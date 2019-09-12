@@ -55,7 +55,7 @@ fn post_can_be_published(status: &str) -> bool {
 
 fn load_template(folder: &str) -> std::io::Result<String> {
     let template = if folder.starts_with(".") {
-        "docs"
+        "posts"
     } else {
         folder
     };
