@@ -104,7 +104,7 @@ fn generate_related_post(shared: Option<&Shared>, tags: &Vec<String>, current: S
     }
     let total = posts.len();
     let limit = if total < 5 { total } else { 5 };
-    let output: Vec<String> = posts.into_iter().map(|t| format!("<li><a class='related-post' href='/docs/{}'>{}</a></li>", t.url, t.title)).collect();
+    let output: Vec<String> = posts.into_iter().map(|t| format!("<li><a class='related-post' href='/posts/{}'>{}</a></li>", t.url, t.title)).collect();
     format!("<ul class='related-posts-list'>{}</ul>", (&output[..limit]).join(""))
 }
 
@@ -137,7 +137,7 @@ fn apply_template(template: &str, post: &Metadata, tag_text: &str, related_posts
         .replace("{%tags%}", &generate_tags(tag_text, &post.tags))
         .replace("{%related%}", &generate_related_post(related_posts, &post.tags, (&post.title).to_string()))
         .replace("{%postslug%}", &file_name.replace(".html", ""))
-        .replace("{%posturl%}", &format!("{}/docs/{}", env::var("DOMAIN_NAME").unwrap(), file_name));
+        .replace("{%posturl%}", &format!("{}/posts/{}", env::var("DOMAIN_NAME").unwrap(), file_name));
     format!("{}", html)
 }
 
@@ -211,7 +211,7 @@ fn generate_index_page(posts: &Vec<Metadata>) {
             } else {
                 ""
             };
-            format!("<div class='home-list-item'><span class='home-date-indicator'>{}</span>{}{}<br/><a href='/docs/{}'>{}</a></div>", post_date_text, guest_tag, tag_list, file_name, p.title)
+            format!("<div class='home-list-item'><span class='home-date-indicator'>{}</span>{}{}<br/><a href='/posts/{}'>{}</a></div>", post_date_text, guest_tag, tag_list, file_name, p.title)
         }).collect();
         let markdown = html.join("\n");
         let mut post = Metadata {
@@ -235,7 +235,7 @@ fn generate_tags_page(tags: &HashMap<String, Vec<Article>>) {
     if let Ok(template) = load_template("tags") {
         for (key, value) in tags.into_iter() {
             println!("{} - {:?}", key, value);
-            let post_list: Vec<String> = value.into_iter().map(|a| format!("- [{}](/docs/{})", a.title, a.url)).collect();
+            let post_list: Vec<String> = value.into_iter().map(|a| format!("- [{}](/posts/{})", a.title, a.url)).collect();
             let markdown = post_list.join("\n");
             let tags_except_key: Vec<String> = tags.keys().into_iter().filter(|k| *k != key).map(|k| format!("{}", k)).collect();
             let post = Metadata {
@@ -271,7 +271,7 @@ fn generate_rss_feed(posts: &Vec<Metadata>) {
         let post_date_text = post_date.to_rfc2822();
         println!("{:?}  {:?}  {:?}", post_date, post_date_text, &post.date);
         let mut item = rss::Item::default();
-        let link = format!("{}/docs/{}", env::var("DOMAIN_NAME").unwrap(), file_name);
+        let link = format!("{}/posts/{}", env::var("DOMAIN_NAME").unwrap(), file_name);
         let mut guid = rss::Guid::default();
         guid.set_value(link.clone());
         item.set_title(format!("{}", &post.title));
@@ -315,9 +315,9 @@ fn main() {
 
     let args: Vec<String> = env::args().collect();
     let mut folder = ".";
-    if args.len() > 1 {
-        let param = &args[1];
-
+    // let param = &args[1];
+    let param = "posts";
+    if param != ""  {
         if (param != "preview") {
             folder = param;
             // Generator mode
@@ -395,10 +395,10 @@ fn main() {
                     (GET) (/view/{file_name: String}) => {
                         if let Ok(template) = load_template("preview") {
                             let mut shared = Shared { tags: HashMap::new() };
-                            let path = PathBuf::from(format!("./docs/{}.md", file_name));
+                            let path = PathBuf::from(format!("./posts/{}.md", file_name));
                             let abs_path = fs::canonicalize(&path).unwrap();
                             if let Some(post) = parse_post(&template, &shared, &PathBuf::from(abs_path), true) {
-                                let output = post.output_html.replace("\"img", "\"/docs/img").to_string();
+                                let output = post.output_html.replace("\"img", "\"/posts/img").to_string();
                                 return rouille::Response::html(output); 
                             }
                         }
