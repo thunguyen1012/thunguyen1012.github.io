@@ -1,3 +1,12 @@
+---
+title: Duyệt cây nhị phân với Rust
+published: true
+date: 2019-09-12 22:33:21
+tags: rust, binary tree
+description: Các bài giới thiệu về Rust thì nhiều quá rồi nhưng chưa thấy bài nào nói về việc sử dụng Rust hết, nên hôm nay mình sẽ bắt đầu viết một vài bài áp dụng Rust để implement một số thuật toán cơ bản...
+image:
+---
+
 # Implement bài toán duyệt cây nhị phân với Rust
 
 Các bài giới thiệu về Rust <sup>[[1]][ref]</sup> thì nhiều quá rồi <sup>[[2]][ref]</sup> nhưng chưa thấy bài nào nói về việc sử dụng Rust hết, nên hôm nay mình sẽ bắt đầu viết một vài bài áp dụng Rust để implement một số thuật toán cơ bản, mở đầu sẽ là: **Thuật toán duyệt cây nhị phân.**
