@@ -1,0 +1,362 @@
+<html>
+  <head>
+    <title>Custom web component | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'>
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="../apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="../favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="../favicon-16x16.png"
+    />
+    <link rel="manifest" href="../manifest.json" />
+    <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5" />
+    <meta name="theme-color" content="#ffffff" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+      rel="stylesheet"
+    />
+    <link href="../css/theme-dark.css?t=" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/tomorrow.css" />
+    <link rel="stylesheet" href="../css/fontello.css" />
+    <link rel="stylesheet" href="../emoji/css/messenger.min.css" />
+    <link rel="stylesheet" href="../emoji/css/thinking.ext.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script src="../js/autosizing.js"></script>
+    <script src="../js/fetch.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Custom web component</h1>
+        <p>Trình duyệt cung cấp một công cụ tuyệt vời để cấu trúc các ứng dụng web - HTML. HTML là declarative, portable, được hỗ trợ tốt và dễ làm việc. Thế nhưng các thẻ của HTML lại hạn chế và khó mở rộng.</p>
+<p>Custom element là câu trả lời cho HTML hiện đại. Custom element hướng dẫn trình duyệt các kỹ thuật mới trong khi vẫn bảo tồn được các tiện ích của HTML.</p>
+<h2><a href="#phần-1-định-nghĩa-một-element-mới" aria-hidden="true" class="anchor" id="phần-1-định-nghĩa-một-element-mới"></a>Phần 1: Định nghĩa một element mới</h2>
+<p>Để định nghĩa custom element chúng ta sử dụng javascript.
+Đối tượng toàn cục <code>customElements</code> được dùng để tạo mới một tag.</p>
+<pre><code class="language-javascript">class AppDrawer extends HTMLElement {...}
+window.customElements.define('app-drawer', AppDrawer);
+
+// Or use an anonymous class if you don't want a named constructor in current scope.
+window.customElements.define('app-drawer', class extends HTMLElement {...});
+</code></pre>
+<p>Sử dụng</p>
+<pre><code class="language-html">&lt;app-drawer&gt;&lt;/app-drawer&gt;
+</code></pre>
+<h3><a href="#định-nghĩa-javascript-api-cho-element" aria-hidden="true" class="anchor" id="định-nghĩa-javascript-api-cho-element"></a>Định nghĩa Javascript API cho element</h3>
+<p>Chức năng của một tag được định nghĩa bỡi dùng một <code>class</code> kế thừa <code>HTMLElement</code>. Kế thừa <code>HTMLElement</code> đảm bảo tag kế thừa toàn bộ DOM API</p>
+<p>Ví dụ: định nghĩa DOM interface của <code>&lt;app-drawer&gt;</code>:</p>
+<pre><code class="language-javascript">class AppDrawer extends HTMLElement {
+
+  // A getter/setter for an open property.
+  get open() {
+    return this.hasAttribute('open');
+  }
+
+  set open(val) {
+    // Reflect the value of the open property as an HTML attribute.
+    if (val) {
+      this.setAttribute('open', '');
+    } else {
+      this.removeAttribute('open');
+    }
+    this.toggleDrawer();
+  }
+
+  // A getter/setter for a disabled property.
+  get disabled() {
+    return this.hasAttribute('disabled');
+  }
+
+  set disabled(val) {
+    // Reflect the value of the disabled property as an HTML attribute.
+    if (val) {
+      this.setAttribute('disabled', '');
+    } else {
+      this.removeAttribute('disabled');
+    }
+  }
+
+  // Can define constructor arguments if you wish.
+  constructor() {
+    // If you define a constructor, always call super() first!
+    // This is specific to CE and required by the spec.
+    super();
+
+    // Setup a click listener on &lt;app-drawer&gt; itself.
+    this.addEventListener('click', e =&gt; {
+      // Don't toggle the drawer if it's disabled.
+      if (this.disabled) {
+        return;
+      }
+      this.toggleDrawer();
+    });
+  }
+
+  toggleDrawer() {
+    ...
+  }
+}
+
+customElements.define('app-drawer', AppDrawer);
+</code></pre>
+<p>Trong ví dụ này, chúng ta tạo một drawer có thuộc tính <code>open</code>, <code>disabled</code>, và <code>toggleDrawer()</code>. Nó cũng phản ánh các thuộc tính như là các HTML attributes.</p>
+<p><code>this</code> trong định nghĩa lớp trỏ tới chính DOM element.</p>
+<h4><a href="#các-quy-tắc-trong-việc-tạo-custom-element" aria-hidden="true" class="anchor" id="các-quy-tắc-trong-việc-tạo-custom-element"></a>Các quy tắc trong việc tạo custom element</h4>
+<ol>
+<li>Tên của phải có một gạch ngang <strong>-</strong>. Nhằm phân biệt với những element có sẵn và cũng để đảm bảo tương thích ngược khi tag mới được thêm vào HTML.</li>
+<li>Không thể khai báo trùng tag. Nếu trùng sẽ có <code>DOMException</code></li>
+<li>Custom element không thể tự đóng. Luôn viết thẻ đóng (<code>&lt;app-drawer&gt;&lt;/app-drawer&gt;</code>)</li>
+</ol>
+<h2><a href="#custom-element-reactions" aria-hidden="true" class="anchor" id="custom-element-reactions"></a>Custom element reactions</h2>
+<p>Custom tag có các lifecycle hooks - được gọi là custom element reactions</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Called when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>constructor</code></td>
+<td>Một thực thê được tạo hay nâng cấp. Nơi để khởi tạo state, thiết lập các event listener, hay tạo shadow dom</td>
+</tr>
+<tr>
+<td><code>connectedCallback</code></td>
+<td>Được gọi mỗi khi element được chèn vào DOM. Hữu ích cho thiết lập như tải resource hay rendering. Nên trì hoãn xử lý cho đến lúc này</td>
+</tr>
+<tr>
+<td><code>disconnectedCallback</code></td>
+<td>Được gọi mỗi khi element bị loại ra khỏi DOM. Dùng cho việc dọn dẹp.</td>
+</tr>
+<tr>
+<td><code>attributeChangedCallback(attrName, oldVal, newVal)</code></td>
+<td>Được gọi khi một thuộc tính được thêm, loại, cập nhật, hay thay thế. Cũng được gọi khi khởi tạo giá trị khi element được tạo bỡi parser hay nâng cấp. <strong>Note</strong>: chỉ các thuộc tính được liệt kê trong <code>observedAttributes</code> mới tương tác với callback này</td>
+</tr>
+<tr>
+<td><code>adoptedCallback</code></td>
+<td>Custom element được chuyển vào trong một <code>document</code> mới</td>
+</tr></tbody></table>
+<p><strong>Các reaction callback là các xử lý đồng bộ.</strong> Ví dụ, nếu ai đó gọi <code>el.setAttribute()</code> trên element của bạn, trình duyệt sẽ lập tức gọi <code>attributeChangedCallback()</code>.
+<code>disconnectedCallback()</code> sẽ không được gọi khi người dùng tắt tab.</p>
+<p>Ví dụ:</p>
+<pre><code class="language-javascript">class AppDrawer extends HTMLElement {
+  constructor() {
+    super(); // always call super() first in the constructor.
+    ...
+  }
+  connectedCallback() {
+    ...
+  }
+  disconnectedCallback() {
+    ...
+  }
+  attributeChangedCallback(attrName, oldVal, newVal) {
+    ...
+  }
+}
+</code></pre>
+<h2><a href="#properties-và-attributes" aria-hidden="true" class="anchor" id="properties-và-attributes"></a>Properties và attributes</h2>
+<h3><a href="#refecting-properties-to-attributes" aria-hidden="true" class="anchor" id="refecting-properties-to-attributes"></a>Refecting properties to attributes</h3>
+<p>Thường các thuộc tính HTML đều được phản ánh vào DOM như là thuộc tính của HTML. Ví dụ trên javascript</p>
+<pre><code class="language-javasrcipt">div.id = 'my-id';
+div.hidden = true;
+</code></pre>
+<p>các giá trị được phản ánh lên live DOM dưới dạng các attribute</p>
+<p><code>&lt;div id=&quot;my-id&quot; hidden&gt;</code></p>
+<p>Đây là reflecting properties to attributes. Với custom element, chúng ta khai báo setter/getter cho thuộc tính cần mapping. Ví dụ cho <code>disabled</code></p>
+<pre><code class="language-javascript">...
+
+get disabled() {
+  return this.hasAttribute('disabled');
+}
+
+set disabled(val) {
+  // Reflect the value of `disabled` as an attribute.
+  if (val) {
+    this.setAttribute('disabled', '');
+  } else {
+    this.removeAttribute('disabled');
+  }
+  this.toggleDrawer();
+}
+</code></pre>
+<h3><a href="#observing-changes-to-attributes" aria-hidden="true" class="anchor" id="observing-changes-to-attributes"></a>Observing changes to attributes</h3>
+<p>Các element có thể phản ánh các sự thay đổi của attribute bỡi sử dụng <code>attributeChangedCallback()</code> và mảng <code>observedAttributes</code></p>
+<pre><code class="language-javascript">class AppDrawer extends HTMLElement {
+  ...
+
+  static get observedAttributes() {
+    return ['disabled', 'open'];
+  }
+
+  get disabled() {
+    return this.hasAttribute('disabled');
+  }
+
+  set disabled(val) {
+    if (val) {
+      this.setAttribute('disabled', '');
+    } else {
+      this.removeAttribute('disabled');
+    }
+  }
+
+  // Only called for the disabled and open attributes due to observedAttributes
+  attributeChangedCallback(name, oldValue, newValue) {
+    // When the drawer is disabled, update keyboard/screen reader behavior.
+    if (this.disabled) {
+      this.setAttribute('tabindex', '-1');
+      this.setAttribute('aria-disabled', 'true');
+    } else {
+      this.setAttribute('tabindex', '0');
+      this.setAttribute('aria-disabled', 'false');
+    }
+    // TODO: also react to the open attribute changing.
+  }
+}
+</code></pre>
+<h2><a href="#element-upgrades" aria-hidden="true" class="anchor" id="element-upgrades"></a>Element upgrades</h2>
+<h3><a href="#progressively-enhanced-html" aria-hidden="true" class="anchor" id="progressively-enhanced-html"></a>Progressively enhanced HTML</h3>
+<p>Chúng ta không cần đăng ký trước custom element rồi mới sử dụng. Lúc này custom element được xem như là unknown tags. Khi định nghĩa custom element được đăng ký thì sẽ diễn ra &quot;element upgrades&quot;.</p>
+<p>Để biết khi nào một tag name bắt đầu được định nghĩa, có thể dùng <code>window.customElements.whenDefined('tên custom element')</code>. Hàm trả về một promise và được resolve khi element được định nghĩa.</p>
+<pre><code class="language-javascript">customElements.whenDefined('app-drawer').then(() =&gt; {
+  console.log('app-drawer defined');
+});
+</code></pre>
+<p>Ví dụ: đợi cho đến khi các elements con được upgraded</p>
+<pre><code class="language-javascript">&lt;share-buttons&gt;
+  &lt;social-button type=&quot;twitter&quot;&gt;&lt;a href=&quot;...&quot;&gt;Twitter&lt;/a&gt;&lt;/social-button&gt;
+  &lt;social-button type=&quot;fb&quot;&gt;&lt;a href=&quot;...&quot;&gt;Facebook&lt;/a&gt;&lt;/social-button&gt;
+  &lt;social-button type=&quot;plus&quot;&gt;&lt;a href=&quot;...&quot;&gt;G+&lt;/a&gt;&lt;/social-button&gt;
+&lt;/share-buttons&gt;
+
+
+
+// Fetch all the children of &lt;share-buttons&gt; that are not defined yet.
+let undefinedButtons = buttons.querySelectorAll(':not(:defined)');
+
+let promises = [...undefinedButtons].map(socialButton =&gt; {
+  return customElements.whenDefined(socialButton.localName);
+));
+
+// Wait for all the social-buttons to be upgraded.
+Promise.all(promises).then(() =&gt; {
+  // All social-button children are ready.
+});
+</code></pre>
+<h2><a href="#element-defined-content" aria-hidden="true" class="anchor" id="element-defined-content"></a>Element-defined content</h2>
+<p>Custom element có thể quản lý nội dung của nó bỡi sử dụng các DOM API bên trong element code</p>
+<p>Ví dụ: tạo một custom element có nội dung mặc định</p>
+<pre><code class="language-javascript">customElements.define('x-foo-with-markup', class extends HTMLElement {
+  connectedCallback() {
+    this.innerHTML = &quot;&lt;b&gt;I'm an x-foo-with-markup!&lt;/b&gt;&quot;;
+  }
+  ...
+});
+</code></pre>
+<p>HTML được tạo ra</p>
+<pre><code class="language-html">&lt;x-foo-with-markup&gt;
+ &lt;b&gt;I'm an x-foo-with-markup!&lt;/b&gt;
+&lt;/x-foo-with-markup&gt;
+</code></pre>
+<h3><a href="#create-an-element-that-uses-shadow-dom" aria-hidden="true" class="anchor" id="create-an-element-that-uses-shadow-dom"></a>Create an element that uses Shadow DOM</h3>
+<p>Shaw DOM cung cấp cách để element sở hữu, render, và style một khối DOM tách biệt với phần còn lại của trang</p>
+<pre><code class="language-html">&lt;!-- chat-app's implementation details are hidden away in Shadow DOM. --&gt;
+&lt;chat-app&gt;&lt;/chat-app&gt;
+</code></pre>
+<p>Để dùng Shadow DOM trong một custom element, gọi <code>this.attachShadow</code> trong <code>constructor</code>:</p>
+<pre><code class="language-javascript">let tmpl = document.createElement('template');
+tmpl.innerHTML = `
+  &lt;style&gt;:host { ... }&lt;/style&gt; &lt;!-- look ma, scoped styles --&gt;
+  &lt;b&gt;I'm in shadow dom!&lt;/b&gt;
+  &lt;slot&gt;&lt;/slot&gt;
+`;
+
+customElements.define('x-foo-shadowdom', class extends HTMLElement {
+  constructor() {
+    super(); // always call super() first in the constructor.
+
+    // Attach a shadow root to the element.
+    let shadowRoot = this.attachShadow({mode: 'open'});
+    shadowRoot.appendChild(tmpl.content.cloneNode(true));
+  }
+  ...
+});
+</code></pre>
+<p>Sử dụng</p>
+<pre><code class="language-html">&lt;x-foo-shadowdom&gt;
+  &lt;p&gt;&lt;b&gt;User's&lt;/b&gt; custom text&lt;/p&gt;
+&lt;/x-foo-shadowdom&gt;
+
+&lt;!-- renders as --&gt;
+&lt;x-foo-shadowdom&gt;
+  #shadow-root
+    &lt;b&gt;I'm in shadow dom!&lt;/b&gt;
+    &lt;slot&gt;&lt;/slot&gt; &lt;!-- slotted content appears here --&gt;
+&lt;/x-foo-shadowdom&gt;
+</code></pre>
+<h3><a href="#create-elements-from-a-template>" aria-hidden="true" class="anchor" id="create-elements-from-a-template>"></a>Create elements from a <code>&lt;template&gt;</code></h3>
+<p>Ôn bài, <code>&lt;template&gt;</code> element cho phép khai báo các fragment của DOM, những cái này được parsed và có thể được kích hoạt trễ (lúc thực thi). <strong>Template là placeholder lý tưởng cho việc khai báo cấu trúc của một custom element.</strong></p>
+<p>Ví dụ: đăng ký một element với nội dung Shadow DOM từ một <code>&lt;template&gt;</code></p>
+<pre><code class="language-html">&lt;template id=&quot;x-foo-from-template&quot;&gt;
+  &lt;style&gt;
+    p { color: green; }
+  &lt;/style&gt;
+  &lt;p&gt;I'm in Shadow DOM. My markup was stamped from a &amp;lt;template&amp;gt;.&lt;/p&gt;
+&lt;/template&gt;
+
+&lt;script&gt;
+  let tmpl = document.querySelector('#x-foo-from-template');
+  // If your code is inside of an HTML Import you'll need to change the above line to:
+  // let tmpl = document.currentScript.ownerDocument.querySelector('#x-foo-from-template');
+
+  customElements.define('x-foo-from-template', class extends HTMLElement {
+    constructor() {
+      super(); // always call super() first in the constructor.
+      let shadowRoot = this.attachShadow({mode: 'open'});
+      shadowRoot.appendChild(tmpl.content.cloneNode(true));
+    }
+    ...
+  });
+&lt;/script&gt;
+</code></pre>
+<h2><a href="#styling-a-custom-element" aria-hidden="true" class="anchor" id="styling-a-custom-element"></a>Styling a custom element</h2>
+<h3><a href="#pre-styling-unregistered-elements" aria-hidden="true" class="anchor" id="pre-styling-unregistered-elements"></a>Pre-styling unregistered elements</h3>
+<h2><a href="#extending-elements" aria-hidden="true" class="anchor" id="extending-elements"></a>Extending elements</h2>
+<h3><a href="#extending-a-custom-element" aria-hidden="true" class="anchor" id="extending-a-custom-element"></a>Extending a custom element</h3>
+<h3><a href="#extending-native-html-elements" aria-hidden="true" class="anchor" id="extending-native-html-elements"></a>Extending native HTML elements</h3>
+<h2><a href="#mics-details" aria-hidden="true" class="anchor" id="mics-details"></a>Mics details</h2>
+<h3><a href="#unknown-elements-vs-undefined-custom-elements" aria-hidden="true" class="anchor" id="unknown-elements-vs-undefined-custom-elements"></a>Unknown elements vs. undefined custom elements</h3>
+<h2><a href="#api-reference" aria-hidden="true" class="anchor" id="api-reference"></a>API reference</h2>
+<h2><a href="#history-and-browser-support" aria-hidden="true" class="anchor" id="history-and-browser-support"></a>History and browser support</h2>
+<h3><a href="#browser-support" aria-hidden="true" class="anchor" id="browser-support"></a>Browser support</h3>
+<h2><a href="#conclusion" aria-hidden="true" class="anchor" id="conclusion"></a>Conclusion</h2>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/html.html'>html</a><a class='topic-tag' href='/tags/custom.html'>custom</a><a class='topic-tag' href='/tags/component.html'>component</a></div>
+      </div>
+    </div>
+  </body>
+</html>
