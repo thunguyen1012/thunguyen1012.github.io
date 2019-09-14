@@ -620,13 +620,12 @@ header h3::before {
 header#user_top {
   position: relative;
   display: block;
-  padding-top: 100px;
-  padding-bottom: 45px;
+  padding-top: 20px;
+  padding-bottom: 20px;
   border-bottom: 0px solid #f0f0f0;
   text-align: center;
   background: #fafafa;
   border-bottom: 1px solid #f8f8f8;
-  margin-bottom: 30px;
 }
 
 header#user_top h2 {

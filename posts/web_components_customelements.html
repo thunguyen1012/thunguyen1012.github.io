@@ -5,38 +5,15 @@
     <meta http-equiv="content-type" content="text/html;" />
     <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
     <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'>
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href="../apple-touch-icon.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="../favicon-32x32.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="../favicon-16x16.png"
-    />
-    <link rel="manifest" href="../manifest.json" />
-    <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5" />
     <meta name="theme-color" content="#ffffff" />
     <link
       href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
       rel="stylesheet"
     />
-    <link href="../css/theme-dark.css?t=" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="../css/highlight/tomorrow.css" />
+    <link href="../css/theme-dark.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/tomorrow-night.css" />
     <link rel="stylesheet" href="../css/fontello.css" />
-    <link rel="stylesheet" href="../emoji/css/messenger.min.css" />
-    <link rel="stylesheet" href="../emoji/css/thinking.ext.css" />
     <script src="../js/highlight.pack.js"></script>
-    <script src="../js/autosizing.js"></script>
-    <script src="../js/fetch.js"></script>
     <script>
       hljs.initHighlightingOnLoad();
     </script>
@@ -53,7 +30,7 @@
         <h1>Custom web component</h1>
         <p>Trình duyệt cung cấp một công cụ tuyệt vời để cấu trúc các ứng dụng web - HTML. HTML là declarative, portable, được hỗ trợ tốt và dễ làm việc. Thế nhưng các thẻ của HTML lại hạn chế và khó mở rộng.</p>
 <p>Custom element là câu trả lời cho HTML hiện đại. Custom element hướng dẫn trình duyệt các kỹ thuật mới trong khi vẫn bảo tồn được các tiện ích của HTML.</p>
-<h2><a href="#phần-1-định-nghĩa-một-element-mới" aria-hidden="true" class="anchor" id="phần-1-định-nghĩa-một-element-mới"></a>Phần 1: Định nghĩa một element mới</h2>
+<h2><a href="#định-nghĩa-một-element-mới" aria-hidden="true" class="anchor" id="định-nghĩa-một-element-mới"></a>Định nghĩa một element mới</h2>
 <p>Để định nghĩa custom element chúng ta sử dụng javascript.
 Đối tượng toàn cục <code>customElements</code> được dùng để tạo mới một tag.</p>
 <pre><code class="language-javascript">class AppDrawer extends HTMLElement {...}

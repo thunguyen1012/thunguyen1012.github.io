@@ -10,7 +10,7 @@ Trình duyệt cung cấp một công cụ tuyệt vời để cấu trúc các 
 
 Custom element là câu trả lời cho HTML hiện đại. Custom element hướng dẫn trình duyệt các kỹ thuật mới trong khi vẫn bảo tồn được các tiện ích của HTML.
 
-## Phần 1: Định nghĩa một element mới 
+## Định nghĩa một element mới 
 
 Để định nghĩa custom element chúng ta sử dụng javascript.
 Đối tượng toàn cục ```customElements``` được dùng để tạo mới một tag.
