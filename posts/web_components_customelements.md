@@ -1,7 +1,7 @@
 ---
 title: Custom web component
 published: true
-date: 2019-09-13
+date: 2019-09-13 12:00:00
 tags: html, custom, component
 description: Tùy chỉnh và tạo mới thẻ html là cơ sở để tái sử dụng code, code có module...
 image:
