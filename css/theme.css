@@ -1,3 +1,9 @@
+@font-face {
+  font-family: 'Inconsolata';
+  font-display: auto;
+  src: local('Inconsolata'), url(https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese) format('woff2');
+}
+
 * {
   font-family: 'Inconsolata', monospace;
 }
@@ -200,7 +206,7 @@ code.math {
 
 a {
   text-decoration: none;
-  color: #e74c3c;
+  color: #AB2312;
 }
 
 a:hover {
@@ -1162,7 +1168,7 @@ p.special word wise {
 }
 
 .home-date-indicator {
-  color: #888;
+  color: #595959;
   margin-right: 10px;
 }
 
