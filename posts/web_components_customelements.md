@@ -331,23 +331,232 @@ Ví dụ: đăng ký một element với nội dung Shadow DOM từ một ```<te
 ```
 
 ## Styling a custom element
+Ngay cả khi element bạn định nghĩa có style riêng bỡi dùng Shadow DOM, người vẫn có thể style custom element của bạn trên trang của họ. Gọi là "user-defined styles"
+
+```html
+<!-- user-defined styling -->
+<style>
+  app-drawer {
+    display: flex;
+  }
+  panel-item {
+    transition: opacity 400ms ease-in-out;
+    opacity: 0.3;
+    flex: 1;
+    text-align: center;
+    border-radius: 50%;
+  }
+  panel-item:hover {
+    opacity: 1.0;
+    background: rgb(255, 0, 255);
+    color: white;
+  }
+  app-panel > panel-item {
+    padding: 5px;
+    list-style: none;
+    margin: 0 7px;
+  }
+</style>
+
+<app-drawer>
+  <panel-item>Do</panel-item>
+  <panel-item>Re</panel-item>
+  <panel-item>Mi</panel-item>
+</app-drawer>
+```
+User style luôn thắng style đã định nghĩa bên trong Shadow DOM.
 
 ### Pre-styling unregistered elements
+Trước khi một element được upgraded, bạn có thể style nó bỡi dùng ```:defined``` pseudo-class. Cái này hữu dụng cho việc pre-styling một component. Ví dụ, bạn có thể muốn giữ layout khi custom element chưa được định nghĩa.
+
+Ví dụ: ẩn ```<app-drawer>``` trước khi nó được định nghĩa:
+```css
+app-drawer:not(:defined) {
+  /* Pre-style, give layout, replicate app-drawer's eventual styles, etc. */
+  display: inline-block;
+  height: 100vh;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+```
+Sau khi ```<app-drawer>``` được định nghĩa, selector trên không còn tác dụng.
 
 ## Extending elements
 
 ### Extending a custom element
+Thông qua extend định nghĩa lớp của custom element.
+Ví dụ:
+
+```javascript
+class FancyDrawer extends AppDrawer {
+  constructor() {
+    super(); // always call super() first in the constructor. This also calls the extended class' constructor.
+    ...
+  }
+
+  toggleDrawer() {
+    // Possibly different toggle implementation?
+    // Use ES2015 if you need to call the parent method.
+    // super.toggleDrawer()
+  }
+
+  anotherMethod() {
+    ...
+  }
+}
+
+customElements.define('fancy-app-drawer', FancyDrawer);
+```
 
 ### Extending native HTML elements
+Cũng có thể mở rộng HTML element bỡi kế thừa DOM interface phù hợp. Ví dụ một custom element mở rộng ```<button>``` cần kế thừa ```HTMLButtonElement``` thay vì ```HTMLElement```.
+
+Ví dụ:
+```javascript
+// See https://html.spec.whatwg.org/multipage/indices.html#element-interfaces
+// for the list of other DOM interfaces.
+class FancyButton extends HTMLButtonElement {
+  constructor() {
+    super(); // always call super() first in the constructor.
+    this.addEventListener('click', e => this.drawRipple(e.offsetX, e.offsetY));
+  }
+
+  // Material design ripple animation.
+  drawRipple(x, y) {
+    let div = document.createElement('div');
+    div.classList.add('ripple');
+    this.appendChild(div);
+    div.style.top = `${y - div.clientHeight/2}px`;
+    div.style.left = `${x - div.clientWidth/2}px`;
+    div.style.backgroundColor = 'currentColor';
+    div.classList.add('run');
+    div.addEventListener('transitionend', e => div.remove());
+  }
+}
+
+customElements.define('fancy-button', FancyButton, {extends: 'button'});
+```
+
+Lưu ý có sự thay đổi trong việc gọi ```define()``` để extend một native element. Tham số bắt buộc thứ ba cho browser biết tag bạn đang extending. Vì có nhiều HTML tag chia sẻ cùng DOM interface. ```<section>, <address>, và <em>``` cùng extend ```HTMLElement```.
+
+Sử dụng custom của một native element cũng có nhiều cách. Có thể dùng ```is=""``` trên native tag:
+```html
+<!-- This <button> is a fancy button. -->
+<button is="fancy-button" disabled>Fancy button!</button>
+```
+
+Trong javascript
+```javascript
+// Custom elements overload createElement() to support the is="" attribute.
+let button = document.createElement('button', {is: 'fancy-button'});
+button.textContent = 'Fancy button!';
+button.disabled = true;
+document.body.appendChild(button);
+```
+
+Hay dùng ```new```
+```javascript
+let button = new FancyButton();
+button.textContent = 'Fancy button!';
+button.disabled = true;
+```
 
 ## Mics details
 
 ### Unknown elements vs. undefined custom elements
+Những element chưa được định nghĩa sẽ được parse như ```HTMLUnknownElement```. Nhưng nếu custom element được khai báo với tên hợp lệ (có '-') thì custom element sẽ được parsed như là một ```HTMLElement```.
+
+```javascript
+// "tabs" is not a valid custom element name
+document.createElement('tabs') instanceof HTMLUnknownElement === true
+
+// "x-tabs" is a valid custom element name
+document.createElement('x-tabs') instanceof HTMLElement === true
+```
 
 ## API reference
+```customElement``` có các phương thức hữu ích trong xử lý custom element.
+```define(tagName, constructor, options)```
+Định nghĩa custom element.
+
+Ví dụ:
+```javascript
+customElements.define('my-app', class extends HTMLElement { ... });
+customElements.define(
+  'fancy-button', class extends HTMLButtonElement { ... }, {extends: 'button'});
+```
+
+```get(tagName)```
+Trả về constructor của custom element. ```undefined``` nếu định nghĩa của element chưa được đăng ký.
+
+Ví dụ:
+```javascript
+let Drawer = customElements.get('app-drawer');
+let drawer = new Drawer();
+```
+
+```whenDefined(tagName)```
+Trả về một Promise, promise này resolve khi custom element được định nghĩa. Nếu element đã định nghĩa thì resolve ngay lập tức. Reject nếu tag name không là một tên hợp lệ.
+
+Ví dụ:
+```javascript
+customElements.whenDefined('app-drawer').then(() => {
+  console.log('ready!');
+});
+```
 
 ## History and browser support
 
 ### Browser support
+Dùng script để detect
+```javascript
+const supportsCustomElementsV1 = 'customElements' in window;
+```
+
+### Polyfill
+Từ package
+```npm install --save @webcomponents/webcomponentsjs```
+
+Sử dụng
+```html
+<!-- Use the custom element on the page. -->
+<my-element></my-element>
+
+<!-- Load polyfills; note that "loader" will load these async -->
+<script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js" defer></script>
+
+<!-- Load a custom element definitions in `waitFor` and return a promise -->
+<script type="module">
+  function loadScript(src) {
+    return new Promise(function(resolve, reject) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  WebComponents.waitFor(() => {
+    // At this point we are guaranteed that all required polyfills have
+    // loaded, and can use web components APIs.
+    // Next, load element definitions that call `customElements.define`.
+    // Note: returning a promise causes the custom elements
+    // polyfill to wait until all definitions are loaded and then upgrade
+    // the document in one batch, for better performance.
+    return loadScript('my-element.js');
+  });
+</script>
+```
 
 ## Conclusion
+Custom element cho phép tạo HTML tag mới. Kết hợp với Shadow DOM và ```<template>```, có thể định hình bức tranh của Web Components:
+- Cross-browser (web standard) for creating and extending reusable components.
+- Requires no library or framework to get started. Vanilla JS/HTML FTW!
+- Provides a familiar programming model. It's just DOM/CSS/HTML.
+- Works well with other new web platform features (Shadow DOM, <template>, CSS custom properties, etc.)
+- Tightly integrated with the browser's DevTools.
+- Leverage existing accessibility features.
+
+## REF
+https://developers.google.com/web/fundamentals/web-components/customelements
