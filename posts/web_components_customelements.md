@@ -550,11 +550,11 @@ Sử dụng
 ```
 
 ## Conclusion
-Custom element cho phép tạo HTML tag mới. Kết hợp với Shadow DOM và ```<template>```, có thể định hình bức tranh của Web Components:
+Custom element cho phép tạo HTML tag mới. Kết hợp với [Shadow DOM](https://thunguyen1012.github.io/posts/web_components_shadow_dom.html)  và ```<template>```, có thể định hình bức tranh của Web Components:
 - Cross-browser (web standard) for creating and extending reusable components.
 - Requires no library or framework to get started. Vanilla JS/HTML FTW!
 - Provides a familiar programming model. It's just DOM/CSS/HTML.
-- Works well with other new web platform features (Shadow DOM, <template>, CSS custom properties, etc.)
+- Works well with other new web platform features (Shadow DOM, ```<template>```, CSS custom properties, etc.)
 - Tightly integrated with the browser's DevTools.
 - Leverage existing accessibility features.
 
