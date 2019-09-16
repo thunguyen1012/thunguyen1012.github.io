@@ -318,16 +318,197 @@ customElements.define('x-foo-shadowdom', class extends HTMLElement {
 &lt;/script&gt;
 </code></pre>
 <h2><a href="#styling-a-custom-element" aria-hidden="true" class="anchor" id="styling-a-custom-element"></a>Styling a custom element</h2>
+<p>Ngay cả khi element bạn định nghĩa có style riêng bỡi dùng Shadow DOM, người vẫn có thể style custom element của bạn trên trang của họ. Gọi là &quot;user-defined styles&quot;</p>
+<pre><code class="language-html">&lt;!-- user-defined styling --&gt;
+&lt;style&gt;
+  app-drawer {
+    display: flex;
+  }
+  panel-item {
+    transition: opacity 400ms ease-in-out;
+    opacity: 0.3;
+    flex: 1;
+    text-align: center;
+    border-radius: 50%;
+  }
+  panel-item:hover {
+    opacity: 1.0;
+    background: rgb(255, 0, 255);
+    color: white;
+  }
+  app-panel &gt; panel-item {
+    padding: 5px;
+    list-style: none;
+    margin: 0 7px;
+  }
+&lt;/style&gt;
+
+&lt;app-drawer&gt;
+  &lt;panel-item&gt;Do&lt;/panel-item&gt;
+  &lt;panel-item&gt;Re&lt;/panel-item&gt;
+  &lt;panel-item&gt;Mi&lt;/panel-item&gt;
+&lt;/app-drawer&gt;
+</code></pre>
+<p>User style luôn thắng style đã định nghĩa bên trong Shadow DOM.</p>
 <h3><a href="#pre-styling-unregistered-elements" aria-hidden="true" class="anchor" id="pre-styling-unregistered-elements"></a>Pre-styling unregistered elements</h3>
+<p>Trước khi một element được upgraded, bạn có thể style nó bỡi dùng <code>:defined</code> pseudo-class. Cái này hữu dụng cho việc pre-styling một component. Ví dụ, bạn có thể muốn giữ layout khi custom element chưa được định nghĩa.</p>
+<p>Ví dụ: ẩn <code>&lt;app-drawer&gt;</code> trước khi nó được định nghĩa:</p>
+<pre><code class="language-css">app-drawer:not(:defined) {
+  /* Pre-style, give layout, replicate app-drawer's eventual styles, etc. */
+  display: inline-block;
+  height: 100vh;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+</code></pre>
+<p>Sau khi <code>&lt;app-drawer&gt;</code> được định nghĩa, selector trên không còn tác dụng.</p>
 <h2><a href="#extending-elements" aria-hidden="true" class="anchor" id="extending-elements"></a>Extending elements</h2>
 <h3><a href="#extending-a-custom-element" aria-hidden="true" class="anchor" id="extending-a-custom-element"></a>Extending a custom element</h3>
+<p>Thông qua extend định nghĩa lớp của custom element.
+Ví dụ:</p>
+<pre><code class="language-javascript">class FancyDrawer extends AppDrawer {
+  constructor() {
+    super(); // always call super() first in the constructor. This also calls the extended class' constructor.
+    ...
+  }
+
+  toggleDrawer() {
+    // Possibly different toggle implementation?
+    // Use ES2015 if you need to call the parent method.
+    // super.toggleDrawer()
+  }
+
+  anotherMethod() {
+    ...
+  }
+}
+
+customElements.define('fancy-app-drawer', FancyDrawer);
+</code></pre>
 <h3><a href="#extending-native-html-elements" aria-hidden="true" class="anchor" id="extending-native-html-elements"></a>Extending native HTML elements</h3>
+<p>Cũng có thể mở rộng HTML element bỡi kế thừa DOM interface phù hợp. Ví dụ một custom element mở rộng <code>&lt;button&gt;</code> cần kế thừa <code>HTMLButtonElement</code> thay vì <code>HTMLElement</code>.</p>
+<p>Ví dụ:</p>
+<pre><code class="language-javascript">// See https://html.spec.whatwg.org/multipage/indices.html#element-interfaces
+// for the list of other DOM interfaces.
+class FancyButton extends HTMLButtonElement {
+  constructor() {
+    super(); // always call super() first in the constructor.
+    this.addEventListener('click', e =&gt; this.drawRipple(e.offsetX, e.offsetY));
+  }
+
+  // Material design ripple animation.
+  drawRipple(x, y) {
+    let div = document.createElement('div');
+    div.classList.add('ripple');
+    this.appendChild(div);
+    div.style.top = `${y - div.clientHeight/2}px`;
+    div.style.left = `${x - div.clientWidth/2}px`;
+    div.style.backgroundColor = 'currentColor';
+    div.classList.add('run');
+    div.addEventListener('transitionend', e =&gt; div.remove());
+  }
+}
+
+customElements.define('fancy-button', FancyButton, {extends: 'button'});
+</code></pre>
+<p>Lưu ý có sự thay đổi trong việc gọi <code>define()</code> để extend một native element. Tham số bắt buộc thứ ba cho browser biết tag bạn đang extending. Vì có nhiều HTML tag chia sẻ cùng DOM interface. <code>&lt;section&gt;, &lt;address&gt;, và &lt;em&gt;</code> cùng extend <code>HTMLElement</code>.</p>
+<p>Sử dụng custom của một native element cũng có nhiều cách. Có thể dùng <code>is=&quot;&quot;</code> trên native tag:</p>
+<pre><code class="language-html">&lt;!-- This &lt;button&gt; is a fancy button. --&gt;
+&lt;button is=&quot;fancy-button&quot; disabled&gt;Fancy button!&lt;/button&gt;
+</code></pre>
+<p>Trong javascript</p>
+<pre><code class="language-javascript">// Custom elements overload createElement() to support the is=&quot;&quot; attribute.
+let button = document.createElement('button', {is: 'fancy-button'});
+button.textContent = 'Fancy button!';
+button.disabled = true;
+document.body.appendChild(button);
+</code></pre>
+<p>Hay dùng <code>new</code></p>
+<pre><code class="language-javascript">let button = new FancyButton();
+button.textContent = 'Fancy button!';
+button.disabled = true;
+</code></pre>
 <h2><a href="#mics-details" aria-hidden="true" class="anchor" id="mics-details"></a>Mics details</h2>
 <h3><a href="#unknown-elements-vs-undefined-custom-elements" aria-hidden="true" class="anchor" id="unknown-elements-vs-undefined-custom-elements"></a>Unknown elements vs. undefined custom elements</h3>
+<p>Những element chưa được định nghĩa sẽ được parse như <code>HTMLUnknownElement</code>. Nhưng nếu custom element được khai báo với tên hợp lệ (có '-') thì custom element sẽ được parsed như là một <code>HTMLElement</code>.</p>
+<pre><code class="language-javascript">// &quot;tabs&quot; is not a valid custom element name
+document.createElement('tabs') instanceof HTMLUnknownElement === true
+
+// &quot;x-tabs&quot; is a valid custom element name
+document.createElement('x-tabs') instanceof HTMLElement === true
+</code></pre>
 <h2><a href="#api-reference" aria-hidden="true" class="anchor" id="api-reference"></a>API reference</h2>
+<p><code>customElement</code> có các phương thức hữu ích trong xử lý custom element.
+<code>define(tagName, constructor, options)</code>
+Định nghĩa custom element.</p>
+<p>Ví dụ:</p>
+<pre><code class="language-javascript">customElements.define('my-app', class extends HTMLElement { ... });
+customElements.define(
+  'fancy-button', class extends HTMLButtonElement { ... }, {extends: 'button'});
+</code></pre>
+<p><code>get(tagName)</code>
+Trả về constructor của custom element. <code>undefined</code> nếu định nghĩa của element chưa được đăng ký.</p>
+<p>Ví dụ:</p>
+<pre><code class="language-javascript">let Drawer = customElements.get('app-drawer');
+let drawer = new Drawer();
+</code></pre>
+<p><code>whenDefined(tagName)</code>
+Trả về một Promise, promise này resolve khi custom element được định nghĩa. Nếu element đã định nghĩa thì resolve ngay lập tức. Reject nếu tag name không là một tên hợp lệ.</p>
+<p>Ví dụ:</p>
+<pre><code class="language-javascript">customElements.whenDefined('app-drawer').then(() =&gt; {
+  console.log('ready!');
+});
+</code></pre>
 <h2><a href="#history-and-browser-support" aria-hidden="true" class="anchor" id="history-and-browser-support"></a>History and browser support</h2>
 <h3><a href="#browser-support" aria-hidden="true" class="anchor" id="browser-support"></a>Browser support</h3>
+<p>Dùng script để detect</p>
+<pre><code class="language-javascript">const supportsCustomElementsV1 = 'customElements' in window;
+</code></pre>
+<h3><a href="#polyfill" aria-hidden="true" class="anchor" id="polyfill"></a>Polyfill</h3>
+<p>Từ package
+<code>npm install --save @webcomponents/webcomponentsjs</code></p>
+<p>Sử dụng</p>
+<pre><code class="language-html">&lt;!-- Use the custom element on the page. --&gt;
+&lt;my-element&gt;&lt;/my-element&gt;
+
+&lt;!-- Load polyfills; note that &quot;loader&quot; will load these async --&gt;
+&lt;script src=&quot;node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js&quot; defer&gt;&lt;/script&gt;
+
+&lt;!-- Load a custom element definitions in `waitFor` and return a promise --&gt;
+&lt;script type=&quot;module&quot;&gt;
+  function loadScript(src) {
+    return new Promise(function(resolve, reject) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  WebComponents.waitFor(() =&gt; {
+    // At this point we are guaranteed that all required polyfills have
+    // loaded, and can use web components APIs.
+    // Next, load element definitions that call `customElements.define`.
+    // Note: returning a promise causes the custom elements
+    // polyfill to wait until all definitions are loaded and then upgrade
+    // the document in one batch, for better performance.
+    return loadScript('my-element.js');
+  });
+&lt;/script&gt;
+</code></pre>
 <h2><a href="#conclusion" aria-hidden="true" class="anchor" id="conclusion"></a>Conclusion</h2>
+<p>Custom element cho phép tạo HTML tag mới. Kết hợp với <a href="https://thunguyen1012.github.io/posts/web_components_shadow_dom.html">Shadow DOM</a>  và <code>&lt;template&gt;</code>, có thể định hình bức tranh của Web Components:</p>
+<ul>
+<li>Cross-browser (web standard) for creating and extending reusable components.</li>
+<li>Requires no library or framework to get started. Vanilla JS/HTML FTW!</li>
+<li>Provides a familiar programming model. It's just DOM/CSS/HTML.</li>
+<li>Works well with other new web platform features (Shadow DOM, <code>&lt;template&gt;</code>, CSS custom properties, etc.)</li>
+<li>Tightly integrated with the browser's DevTools.</li>
+<li>Leverage existing accessibility features.</li>
+</ul>
+<h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>REF</h2>
+<p><a href="https://developers.google.com/web/fundamentals/web-components/customelements">https://developers.google.com/web/fundamentals/web-components/customelements</a></p>
  <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/html.html'>html</a><a class='topic-tag' href='/tags/custom.html'>custom</a><a class='topic-tag' href='/tags/component.html'>component</a></div>
       </div>
     </div>
