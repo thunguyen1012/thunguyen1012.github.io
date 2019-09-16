@@ -24,7 +24,58 @@
     <div class="container">
       <div class="main">
         <h1>Shadow DOM</h1>
-         <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/html.html'>html</a><a class='topic-tag' href='/tags/shadow dom.html'>shadow dom</a><a class='topic-tag' href='/tags/component.html'>component</a></div>
+        <h2><a href="#what-is-shadow-dom" aria-hidden="true" class="anchor" id="what-is-shadow-dom"></a>what is shadow DOM?</h2>
+<p>Shadow DOM loại bỏ tính dễ vỡ của xây dựng ứng dụng web. Dễ vỡ từ tính tự nhiên của HTML, CSS, và JS. Ví dụ, khi tạo mới một HTML id/class, không ai cho bạn biết có conflict nào không. Rồi <code>!important</code> trong CSS.</p>
+<p>Shadow DOM fixes CSS and DOM. Shadow DOM giới thiệu scoped style. Bạn có thể đóng gói CSS với markup, ẩn chi tiết, và author self-contained components trong JS.</p>
+<p>Shadow DOM là một trong bốn chuẩn Web Component: HTML template, Shadow DOM, <a href="https://thunguyen1012.github.io/posts/web_components_customelements.html">Custom element</a>, và HTML import.</p>
+<p>Shadow DOM được thiết kế như là một tool để xây dựng component-based app. Vì thế, nó cung cấp giải pháp cho các vấn đề phổ biến trong lập trình web:</p>
+<ul>
+<li>Isolated DOM: DOM của component là tự quản lý (ví dụ: <code>document.querySelector()</code> sẽ không trả về các node trong shadow DOM của component.)</li>
+<li>Scoped CSS: CSS định nghĩa trong shadow DOM được scope trong đó. Nội bất xuất, ngoại bất nhập.</li>
+<li>Composition: declarative, markup-based API</li>
+<li>Simplifies CSS: Scoped DOM cho phép bạn tạo các CSS selector đơn giản. Ít lo lắng về conflict.</li>
+<li>Productivity: App sẽ là tổng hợp các DOM thay vì một DOM siêu bự.</li>
+</ul>
+<h2><a href="#create-shadow-dom" aria-hidden="true" class="anchor" id="create-shadow-dom"></a>Create shadow DOM</h2>
+<p>HTML dễ cho người đọc hiểu, nhưng khó cho máy - DOM xuất hiện. Khi trình duyệt tải một trang web, có nhiều việc diễn ra. Một trong số đó là chuyển HTML thành một live document. Cơ bản, để hiểu cấu trúc của trang, trình duyệt parse HTML thành một data model. Trình duyệt thể hiện cấu trúc của HTML bỡi tạo một cấu trúc cây: DOM. DOM có các thuộc tính, phương thức, và có thể được xử lý bỡi lập trình.</p>
+<pre><code class="language-javascript">const header = document.createElement('header');
+const h1 = document.createElement('h1');
+h1.textContent = 'Hello DOM';
+header.appendChild(h1);
+document.body.appendChild(header);
+</code></pre>
+<p>Tạo HTML</p>
+<pre><code class="language-html">&lt;body&gt;
+  &lt;header&gt;
+    &lt;h1&gt;Hello DOM&lt;/h1&gt;
+  &lt;/header&gt;
+&lt;/body&gt;
+</code></pre>
+<p>DOM...in the shadows
+Shadow DOM là DOM với 2 điểm khác: 1) Cách nó được tạo và sử dụng. 2) Mối tương quan của nó với phần còn lại của trang.
+Cơ bản, bạn tạo các DOM node và append chúng như là con của element khác. Với shadow DOM, bạn tạo một scoped DOM tree và gắn nó với một element, nhưng phân tách với các của thực sự của element. Tree này được gọi là <strong>shadow tree</strong>. Element được gắn shadow tree vào gọi là <strong>shadow host</strong>. Mọi thứ bạn thêm trong shadow trở nên cục bộ trong hosting element, kể cả <code>&lt;style&gt;</code>.</p>
+<h3><a href="#creating-shadow-dom-for-a-custom-element" aria-hidden="true" class="anchor" id="creating-shadow-dom-for-a-custom-element"></a>Creating shadow DOM for a custom element</h3>
+<h2><a href="#composition-and-slots" aria-hidden="true" class="anchor" id="composition-and-slots"></a>Composition and slots</h2>
+<h3><a href="#terminology-light-dom-vs.-shadow-dom" aria-hidden="true" class="anchor" id="terminology-light-dom-vs.-shadow-dom"></a>Terminology: light DOM vs. shadow DOM</h3>
+<h3><a href="#the--element" aria-hidden="true" class="anchor" id="the--element"></a>The <slot> element</h3>
+<h2><a href="#styling" aria-hidden="true" class="anchor" id="styling"></a>Styling</h2>
+<h3><a href="#component-defined-styles" aria-hidden="true" class="anchor" id="component-defined-styles"></a>Component-defined styles</h3>
+<h3><a href="#styling-based-on-context" aria-hidden="true" class="anchor" id="styling-based-on-context"></a>Styling based on context</h3>
+<h3><a href="#styling-distributed-nodes" aria-hidden="true" class="anchor" id="styling-distributed-nodes"></a>Styling distributed nodes</h3>
+<h3><a href="#styling-a-component-from-the-outside" aria-hidden="true" class="anchor" id="styling-a-component-from-the-outside"></a>Styling a component from the outside</h3>
+<h2><a href="#advanced-topics" aria-hidden="true" class="anchor" id="advanced-topics"></a>Advanced topics</h2>
+<h3><a href="#creating-closed-shadow-roots-should-avoid)" aria-hidden="true" class="anchor" id="creating-closed-shadow-roots-should-avoid)"></a>Creating closed shadow roots (should avoid)</h3>
+<h3><a href="#working-with-slots-in-js" aria-hidden="true" class="anchor" id="working-with-slots-in-js"></a>Working with slots in JS</h3>
+<h3><a href="#the-shadow-dom-event-model" aria-hidden="true" class="anchor" id="the-shadow-dom-event-model"></a>The Shadow DOM event model</h3>
+<h3><a href="#handling-focus" aria-hidden="true" class="anchor" id="handling-focus"></a>Handling focus</h3>
+<h2><a href="#tips--tricks" aria-hidden="true" class="anchor" id="tips--tricks"></a>Tips &amp; Tricks</h2>
+<h3><a href="#use-css-containment" aria-hidden="true" class="anchor" id="use-css-containment"></a>Use CSS containment</h3>
+<h3><a href="#resetting-inheritable-styles" aria-hidden="true" class="anchor" id="resetting-inheritable-styles"></a>Resetting inheritable styles</h3>
+<h3><a href="#finding-all-the-custom-elements-used-by-a-page" aria-hidden="true" class="anchor" id="finding-all-the-custom-elements-used-by-a-page"></a>Finding all the custom elements used by a page</h3>
+<h3><a href="#creating-elements-from-a-template>" aria-hidden="true" class="anchor" id="creating-elements-from-a-template>"></a>Creating elements from a <code>&lt;template&gt;</code></h3>
+<h2><a href="#history--browser-support" aria-hidden="true" class="anchor" id="history--browser-support"></a>History &amp; browser support</h2>
+<h2><a href="#conclusion" aria-hidden="true" class="anchor" id="conclusion"></a>Conclusion</h2>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/html.html'>html</a><a class='topic-tag' href='/tags/shadow dom.html'>shadow dom</a><a class='topic-tag' href='/tags/component.html'>component</a></div>
       </div>
     </div>
   </body>
