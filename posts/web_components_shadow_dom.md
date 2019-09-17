@@ -612,7 +612,7 @@ el.attachShadow({mode: 'open'}).innerHTML = `
 </script>
 ```
 
-![Resetting inheritable styles](./img/resetInheritableStyles.png "Resetting inheritable styles")
+![Resetting inheritable styles](./img/resetInheritableStyles.PNG "Resetting inheritable styles")
 
 ### Finding all the custom elements used by a page
 ```javascript
