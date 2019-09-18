@@ -681,3 +681,7 @@ if (!supportsShadowDOMV1) {
 
 ## Conclusion
 Không còn phải hack, không còn cần dùng ```<iframe>``` để CSS scoping, DOM scoping nữa.
+
+## REF
+- https://developers.google.com/web/fundamentals/web-components/shadowdom
+- https://github.com/thunguyen1012/webComponent
