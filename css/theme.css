@@ -63,6 +63,7 @@ body {
   font-size: 16px;
   font-weight: 100;
   overflow-x: hidden;
+  height: 100vh;
 }
 
 .fb_iframe_widget {
@@ -244,11 +245,12 @@ table tr:nth-last-child(1) td {
 }
 
 .container {
-  max-width: 700px;
-  height: auto;
-  min-height: calc(100% - 260px);
-  margin: 0 auto;
-  padding: 20px;
+  width: 75%;
+  height: calc(100vh - 210px);
+  margin-left: 25%;
+  padding: 1%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .main p {
@@ -625,12 +627,10 @@ header h3::before {
 header#user_top {
   position: relative;
   display: block;
-  padding-top: 20px;
-  padding-bottom: 20px;
-  border-bottom: 0px solid #f0f0f0;
+  padding: 20px 0;
   text-align: center;
   background: #fafafa;
-  border-bottom: 1px solid #f8f8f8;
+  box-sizing: border-box;
 }
 
 header#user_top h2 {
