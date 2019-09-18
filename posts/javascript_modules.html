@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Javascript Modules | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'>
+    <meta name="theme-color" content="#ffffff" />
+    <link href="../css/theme-dark.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/tomorrow-night.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Javascript Modules</h1>
+        <h2><a href="#what-are-js-modules" aria-hidden="true" class="anchor" id="what-are-js-modules"></a>What are JS modules?</h2>
+<p>JS module (ES module hay ECMAScript module). Có thể bạn từng dùng CommonJS, AMD, hay gì đó tương tự. Tất cả các hệ thống module này đều có một tính năng chung: cho phép import và export.</p>
+<p>Bây giờ javascript có chuẩn chung cho công việc này. Trong module, bạn có thể dùng <code>export</code> để export mọi thứ: <code>const, function, variable, hay declaration</code>.</p>
+<pre><code class="language-javascript">export const repeat = string =&gt; `${string} ${string}`;
+export function shout(string) {
+  return `${string.toUpperCase()}!`;
+}
+</code></pre>
+<p>Sau đó bạn dùng <code>import</code> để import module từ module khác.</p>
+<pre><code class="language-javascript">import { repeat, shout } from './lib.mjs';
+repeat('hello');
+// → 'hello hello'
+shout('Modules in action');
+// → 'MODULES IN ACTION!'
+</code></pre>
+<p>Export giá trị default từ module</p>
+<pre><code class="language-javascript">export default function(string) {
+  return `${string.toUpperCase()}!`;
+}
+</code></pre>
+<p>Và import giá trị default (có thể import thành bất kỳ tên nào)</p>
+<pre><code class="language-javascript">import shout from './lib.mjs';
+//     ^^^^^
+</code></pre>
+<p>Module có vài điểm khác biệt so với script truyền thống:</p>
+<ul>
+<li>Strict mode là mặc định trong module</li>
+<li>HTML-style comment syntax không hỗ trợ trong module</li>
+<li>Module có một lexical top-level scope. Nghĩa là <code>var foo = 42;</code> trong một module sẽ không tạo một biến toàn cục, hay có thể truy cập thông qua <code>window</code>. Trong script truyền thống thì được.</li>
+<li><code>this</code> trong module không tham chiếu đến global <code>this</code>.</li>
+<li>Từ khóa <code>import và export</code> chỉ có giá trị trong module.</li>
+</ul>
+<h2><a href="#using-js-modules-in-the-browser" aria-hidden="true" class="anchor" id="using-js-modules-in-the-browser"></a>Using JS modules in the browser</h2>
+<p>Trên web, bạn có thể chỉ định <code>&lt;script&gt;</code> như là một module bỡi thiết lập thuộc tính <code>type</code> là <code>module</code>.</p>
+<pre><code class="language-html">&lt;script type=&quot;module&quot; src=&quot;main.mjs&quot;&gt;&lt;/script&gt;
+&lt;script nomodule src=&quot;fallback.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p>Các browser hiểu <code>type=&quot;module&quot;</code> sẽ bỏ qua các script có thuộc tính <code>nomodule</code>. Điều này có nghĩa bạn có thể phục vụ một payload dạng module cho các trình duyệt hỗ trợ module, trong khi cung cấp một đường lui cho các trình duyệt không hỗ trợ. Các module mặc định là <code>defer</code>.</p>
+<h3><a href="#browser-specific-differences-between-modules-and-classic-scripts" aria-hidden="true" class="anchor" id="browser-specific-differences-between-modules-and-classic-scripts"></a>Browser-specific differences between modules and classic scripts</h3>
+<p>Module được thực thi chỉ một lần, trong khi classic script được thực thi mỗi khi bạn thêm nó vào DOM.</p>
+<pre><code class="language-html">&lt;script src=&quot;classic.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;classic.js&quot;&gt;&lt;/script&gt;
+&lt;!-- classic.js executes multiple times. --&gt;
+
+&lt;script type=&quot;module&quot; src=&quot;module.mjs&quot;&gt;&lt;/script&gt;
+&lt;script type=&quot;module&quot; src=&quot;module.mjs&quot;&gt;&lt;/script&gt;
+&lt;script type=&quot;module&quot;&gt;
+  import './module.mjs';
+&lt;/script&gt;
+&lt;!-- module.mjs executes only once. --&gt;
+</code></pre>
+<p>Module script và những phụ thuộc của chúng được fetched với CORS. Điều này có nghĩa mọi cross-origin module script phải được load với header phù hợp, như <code>Access-Control-Allow-Origin: *</code>. Điều này không có với classic script.</p>
+<p>Thuộc tính <code>async</code> làm cho việc tải script không block HTML parser (giống <code>defer</code>) ngoại trừ việc nó sẽ thực thi script sớm nhất có thể, không đảm bảo tính thứ tự, không đợi HTML parsing để hoàn tất. Thuộc tính <code>async</code> không làm việc với inline classic script, nhưng nó chạy cho inline <code>&lt;script type=&quot;module&quot;&gt;</code>.</p>
+<h3><a href="#module-specifiers" aria-hidden="true" class="anchor" id="module-specifiers"></a>Module specifiers</h3>
+<p>Khi import module, chuỗi chỉ định vị trí của module được gọi là &quot;module specifier&quot; hay &quot;import specifier&quot;. Có một vài ràng buộc với &quot;module specifier&quot; trên trình duyệt:</p>
+<pre><code class="language-javascript">// Not supported (yet):
+import { shout } from 'jquery';
+import { shout } from 'lib.mjs';
+import { shout } from 'modules/lib.mjs';
+
+// Supported:
+import { shout } from './lib.mjs';
+import { shout } from '../lib.mjs';
+import { shout } from '/modules/lib.mjs';
+import { shout } from 'https://simple.example/modules/lib.mjs';
+</code></pre>
+<h3><a href="#modules-are-deferred-by-default" aria-hidden="true" class="anchor" id="modules-are-deferred-by-default"></a>Modules are deferred by default</h3>
+<p><img src="./img/async-defer.svg" alt="Load script ways" title="Load script ways" /></p>
+<h2><a href="#other-module-features" aria-hidden="true" class="anchor" id="other-module-features"></a>Other module features</h2>
+<h3><a href="#dynamic-import)" aria-hidden="true" class="anchor" id="dynamic-import)"></a>Dynamic import()</h3>
+<p>Đôi khi sẽ load module theo nhu cầu, để cải thiện hiệu năng load. Sử dụng dynamic <code>import()</code></p>
+<pre><code class="language-html">&lt;script type=&quot;module&quot;&gt;
+  (async () =&gt; {
+    const moduleSpecifier = './lib.mjs';
+    const { repeat, shout } = await import(moduleSpecifier);
+    repeat('hello');
+    // → 'hello hello'
+    shout('Dynamic import in action');
+    // → 'DYNAMIC IMPORT IN ACTION!'
+  })();
+&lt;/script&gt;
+</code></pre>
+<h3><a href="#importmeta" aria-hidden="true" class="anchor" id="importmeta"></a>import.meta</h3>
+<p><code>import.meta</code> cung cấp metadata của module. Giá trị này không chính thức đề cập trong ECMAScript, nó cũng chạy khác nhau trên browser, Nodejs.
+Ví dụ: <code>import.meta</code> trên web. Mặc định, image được load tương đối với URL hiện tại trong HTML document. <code>import.meta.url</code> cho phép load một image tương đối với module hiện tại.</p>
+<pre><code class="language-javascript">function loadThumbnail(relativePath) {
+  const url = new URL(relativePath, import.meta.url);
+  const image = new Image();
+  image.src = url;
+  return image;
+}
+
+const thumbnail = loadThumbnail('../img/thumbnail.png');
+container.append(thumbnail);
+</code></pre>
+<h2><a href="#performance-recommendations" aria-hidden="true" class="anchor" id="performance-recommendations"></a>Performance recommendations</h2>
+<h3><a href="#keep-bundling" aria-hidden="true" class="anchor" id="keep-bundling"></a>Keep bundling</h3>
+<p>Với module, có thể phát triển web mà không cần các bundler như webpack, rollup,... Nó hợp lý để dùng trực tiếp native JS module trong các ngữ cảnh sau:</p>
+<ul>
+<li>Trong quá trình phát triển ở local</li>
+<li>Trong production cho các ứng dụng nhỏ, ít hơn 100 module và 1 cây phục thuộc cạn (ví dụ: sâu tối đa 5)</li>
+</ul>
+<p>Tuy nhiên bundle vẫn tốt hơn không bundle: Loại bỏ code không dùng, minifying code, code splitting (phân tách các bundle và defer loading của non-First-Meaningful-Paint critial script)</p>
+<h4><a href="#trade-offs-of-bundling-vs-shipping-unbundled-modules" aria-hidden="true" class="anchor" id="trade-offs-of-bundling-vs-shipping-unbundled-modules"></a>Trade-offs of bundling vs. shipping unbundled modules</h4>
+<p>Tải unbundled modules có thể giảm hiệu năng load khởi tạo (cold cache), nhưng có thể cải thiện hiệu năng load cho các lần truy cập sau (warm cache) khi so với tải một single bundle không có code splitting.</p>
+<h3><a href="#use-fine-grained-modules" aria-hidden="true" class="anchor" id="use-fine-grained-modules"></a>Use fine-grained modules</h3>
+<p>Tập trung vào viết code sử dụng các module nhỏ, mịn: có vài export trong module tốt hơn là một export mà chứa rất nhiều thứ trong đó và nếu không liên quan với nhau thì tách file ra - đừng tải về cái gì không cần dùng.</p>
+<h3><a href="#preload-modules" aria-hidden="true" class="anchor" id="preload-modules"></a>Preload modules</h3>
+<p>Có thể tối ưu thêm một bước nữa trong việc load module bỡi dùng <code>&lt;link rel=&quot;modulepreload&quot;&gt;</code>. Browser có thể load trước và thậm chí parse trước, compile module và những thứ phụ thuộc trước.</p>
+<pre><code class="language-html">&lt;link rel=&quot;modulepreload&quot; href=&quot;lib.mjs&quot; /&gt;
+&lt;link rel=&quot;modulepreload&quot; href=&quot;main.mjs&quot; /&gt;
+&lt;script type=&quot;module&quot; src=&quot;main.mjs&quot;&gt;&lt;/script&gt;
+&lt;script nomodule src=&quot;fallback.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p>Điều này quan trọng với các cây dependency lớn. Không có <code>rel=&quot;modulepreload&quot;</code>, trình duyệt cần thực hiện nhiều HTTP request để xây dựng đầy đủ dependency tree. Tuy nhiên, nếu bạn khai báo đầy đủ danh sách các dependency module script với <code>rel=&quot;modulepreload&quot;</code>, trình duyệt không phải liên tục tìm những phụ thuộc này.</p>
+<h3><a href="#use-http2" aria-hidden="true" class="anchor" id="use-http2"></a>Use HTTP/2</h3>
+<p>Nên cố gắng dùng HTTP/2 khi có thể để cải thiện hiệu năng. Với HTTP/2 multiplexing (ghép kênh), các request và response có thể được kích hoạt cùng lúc, cái này hữu ích cho việc load các module tree.</p>
+<h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>REF</h2>
+<ul>
+<li><a href="https://v8.dev/features/modules">https://v8.dev/features/modules</a></li>
+</ul>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/javascript.html'>javascript</a><a class='topic-tag' href='/tags/module.html'>module</a></div>
+      </div>
+    </div>
+  </body>
+</html>
