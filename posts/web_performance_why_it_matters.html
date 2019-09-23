@@ -38,7 +38,73 @@
     <div class="container">
       <div class="main">
         <h1>Why Performance Matters</h1>
-        <h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>REF</h2>
+        <p>Đây là bài đầu tiên trong chuỗi bài ngâm cứu về hiệu năng ứng dụng web</p>
+<ul>
+<li><strong><a href="https://thunguyen1012.github.io/posts/web_performance_why_it_matters.html">Why Performance Matters</a></strong></li>
+<li><a href="https://thunguyen1012.github.io/posts/web_performance_rail.html">Measure Performance with the RAIL Model</a></li>
+<li><a href="https://thunguyen1012.github.io/posts/web_performance_loading_performance.html">Loading Performance</a></li>
+<li><a href="https://thunguyen1012.github.io/posts/web_performance_rendering_performance.html">Rendering Performance</a></li>
+</ul>
+<h2><a href="#performance" aria-hidden="true" class="anchor" id="performance"></a>Performance</h2>
+<p>Hiệu năng là vấn đề phổ biến của ứng dung web. Site có nhiều tính năng hơn, phải đáp ứng với dãy các điều kiện mạng, thiết bị khác nhau.
+Các vấn đề hiệu năng rất rộng, từ chậm xíu cho đến không truy cập được hay không phản hồi.</p>
+<p>Người dùng thường sẽ không quay lại site đã cung cấp hiệu năng tệ: quá chậm để hiện nội dung, tương tác không mịn, tốn quá nhiều tài nguyên mạng. Điều này ảnh hưởng đến mong muốn người dùng tương tác với site: không bán được sản phẩm, không xem bài viết,..</p>
+<h2><a href="#where-to-go-from-here" aria-hidden="true" class="anchor" id="where-to-go-from-here"></a>Where to go from here</h2>
+<p>Một vài điểm bạn cần chú ý khi nói về hiệu năng.</p>
+<h3><a href="#mind-what-resources-you-send" aria-hidden="true" class="anchor" id="mind-what-resources-you-send"></a>Mind what resources you send</h3>
+<p>Kiểm tra xem bạn gởi gì đến người dùng.</p>
+<ul>
+<li>
+<p>Có đáng để sử dụng những thư viện UI lớn để xây dựng website của bạn? CSS is a render blocking resource, với lượng lớn CSS có thể làm giảm quá trình render đáng kể. Loại bỏ những cái không cần thiết khi có thể.</p>
+</li>
+<li>
+<p>Có đáng để sử dụng những thư viện JS lớn? Nếu có thể nên tận dụng browser APIs (Ví dụ: <code>querySelector, addEventListener,...</code>)</p>
+</li>
+<li>
+<p>Không phải web nào cũng nên là SPA. SPA cần dùng nhiều javascript: phải được tải về, parsed, compiled, và thực thi. Với các site tin tức, blog nên là multipage truyền thống và được tối ưu tốt.</p>
+</li>
+</ul>
+<h3><a href="#mind-how-you-send-resources" aria-hidden="true" class="anchor" id="mind-how-you-send-resources"></a>Mind how you send resources</h3>
+<p>Truyền tải hiệu quả là yếu tố sống còn để xây dựng trải nghiệm:</p>
+<ul>
+<li>
+<p>Sử dụng HTTP/2. Giải quyết những vấn đề hiệu năng của HTTP/1.1 như hạn chế request đồng thời và không nén header.</p>
+</li>
+<li>
+<p>Tải sớm các tài nguyên. <code>rel=preload</code> cho phép tải sớm các tài nguyên quan trọng trước. Điều này có thể tác động tích cực đến page rendering, và giảm Time to Interactive. <code>rel=preconnect</code> dùng để hoãn mở các connection mới cho các tài nguyên được host trên các third party domain.</p>
+</li>
+<li>
+<p>Các site hiện đại dùng rất nhiều JS và CSS. Từng thịnh hành việc bundle các style và JS vào các bundle trong môi trường HTTP/1. Thực hiện điều này là để giảm số lượng request. Điều này không còn là vấn đề với HTTP/2, hỗ trợ các request đồng thời. Cân nhắc phân tách tài nguyên thành nhiều bundle nhỏ (đủ dùng cho trang hiện tại).</p>
+</li>
+</ul>
+<h3><a href="#mind-how-much-data-you-send" aria-hidden="true" class="anchor" id="mind-how-much-data-you-send"></a>Mind how much data you send</h3>
+<ul>
+<li>
+<p>Minify text assets: loại bỏ những khoảng trắng không cần thiết, các comment, và những tài nguyên dạng text khác. Uglification in JS để rút ngắn tên biến và tên phương thức. SVGO cho SVG.</p>
+</li>
+<li>
+<p>Cấu hình server để nén tài nguyên. GZIP, Brotli.</p>
+</li>
+<li>
+<p>Tối ưu image để đảm bảo dùng ít dữ liệu hình khi có thể.</p>
+</li>
+<li>
+<p>Dùng định dạng image khác: WebP (ít data hơn JPEG, PNG trong khi vẫn duy trì chất lượng hiển thị cao), JPEG XR</p>
+</li>
+<li>
+<p>Deliver images responsively. Dùng thuộc tính <code>srcset</code> trong thẻ <code>&lt;img&gt;</code> để chỉ định mảng các image để cho trình duyệt chọn khi thể hiện trên các kích thước khác nhau. Có thể dùng <code>&lt;picture&gt;</code> để giúp trình duyệt chọn định dạng hình tối ưu nhất (ví dụ: WebP thay vì JPEG hay PNG), hay các đối xử khác nhau cho hình với các kích thước màn hình khác nhau.</p>
+</li>
+<li>
+<p>Dùng video thay cho GIF. Với cùng chất lượng, video thường chỉ nặng 80% so với GIF.</p>
+</li>
+<li>
+<p>Client hint: hướng dẫn trình duyệt load resource dựa trên điều kiện mạng và thiết bị. Các thông tin <code>DPR, Width, và Viewport-Width</code> trên header có thể giúp bạn cung cấp hình ảnh tốt nhất cho thiết bị và lượng markup phù hợp. <code>Save-Data</code> có thể giúp deilver ứng dụng nhẹ ký hơn.</p>
+</li>
+<li>
+<p><code>NetworkInformation</code> API cung cấp thông tin mạng của người dùng.</p>
+</li>
+</ul>
+<h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>REF</h2>
 <ul>
 <li><a href="https://developers.google.com/web/fundamentals/performance/why-performance-matters/">https://developers.google.com/web/fundamentals/performance/why-performance-matters/</a></li>
 </ul>
