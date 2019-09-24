@@ -115,7 +115,9 @@ fn generate_meta(post: &Metadata) -> String {
         "" => &default_img[..],
         _  => &post.image
     };
-    format!("<meta property='og:image' content='{}'>", img)
+    format!("{}{}",
+     format!("<meta property='og:image' content='{}'>", img),
+     format!("<meta name='description' content='{}'>", &post.description))
 }
 
 fn apply_template(template: &str, post: &Metadata, tag_text: &str, related_posts: Option<&Shared>) -> String {
