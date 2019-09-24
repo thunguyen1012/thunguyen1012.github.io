@@ -3,8 +3,8 @@ module.exports = function(grunt) {
     cssmin: {
       dist: {
         files: [
-          { src: 'css/theme.css', dest: 'css/theme.css' },
-          { src: 'css/theme-dark.css', dest: 'css/theme-dark.css' },
+          { src: 'css/theme.css', dest: 'css/theme.min.css' },
+          { src: 'css/theme-dark.css', dest: 'css/theme-dark.min.css' },
           {
             src: 'css/highlight/railscasts.css',
             dest: 'css/highlight/railscasts.css'
