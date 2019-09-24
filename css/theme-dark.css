@@ -1,13 +1,12 @@
 @font-face {
   font-family: 'Inconsolata';
-  font-display: auto;
+  font-display: swap;
   src: local('Inconsolata'), url(https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese) format('woff2');
 }
 
 * {
   font-family: 'Inconsolata', monospace;
 }
-
 
 .center {
   text-align: center;
