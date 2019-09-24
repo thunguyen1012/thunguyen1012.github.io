@@ -8,46 +8,6 @@
   font-family: 'Inconsolata', monospace;
 }
 
-.published {
-  display: block;
-  padding: 10px;
-  clear: both;
-  text-align: right;
-  font-size: 0.9em;
-}
-
-.subscribe {
-  padding: 3px 8px;
-  border: 1px solid #333;
-  color: #333;
-  text-transform: uppercase;
-  display: inline-block;
-  clear: both;
-  border-radius: 5px;
-  text-decoration: none !important;
-}
-
-.subscribe:hover {
-  background: #333;
-  color: #FFF;
-}
-
-.subscribe.right {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: 14px;
-}
-
-.copyright {
-  font-size: 0.8em;
-  color: #CCC;
-}
-
-.center {
-  text-align: center;
-}
-
 @media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -66,12 +26,6 @@ body {
   height: 100vh;
 }
 
-.fb_iframe_widget {
-  margin-top: 50px;
-  border-top: 1px solid #EEE;
-  padding-top: 20px;
-}
-
 ul {
   list-style: none;
   padding-left: 24px;
@@ -81,7 +35,6 @@ ul>li:before {
   content: "- ";
   margin-left: -18px;
   display: inline;
-  float: left;
 }
 
 ul>li>ul>li:before {
@@ -99,18 +52,24 @@ ul li {
 h1 {
   font-size: 1.8em;
   line-height: 1.2em;
+  counter-reset: first;
 }
 
 h2 {
   font-size: 1.4em;
+  counter-increment: first;
+  counter-reset: second;
 }
 
 h3 {
   font-size: 1.2em;
+  counter-increment: second;
+  counter-reset: third;
 }
 
 h4 {
   font-size: 1.05em;
+  counter-increment: third;
 }
 
 h5 {
@@ -286,7 +245,6 @@ table tr:nth-last-child(1) td {
   line-height: 38px;
   display: inline-block;
   margin-left: 10px;
-  float: left;
   color: #333;
 }
 
@@ -297,28 +255,6 @@ table tr:nth-last-child(1) td {
   display: inline-block;
   background: url(../img/avatar.svg) no-repeat center center;
   background-size: contain;
-  float: left;
-}
-
-.footer {
-  text-align: center;
-  background: #FAFAFA;
-  padding: 30px;
-}
-
-.footer p,
-.footer p>* {
-  font-size: 12px;
-  color: #BBB;
-}
-
-.footer p a {
-  font-weight: bold;
-}
-
-.footer .social {
-  text-align: center;
-  margin: 0 auto;
 }
 
 h1:before,
@@ -333,30 +269,12 @@ h6:before {
   content: "#";
 }
 
-h1 {
-  counter-reset: first;
-}
-
-h2 {
-  counter-increment: first;
-  counter-reset: second;
-}
-
 h2:before {
   content: counter(first) ".";
 }
 
-h3 {
-  counter-increment: second;
-  counter-reset: third;
-}
-
 h3:before {
   content: counter(first) "."counter(second) ".";
-}
-
-h4 {
-  counter-increment: third;
 }
 
 h4:before {
@@ -474,147 +392,10 @@ h4:before {
   background: #EEE;
 }
 
-.container .comments {
-  margin-top: 30px;
-}
-
 .loading {
   padding: 30px;
   background: url(../img/loading.gif) no-repeat center center;
   display: block;
-}
-
-.container .comments .login {
-  display: none;
-  padding: 10px;
-  text-align: center;
-  margin-bottom: 10px;
-  background: #FAFAFA;
-  line-height: 32px;
-}
-
-.container .comments .login button {
-  background: #3498db;
-  border: none;
-  border-radius: 3px;
-  padding: 3px 5px;
-  color: #FFF;
-  font-size: 1.0em;
-  cursor: pointer;
-}
-
-.container .comments .comment-input {
-  margin-top: 10px;
-  display: none;
-  flex-direction: row;
-}
-
-.container .comments .comment-input .avatar {
-  flex-basis: 32px;
-  width: 32px;
-  height: 32px;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.container .comments .comment-input .input {
-  flex: 1;
-  margin-left: 10px;
-  display: flex;
-  flex-direction: column;
-  height: auto;
-}
-
-.container .comments .comment-input .input textarea {
-  padding: 5px;
-  outline: none;
-  font-size: 1.0em;
-  border: 1px solid #CCC;
-  resize: none;
-  border-radius: 3px;
-  min-height: 50px;
-  max-height: 120px;
-}
-
-.container .comments .comment-input .input button {
-  display: none;
-}
-
-.container .comments .comment-input .input span {
-  flex-basis: 14px;
-  font-size: 0.8em;
-  margin-top: 5px;
-  text-align: right;
-  color: #555;
-}
-
-.container .comments .comment-input .input span kbd {
-  background: #FAFAFA;
-  padding: 3px;
-}
-
-@media only screen and (max-width: 768px) {
-  .container .comments .comment-input .input {
-    flex-direction: row;
-  }
-
-  .container .comments .comment-input .input span {
-    display: none;
-  }
-
-  .container .comments .comment-input .input textarea {
-    flex: 1;
-  }
-
-  .container .comments .comment-input .input button {
-    display: block;
-    flex-basis: 55px;
-    height: 55px;
-    border: 1px solid #FFF;
-    background: #3498db;
-    color: #FFF;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-}
-
-.container .comments .comment-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.container .comments .comment-list li {
-  display: flex;
-  flex-direction: row;
-}
-
-.container .comments .comment-list li:before {
-  display: none;
-  content: "";
-}
-
-.container .comments .comment-list li .avatar {
-  flex-basis: 32px;
-  width: 32px;
-  height: 32px;
-  border-radius: 3px;
-  overflow: hidden;
-  padding: 8px;
-}
-
-.container .comments .comment-list li .comment {
-  flex: 1;
-  margin-left: 5px;
-}
-
-.container .comments .comment-list li .comment .metadata {
-  font-size: 0.9em;
-  color: #888;
-}
-
-.container .comments .comment-list li .comment .metadata b {
-  color: #000;
 }
 
 header h2::before,
@@ -759,7 +540,8 @@ header#user_top h3 a {
 }
 
 header#user_top.small ul#user_links {
-  margin-top: 10px list-style: none;
+  margin-top: 10px;
+  list-style: none;
 }
 
 header#user_top.small figure#user_logo {
@@ -932,125 +714,6 @@ hr {
   border: none;
 }
 
-.fb-like-box {
-  width: 700px;
-  height: 175px;
-  border: none;
-  margin: 10px auto;
-  padding: 0;
-  box-sizing: border-box;
-  border-top: 1px solid #EEE;
-}
-
-.fb-like-box .fb-page {
-  display: inline-block;
-  width: 500px;
-  height: 175px;
-  box-sizing: border-box;
-  float: left;
-  margin: 0;
-  padding: 0;
-  border-top: none;
-}
-
-.fb-like-box .fb-page>span {
-  margin-top: 21px;
-}
-
-.fb-like-box .like-bait {
-  display: inline-block;
-  width: 200px;
-  height: 175px;
-  box-sizing: border-box;
-  background: url(../likebait.png) no-repeat;
-  margin: 0;
-  padding: 0;
-}
-
-book {
-  position: relative;
-  display: block;
-  clear: both;
-  padding: 0 35px !important;
-  font-family: Rekha, Georgia, serif !important;
-  font-size: 16px !important;
-  line-height: 2.2em !important;
-  text-align: justify;
-}
-
-.btn-toggle {
-  border: none;
-  background: #CCC;
-  color: #888;
-  padding: 5px 8px;
-  cursor: pointer;
-  font-size: 14px;
-  width: 50px;
-  margin-right: 0;
-  outline: none;
-}
-
-.btn-toggle.active {
-  background: #e67e22;
-  color: #FFF;
-}
-
-book:before {
-  content: '“';
-  position: absolute;
-  font-size: serif;
-  font-size: 100px;
-  color: #CCC;
-  top: 10px;
-  left: -25px;
-}
-
-book:after {
-  content: '”';
-  position: absolute;
-  font-size: serif;
-  font-size: 100px;
-  color: #CCC;
-  bottom: 10px;
-  right: -25px;
-}
-
-book * {
-  font-family: Rekha, Georgia, serif !important;
-  line-height: 2.2em !important;
-}
-
-book word {
-  position: relative;
-  text-align: center;
-  display: inline-block;
-}
-
-book word wise {
-  font-family: 'Inconsolata', monospace !important;
-  position: absolute;
-  top: -0.8em;
-  font-size: 0.7em;
-  line-height: 16px !important;
-  left: 0%;
-  width: 100%;
-  color: #888;
-  font-weight: 100;
-  font-style: normal;
-  border-bottom: 1px dashed #CCC;
-}
-
-book.off word wise {
-  display: none;
-}
-
-book right {
-  display: block;
-  width: 100%;
-  clear: both;
-  text-align: right;
-}
-
 @media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) {
   word wise {
     display: none;
@@ -1121,27 +784,6 @@ p.special word wise {
   color: #BBB;
 }
 
-.searchbox {
-  width: 700px;
-  position: absolute;
-  left: 50%;
-  bottom: -15px;
-  margin-left: -350px;
-}
-
-.searchbox form {
-  margin: 0;
-}
-
-.searchbox input[type=text] {
-  padding: 12px;
-  width: 100%;
-  font-size: 0.9em;
-  border: 1px solid #CCC;
-  background: #FFF;
-  color: #333;
-}
-
 .bigquote {
   margin: 50px;
   padding-left: 50px;
@@ -1204,12 +846,4 @@ p.special word wise {
 
 .header-top a:hover {
   color: #FFF;
-}
-
-@media only screen and (max-width: 768px) {
-
-  .header-top,
-  .searchbox {
-    display: none;
-  }
 }
