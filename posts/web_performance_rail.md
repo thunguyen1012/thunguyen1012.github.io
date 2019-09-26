@@ -1,9 +1,9 @@
 ---
 title: Measure Performance with the RAIL Model
 published: true
-date: 2019-09-23 22:00:00
+date: 2019-09-26 22:00:00
 tags: web, performance, rail
-description:
+description: RAIL là mô hình hiệu suất lấy người dụng làm trọng tâm...
 image:
 ---
 
@@ -14,14 +14,14 @@ image:
 - [Loading Performance](https://thunguyen1012.github.io/posts/web_performance_loading_performance.html)
 - [Rendering Performance](https://thunguyen1012.github.io/posts/web_performance_rendering_performance.html)
 
-RAIL là một mô hình hiệu suất lấy người dùng làm trọng tâm, nó chia nhỏ trãi nghiệm của người dùng thành các hoạt động chính. Các mục tiêu và hướng dẫn của RAIL nhằm mục đích giúp các lập trình viên và designer đảm bảo một trãi nghiệm người dùng tốt. Bỡi đặt ra một cấu trúc cho việc suy nghĩ về hiệu năng, RAIL cho phép các designer và các lập trình viên chắc chắn hướng đến công việc có tác động cao nhất trên trãi nghiệm người dùng.
+RAIL (Response, Animation, Idle, and Load) là một mô hình hiệu suất lấy người dùng làm trọng tâm, nó chia nhỏ trải nghiệm của người dùng thành các hoạt động chính. Các mục tiêu và hướng dẫn của RAIL nhằm mục đích giúp các lập trình viên và designer đảm bảo một trải nghiệm người dùng tốt. Bỡi đặt ra một cấu trúc cho việc suy nghĩ về hiệu năng, RAIL cho phép các designer và các lập trình viên chắc chắn hướng đến công việc có tác động cao nhất trên trải nghiệm người dùng.
 
 Mỗi web app có bốn khía cạnh rõ ràng trong vòng đời của nó và hiệu năng phân bổ vào từng khía cạnh theo các cách khác nhau:
 ![4 part of RAIL performance model](./img/rail.png '4 part of RAIL performance model')
 
 ## Goals and guidelines
 
-- Goal: các thang đo hiệu năng chính liên quan đến trãi nghiệm người dùng. Những thang này có tính ổn định cao.
+- Goal: các thang đo hiệu năng chính liên quan đến trải nghiệm người dùng. Những thang này có tính ổn định cao.
 - Guideline: các khuyến khích để đạt được goal. Có thể cụ thể đến các điều kiện thiết bị, mạng. Có tính thay đổi cao.
 
 ## Focus on the user
@@ -95,16 +95,40 @@ Guidelines:
   - Dragging
 
 ## Idle: maximize idle time
+
 Goal: Tối đa idle time để tăng cơ hội để trang phản hồi input người dùng trong 50ms.
 Guidelines:
+
 - Dùng idle time để hoàn tất deferred work. Như cho việc load trang ban đầu, load tối thiểu data có thể, sau đó dùng idle time để load phần còn lại.
 - Thực hiện công việc trong idle time tối đa là 50ms.
 - Nếu người dùng tương tác với trang trong quá trình idle time work thì tương tác của người dùng luôn ở độ ưu tiên cao nhất và interrupt the idle time work.
 
 ## Load: deliver content and become interactive in under 5 seconds
 
+Goals:
+
+- Tối ưu cho đẩy nhanh hiệu năng loading tương quan với khả năng của thiết bị và mạng. Lần load đầu tiên: load trang và tương tác trong 5 giây hay ít hơn trên mid-range mobile device và mạng 3G.
+- CHo những lần load tiếp theo, load trang dưới 2 giây.
+  ![Each loading metric represents a different phase of the user's perception of the loading experience](./img/speed-metrics.png 'Each loading metric represents a different phase of the user's perception of the loading experience')
+
+Guidelines:
+
+- Kiểm tra hiệu năng load của web trên các thiết bị và điều kiện mạng phổ biến.
+- Luôn nhớ rằng tốc độ thực tế thường nhỏ hơn so với lý thuyết.
+- Tập trung tối ưu the Critical Rendering Path để unblock rendering.
+- Bạn không phải load hết mọi thứ trong 5 giây.
+- Một vài yếu tố ảnh hưởng đến hiệu năng:
+  - Network speed and latency
+  - Hardware (slower CPUs, for example)
+  - Cache eviction
+  - Differences in L2/L3 caching
+  - Parsing JavaScript
 
 ## Tools for measuring RAIL
+
+- Google DevTools (Performance panel)
+- Lighthouse
+- WebPageTest (https://webpagetest.org/easy)
 
 ## REF
 

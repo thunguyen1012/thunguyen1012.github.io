@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="content-type" content="text/html;" />
     <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
-    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='RAIL là mô hình hiệu suất lấy người dụng làm trọng tâm...'>
     <meta name="theme-color" content="#ffffff" />
     <meta
       name="google-site-verification"
@@ -49,12 +49,12 @@
 <li><a href="https://thunguyen1012.github.io/posts/web_performance_loading_performance.html">Loading Performance</a></li>
 <li><a href="https://thunguyen1012.github.io/posts/web_performance_rendering_performance.html">Rendering Performance</a></li>
 </ul>
-<p>RAIL là một mô hình hiệu suất lấy người dùng làm trọng tâm, nó chia nhỏ trãi nghiệm của người dùng thành các hoạt động chính. Các mục tiêu và hướng dẫn của RAIL nhằm mục đích giúp các lập trình viên và designer đảm bảo một trãi nghiệm người dùng tốt. Bỡi đặt ra một cấu trúc cho việc suy nghĩ về hiệu năng, RAIL cho phép các designer và các lập trình viên chắc chắn hướng đến công việc có tác động cao nhất trên trãi nghiệm người dùng.</p>
+<p>RAIL (Response, Animation, Idle, and Load) là một mô hình hiệu suất lấy người dùng làm trọng tâm, nó chia nhỏ trải nghiệm của người dùng thành các hoạt động chính. Các mục tiêu và hướng dẫn của RAIL nhằm mục đích giúp các lập trình viên và designer đảm bảo một trải nghiệm người dùng tốt. Bỡi đặt ra một cấu trúc cho việc suy nghĩ về hiệu năng, RAIL cho phép các designer và các lập trình viên chắc chắn hướng đến công việc có tác động cao nhất trên trải nghiệm người dùng.</p>
 <p>Mỗi web app có bốn khía cạnh rõ ràng trong vòng đời của nó và hiệu năng phân bổ vào từng khía cạnh theo các cách khác nhau:
 <img src="./img/rail.png" alt="4 part of RAIL performance model" title="4 part of RAIL performance model" /></p>
 <h2><a href="#goals-and-guidelines" aria-hidden="true" class="anchor" id="goals-and-guidelines"></a>Goals and guidelines</h2>
 <ul>
-<li>Goal: các thang đo hiệu năng chính liên quan đến trãi nghiệm người dùng. Những thang này có tính ổn định cao.</li>
+<li>Goal: các thang đo hiệu năng chính liên quan đến trải nghiệm người dùng. Những thang này có tính ổn định cao.</li>
 <li>Guideline: các khuyến khích để đạt được goal. Có thể cụ thể đến các điều kiện thiết bị, mạng. Có tính thay đổi cao.</li>
 </ul>
 <h2><a href="#focus-on-the-user" aria-hidden="true" class="anchor" id="focus-on-the-user"></a>Focus on the user</h2>
@@ -131,7 +131,34 @@ Guidelines:</p>
 <li>Nếu người dùng tương tác với trang trong quá trình idle time work thì tương tác của người dùng luôn ở độ ưu tiên cao nhất và interrupt the idle time work.</li>
 </ul>
 <h2><a href="#load-deliver-content-and-become-interactive-in-under-5-seconds" aria-hidden="true" class="anchor" id="load-deliver-content-and-become-interactive-in-under-5-seconds"></a>Load: deliver content and become interactive in under 5 seconds</h2>
+<p>Goals:</p>
+<ul>
+<li>Tối ưu cho đẩy nhanh hiệu năng loading tương quan với khả năng của thiết bị và mạng. Lần load đầu tiên: load trang và tương tác trong 5 giây hay ít hơn trên mid-range mobile device và mạng 3G.</li>
+<li>CHo những lần load tiếp theo, load trang dưới 2 giây.
+![Each loading metric represents a different phase of the user's perception of the loading experience](./img/speed-metrics.png 'Each loading metric represents a different phase of the user's perception of the loading experience')</li>
+</ul>
+<p>Guidelines:</p>
+<ul>
+<li>Kiểm tra hiệu năng load của web trên các thiết bị và điều kiện mạng phổ biến.</li>
+<li>Luôn nhớ rằng tốc độ thực tế thường nhỏ hơn so với lý thuyết.</li>
+<li>Tập trung tối ưu the Critical Rendering Path để unblock rendering.</li>
+<li>Bạn không phải load hết mọi thứ trong 5 giây.</li>
+<li>Một vài yếu tố ảnh hưởng đến hiệu năng:
+<ul>
+<li>Network speed and latency</li>
+<li>Hardware (slower CPUs, for example)</li>
+<li>Cache eviction</li>
+<li>Differences in L2/L3 caching</li>
+<li>Parsing JavaScript</li>
+</ul>
+</li>
+</ul>
 <h2><a href="#tools-for-measuring-rail" aria-hidden="true" class="anchor" id="tools-for-measuring-rail"></a>Tools for measuring RAIL</h2>
+<ul>
+<li>Google DevTools (Performance panel)</li>
+<li>Lighthouse</li>
+<li>WebPageTest (<a href="https://webpagetest.org/easy">https://webpagetest.org/easy</a>)</li>
+</ul>
 <h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>REF</h2>
 <ul>
 <li><a href="https://developers.google.com/web/fundamentals/performance/rail">https://developers.google.com/web/fundamentals/performance/rail</a></li>
