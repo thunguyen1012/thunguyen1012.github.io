@@ -42,7 +42,156 @@
     <div class="container">
       <div class="main">
         <h1>React's Notes</h1>
-        <h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>REF</h2>
+        <h2><a href="#superprops)" aria-hidden="true" class="anchor" id="superprops)"></a><code>super(props)</code></h2>
+<p><em>Tại sao lại gọi <code>super</code>? Không có được không? Không truyền <code>props</code> có được không? Còn tham số nào khác không?</em></p>
+<pre><code class="language-javascript">class Note extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+}
+</code></pre>
+<p>Bạn không thể dùng <code>this</code> trước khi gọi <code>super()</code>
+Nếu bạn không truyền <em>props</em> trong <code>super()</code> thì bạn vẫn có thể truy cập <code>this.props</code> trong lifecycle. React luôn gán <em>props</em> cho thực thể của component sau khi khởi tạo.</p>
+<pre><code class="language-javascript">// Inside React
+const instance = new YourComponent(props);
+instance.props = props;
+</code></pre>
+<p>Vậy có cần truyền gọi dạng <code>super(props)</code> không? Cần khi bạn truy cập <code>this.props</code> trong constructor.</p>
+<p>Có còn tham số nào có thể truyền cho <code>super()</code> không? Còn, đó là <code>context</code></p>
+<h2><a href="#react-đối-xử-với-functional-component-và-class-component-như-thế-nào" aria-hidden="true" class="anchor" id="react-đối-xử-với-functional-component-và-class-component-như-thế-nào"></a>React đối xử với functional component và class component như thế nào?</h2>
+<p>Giả định chúng ta có <code>Greeting</code> component:</p>
+<ul>
+<li>Theo functional component</li>
+</ul>
+<pre><code class="language-javascript">function Greeting() {
+  return &lt;p&gt;Hello&lt;/p&gt;;
+}
+</code></pre>
+<ul>
+<li>Theo class</li>
+</ul>
+<pre><code class="language-javascript">class Greeting extends React.Component {
+  render() {
+    return &lt;p&gt;Hello&lt;/p&gt;;
+  }
+}
+</code></pre>
+<p>Và sử dụng</p>
+<pre><code class="language-javascript">// Class or function — whatever.
+&lt;Greeting /&gt;
+</code></pre>
+<p>Bên trong react sẽ là</p>
+<pre><code class="language-javascript">// For functional
+const result = Greeting(props); // &lt;p&gt;Hello&lt;/p&gt;
+
+// For class
+// Inside React
+const instance = new Greeting(props); // Greeting {}
+const result = instance.render(); // &lt;p&gt;Hello&lt;/p&gt;
+</code></pre>
+<p>Chúng ta sẽ đi qua <code>new, this, class, arrow function, prototype, __proto__, instanceOf</code> để nói về sự khác biệt này.</p>
+<h3><a href="#new" aria-hidden="true" class="anchor" id="new"></a><code>new</code></h3>
+<p>Bạn có thể dùng bất kỳ function nào theo dạng một class constructor bỡi thêm <code>new</code> trước lời gọi.</p>
+<pre><code class="language-javascript">// Just a function
+function Person(name) {
+  this.name = name;
+}
+
+var fred = new Person('Fred'); // case1 ✅ Person {name: 'Fred'}
+var george = Person('George'); // case2 🔴 Won’t work, george = undefined
+</code></pre>
+<p>Case2, <code>this</code> trỏ đến window (global) hay <code>undefined</code>. Còn case1, sẽ giống như: tạo một {} object, trỏ <code>this</code> trong hàm <code>Person</code> tới object này,..., và trả nó về. Nó cũng cung cấp <code>Person.prototype</code> đến <code>fred</code> object.</p>
+<p>Nếu bạn gọi tạo thực thể của một class mà quên <code>new</code> thì sao? Sẽ có lỗi.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>with <code>new</code></th>
+<th>without <code>new</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>class</td>
+<td>ok</td>
+<td>error</td>
+</tr>
+<tr>
+<td>function</td>
+<td>ok</td>
+<td>ok</td>
+</tr></tbody></table>
+<p>=&gt; React sẽ luôn thực thi tạo mới thực thể với <code>new</code>? Không, vì chúng ta sẽ gặp vấn đề <code>this</code> trong functional component (kể cả dạng arrow function) - <code>this</code> ở đây là không cần thiết và không trỏ đến thực thể chúng ta muốn (arrow function).</p>
+<p>Vậy không thể <code>new</code> cho arrow function. Làm sao để detect arrow function?</p>
+<pre><code class="language-javascript">(() =&gt; {}).prototype // undefined
+(function() {}).prototype // {constructor: f}
+</code></pre>
+<p>Note: chạy với babel thì kết quả không như thế.</p>
+<p>Không thể <code>new</code> cho functional component, cái trả về giá trị nguyên bản: chuỗi, số,..</p>
+<pre><code class="language-javascript">function Greeting() {
+  return 'Hello';
+}
+
+Greeting(); // ✅ 'Hello'
+new Greeting(); // 😳 Greeting {}
+</code></pre>
+<p>Note: một trick ở đây, dùng <code>new</code> để thay đổi giá trị trả về của 1 hàm khi được gọi với <code>new</code>.</p>
+<pre><code class="language-javascript">// Created lazily
+var zeroVector = null;
+
+function Vector(x, y) {
+  if (x === 0 &amp;&amp; y === 0) {
+    if (zeroVector !== null) {
+      // Reuse the same instance
+      return zeroVector;
+    }
+    zeroVector = this;
+  }
+  this.x = x;
+  this.y = y;
+}
+
+var a = new Vector(1, 1);
+var b = new Vector(0, 0);
+var c = new Vector(0, 0); // 😲 b === c
+</code></pre>
+<p>Luyên thuyên quá, câu hỏi vẫn tồn tại, nhắc lại: Làm sao React biết dùng <code>new</code> cho class component và không dùng <code>new</code> cho functional component (kể cả đã được parsed bỡi babel)?</p>
+<p>Dựa vào <code>prorotype</code> chain.</p>
+<pre><code class="language-javascript">class Greeting extends React.Component {
+  render() {
+    return &lt;p&gt;Hello&lt;/p&gt;;
+  }
+}
+
+let c = new Greeting();
+console.log(c.__proto__); // Greeting.prototype
+console.log(c.__proto__.__proto__); // React.Component.prototype
+console.log(c.__proto__.__proto__.__proto__); // Object.prototype
+
+c.render();      // Found on c.__proto__ (Greeting.prototype)
+c.setState();    // Found on c.__proto__.__proto__ (React.Component.prototype)
+c.toString();    // Found on c.__proto__.__proto__.__proto__ (Object.prototype)
+
+console.log(Greeting.prototype instanceof React.Component);
+// greeting
+//   .__proto__ → Greeting.prototype (🕵️‍ We start here)
+//     .__proto__ → React.Component.prototype (✅ Found it!)
+//       .__proto__ → Object.prototype
+</code></pre>
+<p>Nói vậy chứ sẽ chết khi có nhiều phiên bản React trên trang - instant được tạo bỡi <code>React.Component</code> khác với cái nó đi kiểm tra. React dùng cách khác: dùng flag</p>
+<pre><code class="language-javascript">// Inside React
+class Component {}
+Component.prototype.isReactComponent = {};
+
+// We can check it like this
+class Greeting extends Component {}
+console.log(Greeting.prototype.isReactComponent); // ✅ Yes
+</code></pre>
+<p>Câu hỏi đặt ra: tại sao lại đưa vào <code>prototype</code>? Vì có thể mất khi mình định nghĩa class và không muốn copy các thuộc tính tĩnh.</p>
+<p>Đôi khi code chạy ngon, đơn giản thì tốt hơn là cố code theo bài bản.</p>
+<h2><a href="#how-does-setstate-know-what-to-do" aria-hidden="true" class="anchor" id="how-does-setstate-know-what-to-do"></a>How Does setState Know What to Do?</h2>
+<h2><a href="#why-do-react-hooks-rely-on-call-order" aria-hidden="true" class="anchor" id="why-do-react-hooks-rely-on-call-order"></a>Why Do React Hooks Rely on Call Order?</h2>
+<h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>REF</h2>
 <ul>
 <li><a href="https://overreacted.io">https://overreacted.io</a></li>
 </ul>

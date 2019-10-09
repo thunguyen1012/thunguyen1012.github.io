@@ -2,6 +2,7 @@
   "devDependencies": {
     "grunt": "^1.0.4",
     "grunt-contrib-cssmin": "^3.0.0",
+    "grunt-shell": "^3.0.1",
     "grunt-uncss": "^0.9.0"
   }
 }
