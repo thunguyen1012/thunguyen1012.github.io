@@ -180,6 +180,8 @@ Câu hỏi đặt ra: tại sao lại đưa vào ```prototype```? Vì có thể 
 
 ## Why Do React Hooks Rely on Call Order?
 
+## Why Isn’t X a Hook?
+
 ## REF
 
 - https://overreacted.io
