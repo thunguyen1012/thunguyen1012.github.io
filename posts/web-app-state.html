@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web application state | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='State of web application and using them'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function() {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga('create', 'UA-120719369-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web application state</h1>
+        <h2><a href="#cookie" aria-hidden="true" class="anchor" id="cookie"></a>Cookie</h2>
+<p>Lưu trữ thông tin trong trình duyệt của người dùng. Trình duyệt đính kèm cookie trong mỗi request. Vì thế thông tin lưu trong cookie nên tối thiểu. Phần lớn kích thước cookie là 4KB và có số lượng hạn chế cho mỗi domain. Cookie có thời hạn sử dụng.</p>
+<p>Thường lưu thông tin cơ bản, không quan trọng như theme name.</p>
+<p>Với ASP.NET CORE và C#.</p>
+<ul>
+<li>Get: <code>Request.Cookies</code></li>
+<li>Set: <code>Response.Cookies</code></li>
+</ul>
+<h2><a href="#query-string" aria-hidden="true" class="anchor" id="query-string"></a>Query string</h2>
+<p>Có giới hạn kích thức query string và tùy thuộc trình duyệt</p>
+<h2><a href="#hidden-fields" aria-hidden="true" class="anchor" id="hidden-fields"></a>Hidden Fields</h2>
+<h2><a href="#tempdata" aria-hidden="true" class="anchor" id="tempdata"></a>TempData</h2>
+<p>TempData được implemented giựa trên cookie hay session state.
+Truyền data qua các actions, views.</p>
+<p><code>TempData.Keep() hay TempData.Peek()</code></p>
+<h2><a href="#viewdataviewbag" aria-hidden="true" class="anchor" id="viewdataviewbag"></a>ViewData/ViewBag</h2>
+<p>Truyền data từ action lên view.</p>
+<h2><a href="#session-state" aria-hidden="true" class="anchor" id="session-state"></a>Session state</h2>
+<p>Trong ASP.NET Core, session state dùng để lưu trữ dữ liệu user trong khi sử dụng ứng dụng. Nó cùng một store được quản lý bỡi application để persist data qua các request từ một client. Thường cache thông tin quan trọng trong session để tối ưu hiệu năng.</p>
+<p>ASP.NET Core quản lý session state vỡi cung cấp một cookie cho client, cookie này lưu một session ID.</p>
+<p>Vài lưu ý khi làm việc với session:</p>
+<ul>
+<li>Một session cookie là cụ thể cho browser session</li>
+<li>Khi một browser session kết thúc, nó xóa session cookie.</li>
+<li>Khi ứng dụng nhận một cookie cho một session đã hết hạn, nó tạo một session mới và dùng lại session cookie đó.</li>
+<li>Ứng dụng không duy trì các session rỗng.</li>
+<li>Ứng dụng duy trì một session trong một quảng thời gian sau lần request cuối. Mặc định là 20 phút.</li>
+<li>Session state là lý tưởng để lưu thông tin người dùng cụ thể cho một phiên, nhưng không yêu cầu lưu trữ lâu dài - dùng giữa các phiên.</li>
+<li>Không có cơ chế mặc định để thông báo ứng dụng khi client đóng trình duyệt hay xóa session cookie, hay nó hết hạn.</li>
+</ul>
+<p>Cấu hình session state trong <code>ConfigureServices()</code>, enable session state trong <code>Configure()</code> trong <code>Startup.cs</code>. Thứ tự cấu hình là quan trọng: <code>UseSession()</code> trước <code>UseMVC()</code>.</p>
+<p><code>HttpContext.Session</code></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/web.html'>web</a><a class='topic-tag' href='/tags/cookie.html'>cookie</a><a class='topic-tag' href='/tags/session.html'>session</a></div>
+      </div>
+    </div>
+  </body>
+</html>
