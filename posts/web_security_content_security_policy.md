@@ -1,5 +1,5 @@
 ---
-title: Content Security Policy
+title: ==> Content Security Policy
 published: true
 date: 2019-09-18 22:00:00
 tags: web, security
