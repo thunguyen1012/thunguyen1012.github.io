@@ -31,3 +31,7 @@ Serving HTTP on 0.0.0.0 port 8000 ...
 127.0.0.1 - - [11/Oct/2019 09:01:23] "GET /models/face_recognition_model-shard2 HTTP/1.1" 200 -
 127.0.0.1 - - [11/Oct/2019 09:01:23] "GET /models/face_expression_model-shard1 HTTP/1.1" 200 -
 ```
+
+## Run a batch file
+Grant permission: chmod u+x <scriptname>
+Run: ./<scriptname>
