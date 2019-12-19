@@ -33,5 +33,5 @@ Serving HTTP on 0.0.0.0 port 8000 ...
 ```
 
 ## Run a batch file
-Grant permission: chmod u+x <scriptname>
+Grant permission: chmod u+x <scriptname>  
 Run: ./<scriptname>
