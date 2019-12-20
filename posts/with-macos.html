@@ -65,6 +65,21 @@ Serving HTTP on 0.0.0.0 port 8000 ...
 <h2><a href="#run-a-batch-file" aria-hidden="true" class="anchor" id="run-a-batch-file"></a>Run a batch file</h2>
 <p>Grant permission: chmod u+x <scriptname><br />
 Run: ./<scriptname></p>
+<h2><a href="#visual-studio-code" aria-hidden="true" class="anchor" id="visual-studio-code"></a>Visual Studio Code</h2>
+<p>Invoke code from terminal</p>
+<ol>
+<li>Move Visual Studio Code into the Applications folder</li>
+<li>Update PATH</li>
+</ol>
+<ul>
+<li>Add this to your ~/.bash_profile</li>
+</ul>
+<pre><code class="language-batch">export PATH=&quot;$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin&quot;
+</code></pre>
+<ul>
+<li>ZShell<br />
+Add <code>alias code=&quot;/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code&quot;</code> to <code>~/.zshrc</code> file.</li>
+</ul>
  <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/mac.html'>mac</a><a class='topic-tag' href='/tags/command.html'>command</a></div>
       </div>
     </div>

@@ -35,3 +35,14 @@ Serving HTTP on 0.0.0.0 port 8000 ...
 ## Run a batch file
 Grant permission: chmod u+x <scriptname>  
 Run: ./<scriptname>
+
+## Visual Studio Code
+Invoke code from terminal
+1. Move Visual Studio Code into the Applications folder
+2. Update PATH
+-  Add this to your ~/.bash_profile
+```batch
+export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+```
+- ZShell  
+Add ```alias code="/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code"``` to ```~/.zshrc``` file.
