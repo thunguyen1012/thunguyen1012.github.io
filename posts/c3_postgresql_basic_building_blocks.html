@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>==>PostgreSQL Basic Building Blocks | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Những thành phần cơ bản khi làm việc với PostgreSQL'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function() {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga('create', 'UA-120719369-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>==>PostgreSQL Basic Building Blocks</h1>
+        <ol>
+<li>Database coding</li>
+</ol>
+<p>1.1. Database naming conventions</p>
+<p>Chỉ là sở thích trong series này</p>
+<ul>
+<li>Tên của table, view không dùng suffix</li>
+<li>Tên là unique trong database hay trong schemas</li>
+<li>Không viết tắt</li>
+<li>Không ở dạng số nhiều</li>
+<li>Dùng _ để phân tách các từ trong tên có nhiều từ</li>
+<li>Khoá chính &lt;tên table&gt;_ID</li>
+<li>Khoá ngoại cùng tên với tên khoá chính ở bảng tham chiếu</li>
+</ul>
+<p>1.2. PostgreSQL identifiers<br />
+Theo ANSI SQL, không quan tâm in hoa - thường. Tuân theo các ràng buộc sau:</p>
+<ul>
+<li>Bắt đầu với _ hay ký tự</li>
+<li>Có thể dùng ký tự, ký số, _, và $</li>
+<li>Độ dài trong khoảng 1-63</li>
+</ul>
+<p>1.3. Document<br />
+Dùng <code>--</code> hay <code>/* */</code>. PostgreSQL cho phép lưu database object description thông qua <code>COMMENT ON</code>.</p>
+<p>1.4. Version control system<br />
+Nên có một installation script và thực thi nó trong một transaction.<br />
+Tạo rollback script để nhanh chóng quay về schema kề trước ở application level.</p>
+<p>Thường duy trì DDL script, DML script, và DCL script riêng lẻ. Lưu DDL script cho các thành phần không thuộc physical schema như view, function ở file riêng.</p>
+<p>1.5. Database-migration tools<br />
+Có vài tools: Liquibase, Sqitch, <b>Flyway</b>.</p>
+<ol start="2">
+<li>PostgreSQL object hierarchy<br />
+<img src="./c3_postgresql_basic_building_blocks/postgresql_object_hierarchy.png" alt="postgresql object hierarchy" title="postgresql object hierarchy" /></li>
+</ol>
+<p>2.1. Template databases<br />
+Mặc định một database khi được tạo ra, nó là clone của <code>template1</code> database.<br />
+Template này chứa tập các table, view, và function dùng để model mối quan hệ giữa các user-defined database object. Những table, view, và function này là một phần của system catalog schema <code>pg_catalog</code>.<br />
+Ngoài <code>template1</code>, hệ thống còn có <code>template0</code>. Đây là bản dự phòng của <code>template1</code>, và nó không có chứa thông tin encoding-specific và locale-specific.</p>
+<p>Mình có thể tạo mới database bỡi dùng một database nào có sẵn.</p>
+<p>2.1. User database<br />
+Một client kết nối tới PostgreSQL chỉ có thể truy cập tới data trong một database (Cái được chỉ định trong connection string). Có thể vượt qua cái này bỡi dùng <b>PostgreSQL foreign data wrapper</b> hay DB link extensions.</p>
+<p>Mỗi database có một owner và một tập các permissions liên quan để quản lý các actions cho một role cụ thể. Các quyền trên PostgreSQL object, bao gồm databases, views, tables, và sequences, được thể hiện trong <code>qsql</code> client qua lệnh: <code>&lt;user&gt;=&lt;privileges&gt;/granted by</code> Nếu phần user của privileges không thấy, có nghĩa rằng những privilege này được apply tới <code>PUBLIC</code> role.</p>
+<p><img src="./c3_postgresql_basic_building_blocks/list_databases.png" alt="list databases" title="list databases" /></p>
+<p>Database-access privileges:</p>
+<ul>
+<li>CREATE (-C): quyền create access cho phép role cụ thể tạo mới schemas trong database.</li>
+<li>CONNECT (-c): Khi một role cố gắng connect tới một database, các quyền connect được kiểm tra.</li>
+<li>TEMPORARY (-T): quyền temporary access cho phép role cụ thể tạo các table tạm. (Table tạm giống table bình thường, nhưng ko có lưu vật lý và sẽ bị huỷ sau khi kết thúc user session.)</li>
+</ul>
+<p>Ngoài các thuộc tính trên hình, PostgreSQL còn có các thuộc tính khác:</p>
+<ul>
+<li>maintenance: thuộc tính <code>datfrozenxid</code> được dùng bỡi các thao tác autovaccum.</li>
+<li>storage management: thuộc tính <code>dattablespace</code> được dùng để chỉ định tablespace nào chứa database.</li>
+<li>concurrency: thuộc tính <code>datconnlimit</code> được dùng để chỉ định số lượng kết nối đồng thời (-1 không hạn chế)</li>
+<li>protection: thuộc tính <code>datallowconn</code> chặn kết nối tới database. Được dùng chính để ngăn thay đổi trên <code>template0</code></li>
+</ul>
+<p><code>\c</code> tạo một kết nối mới tới database và đóng kết nối hiện tại.<br />
+Các table <code>pg_catalog</code> chứa các thông tin của database.
+<img src="./c3_postgresql_basic_building_blocks/list_dbs_details.png" alt="list databases in details" title="list databases in details" /></p>
+<p>Page 81</p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/postgresql.html'>postgresql</a></div>
+      </div>
+    </div>
+  </body>
+</html>
