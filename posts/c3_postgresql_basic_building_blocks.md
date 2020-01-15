@@ -27,7 +27,7 @@ Theo ANSI SQL, không quan tâm in hoa - thường. Tuân theo các ràng buộc
 - Độ dài trong khoảng 1-63
 
 1.3. Document  
-Dùng ```--``` hay ```/* */```. PostgreSQL cho phép lưu database object description thông qua ```COMMENT ON```.
+Dùng `--` hay `/* */`. PostgreSQL cho phép lưu database object description thông qua `COMMENT ON`.
 
 1.4. Version control system  
 Nên có một installation script và thực thi nó trong một transaction.  
