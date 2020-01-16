@@ -100,7 +100,197 @@ Một client kết nối tới PostgreSQL chỉ có thể truy cập tới data 
 <p><code>\c</code> tạo một kết nối mới tới database và đóng kết nối hiện tại.<br />
 Các table <code>pg_catalog</code> chứa các thông tin của database.
 <img src="./c3_postgresql_basic_building_blocks/list_dbs_details.png" alt="list databases in details" title="list databases in details" /></p>
-<p>Page 81</p>
+<p>2.2. Roles<br />
+Roles thuộc PostgreSQL server cluster và không thuộc một database cụ thể nào. Một role có thể là một database user hay một database group.</p>
+<p>Role có các thuộc tính:</p>
+<ul>
+<li><code>SUPERUSER</code>: một super role có đầy đủ quyền, ngoại trừ <code>LOGIN</code></li>
+<li><code>LOGIN</code>: Một role với thuộc tính <code>LOGIN</code> có thể được dùng bỡi một client để kết nối tới một database.</li>
+<li><code>CREATEDB</code>: một role có thuộc tính <code>create database</code> có thể tạo các database.</li>
+<li><code>CREATEROLE</code>: một role với thuộc tính này có thể tạo, xoá, và chỉnh sữa các role.</li>
+<li><code>REPLICATION</code>: role có thuộc tính này có thể được dùng để stream replication.</li>
+<li><code>PASSWORD</code>: role có thuộc tính <code>PASSWORD</code> có thể được dùng với phương thức xác thực <code>md5</code> và <code>scram-sha-256</code>.</li>
+<li><code>CONNECTION LIMIT</code>: chỉ định số kết nối đồng thời mà người dùng có thể tạo.</li>
+<li><code>INHERIT</code>: Nếu chỉ định, role sẽ kế thừa các quyền đã gắn với các role mà nó là một thành viên. Nếu không chỉ định, <code>INHERIT</code> là mặc định.</li>
+<li><code>BYPASSRLS</code>: Nếu chỉ định, role này có thể vượt qua <b>row-level security (RLS)</b></li>
+</ul>
+<p>Note: khi cài đặt PostgreSQL, postgres superuser role được tạo.<br />
+<code>CREATE USER</code> tương đương với <code>CREATEROLE</code> + <code>LOGIN</code> option<br />
+<code>CREATE GROUP</code> tương đương với <code>CREATEROLE</code> + <code>NOLOGIN</code> option.<br />
+Một role có thể là một thành viên của một role khác. <code>GRANT</code>, <code>REVOKE</code>.</p>
+<p><img src="./c3_postgresql_basic_building_blocks/list_roles.png" alt="list roles in details" title="list roles in details" /></p>
+<p>2.3. Tablespaces<br />
+Một <b>tablespace</b> là một defined storage location cho một database hay các database object. <code>CREATE TABLESPACE</code>
+<img src="./c3_postgresql_basic_building_blocks/list_tablespaces.png" alt="list tablespaces" title="list tablespaces" /></p>
+<p>2.4. Template procedural languages<br />
+Được dùng để đăng ký một ngôn ngữ mới. Có hai cách để tạo một ngôn ngữ lập trình mới.</p>
+<ul>
+<li>bỡi chỉ định tên của ngôn ngữ. PostgreSQL sử dụng programming language template và xác định các tham số.</li>
+<li>chỉ định tên của ngôn ngữ cũng như các tham số.
+<code>CREATE LANGUAGE</code>, <code>CREATE EXTENSION</code></li>
+</ul>
+<p><img src="./c3_postgresql_basic_building_blocks/list_language_templates.png" alt="list language templates" title="list language templates" /></p>
+<p>2.5. Settings<br />
+Cấu hình: replication, write-ahead logs, resource comsumption, query planning, logging, authentication, statistic collection, garbage collection, client connections, lock management, error handling, và debug options.
+<code>select * from pg_settings</code></p>
+<p>Các giá trị của <code>context</code> column:</p>
+<ul>
+<li>internal: Chỉ có thể thay đổi qua việc thay đổi source code, compile, và dựng lại database cluster.</li>
+<li>postmaster: khởi động lại server để sử dụng giá trị mới. Thường những thiết lập này được lưu trong <code>postgresql.conf</code> file.</li>
+<li>sighup: có thể thay đổi trong <code>postgresql.conf</code> file và chạy <code>SIGHUP</code> trên PostgreSQL server process.</li>
+<li>backend: có thể thiết lập cho một session cụ thể.</li>
+<li>superuser: chỉ superuser có thể thay đổi, có thể thay đổi trong <code>postgresql.conf</code> file hay qua lệnh <code>SET</code></li>
+<li>user: giống superuser, dùng để thay đổi các giá trị trong session-local.</li>
+</ul>
+<p>Những thiết lập trong <code>postgresql.conf.auto</code> file sẽ override những thiết lập trong <code>postgresql.conf</code> file</p>
+<p><code>SET</code>, <code>SHOW</code>
+<code>pg_reload_conf()</code> tương đương với <code>SIGHUP</code>. Ưu tiên dùng <code>pg_reload_conf()</code> hay thông qua init script vì nó an toàn hơn <code>SIGNUP</code>.<br />
+<code>$qsql -U postgres -c &quot;SELECT pg_reload_conf()&quot;</code></p>
+<p><img src="./c3_postgresql_basic_building_blocks/components_in_chart.png" alt="components in chart" title="components in chart" /></p>
+<ol start="3">
+<li>PostgreSQL database components<br />
+Một PostgreSQL database được xem như là một container cho các database schema (database chứa ít nhất một schema). Mặc định có <code>public</code> schema trong các template database.</li>
+</ol>
+<p>3.1. Schemas
+Dùng để cô lập các object name. Schema chứa tất cả các database-named object: tables, views, functions, aggregates, indexes, sequences, triggers, data types, domains, và ranges.</p>
+<p>Note: trong môi trường nhiều user, nhiều database, nên huỷ khả năng tạo object trong public schema: <code>REVOKE CREATE ON SCHEMA public FROM PUBLIC;</code></p>
+<p><code>search_path</code> là tổng hợp các schema để server dùng khi tìm object. Khi tìm object, server tìm theo qualified database-object name.
+<img src="./c3_postgresql_basic_building_blocks/search_path.png" alt="search_path" title="search_path" /></p>
+<p>3.1.1. Schema usages<br />
+Schema được dùng bỡi vì các lý do sau:</p>
+<ul>
+<li>Control authorization: dùng các schema để gom nhóm các object giựa trên các role.</li>
+<li>Organize database objects: Có thể tổ chức các database object trong các nhóm giựa trên business logic. Ví dụ, dữ liệu historical và auditing có thể được gom và tổ chức trong một schema riêng.</li>
+<li>Maintain third-party SQL code: các extension trong các package có thể được dùng trong nhiều ứng dụng. Quản lý các extension này trong các schema riêng lẻ giúp dùng lại extension và update chúng dễ dàng.</li>
+</ul>
+<p>Ví dụ tạo schema sales, owned bỡi sale role:
+<code>CREATE SCHEMA sales AUTHORIZATION sale;</code></p>
+<p>3.2. Tables
+<code>CREATE TABLE</code> dùng để tạo table, clone table (hữu ích để tạo rollback script), materialize kết quả của <code>SELECT</code> (để boost hiệu năng).
+Các kiểu table:</p>
+<ul>
+<li>Ordinary table: sống với database.</li>
+<li>Temporary table: sống với user session</li>
+<li>Unlogged table: nhanh hơn ordinary table (vì data không được viết vào các WAL file) -&gt; không crash-safe, không thể replicated tới standby node (vì streaming replication hoạt động giựa trên việc chuyển các WAL file).</li>
+<li>Child table: là một ordinary table và kế thừa từ một hay nhiều table. Kế thừa thường được dùng với ràng buộc exclusion để phân vùng vật lý cho data và cải thiện hiệu năng bỡi lấy một tập nhỏ data hơn là nguyên con.</li>
+</ul>
+<p>Ref: <a href="https://www.postgresql.org/docs/current/sql-createtable.html">https://www.postgresql.org/docs/current/sql-createtable.html</a></p>
+<ol start="4">
+<li>PostgreSQL native data types
+Khi chọn một data type, cần chú ý các yếu tố:</li>
+</ol>
+<ul>
+<li>Extensibility: thay đổi maximum length của type có gây ra viết lại toàn bộ table hay scan toàn bộ table ko?</li>
+<li>Data type size: lạm dụng big size -&gt; tốn tài nguyên</li>
+<li>Support: type có được driver đang dùng hỗ trợ hay không? Nếu không thì đổi driver hay viết serialize và deserialize data.</li>
+</ul>
+<p>4.1. Numeric types
+| Name | Comments | Size | Range |
+| --- | --- | --- | --- |
+| smallint | SQL equivalent: Int2 | 2 bytes | -32,768 to +32,767. |
+| integer | SQL equivalent: Int4  Integer is an alias for INT. | 4 bytes | -2,147,483,648 to +2,147,483,647. |
+| bigint | SQL equivalent: Int8 8 bytes | 8 bytes | -9,223,372,036,854,775,808 to +9,223,372,036,854,775,807. |
+| numeric or decimal | No difference in PostgreSQL | Variable | Up to 131,072 digits before the decimal point; up to 16,383 digits after the decimal point. |
+| real | Special values: Infinity, Infinity, NaN | 4 bytes | Platform-dependent, at least six-digit precision. Often, the range is 1E-37 to 1E+37. |
+| double precision | Special values: Infinity, Infinity, NaN | 8 bytes | Platform dependent, at least 15-digit precision. Often, the range is 1E-307 to 1E+308. |</p>
+<p>Precision là tổng số ký số, scale là số ký số phần thập phân.
+Numeric và decimal nên dùng cho tiền tệ và những giá trị yêu cầu precision.<br />
+Những giá trị không yêu cầu precision thì nên dùng float, double. (tối ưu tốc độ xử lý)<br />
+Floating-point và double precision không chính xác; giá trị trong một số trường hợp không thể được thể hiện dạng binary format và lưu trữ dạng gần đúng.<br />
+Các kiểu <code>smallserial, serial, và bigserial</code> là đóng gói của <code>smallint, integer, và bigint</code>. <code>serial</code> không thực sự là data type. Chúng thường được dùng như các surrogate key và không có <code>null</code> value (mặc định). <code>serial</code> sử dụng sequence ở phía dưới. Một sequence là một database object được dùng để tạo sequence bỡi chỉ định min, max, step.</p>
+<p>ví dụ:</p>
+<pre><code class="language-sql">CREATE TABLE customer (
+  customer_id SERIAL
+)
+</code></pre>
+<p>Tương đương với</p>
+<pre><code class="language-sql">CREATE SEQUENCE customer_customer_id_seq;
+CREATE TABLE customer (
+  customer_id integer NOT NULL DEFAULT nextval('customer_customer_id_seq')
+);
+ALTER SEQUENCE customer_customer_id_seq OWNED BY customer.Customer_id;
+</code></pre>
+<p>Chú ý khi tạo column với serial type:</p>
+<ul>
+<li>Một sequence sẽ được tạo với tên tableName_columnName_seq</li>
+<li>Column sẽ có <code>NOT NULL</code> constraint</li>
+<li>Column sẽ có một default value được tạo bỡi <code>nextval()</code> function.</li>
+<li>Sequence sẽ được owne bỡi column (-&gt; sequence bị xoá khi column bị xoá)</li>
+</ul>
+<p>4.1.1. Serial types and identity columns<br />
+Các cột serial và idenity được dùng để định nghĩa các key thay thế.
+<code>GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( sequence_options ) ]</code>
+Identity column vẫn ưu tiên hơn serial, vì serial type có các hạn chế:</p>
+<ul>
+<li>Compatibility: idenitity column là SQL chuẩn -&gt; dễ migrate PostgreSQL sang các database quan hệ khác</li>
+<li>Permission: các quyền của sequence object được tạo bỡi dùng serial column được quản lý riêng lẻ -&gt; thường quên quản lý quyền cho sequence object</li>
+<li>Sequence value and user data precedence: mặc định serial type dùng constraint để gán dữ liệu cho column. Bạn có thể override giá trị mặc định. Identity column cũng thế. <code>BY DEFAULT</code> cho phép người dùng insert data vào column. <code>ALWAY</code> - giá trị của người dùng sẽ không được chấp nhận trừ khi trong câu <code>INSERT</code> có thêm tuỳ chọn <code>OVERRIDING SYSTEM VALUE</code>. <code>COPY</code> không quan tâm option này.</li>
+<li>Managing table structure: quản lý identity column sẽ dễ dàng hơn.</li>
+</ul>
+<p>Cả indentity column và serial type đều dùng các sequence object ở bên dưới.</p>
+<p>4.2. Character types
+| Name | Comments | Trailing spaces | Maximum length |
+| --- | --- | --- | --- |
+| char | Equivalent to char(1), it must be quoted as shown in the name. | Semantically insignificant | 1 |
+| name | Equivalent to varchar(64). Used by Postgres for object names. | Semantically significant | 64 |
+| char(n) | Alias: character(n). Fixed-length character where the length is n. Internally called blank padded character (bpchar). | Semantically insignificant | 1 to 10485760 |
+| varchar(n) | Alias: character varying(n). Variablelength character where the maximum length is n. | Semantically significant | 1 to 10485760 |
+| text | Variable-length character. | Semantically significant | Unlimited |</p>
+<p>Với <code>char, varchar</code>, nếu value dài hơn kích thước tối đa thì khi <code>INSERT, UPDATE</code> sẽ báo lỗi, trừ khi phần dư là khoản trắng. Trong trường hợp thừa data khi ép kiểu thì dữ liệu thừa sẽ bị cắt bỏ và không báo lỗi.</p>
+<p>Kích cỡ lưu trữ text tuỳ thuộc vài yếu tố: độ dài của chuỗi, text decoding, và compression.<br />
+<code>text</code> có thể được xem như unlimited <code>varchar()</code> type.
+Trong PostgreSQL, không có khác biệt về hiệu năng giữa các kiểu character =&gt; <b>Nên dùng <code>text</code></b></p>
+<pre><code class="language-sql">CREATE TABLE emulate_varchar(
+  test VARCHAR(4)
+);
+--semantically equivalent to
+CREATE TABLE emulate_varchar (
+  test TEXT,
+  CONSTRAINT test_length CHECK (length(test) &lt;= 4)
+);
+</code></pre>
+<p>4.3. Date and time types<br />
+| Name | Size in bytes | Description | Low value | High value |
+| --- | --- | --- | --- | --- |
+| Timestamp without time zone | 8 | Date and time without time zone, equivalent to timestamp | 4713 BC | 294276 AD |
+| Timestamp with time zone | 8 | Date and time with time zone, equivalent to timestamptz | 4713 BC | 294276 AD |
+| Date | 4 | Date only | 4713 BC | 294276 AD |
+| Time without time zone | 8 | Time of day | 00:00:00 | 24:00:00 |
+| Time with time zone | 12 | Time of day with time zone | 00:00:00+1459 | 24:00:00-1459 |
+| Interval | 16 | Time interval | -178,000,000 years | +178,000,000 years |</p>
+<p>PostgreSQL lưu timestamp trong định dạng UTC. Có hai tiếp cận khi dùng timestamp.</p>
+<ul>
+<li>Dùng timestamp không có timezone và client quản lý việc sai khác timezone. Cách này phù hợp với các ứng dụng phát triển in-house, ứng dụng chỉ có 1 timezone, và khi client biết được các khác biệt timezone.</li>
+<li>Dùng timestamp với timezone, trong PostgreSQL có <code>timestamptz</code> extension.
+<ul>
+<li>Đảm bảo thiết lập default timezone cho tất cả các connection. Thực hiện trong <code>postgresql.conf</code> file. Nên để chọn UTC, UTC cũng giúp chúng ta trên vấn đề DST (daylight savings time).</li>
+<li>Timezone nên được chỉ định trong mỗi CRUD.</li>
+<li>Không thực hiện các thao tác trên timestamp không có timezone và timestamp có timezone.</li>
+<li>Dùng database server để chuyển đổi các khác biệt timezone.</li>
+</ul>
+</li>
+</ul>
+<p><code>DAYSTYLE</code> setting có 2 mục đích:</p>
+<ul>
+<li>Setting the display format: <code>DAYSTYLE</code> chỉ định timestamp và <code>timestamptz</code> rendering style</li>
+<li>Interpreting ambiguous data: <code>DAYSTYLE</code> chỉ hình interpret timestamp và <code>timestamptz</code> như thế nào.</li>
+</ul>
+<p>Các view <code>pg_timezone_names, pg_timezone_abbrevs</code> cung cấp danh sách các tên và tên viết tắt của các timezone.
+<code>AT TIME ZONE</code> convert timestamp đến một timezone cụ thể.</p>
+<p><code>now()</code> trả về current timestamp với current timezone.</p>
+<p>Convert timestamp tới timezone cụ thể:</p>
+<ul>
+<li><code>'y'::TIMESTAMP WITHOUT TIMEZONE AT TIME ZONE 'x'</code></li>
+<li><code>'y'::TIMESTAMP WITH TIMEZONE AT TIME ZONE 'x'</code></li>
+</ul>
+<p>Dùng <code>date</code> khi không quan tâm time.
+<code>interval</code> dùng để quản lý các thao tác trên timestamp - được xem như là một quảng thời gian.</p>
+<ol start="5">
+<li>Ref</li>
+</ol>
+<ul>
+<li>Salahaldin Juba_ Andrey Volkov - Learning PostgreSQL 11_ A beginner’s guide to building high-performance PostgreSQL database solutions, 3rd Edition (2019, Packt Publishing)</li>
+</ul>
  <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/postgresql.html'>postgresql</a></div>
       </div>
     </div>
