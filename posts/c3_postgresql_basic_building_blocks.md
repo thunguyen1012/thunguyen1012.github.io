@@ -1,5 +1,5 @@
 ---
-title: ==>PostgreSQL Basic Building Blocks
+title: C3 - PostgreSQL Basic Building Blocks
 published: true
 date: 2020-01-15 22:00:00
 tags: postgresql
