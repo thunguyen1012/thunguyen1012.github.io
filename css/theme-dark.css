@@ -747,3 +747,7 @@ hr {
   background-color: #333333;
   border: none;
 }
+
+img:hover {
+  transform: scale(2);
+}
