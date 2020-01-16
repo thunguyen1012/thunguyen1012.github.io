@@ -7,9 +7,9 @@ description: Những thành phần cơ bản khi làm việc với PostgreSQL
 image:
 ---
 
-1. Database coding
+## Database coding
 
-1.1. Database naming conventions
+### Database naming conventions
 
 Chỉ là sở thích trong series này
 - Tên của table, view không dùng suffix
@@ -20,35 +20,35 @@ Chỉ là sở thích trong series này
 - Khoá chính <tên table>_ID
 - Khoá ngoại cùng tên với tên khoá chính ở bảng tham chiếu
 
-1.2. PostgreSQL identifiers  
+### PostgreSQL identifiers  
 Theo ANSI SQL, không quan tâm in hoa - thường. Tuân theo các ràng buộc sau:  
 - Bắt đầu với _ hay ký tự
 - Có thể dùng ký tự, ký số, _, và $
 - Độ dài trong khoảng 1-63
 
-1.3. Document  
+### Document  
 Dùng `--` hay `/* */`. PostgreSQL cho phép lưu database object description thông qua `COMMENT ON`.
 
-1.4. Version control system  
+### Version control system  
 Nên có một installation script và thực thi nó trong một transaction.  
 Tạo rollback script để nhanh chóng quay về schema kề trước ở application level.  
 
 Thường duy trì DDL script, DML script, và DCL script riêng lẻ. Lưu DDL script cho các thành phần không thuộc physical schema như view, function ở file riêng.
 
-1.5. Database-migration tools  
+### Database-migration tools  
 Có vài tools: Liquibase, Sqitch, <b>Flyway</b>.
 
-2. PostgreSQL object hierarchy  
+## PostgreSQL object hierarchy  
 ![postgresql object hierarchy](./c3_postgresql_basic_building_blocks/postgresql_object_hierarchy.png "postgresql object hierarchy")
 
-2.1. Template databases  
+### Template databases  
 Mặc định một database khi được tạo ra, nó là clone của ```template1``` database.  
 Template này chứa tập các table, view, và function dùng để model mối quan hệ giữa các user-defined database object. Những table, view, và function này là một phần của system catalog schema ```pg_catalog```.  
 Ngoài ```template1```, hệ thống còn có ```template0```. Đây là bản dự phòng của ```template1```, và nó không có chứa thông tin encoding-specific và locale-specific.  
 
 Mình có thể tạo mới database bỡi dùng một database nào có sẵn.
 
-2.1. User database  
+### User database  
 Một client kết nối tới PostgreSQL chỉ có thể truy cập tới data trong một database (Cái được chỉ định trong connection string). Có thể vượt qua cái này bỡi dùng <b>PostgreSQL foreign data wrapper</b> hay DB link extensions.
 
 Mỗi database có một owner và một tập các permissions liên quan để quản lý các actions cho một role cụ thể. Các quyền trên PostgreSQL object, bao gồm databases, views, tables, và sequences, được thể hiện trong ```qsql``` client qua lệnh: ```<user>=<privileges>/granted by``` Nếu phần user của privileges không thấy, có nghĩa rằng những privilege này được apply tới ```PUBLIC``` role.
@@ -70,7 +70,7 @@ Ngoài các thuộc tính trên hình, PostgreSQL còn có các thuộc tính kh
 Các table ```pg_catalog``` chứa các thông tin của database.
 ![list databases in details](./c3_postgresql_basic_building_blocks/list_dbs_details.png "list databases in details")
 
-2.2. Roles  
+### Roles  
 Roles thuộc PostgreSQL server cluster và không thuộc một database cụ thể nào. Một role có thể là một database user hay một database group.
 
 Role có các thuộc tính:
@@ -91,11 +91,11 @@ Một role có thể là một thành viên của một role khác. ```GRANT```,
 
 ![list roles in details](./c3_postgresql_basic_building_blocks/list_roles.png "list roles in details")
 
-2.3. Tablespaces  
+### Tablespaces  
 Một <b>tablespace</b> là một defined storage location cho một database hay các database object. ```CREATE TABLESPACE```
 ![list tablespaces](./c3_postgresql_basic_building_blocks/list_tablespaces.png "list tablespaces")
 
-2.4. Template procedural languages  
+### Template procedural languages  
 Được dùng để đăng ký một ngôn ngữ mới. Có hai cách để tạo một ngôn ngữ lập trình mới.
 - bỡi chỉ định tên của ngôn ngữ. PostgreSQL sử dụng programming language template và xác định các tham số.
 - chỉ định tên của ngôn ngữ cũng như các tham số.
@@ -103,7 +103,7 @@ Một <b>tablespace</b> là một defined storage location cho một database ha
 
 ![list language templates](./c3_postgresql_basic_building_blocks/list_language_templates.png "list language templates")
 
-2.5. Settings  
+### Settings  
 Cấu hình: replication, write-ahead logs, resource comsumption, query planning, logging, authentication, statistic collection, garbage collection, client connections, lock management, error handling, và debug options.
 ```select * from pg_settings```
 
@@ -123,10 +123,10 @@ Những thiết lập trong ```postgresql.conf.auto``` file sẽ override nhữn
 
 ![components in chart](./c3_postgresql_basic_building_blocks/components_in_chart.png "components in chart")
 
-3. PostgreSQL database components  
+## PostgreSQL database components  
 Một PostgreSQL database được xem như là một container cho các database schema (database chứa ít nhất một schema). Mặc định có ```public``` schema trong các template database.
 
-3.1. Schemas
+### Schemas
 Dùng để cô lập các object name. Schema chứa tất cả các database-named object: tables, views, functions, aggregates, indexes, sequences, triggers, data types, domains, và ranges.
 
 Note: trong môi trường nhiều user, nhiều database, nên huỷ khả năng tạo object trong public schema: ```REVOKE CREATE ON SCHEMA public FROM PUBLIC;```
@@ -134,7 +134,7 @@ Note: trong môi trường nhiều user, nhiều database, nên huỷ khả năn
 ```search_path``` là tổng hợp các schema để server dùng khi tìm object. Khi tìm object, server tìm theo qualified database-object name.
 ![search_path](./c3_postgresql_basic_building_blocks/search_path.png "search_path")
 
-3.1.1. Schema usages  
+#### Schema usages  
 Schema được dùng bỡi vì các lý do sau:
 - Control authorization: dùng các schema để gom nhóm các object giựa trên các role.
 - Organize database objects: Có thể tổ chức các database object trong các nhóm giựa trên business logic. Ví dụ, dữ liệu historical và auditing có thể được gom và tổ chức trong một schema riêng.
@@ -143,7 +143,7 @@ Schema được dùng bỡi vì các lý do sau:
 Ví dụ tạo schema sales, owned bỡi sale role:
 ```CREATE SCHEMA sales AUTHORIZATION sale;```
 
-3.2. Tables
+### Tables
 ``` CREATE TABLE``` dùng để tạo table, clone table (hữu ích để tạo rollback script), materialize kết quả của ```SELECT``` (để boost hiệu năng).
 Các kiểu table:
 - Ordinary table: sống với database.
@@ -153,13 +153,14 @@ Các kiểu table:
 
 Ref: https://www.postgresql.org/docs/current/sql-createtable.html
 
-4. PostgreSQL native data types
+## PostgreSQL native data types
 Khi chọn một data type, cần chú ý các yếu tố:
 - Extensibility: thay đổi maximum length của type có gây ra viết lại toàn bộ table hay scan toàn bộ table ko?
 - Data type size: lạm dụng big size -> tốn tài nguyên
 - Support: type có được driver đang dùng hỗ trợ hay không? Nếu không thì đổi driver hay viết serialize và deserialize data.
 
-4.1. Numeric types
+### Numeric types
+
 | Name | Comments | Size | Range |
 | --- | --- | --- | --- |
 | smallint | SQL equivalent: Int2 | 2 bytes | -32,768 to +32,767. |
@@ -197,7 +198,7 @@ Chú ý khi tạo column với serial type:
 - Column sẽ có một default value được tạo bỡi ```nextval()``` function.
 - Sequence sẽ được owne bỡi column (-> sequence bị xoá khi column bị xoá)
 
-4.1.1. Serial types and identity columns  
+#### Serial types and identity columns  
 Các cột serial và idenity được dùng để định nghĩa các key thay thế.
 ```GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( sequence_options ) ]```
 Identity column vẫn ưu tiên hơn serial, vì serial type có các hạn chế:
@@ -208,7 +209,8 @@ Identity column vẫn ưu tiên hơn serial, vì serial type có các hạn ch�
 
 Cả indentity column và serial type đều dùng các sequence object ở bên dưới.
 
-4.2. Character types
+### Character types
+
 | Name | Comments | Trailing spaces | Maximum length |
 | --- | --- | --- | --- |
 | char | Equivalent to char(1), it must be quoted as shown in the name. | Semantically insignificant | 1 |
@@ -234,7 +236,8 @@ CREATE TABLE emulate_varchar (
 );
 ```
 
-4.3. Date and time types  
+### Date and time types  
+
 | Name | Size in bytes | Description | Low value | High value |
 | --- | --- | --- | --- | --- |
 | Timestamp without time zone | 8 | Date and time without time zone, equivalent to timestamp | 4713 BC | 294276 AD |
@@ -268,5 +271,5 @@ Convert timestamp tới timezone cụ thể:
 Dùng ```date``` khi không quan tâm time.
 ```interval``` dùng để quản lý các thao tác trên timestamp - được xem như là một quảng thời gian.
 
-5. Ref
+## Ref
 - Salahaldin Juba_ Andrey Volkov - Learning PostgreSQL 11_ A beginner’s guide to building high-performance PostgreSQL database solutions, 3rd Edition (2019, Packt Publishing)

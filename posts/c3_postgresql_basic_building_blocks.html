@@ -42,10 +42,8 @@
     <div class="container">
       <div class="main">
         <h1>==>PostgreSQL Basic Building Blocks</h1>
-        <ol>
-<li>Database coding</li>
-</ol>
-<p>1.1. Database naming conventions</p>
+        <h2><a href="#database-coding" aria-hidden="true" class="anchor" id="database-coding"></a>Database coding</h2>
+<h3><a href="#database-naming-conventions" aria-hidden="true" class="anchor" id="database-naming-conventions"></a>Database naming conventions</h3>
 <p>Chỉ là sở thích trong series này</p>
 <ul>
 <li>Tên của table, view không dùng suffix</li>
@@ -56,32 +54,30 @@
 <li>Khoá chính &lt;tên table&gt;_ID</li>
 <li>Khoá ngoại cùng tên với tên khoá chính ở bảng tham chiếu</li>
 </ul>
-<p>1.2. PostgreSQL identifiers<br />
-Theo ANSI SQL, không quan tâm in hoa - thường. Tuân theo các ràng buộc sau:</p>
+<h3><a href="#postgresql-identifiers" aria-hidden="true" class="anchor" id="postgresql-identifiers"></a>PostgreSQL identifiers</h3>
+<p>Theo ANSI SQL, không quan tâm in hoa - thường. Tuân theo các ràng buộc sau:</p>
 <ul>
 <li>Bắt đầu với _ hay ký tự</li>
 <li>Có thể dùng ký tự, ký số, _, và $</li>
 <li>Độ dài trong khoảng 1-63</li>
 </ul>
-<p>1.3. Document<br />
-Dùng <code>--</code> hay <code>/* */</code>. PostgreSQL cho phép lưu database object description thông qua <code>COMMENT ON</code>.</p>
-<p>1.4. Version control system<br />
-Nên có một installation script và thực thi nó trong một transaction.<br />
+<h3><a href="#document" aria-hidden="true" class="anchor" id="document"></a>Document</h3>
+<p>Dùng <code>--</code> hay <code>/* */</code>. PostgreSQL cho phép lưu database object description thông qua <code>COMMENT ON</code>.</p>
+<h3><a href="#version-control-system" aria-hidden="true" class="anchor" id="version-control-system"></a>Version control system</h3>
+<p>Nên có một installation script và thực thi nó trong một transaction.<br />
 Tạo rollback script để nhanh chóng quay về schema kề trước ở application level.</p>
 <p>Thường duy trì DDL script, DML script, và DCL script riêng lẻ. Lưu DDL script cho các thành phần không thuộc physical schema như view, function ở file riêng.</p>
-<p>1.5. Database-migration tools<br />
-Có vài tools: Liquibase, Sqitch, <b>Flyway</b>.</p>
-<ol start="2">
-<li>PostgreSQL object hierarchy<br />
-<img src="./c3_postgresql_basic_building_blocks/postgresql_object_hierarchy.png" alt="postgresql object hierarchy" title="postgresql object hierarchy" /></li>
-</ol>
-<p>2.1. Template databases<br />
-Mặc định một database khi được tạo ra, nó là clone của <code>template1</code> database.<br />
+<h3><a href="#database-migration-tools" aria-hidden="true" class="anchor" id="database-migration-tools"></a>Database-migration tools</h3>
+<p>Có vài tools: Liquibase, Sqitch, <b>Flyway</b>.</p>
+<h2><a href="#postgresql-object-hierarchy" aria-hidden="true" class="anchor" id="postgresql-object-hierarchy"></a>PostgreSQL object hierarchy</h2>
+<p><img src="./c3_postgresql_basic_building_blocks/postgresql_object_hierarchy.png" alt="postgresql object hierarchy" title="postgresql object hierarchy" /></p>
+<h3><a href="#template-databases" aria-hidden="true" class="anchor" id="template-databases"></a>Template databases</h3>
+<p>Mặc định một database khi được tạo ra, nó là clone của <code>template1</code> database.<br />
 Template này chứa tập các table, view, và function dùng để model mối quan hệ giữa các user-defined database object. Những table, view, và function này là một phần của system catalog schema <code>pg_catalog</code>.<br />
 Ngoài <code>template1</code>, hệ thống còn có <code>template0</code>. Đây là bản dự phòng của <code>template1</code>, và nó không có chứa thông tin encoding-specific và locale-specific.</p>
 <p>Mình có thể tạo mới database bỡi dùng một database nào có sẵn.</p>
-<p>2.1. User database<br />
-Một client kết nối tới PostgreSQL chỉ có thể truy cập tới data trong một database (Cái được chỉ định trong connection string). Có thể vượt qua cái này bỡi dùng <b>PostgreSQL foreign data wrapper</b> hay DB link extensions.</p>
+<h3><a href="#user-database" aria-hidden="true" class="anchor" id="user-database"></a>User database</h3>
+<p>Một client kết nối tới PostgreSQL chỉ có thể truy cập tới data trong một database (Cái được chỉ định trong connection string). Có thể vượt qua cái này bỡi dùng <b>PostgreSQL foreign data wrapper</b> hay DB link extensions.</p>
 <p>Mỗi database có một owner và một tập các permissions liên quan để quản lý các actions cho một role cụ thể. Các quyền trên PostgreSQL object, bao gồm databases, views, tables, và sequences, được thể hiện trong <code>qsql</code> client qua lệnh: <code>&lt;user&gt;=&lt;privileges&gt;/granted by</code> Nếu phần user của privileges không thấy, có nghĩa rằng những privilege này được apply tới <code>PUBLIC</code> role.</p>
 <p><img src="./c3_postgresql_basic_building_blocks/list_databases.png" alt="list databases" title="list databases" /></p>
 <p>Database-access privileges:</p>
@@ -100,8 +96,8 @@ Một client kết nối tới PostgreSQL chỉ có thể truy cập tới data 
 <p><code>\c</code> tạo một kết nối mới tới database và đóng kết nối hiện tại.<br />
 Các table <code>pg_catalog</code> chứa các thông tin của database.
 <img src="./c3_postgresql_basic_building_blocks/list_dbs_details.png" alt="list databases in details" title="list databases in details" /></p>
-<p>2.2. Roles<br />
-Roles thuộc PostgreSQL server cluster và không thuộc một database cụ thể nào. Một role có thể là một database user hay một database group.</p>
+<h3><a href="#roles" aria-hidden="true" class="anchor" id="roles"></a>Roles</h3>
+<p>Roles thuộc PostgreSQL server cluster và không thuộc một database cụ thể nào. Một role có thể là một database user hay một database group.</p>
 <p>Role có các thuộc tính:</p>
 <ul>
 <li><code>SUPERUSER</code>: một super role có đầy đủ quyền, ngoại trừ <code>LOGIN</code></li>
@@ -119,19 +115,19 @@ Roles thuộc PostgreSQL server cluster và không thuộc một database cụ t
 <code>CREATE GROUP</code> tương đương với <code>CREATEROLE</code> + <code>NOLOGIN</code> option.<br />
 Một role có thể là một thành viên của một role khác. <code>GRANT</code>, <code>REVOKE</code>.</p>
 <p><img src="./c3_postgresql_basic_building_blocks/list_roles.png" alt="list roles in details" title="list roles in details" /></p>
-<p>2.3. Tablespaces<br />
-Một <b>tablespace</b> là một defined storage location cho một database hay các database object. <code>CREATE TABLESPACE</code>
+<h3><a href="#tablespaces" aria-hidden="true" class="anchor" id="tablespaces"></a>Tablespaces</h3>
+<p>Một <b>tablespace</b> là một defined storage location cho một database hay các database object. <code>CREATE TABLESPACE</code>
 <img src="./c3_postgresql_basic_building_blocks/list_tablespaces.png" alt="list tablespaces" title="list tablespaces" /></p>
-<p>2.4. Template procedural languages<br />
-Được dùng để đăng ký một ngôn ngữ mới. Có hai cách để tạo một ngôn ngữ lập trình mới.</p>
+<h3><a href="#template-procedural-languages" aria-hidden="true" class="anchor" id="template-procedural-languages"></a>Template procedural languages</h3>
+<p>Được dùng để đăng ký một ngôn ngữ mới. Có hai cách để tạo một ngôn ngữ lập trình mới.</p>
 <ul>
 <li>bỡi chỉ định tên của ngôn ngữ. PostgreSQL sử dụng programming language template và xác định các tham số.</li>
 <li>chỉ định tên của ngôn ngữ cũng như các tham số.
 <code>CREATE LANGUAGE</code>, <code>CREATE EXTENSION</code></li>
 </ul>
 <p><img src="./c3_postgresql_basic_building_blocks/list_language_templates.png" alt="list language templates" title="list language templates" /></p>
-<p>2.5. Settings<br />
-Cấu hình: replication, write-ahead logs, resource comsumption, query planning, logging, authentication, statistic collection, garbage collection, client connections, lock management, error handling, và debug options.
+<h3><a href="#settings" aria-hidden="true" class="anchor" id="settings"></a>Settings</h3>
+<p>Cấu hình: replication, write-ahead logs, resource comsumption, query planning, logging, authentication, statistic collection, garbage collection, client connections, lock management, error handling, và debug options.
 <code>select * from pg_settings</code></p>
 <p>Các giá trị của <code>context</code> column:</p>
 <ul>
@@ -147,17 +143,15 @@ Cấu hình: replication, write-ahead logs, resource comsumption, query planning
 <code>pg_reload_conf()</code> tương đương với <code>SIGHUP</code>. Ưu tiên dùng <code>pg_reload_conf()</code> hay thông qua init script vì nó an toàn hơn <code>SIGNUP</code>.<br />
 <code>$qsql -U postgres -c &quot;SELECT pg_reload_conf()&quot;</code></p>
 <p><img src="./c3_postgresql_basic_building_blocks/components_in_chart.png" alt="components in chart" title="components in chart" /></p>
-<ol start="3">
-<li>PostgreSQL database components<br />
-Một PostgreSQL database được xem như là một container cho các database schema (database chứa ít nhất một schema). Mặc định có <code>public</code> schema trong các template database.</li>
-</ol>
-<p>3.1. Schemas
-Dùng để cô lập các object name. Schema chứa tất cả các database-named object: tables, views, functions, aggregates, indexes, sequences, triggers, data types, domains, và ranges.</p>
+<h2><a href="#postgresql-database-components" aria-hidden="true" class="anchor" id="postgresql-database-components"></a>PostgreSQL database components</h2>
+<p>Một PostgreSQL database được xem như là một container cho các database schema (database chứa ít nhất một schema). Mặc định có <code>public</code> schema trong các template database.</p>
+<h3><a href="#schemas" aria-hidden="true" class="anchor" id="schemas"></a>Schemas</h3>
+<p>Dùng để cô lập các object name. Schema chứa tất cả các database-named object: tables, views, functions, aggregates, indexes, sequences, triggers, data types, domains, và ranges.</p>
 <p>Note: trong môi trường nhiều user, nhiều database, nên huỷ khả năng tạo object trong public schema: <code>REVOKE CREATE ON SCHEMA public FROM PUBLIC;</code></p>
 <p><code>search_path</code> là tổng hợp các schema để server dùng khi tìm object. Khi tìm object, server tìm theo qualified database-object name.
 <img src="./c3_postgresql_basic_building_blocks/search_path.png" alt="search_path" title="search_path" /></p>
-<p>3.1.1. Schema usages<br />
-Schema được dùng bỡi vì các lý do sau:</p>
+<h4><a href="#schema-usages" aria-hidden="true" class="anchor" id="schema-usages"></a>Schema usages</h4>
+<p>Schema được dùng bỡi vì các lý do sau:</p>
 <ul>
 <li>Control authorization: dùng các schema để gom nhóm các object giựa trên các role.</li>
 <li>Organize database objects: Có thể tổ chức các database object trong các nhóm giựa trên business logic. Ví dụ, dữ liệu historical và auditing có thể được gom và tổ chức trong một schema riêng.</li>
@@ -165,8 +159,8 @@ Schema được dùng bỡi vì các lý do sau:</p>
 </ul>
 <p>Ví dụ tạo schema sales, owned bỡi sale role:
 <code>CREATE SCHEMA sales AUTHORIZATION sale;</code></p>
-<p>3.2. Tables
-<code>CREATE TABLE</code> dùng để tạo table, clone table (hữu ích để tạo rollback script), materialize kết quả của <code>SELECT</code> (để boost hiệu năng).
+<h3><a href="#tables" aria-hidden="true" class="anchor" id="tables"></a>Tables</h3>
+<p><code>CREATE TABLE</code> dùng để tạo table, clone table (hữu ích để tạo rollback script), materialize kết quả của <code>SELECT</code> (để boost hiệu năng).
 Các kiểu table:</p>
 <ul>
 <li>Ordinary table: sống với database.</li>
@@ -175,24 +169,60 @@ Các kiểu table:</p>
 <li>Child table: là một ordinary table và kế thừa từ một hay nhiều table. Kế thừa thường được dùng với ràng buộc exclusion để phân vùng vật lý cho data và cải thiện hiệu năng bỡi lấy một tập nhỏ data hơn là nguyên con.</li>
 </ul>
 <p>Ref: <a href="https://www.postgresql.org/docs/current/sql-createtable.html">https://www.postgresql.org/docs/current/sql-createtable.html</a></p>
-<ol start="4">
-<li>PostgreSQL native data types
-Khi chọn một data type, cần chú ý các yếu tố:</li>
-</ol>
+<h2><a href="#postgresql-native-data-types" aria-hidden="true" class="anchor" id="postgresql-native-data-types"></a>PostgreSQL native data types</h2>
+<p>Khi chọn một data type, cần chú ý các yếu tố:</p>
 <ul>
 <li>Extensibility: thay đổi maximum length của type có gây ra viết lại toàn bộ table hay scan toàn bộ table ko?</li>
 <li>Data type size: lạm dụng big size -&gt; tốn tài nguyên</li>
 <li>Support: type có được driver đang dùng hỗ trợ hay không? Nếu không thì đổi driver hay viết serialize và deserialize data.</li>
 </ul>
-<p>4.1. Numeric types
-| Name | Comments | Size | Range |
-| --- | --- | --- | --- |
-| smallint | SQL equivalent: Int2 | 2 bytes | -32,768 to +32,767. |
-| integer | SQL equivalent: Int4  Integer is an alias for INT. | 4 bytes | -2,147,483,648 to +2,147,483,647. |
-| bigint | SQL equivalent: Int8 8 bytes | 8 bytes | -9,223,372,036,854,775,808 to +9,223,372,036,854,775,807. |
-| numeric or decimal | No difference in PostgreSQL | Variable | Up to 131,072 digits before the decimal point; up to 16,383 digits after the decimal point. |
-| real | Special values: Infinity, Infinity, NaN | 4 bytes | Platform-dependent, at least six-digit precision. Often, the range is 1E-37 to 1E+37. |
-| double precision | Special values: Infinity, Infinity, NaN | 8 bytes | Platform dependent, at least 15-digit precision. Often, the range is 1E-307 to 1E+308. |</p>
+<h3><a href="#numeric-types" aria-hidden="true" class="anchor" id="numeric-types"></a>Numeric types</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Comments</th>
+<th>Size</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>smallint</td>
+<td>SQL equivalent: Int2</td>
+<td>2 bytes</td>
+<td>-32,768 to +32,767.</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>SQL equivalent: Int4  Integer is an alias for INT.</td>
+<td>4 bytes</td>
+<td>-2,147,483,648 to +2,147,483,647.</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>SQL equivalent: Int8 8 bytes</td>
+<td>8 bytes</td>
+<td>-9,223,372,036,854,775,808 to +9,223,372,036,854,775,807.</td>
+</tr>
+<tr>
+<td>numeric or decimal</td>
+<td>No difference in PostgreSQL</td>
+<td>Variable</td>
+<td>Up to 131,072 digits before the decimal point; up to 16,383 digits after the decimal point.</td>
+</tr>
+<tr>
+<td>real</td>
+<td>Special values: Infinity, Infinity, NaN</td>
+<td>4 bytes</td>
+<td>Platform-dependent, at least six-digit precision. Often, the range is 1E-37 to 1E+37.</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>Special values: Infinity, Infinity, NaN</td>
+<td>8 bytes</td>
+<td>Platform dependent, at least 15-digit precision. Often, the range is 1E-307 to 1E+308.</td>
+</tr></tbody></table>
 <p>Precision là tổng số ký số, scale là số ký số phần thập phân.
 Numeric và decimal nên dùng cho tiền tệ và những giá trị yêu cầu precision.<br />
 Những giá trị không yêu cầu precision thì nên dùng float, double. (tối ưu tốc độ xử lý)<br />
@@ -217,8 +247,8 @@ ALTER SEQUENCE customer_customer_id_seq OWNED BY customer.Customer_id;
 <li>Column sẽ có một default value được tạo bỡi <code>nextval()</code> function.</li>
 <li>Sequence sẽ được owne bỡi column (-&gt; sequence bị xoá khi column bị xoá)</li>
 </ul>
-<p>4.1.1. Serial types and identity columns<br />
-Các cột serial và idenity được dùng để định nghĩa các key thay thế.
+<h4><a href="#serial-types-and-identity-columns" aria-hidden="true" class="anchor" id="serial-types-and-identity-columns"></a>Serial types and identity columns</h4>
+<p>Các cột serial và idenity được dùng để định nghĩa các key thay thế.
 <code>GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( sequence_options ) ]</code>
 Identity column vẫn ưu tiên hơn serial, vì serial type có các hạn chế:</p>
 <ul>
@@ -228,14 +258,47 @@ Identity column vẫn ưu tiên hơn serial, vì serial type có các hạn ch�
 <li>Managing table structure: quản lý identity column sẽ dễ dàng hơn.</li>
 </ul>
 <p>Cả indentity column và serial type đều dùng các sequence object ở bên dưới.</p>
-<p>4.2. Character types
-| Name | Comments | Trailing spaces | Maximum length |
-| --- | --- | --- | --- |
-| char | Equivalent to char(1), it must be quoted as shown in the name. | Semantically insignificant | 1 |
-| name | Equivalent to varchar(64). Used by Postgres for object names. | Semantically significant | 64 |
-| char(n) | Alias: character(n). Fixed-length character where the length is n. Internally called blank padded character (bpchar). | Semantically insignificant | 1 to 10485760 |
-| varchar(n) | Alias: character varying(n). Variablelength character where the maximum length is n. | Semantically significant | 1 to 10485760 |
-| text | Variable-length character. | Semantically significant | Unlimited |</p>
+<h3><a href="#character-types" aria-hidden="true" class="anchor" id="character-types"></a>Character types</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Comments</th>
+<th>Trailing spaces</th>
+<th>Maximum length</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>char</td>
+<td>Equivalent to char(1), it must be quoted as shown in the name.</td>
+<td>Semantically insignificant</td>
+<td>1</td>
+</tr>
+<tr>
+<td>name</td>
+<td>Equivalent to varchar(64). Used by Postgres for object names.</td>
+<td>Semantically significant</td>
+<td>64</td>
+</tr>
+<tr>
+<td>char(n)</td>
+<td>Alias: character(n). Fixed-length character where the length is n. Internally called blank padded character (bpchar).</td>
+<td>Semantically insignificant</td>
+<td>1 to 10485760</td>
+</tr>
+<tr>
+<td>varchar(n)</td>
+<td>Alias: character varying(n). Variablelength character where the maximum length is n.</td>
+<td>Semantically significant</td>
+<td>1 to 10485760</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Variable-length character.</td>
+<td>Semantically significant</td>
+<td>Unlimited</td>
+</tr></tbody></table>
 <p>Với <code>char, varchar</code>, nếu value dài hơn kích thước tối đa thì khi <code>INSERT, UPDATE</code> sẽ báo lỗi, trừ khi phần dư là khoản trắng. Trong trường hợp thừa data khi ép kiểu thì dữ liệu thừa sẽ bị cắt bỏ và không báo lỗi.</p>
 <p>Kích cỡ lưu trữ text tuỳ thuộc vài yếu tố: độ dài của chuỗi, text decoding, và compression.<br />
 <code>text</code> có thể được xem như unlimited <code>varchar()</code> type.
@@ -249,15 +312,60 @@ CREATE TABLE emulate_varchar (
   CONSTRAINT test_length CHECK (length(test) &lt;= 4)
 );
 </code></pre>
-<p>4.3. Date and time types<br />
-| Name | Size in bytes | Description | Low value | High value |
-| --- | --- | --- | --- | --- |
-| Timestamp without time zone | 8 | Date and time without time zone, equivalent to timestamp | 4713 BC | 294276 AD |
-| Timestamp with time zone | 8 | Date and time with time zone, equivalent to timestamptz | 4713 BC | 294276 AD |
-| Date | 4 | Date only | 4713 BC | 294276 AD |
-| Time without time zone | 8 | Time of day | 00:00:00 | 24:00:00 |
-| Time with time zone | 12 | Time of day with time zone | 00:00:00+1459 | 24:00:00-1459 |
-| Interval | 16 | Time interval | -178,000,000 years | +178,000,000 years |</p>
+<h3><a href="#date-and-time-types" aria-hidden="true" class="anchor" id="date-and-time-types"></a>Date and time types</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Size in bytes</th>
+<th>Description</th>
+<th>Low value</th>
+<th>High value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timestamp without time zone</td>
+<td>8</td>
+<td>Date and time without time zone, equivalent to timestamp</td>
+<td>4713 BC</td>
+<td>294276 AD</td>
+</tr>
+<tr>
+<td>Timestamp with time zone</td>
+<td>8</td>
+<td>Date and time with time zone, equivalent to timestamptz</td>
+<td>4713 BC</td>
+<td>294276 AD</td>
+</tr>
+<tr>
+<td>Date</td>
+<td>4</td>
+<td>Date only</td>
+<td>4713 BC</td>
+<td>294276 AD</td>
+</tr>
+<tr>
+<td>Time without time zone</td>
+<td>8</td>
+<td>Time of day</td>
+<td>00:00:00</td>
+<td>24:00:00</td>
+</tr>
+<tr>
+<td>Time with time zone</td>
+<td>12</td>
+<td>Time of day with time zone</td>
+<td>00:00:00+1459</td>
+<td>24:00:00-1459</td>
+</tr>
+<tr>
+<td>Interval</td>
+<td>16</td>
+<td>Time interval</td>
+<td>-178,000,000 years</td>
+<td>+178,000,000 years</td>
+</tr></tbody></table>
 <p>PostgreSQL lưu timestamp trong định dạng UTC. Có hai tiếp cận khi dùng timestamp.</p>
 <ul>
 <li>Dùng timestamp không có timezone và client quản lý việc sai khác timezone. Cách này phù hợp với các ứng dụng phát triển in-house, ứng dụng chỉ có 1 timezone, và khi client biết được các khác biệt timezone.</li>
@@ -285,9 +393,7 @@ CREATE TABLE emulate_varchar (
 </ul>
 <p>Dùng <code>date</code> khi không quan tâm time.
 <code>interval</code> dùng để quản lý các thao tác trên timestamp - được xem như là một quảng thời gian.</p>
-<ol start="5">
-<li>Ref</li>
-</ol>
+<h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>Ref</h2>
 <ul>
 <li>Salahaldin Juba_ Andrey Volkov - Learning PostgreSQL 11_ A beginner’s guide to building high-performance PostgreSQL database solutions, 3rd Edition (2019, Packt Publishing)</li>
 </ul>
