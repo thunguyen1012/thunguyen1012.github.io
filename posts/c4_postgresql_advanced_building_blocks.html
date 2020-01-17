@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>==> C4 - PostgreSQL Advanced Building Blocks | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Những thành phần nâng cao khi làm việc với PostgreSQL'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function() {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga('create', 'UA-120719369-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>==> C4 - PostgreSQL Advanced Building Blocks</h1>
+        <hr />
+<h2><a href="#views" aria-hidden="true" class="anchor" id="views"></a>Views</h2>
+<p>Một view có thể được xem như là một câu truy vấn được đặt tên hay một wrapper của một câu <code>SELECT</code>. View có thể được dùng cho các mục đích sau:</p>
+<ul>
+<li>Đơn giản hoá câu truy vấn phức tạp và nâng cao tính module của code.</li>
+<li>Cải thiện hiệu năng bỡi caching kết quả của view để dùng sau này.</li>
+<li>Giảm số lượng SQL code.</li>
+<li>Cầu nối khoảng gap giữa database quan hệ với ngôn ngữ hướng đối tượng (đặc biệt là updatable views)</li>
+<li>Cài đặt authorization ở row level (bỡi bỏ ra những row không khớp một điều kiện cụ thể)</li>
+<li>Cài đặt các interface và lớp abstraction giữa ngôn ngữ cấp cao và database quan hệ.</li>
+<li>Cài đặt thay đổi phút cuối</li>
+</ul>
+<p>Một vài framework, như các ORM, có thể có các yêu cầu cụ thể, như unique key. Điều này hạn chế việc sử dụng view với những framework này; tuy nhiên, mình có thể vượt qua những issue này bỡi giả lập các primary key, thông qua các hàm window như <code>row_number</code>.</p>
+<p>Trong PostgreSQL, một view được model bên trong như là một table với một <code>_RETURN</code> rule -&gt; có thể tạo một table và convert vào một view -&gt; không khuyến khích kiểu này. Không thể xoá hay chỉnh sửa cấu trúc của một view, nếu đang có view khác phụ thuộc vào nó.</p>
+<h3><a href="#view-synopsis" aria-hidden="true" class="anchor" id="view-synopsis"></a>View synopsis</h3>
+<p>Dùng <code>CREATE VIEW</code> để tạo view.
+Các tên thuộc tính (các cột) của view có thể được cung cấp tường minh hay kế thừa từ câu <code>SELECT</code>.</p>
+<pre><code class="language-sql">CREATE OR REPLACE VIEW car_portal_app.account_information
+(account_id,first_name,last_name,email) AS SELECT account_id, first_name,
+last_name, email FROM car_portal_app.account;
+</code></pre>
+<p>Khi thay thế định nghĩa view bỡi dùng từ khoá <code>REPLACE</code>, column list nên nhất quán trước và sau khi thay thế, bao gồm column type, name, và order.</p>
+<pre><code class="language-sql">CREATE OR REPLACE VIEW account_information AS SELECT
+account_id, last_name, first_name, email FROM car_portal_app.account;
+ERROR: cannot change name of view column &quot;first_name&quot; to &quot;last_name&quot;
+</code></pre>
+<h3><a href="#view-categories" aria-hidden="true" class="anchor" id="view-categories"></a>View categories</h3>
+<p>Dựa vào sử dụng, chúng ta có các loại view:</p>
+<ul>
+<li>Temporary views: tồn tại trong user session. <code>TEMPORARY, TEMP</code></li>
+<li>Recursive views: Giống giống với recursive function. Dùng trong các dạng hierarchical data.</li>
+<li>Updatable views: cho phép người dùng sử dụng view như là table - có thể <code>INSERT, UPDATE, và DELETE</code></li>
+<li>Materialized views: Là một table có nội dụng được làm mới định kỳ, giựa trên một câu query cụ thể. Dùng để tối ưu hiệu năng cho các câu truy vấn thực hiện lâu và thực hiện định kỳ. CŨng có thể xem đây là một dạng caching data.</li>
+</ul>
+<h3><a href="#materialized-views" aria-hidden="true" class="anchor" id="materialized-views"></a>Materialized views</h3>
+<p>Materialized view là một PostgreSQL extension. (Oracle cũng hỗ trợ). Materialized view có thể được tạo trên một <code>TABLESPACE</code> cụ thể, cũng như một <code>storage_parameter</code> -&gt; materialized views là các đối tượng vật lý.</p>
+<pre><code class="language-sql">CREATE MATERIALIZED VIEW [ IF NOT EXISTS ] table_name
+    [ (column_name [, ...] ) ]
+    [ WITH ( storage_parameter [= value] [, ... ] ) ]
+    [ TABLESPACE tablespace_name ]
+    AS query
+    [ WITH [ NO ] DATA ]
+</code></pre>
+<p>Lấy data từ materialized view chưa được populate data sẽ có lỗi.</p>
+<pre><code class="language-sql">car_portal=&gt; CREATE MATERIALIZED VIEW test_mat AS SELECT 1 WITH NO DATA;
+CREATE MATERIALIZED VIEW
+car_portal=&gt; TABLE test_mat;
+ERROR: materialized view &quot;test_mat&quot; has not been populated
+HINT: Use the REFRESH MATERIALIZED VIEW command.
+</code></pre>
+<p>Dùng <code>REFRESH MATERIALIZED VIEW [ CONCURRENTLY ] name [ WITH [ NO ] DATA ]</code> để populate data</p>
+<pre><code class="language-sql">car_portal=&gt; REFRESH MATERIALIZED VIEW test_mat;
+REFRESH MATERIALIZED VIEW
+car_portal=&gt; TABLE test_mat;
+?column?
+----------
+1
+(1 row)
+</code></pre>
+<p>Refresh materialized view là một blocking statement - SHARED LOCK???</p>
+<h3><a href="#updatable-views" aria-hidden="true" class="anchor" id="updatable-views"></a>Updatable views</h3>
+<p>Mặc định trong PostgreSQL, các view là auto-updatable. Những view nào không thể updatable vì vi phạm các ràng buộc thì trigger, rule systems có thể được dùng để biến view trở thành updatable.
+Có thể <code>DELETE, INSERT, và UPDATE</code> với updatable view để tác động tới data của table bên dưới.
+View tự động trở thành updatable khi thoả các điều kiện sau:</p>
+<ul>
+<li>View được xây trên một table hay một updatable view</li>
+<li>view definition không có <code>DISTINCT, WITH, GROUP BY, OFFSET, HAVING, LIMIT, UNION, EXCEPT, INTERSECT</code> trong top level.</li>
+<li>select list của view phải được map với table bên dưới một cách trực tiếp: không dùng function, expression. Các selected columns không được lặp lại.</li>
+<li>thuộc tính <code>security_barrier</code> không được set.</li>
+</ul>
+<pre><code class="language-sql">CREATE VIEW car_portal_app.user_account AS SELECT account_id, first_name,
+last_name, email, password FROM car_portal_app.account WHERE account_id
+NOT IN (SELECT account_id FROM car_portal_app.seller_account);
+</code></pre>
+<p>Insert</p>
+<pre><code class="language-sql">car_portal=&gt; INSERT INTO car_portal_app.user_account VALUES
+(default,'first_name1','last_name1','test@email.com','password');
+INSERT 0 1
+</code></pre>
+<p><code>WITH CHECK OPTION</code> được dùng để quản lý hành vi của updatable view. Nếu không chỉ định <code>WITH CHECK OPTION</code>, chúng ta có thể <code>UPDATE hay INSERT</code> một record, ngay cả khi nó không hiện trong view -&gt; security risk.</p>
+<pre><code class="language-sql">CREATE TABLE check_option (val INT);
+CREATE VIEW test_check_option AS SELECT * FROM check_option WHERE val &gt; 0
+WITH CHECK OPTION;
+</code></pre>
+<p>Test</p>
+<pre><code class="language-sql">car_portal=&gt; INSERT INTO test_check_option VALUES (-1);
+ERROR: new row violates check option for view &quot;test_check_option&quot;
+DETAIL: Failing row contains (-1).
+</code></pre>
+<p>Để kiểm tra một view có là updatable view hay không: xem <code>is_insertable_into</code> của view trong <code>information_schema</code>.</p>
+<pre><code class="language-sql">car_portal=# SELECT table_name, is_insertable_into FROM
+information_schema.tables WHERE table_name = 'user_account';
+table_name | is_insertable_into
+--------------+--------------------
+user_account | YES
+(1 row)
+</code></pre>
+<h2><a href="#indexes" aria-hidden="true" class="anchor" id="indexes"></a>Indexes</h2>
+<p>Một index là một đối tượng physical database, được định nghĩa trên một column hay nhóm column của table.
+Index được dùng để:</p>
+<ul>
+<li>Cải thiện hiệu năng</li>
+<li>Validate constraints</li>
+</ul>
+<h3><a href="#index-synopses" aria-hidden="true" class="anchor" id="index-synopses"></a>Index synopses</h3>
+<p>Dùng <code>CREATE INDEX</code> để tạo index. Vì là đối tượng vật lý nên có thể chỉ định <code>TABLESPACE, storage_parameter</code>. Index có thể tạo trên các column hay các expression. Các index có thể được sắp xếp theo <code>ACS hay DESC</code>. Có thể chỉ định collation cho index trên text fields. Tuỳ chọn <code>OPTION</code> được dùng để quản lý kết thừa và phân mảnh table. Nếu một table được phân mảnh, index cũng sẽ được tạo trên các mảnh (mặc định), khi tuỳ chọn <code>OPTION</code> không được chỉ định.</p>
+<pre><code class="language-sql">CREATE [ UNIQUE ] INDEX [ CONCURRENTLY ] [ [ IF NOT EXISTS ] name ] ON [
+ONLY ] table_name [ USING method ]
+    ( { column_name | ( expression ) } [ COLLATE collation ] [ opclass ] [
+ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
+    [ INCLUDE ( column_name [, ...] ) ]
+    [ WITH ( storage_parameter = value [, ... ] ) ]
+    [ TABLESPACE tablespace_name ]
+    [ WHERE predicate ]
+</code></pre>
+<h3><a href="#index-selectivity" aria-hidden="true" class="anchor" id="index-selectivity"></a>Index selectivity</h3>
+<p>Index không được dùng khi kích thước table nhỏ. PostgreSQL planner sẽ scan hết table. PostgreSQL planner quyết định có dùng index hay không giựa trên execution plan cost. -&gt; Cùng câu truy vấn, khác giá trị tham số -&gt; có thể có execution plan khác nhau.</p>
+<p><code>EXPLAIN</code></p>
+<h3><a href="#index-types" aria-hidden="true" class="anchor" id="index-types"></a>Index types</h3>
+<ul>
+<li>B-tree index: mặc định index type. Dùng cho equality, ranges, và null. Hỗ trợ tất cả các PostgreSQL data type.</li>
+<li>Hash index: Dùng tốt cho equality.</li>
+<li>Generalized Inverted Index (GIN): Hữu dụng khi nhiều giá trị cần map tới một row. Có thể dùng với các cấu trúc dữ liệu phức tạp như array, full-text search.</li>
+<li>Generalized Search Tree (GiST): Cho phép xây dựng các cấu trúc cây cân bằng. Dùng cho index geometric data, full-text search.</li>
+<li>Space-Partitioned GiST (SP-GiST): Giống GiST và hỗ trợ partitioned search tree. Dùng cho quản lý user-defined data type phức tạp.</li>
+<li>Block Range Index (BRIN): Dùng cho bảng lớn, kích thước bị giới hạn. Chạy chậm hơn B-tree, nhưng ít chiếm không gian hơn B-tree.</li>
+</ul>
+<h3><a href="#index-categories" aria-hidden="true" class="anchor" id="index-categories"></a>Index categories</h3>
+<p>Có thể phân loại index thành nhiều category và một index có thể thuộc nhiều category cùng lúc như unique partial index.
+Index categories:</p>
+<ul>
+<li>Partial indexes: một partial index chỉ index trên một tập nhỏ data của table (thoả <code>WHERE</code> trong index). Giảm kích thước index.</li>
+<li>Covering indexes: Cho phép vài query được thực thi với chỉ một lần scan index. Hiện tại chỉ có B-tree index hỗ trợ.</li>
+<li>Unique indexes: đảm bảo một giá trị cụ thể là unique trong toàn bảng.</li>
+<li>Multicolumn indexes: Có thể được dùng cho một mẫu của query nhiều điều kiện (<code>WHERE, ORDER BY, GROUP BY,...</code>), tối đa 32 cột.</li>
+<li>Indexes on expressions: Cũng có thể tạo index cho kết quả của expression hay function. Index trên expression được chọn khi functional expression của index được dùng trong <code>WHERE</code>.</li>
+</ul>
+<p>Hiện tại chỉ B-tree, GIN, GiST, và BRIN hỗ trợ multicolumns index. Khi tạo multicolumn index, thứ tự column là quan trọng. Kích thước multicolumn index thường lớn, planner thường ko dùng.</p>
+<h3><a href="#best-practices-for-indexes" aria-hidden="true" class="anchor" id="best-practices-for-indexes"></a>Best practices for indexes</h3>
+<p>Index thường định nghĩa trên các column cái được dùng ở các điều kiện và khoá ngoại. <code>DELETE, UPDATE</code> cũng có dùng index. <code>pg_stat_all_indexes</code> cung cấp thông tin thống kê việc sử dụng index.</p>
+<p>Tạo trùng index, PostgreSQL không báo lỗi.
+Dùng <code>REINDEX</code> để build lại index. Đây là blocking command. Có thể resolve issue này bỡi tạo <code>CONCURRENTLY</code> index</p>
+<h2><a href="#functions" aria-hidden="true" class="anchor" id="functions"></a>Functions</h2>
+<p>Một PostgreSQL function được dùng để cung cấp một service cụ thể, và nó thường là kết hợp của các khai báo, expression, và lệnh.</p>
+<h3><a href="#the-postgresql-native-programming-language" aria-hidden="true" class="anchor" id="the-postgresql-native-programming-language"></a>The PostgreSQL native programming language</h3>
+<p>Hỗ trợ user-defined function viết bỡi C, SQL, và PL/pgSQL.<br />
+Ngoài ra còn có PL/Tcl, PL/Python, và PL/Perl. Bạn sẽ cần tạo language để dùng chúng. <code>CREATE EXTENSION</code> hay <code>createlang</code> utility tool.</p>
+<h3><a href="#function-usage" aria-hidden="true" class="anchor" id="function-usage"></a>Function usage</h3>
+<p>PostgreSQL function có thể được dùng trong các trường hợp sau:</p>
+<ul>
+<li>Như là abstract interface với các ngôn ngữ bậc cao để giấu data model.</li>
+<li>Thực thi logic phức tạp cái khó implement với SQL</li>
+<li>Thực thi các action trước và sau thực thi một câu SQL - thông qua trigger</li>
+<li>Làm sạch SQL code bỡi sử dụng lại các code phổ biến và đặt chúng trong các module</li>
+<li>Tự động các common task liên quan tới một database bỡi sử dụng dynamic SQL.</li>
+</ul>
+<h3><a href="#postgresql-function-categories" aria-hidden="true" class="anchor" id="postgresql-function-categories"></a>PostgreSQL function categories</h3>
+<p>PostgreSQL function phải là immutable. Nếu không thì sẽ là violate function.</p>
+<h3><a href="#postgresql-anonymous-functions" aria-hidden="true" class="anchor" id="postgresql-anonymous-functions"></a>PostgreSQL anonymous functions</h3>
+<p>PostgreSQL cung cấp <code>DO</code> statement - dùng nó để tạo code block. Tất cả các PostgreSQL function là transactional; vì thế nếu bạn muốn tạo các index (ví dụ), thì shell scripting hay procedures là phương án tốt hơn.</p>
+<pre><code class="language-sql">DO $$
+    DECLARE r record;
+BEGIN
+    FOR r IN SELECT table_schema, table_name FROM information_schema.tables
+WHERE table_schema = 'car_portal_app' LOOP
+    EXECUTE 'GRANT SELECT ON ' || quote_ident(r.table_schema) || '.'||
+quote_ident(r.table_name) || ' TO select_only';
+    END LOOP;
+END$$;
+</code></pre>
+<h2><a href="#user-defined-data-types" aria-hidden="true" class="anchor" id="user-defined-data-types"></a>User-defined data types</h2>
+<p>PostgreSQL cung cấp 2 cách để cài đặt user-defined type:</p>
+<ul>
+<li><code>CREATE DOMAIN</code>: Cho phép tạo user-defined data type với các constraint. Điều này giúp source code module hơn.</li>
+<li><code>CREATE TYPE</code>: thường dùng để tạo composite type. Cũng có thể dùng <code>CREATE TYPE</code> để tạo <code>ENUM</code>, cái giúp giảm số lần join.</li>
+</ul>
+<p>Thường sẽ không dùng user-defined data type mà dùng flat table vì thiếu sự hỗ trợ từ phía driver, như JDBC, ODBC.</p>
+<p>Ví dụ tạo text không có space và không null.
+Tạo domain</p>
+<pre><code class="language-sql">CREATE DOMAIN text_without_space_and_null AS TEXT NOT NULL CHECK (value !~ '\s');
+</code></pre>
+<p>Xử dụng</p>
+<pre><code class="language-sql">CREATE TABLE test_domain (
+    test_att text_without_space_and_null
+);
+</code></pre>
+<p>Có thể chỉnh sửa domain bỡi dùng <code>ALTER DOMAIN</code>. Nếu có thay đổi constraint -&gt; tất cả các thuộc tính đang dùng domain sẽ chạy validate lại. Dùng <code>NOT VALID</code> để ngăn việc này và fix wrong data sau.</p>
+<pre><code class="language-sql">ALTER DOMAIN text_without_space_and_null ADD CONSTRAINT text_without_
+space_and_null_length_chk check (length(value)&lt;=15) NOT VALID;
+</code></pre>
+<p>Sau khi fix xong wrong data thì update domain lại.</p>
+<pre><code class="language-sql">ALTER DOMAIN text_without_space_and_null ADD CONSTRAINT text_without_
+space_and_null_length_chk check (length(value)&lt;=15) VALIDATE CONSTRAINT;
+</code></pre>
+<p>Composite data type hữu dụng cho việc tạo function, đặc biệt khi trả kiểu là một row của nhiều giá trị.</p>
+<p>Ví dụ:</p>
+<pre><code class="language-sql">CREATE TYPE car_portal_app.seller_information AS (seller_id INT,
+seller_name TEXT,number_of_advertisements BIGINT, total_rank float);
+</code></pre>
+<p>và dùng</p>
+<pre><code class="language-sql">CREATE OR REPLACE FUNCTION car_portal_app.seller_information (account_id INT)
+ RETURNS car_portal_app.seller_information AS $$
+    SELECT seller_account.seller_account_id, first_name || last_name as seller_name, count(*), sum(rank)::float/count(*)
+    FROM car_portal_app.account INNER JOIN
+        car_portal_app.seller_account ON account.account_id =
+        seller_account.account_id LEFT JOIN
+        car_portal_app.advertisement ON advertisement.seller_account_id =
+        seller_account.seller_account_id LEFT JOIN
+        car_portal_app.advertisement_rating ON advertisement.advertisement_id =
+        advertisement_rating.advertisement_id
+    WHERE account.account_id = $1
+    GROUP BY seller_account.seller_account_id, first_name, last_name
+$$
+LANGUAGE SQL;
+</code></pre>
+<p>Trong PostgreSQL <code>ENUM</code> là type-safe, các kiểu <code>ENUM</code> khác nhau không thể so sánh với nhau. Có thể thay đổi và add thêm giá trị mới vào ENUM (đây là blocking statement)</p>
+<h2><a href="#trigger-and-rule-systems" aria-hidden="true" class="anchor" id="trigger-and-rule-systems"></a>Trigger and rule systems</h2>
+<p>PostgreSQL cung cấp các trigger và rule để thực hiện một cách tự động một hàm khi một sự kiện, như <code>INSERT, UPDATE, hay DELETE</code> được thực hiện. Trigger hay rule không được định nghĩa trên các câu <code>SELECT</code>, trừ <code>_RETURN</code>.</p>
+<p>Về hiệu năng, rule nhanh hơn trigger, nhưng trigger đơn giản hơn và tương thích với các RDBM khác. Rule là một PostgreSQL extension.</p>
+<h3><a href="#rule-system" aria-hidden="true" class="anchor" id="rule-system"></a>Rule system</h3>
+<p>Tạo mới một rule thì sẽ hoặc rewrite rule mặc định hay tạo một rule mới cho action cụ thể trên một table hay view cụ thể. Rule giựa trên C macro system. -&gt; có thể có kết quả lạ lạ khi gọi các volatite function, hay dùng default value (giá trị unique vẫn cứ tăng dần).</p>
+<p>Ví dụ tạo thêm một table để ghi thêm thông tin log.</p>
+<pre><code class="language-sql">CREATE TABLE car_portal_app.car_log (LIKE car_portal_app.car);
+ALTER TABLE car_portal_app.car_log
+    ADD COLUMN car_log_action varchar (1) NOT NULL,
+    ADD COLUMN car_log_time TIMESTAMP WITH TIME ZONE NOT NULL;
+
+CREATE RULE car_log AS ON INSERT TO car_portal_app.car 
+DO ALSO
+    INSERT INTO car_portal_app.car_log (
+        car_id, 
+        car_model_id,
+        number_of_owners, 
+        registration_number, 
+        number_of_doors,
+        manufacture_year,
+        car_log_action, 
+        car_log_time)
+    VALUES (
+        new.car_id, 
+        new.car_model_id,
+        new.number_of_owners,
+        new.registration_number, 
+        new.number_of_doors, 
+        new.manufacture_year,
+        'I',
+        now());
+</code></pre>
+<h3><a href="#trigger-system" aria-hidden="true" class="anchor" id="trigger-system"></a>Trigger system</h3>
+<p>PostgreSQL kích hoạt một hàm khi một sự kiện cụ thể xảy ra trên một table, view, hay foreign table. Các trigger được thực thi khi một người dùng cố gắng thay đổi data thông qua DML events: <code>INSERT, UPDATE, DELETE, hay TRUNCATE</code>.</p>
+<pre><code class="language-sql">CREATE [ CONSTRAINT ] TRIGGER name { BEFORE | AFTER | INSTEAD OF } { event
+[ OR ... ] }
+    ON table_name
+    [ FROM referenced_table_name ]
+    [ NOT DEFERRABLE | [ DEFERRABLE ] [ INITIALLY IMMEDIATE | INITIALLY DEFERRED ] ]
+    [ REFERENCING { { OLD | NEW } TABLE [ AS ] transition_relation_name } [ ... ] ]
+    [ FOR [ EACH ] { ROW | STATEMENT } ]
+    [ WHEN ( condition ) ]
+    EXECUTE PROCEDURE function_name ( arguments )
+
+where event can be one of:
+INSERT
+UPDATE [ OF column_name [, ... ] ]
+DELETE
+TRUNCATE
+</code></pre>
+<p>Ngữ cảnh thời gian trigger:</p>
+<ul>
+<li><code>BEFORE</code>: chỉ có tác dụng trên table và được kích hoạt trước các điều kiện được kiểm tra và operation được thực hiện.</li>
+<li><code>ALTER</code>: Giống <code>BEFORE</code>, trừ việc kích hoạt sau</li>
+<li><code>INSTEAD OF</code>: dùng trên view và tạo updatable view.</li>
+</ul>
+<p>Khi một trigger được mark cho mỗi row thì nó sẽ được thực thi mỗi khi mỗi row bị tác động bỡi CRUD. Một statement trigger chỉ được thực thi cho một operation.
+Trigger có thể được mark như <code>CONSTRAINT</code>, một trigger có thể được thực thi sau câu lệnh cuối hay kết thúc transaction. Constraint trigger phải là <code>AFTER or FOR EACH ROW</code> trigger, và thời điểm phát trigger sẽ được quản lý bỡi các option sau:</p>
+<ul>
+<li><code>DEFERRABLE</code>: thời điểm phát trigger được hoãn tới cuối của transaction.</li>
+<li><code>INITIALLY DEFERRED</code>: trigger sẽ được thực thi ở cuối của transaction. Trigger nên đánh dấu là <code>DEFERRABLE</code></li>
+<li><code>NOT DEFERRABLE</code>: đây là giá trị mặc định, phát trigger ngay sau mỗi lệnh trong transaction.</li>
+<li><code>INITIALLY IMMEDIATE</code>: trigger sẽ được thực thi sau mỗi lệnh. Trigger nên đánh dấu là <code>DEFERRABLE</code></li>
+</ul>
+<p>Các trigger được thực thi theo thứ tự alphabetically trên tên trigger.</p>
+<pre><code class="language-sql">CREATE OR REPLACE FUNCTION car_portal_app.car_log_trg () RETURNS TRIGGER AS
+$$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO car_portal_app.car_log SELECT NEW.*, 'I', NOW();
+    ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO car_portal_app.car_log SELECT NEW.*, 'U', NOW();
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO car_portal_app.car_log SELECT OLD.*, 'D', NOW();
+    END IF;
+    RETURN NULL; --ignored since this is after trigger
+END;
+$$
+LANGUAGE plpgsql;
+</code></pre>
+<pre><code class="language-sql">CREATE TRIGGER car_log AFTER INSERT OR UPDATE OR DELETE ON
+car_portal_app.car FOR EACH ROW EXECUTE PROCEDURE
+car_portal_app.car_log_trg ();
+</code></pre>
+<p>Page 144</p>
+<h4><a href="#triggers-with-arguments" aria-hidden="true" class="anchor" id="triggers-with-arguments"></a>Triggers with arguments</h4>
+<h4><a href="#triggers-and-updatable-views" aria-hidden="true" class="anchor" id="triggers-and-updatable-views"></a>Triggers and updatable views</h4>
+<h2><a href="#ref" aria-hidden="true" class="anchor" id="ref"></a>Ref</h2>
+<p>Salahaldin Juba_ Andrey Volkov - Learning PostgreSQL 11_ A beginner’s guide to building high-performance PostgreSQL database solutions, 3rd Edition (2019, Packt Publishing)</p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/postgresql.html'>postgresql</a></div>
+      </div>
+    </div>
+  </body>
+</html>
