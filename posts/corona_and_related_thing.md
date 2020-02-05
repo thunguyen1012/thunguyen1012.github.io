@@ -19,7 +19,8 @@ Corona giờ là chủ đề hot nhất hiện nay: hot từ ngỏ hẻm đến 
 Báo đài, mạng xã hội viết về corona cũng hàng ngày, dày đặt trên đó. Nhưng cảm giác phần lớn là không cung cấp cho bà con thông tin thực sự phải làm gì, mà chỉ toàn tin giật gân: số người chết tăng, bao nhiêu ca nhiểm mới, mua bán khẩu trang, 100% đeo khẩu trang sai,... Nói chung là tăng phần hù doạ chung chung, làm tình hình căng thẳng thêm chứ không mang lợi lịch ích phòng dịch gì. Đây là lý do mình nghĩ và quyết định viết bài này.
 
 ### Đặc điểm của nCoV
-#### Lây chính qua tiếp xúc nước bọt có virus corona.
+#### Lây bệnh
+- Lây bệnh chính qua tiếp xúc nước bọt có virus corona.
 - Giọt nước bọt hay virus corona nặng và có kích thước lớn nên chỉ cần dùng khẩu trang y tế thông thường là có thể lọc được. 
 - Mỗi lần hắt hơi, tầm phát tán nước bọt là 3m, virus sẽ bay trong không khí và rơi xuống đất.
 - Virus sẽ sống ngoài tự nhiên tối đa lên đến 12h.
