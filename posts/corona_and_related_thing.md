@@ -14,7 +14,9 @@ image:
 
 ## Thời sự Corona và những vấn đề
 ### Thời sự nóng hổi
-Corona giờ là chủ đề hot nhất hiện nay: hot từ ngỏ hẻm đến cả thế giới. Corona - gọi nhanh là như vậy - tên đúng của nó là Viêm phổi cấp do chủng virus corona mới (nCoV). Lây qua hô hấp, tiếp xúc với virus, là bệnh lây từ người qua người. Số ca nhiễm và chết tăng nhanh hàng ngày, cao nhất là ở Trung Quốc. Báo đài, mạng xã hội viết về corona cũng hàng ngày, dày đặt trên đó. Nhưng cảm giác phần lớn là không cung cấp cho bà con thông tin thực sự phải làm gì, mà chỉ toàn tin giật gân: số người chết tăng, bao nhiêu ca nhiểm mới, mua bán khẩu trang, 100% đeo khẩu trang sai,... Nói chung là hù doạ, làm tình hình căng thẳng thêm chứ không mang lợi lịch ích phòng dịch gì. Đây là lý do mình nghĩ và quyết định viết bài này.
+Corona giờ là chủ đề hot nhất hiện nay: hot từ ngỏ hẻm đến cả thế giới. Corona - gọi nhanh là như vậy - tên đúng của nó là Viêm phổi cấp do chủng virus corona mới (nCoV). Lây qua hô hấp, tiếp xúc với virus, là bệnh lây từ người qua người. Số ca nhiễm và chết tăng nhanh hàng ngày.
+
+Báo đài, mạng xã hội viết về corona cũng hàng ngày, dày đặt trên đó. Nhưng cảm giác phần lớn là không cung cấp cho bà con thông tin thực sự phải làm gì, mà chỉ toàn tin giật gân: số người chết tăng, bao nhiêu ca nhiểm mới, mua bán khẩu trang, 100% đeo khẩu trang sai,... Nói chung là tăng phần hù doạ chung chung, làm tình hình căng thẳng thêm chứ không mang lợi lịch ích phòng dịch gì. Đây là lý do mình nghĩ và quyết định viết bài này.
 
 ### Đặc điểm của nCoV
 #### Lây chính qua tiếp xúc nước bọt có virus corona.
