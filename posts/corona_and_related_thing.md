@@ -12,7 +12,7 @@ image:
 - Corona và những vấn đề
 - Phòng bệnh lây qua đường hô hấp
 
-## Thời sự Corona và những vấn đề
+## Corona và những vấn đề
 ### Thời sự nóng hổi
 Corona giờ là chủ đề hot nhất hiện nay: hot từ ngỏ hẻm đến cả thế giới. Corona - gọi nhanh là như vậy - tên đúng của nó là Viêm phổi cấp do chủng virus corona mới (nCoV). Lây qua hô hấp, tiếp xúc với virus, là bệnh lây từ người qua người. Số ca nhiễm và chết tăng nhanh hàng ngày.
 
@@ -54,3 +54,6 @@ Vì lây qua đường hô hấp: hít thở, dịch, chất nhầy liên quan h
     - Bóp cho phần trên khẩu trang khít với cánh mũi - che kín càng nhiều càng tốt, khẩu trang là miếng lọc không khi trước khi vào mũi, miệng.
     - Đúng mặt trong, mặt ngoài khẩu trang
 - Vì là tấm lọc không khí nên vi khuẩn sẽ đọng, bám vào mặt ngoài của khẩu trang -> bề mặt này có thể là nguồn bệnh -> dùng khẩu trang 1 lần, rửa tay sau khi tháo khẩu trang.
+
+## Tham khảo thêm
+- https://www.who.int/emergencies/diseases/novel-coronavirus-2019/advice-for-public
