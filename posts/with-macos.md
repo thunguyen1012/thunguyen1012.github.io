@@ -46,3 +46,16 @@ export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/b
 ```
 - ZShell  
 Add ```alias code="/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code"``` to ```~/.zshrc``` file.
+
+## Mapping folder
+I faced an issue with Parallel on MacOS.
+I have shared data to WindowsOS and use it with normal account.
+I tried to access the sharing data with 'Run as administrator' and couldn't see mapped driver
+
+Solution:
+Run mapping for administrator by creating a batch file:
+```batch
+net use y: \\psf\Home
+```
+
+And run batch with 'Run as administrator'
