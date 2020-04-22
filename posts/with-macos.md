@@ -59,3 +59,21 @@ net use y: \\psf\Home
 ```
 
 And run batch with 'Run as administrator'
+
+## Who is listening on a specific port?
+```batch
+lsof -nP -iTCP:$PORT | grep LISTEN
+
+OR
+
+lsof -nP -iTCP:$PORT
+```
+
+-n: displaying IP addresses instead of host names.  
+-P: displaying raw port numbers  
+$PORT: the port number or a comma-separated list of port numbers
+
+Almost times, we will kill them.
+```batch
+kill -9 <PID>
+```
