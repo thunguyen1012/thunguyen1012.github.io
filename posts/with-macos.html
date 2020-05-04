@@ -102,6 +102,12 @@ $PORT: the port number or a comma-separated list of port numbers</p>
 <p>Almost times, we will kill them.</p>
 <pre><code class="language-batch">kill -9 &lt;PID&gt;
 </code></pre>
+<h2><a href="#delete-node_modules" aria-hidden="true" class="anchor" id="delete-node_modules"></a>Delete node_modules</h2>
+<pre><code class="language-batch">find . -name &quot;node_modules&quot; -exec rm -rf '{}' +
+</code></pre>
+<p>On Win</p>
+<pre><code class="language-batch">FOR /d /r . %d in (node_modules) DO @IF EXIST &quot;%d&quot; rm -rf &quot;%d&quot;
+</code></pre>
  <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/mac.html'>mac</a><a class='topic-tag' href='/tags/command.html'>command</a></div>
       </div>
     </div>

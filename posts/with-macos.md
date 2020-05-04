@@ -77,3 +77,13 @@ Almost times, we will kill them.
 ```batch
 kill -9 <PID>
 ```
+
+## Delete node_modules
+```batch
+find . -name "node_modules" -exec rm -rf '{}' +
+```
+
+On Win
+```batch
+FOR /d /r . %d in (node_modules) DO @IF EXIST "%d" rm -rf "%d"
+```

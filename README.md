@@ -40,7 +40,7 @@ Make sure your `published` field is set to `true` or `private` (generated but no
 Run the following command:
 
 ```
-./gen posts
+./generator posts
 ```
 
 ## Can I preview my post while writing?
