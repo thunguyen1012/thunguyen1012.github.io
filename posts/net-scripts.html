@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>.NET utility scripts | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Collection of script'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function() {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga('create', 'UA-120719369-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>.NET utility scripts</h1>
+        <h2><a href="#base64-encoded-zipped-string" aria-hidden="true" class="anchor" id="base64-encoded-zipped-string"></a>Base64 encoded zipped string</h2>
+<p>Dấu hiệu: <code>H4sIAAAAAAAAA</code></p>
+<pre><code>public static void CopyTo(Stream src, Stream dest)
+{
+    byte[] bytes = new byte[4096];
+    int cnt;
+
+    while ((cnt = src.Read(bytes, 0, bytes.Length)) != 0)
+    {
+        dest.Write(bytes, 0, cnt);
+    }
+}
+
+public static byte[] Zip(string str)
+{
+    var bytes = Encoding.UTF8.GetBytes(str);
+
+    using var msi = new MemoryStream(bytes);
+    using var mso = new MemoryStream();
+    using (var gs = new GZipStream(mso, CompressionMode.Compress))
+    {
+        CopyTo(msi, gs);
+    }
+
+    return mso.ToArray();
+}
+
+public static string Unzip(byte[] bytes)
+{
+    using var msi = new MemoryStream(bytes);
+    using var mso = new MemoryStream();
+    using (var gs = new GZipStream(msi, CompressionMode.Decompress))
+    {
+        CopyTo(gs, mso);
+    }
+
+    return Encoding.UTF8.GetString(mso.ToArray());
+}
+
+var bytes = Convert.FromBase64String(encodedBase64);
+var decodedBase64 = Unzip(bytes);
+</code></pre>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/net.html'>net</a></div>
+      </div>
+    </div>
+  </body>
+</html>
