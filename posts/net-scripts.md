@@ -8,7 +8,7 @@ image:
 ---
 
 ## Base64 encoded zipped string
-Dấu hiệu: ```H4sIAAAAAAAAA```
+Indicator: ```H4sIAAAAAAAAA```
 
 ```
 public static void CopyTo(Stream src, Stream dest)
