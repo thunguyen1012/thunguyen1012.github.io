@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Regex Notes | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='regex note'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function() {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga('create', 'UA-120719369-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Regex Notes</h1>
+        <h2><a href="#match-multiple-sub-groups-instead-of-a-giant-group" aria-hidden="true" class="anchor" id="match-multiple-sub-groups-instead-of-a-giant-group"></a>Match multiple sub-groups instead of a giant group</h2>
+<p>Sample:</p>
+<pre><code>~EB*B*A*B*01~MSG*Dummy01~EB*B*A*B*02~MSG*Dummy02~EB*B*A
+</code></pre>
+<p>Request: Get groups</p>
+<pre><code>EB*B*A*B*01~MSG*Dummy01  
+EB*B*A*B*02~MSG*Dummy02
+</code></pre>
+<p>Pattern: <code>(EB\*B(.*?)(?=~EB))+</code><br />
+Important thing is <code>(.*?)</code></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/regex.html'>regex</a></div>
+      </div>
+    </div>
+  </body>
+</html>
