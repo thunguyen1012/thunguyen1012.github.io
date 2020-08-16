@@ -1,0 +1,58 @@
+---
+title: Đèn halogen, đèn xenon, đèn LED, đèn laser là gì và chúng hoạt động ra sao?
+published: true
+date: 2020-08-16 22:00:00
+tags: tinhte, oto
+description: Đèn halogen, đèn xenon, đèn LED, đèn laser là gì và chúng hoạt động ra sao?
+image:
+---
+
+Toàn bộ ngành công nghiệp ô tô và xe máy ngày nay đều chuyển qua dùng bóng LED như một tiêu chuẩn mới cho hệ thống chiếu sáng. Thậm chí, nhờ bóng LED, các nhà sản xuất còn có thể tạo ra các hệ thống đèn cực kỳ thông minh với khả năng tự động tinh chỉnh góc chiếu cho phù hợp với điều kiện vận hành, không gây chói mắt cho người đối diện. Vậy điều gì khiến cho LED trở thành công nghệ chiếu sáng được ưu ái như vậy? Và so với trước kia, đèn halogen hay đèn xenon là gì và có khác biệt gì so với LED?
+
+## Đèn halogen
+
+![Đèn halogen](https://photo2.tinhte.vn/data/attachment-files/2020/08/5111882_cac-loai-den-tinhte-6.jpg 'Đèn halogen')
+
+Halogen từng là loại đèn phổ biến nhất trong ngành công nghiệp phương tiện nói chung. Lợi thế của loại đèn này đó chính là quy trình sản xuất đơn giản nhưng lại tốn ít chi phí. Về cơ bản, 1 bóng đèn halogen có tuổi thọ khoảng 1.000 giờ đồng hồ khi vận hành trong điều kiện bình thường và nếu hỏng hóc, chi phí thay thế cũng thường rất rẻ so với các loại khác. Mặc dù sở hữu những lợi thế này, thế nhưng bóng halogen hiện tại không còn là ưu tiên hàng đầu của các nhà sản xuất. Nguyên nhân là vì sao? Lý do nằm ở chỗ halogen trong thời đại này hiện đã không còn vận hành hiệu quả so với các loại đèn khác. Và đề hiểu tại sao, mời các bạn đi đến phần giải thích nguyên lý hoạt động của bóng đèn halogen.
+
+Cấu tạo của đèn halogen đó chính là nó được tạo thành từ lớp vỏ thuỷ tinh có khả năng chịu nhiệt rất cao, bên trong vỏ này chứa 1 loại chất khí, ngoài ra còn có sợi tóc làm từ Volfram, một nguyên tố hoá học với số nguyên tử là 74. Về bản chất, đèn halogen là một loại đèn sợi đốt, nhưng khác biệt ở chỗ là hỗn hợp khí bên trong bóng đèn sẽ là khí halogen - hỗn hợp giữa Nito và Argon.
+
+![](https://photo2.tinhte.vn/data/attachment-files/2020/08/5111881_cac-loai-den-tinhte-3.jpg)
+
+Để tạo ra ánh sáng, dây tóc volfram này sẽ nhận điện năng từ pin trang bị bên trong ô tô, điện năng chuyển thành nhiệt năng, làm cho sợi tóc nóng lên đến 2.500ºC và cuối cùng là chuyển thành quang năng, ý là phát sáng đó. Trải qua thời gian sử dụng, volfram trên dây tóc bắt đầu bay hơi và đọng lại trong bề mặt của lớp kính bên trong bóng đèn, sau đó, dây tóc sẽ bị đứt và kết thúc dòng đời của bóng đèn. Kỳ thực là đối với đèn halogen thì hiện tượng này đã được khắc phục tốt hơn so với đèn sợi đốt thông thường nhưng không phải không có. Tuy nhiên, đó không phải là vấn đề nghiêm trọng bởi cái gì cũng có tuổi thọ của nó.
+
+
+Vấn đề của đèn halogen nằm ở chỗ trong quá trình chuyển nhiệt năng thành quang năng, một lượng nhiệt lớn sẽ được sinh ra và khiến cho một mớ năng lượng bị lãng phí. Ngoài ra, một trở ngại khác nằm ở việc thay thế bóng đèn halogen khi nó bị hỏng cũng không phải chuyện dễ. Nếu không phải thợ lành nghề, việc bạn thay bóng đèn halogen có thể khiến cho dầu mỡ trên tay chạm vào lớp kính bên ngoài, khiến nó toả nhiệt không đều trong quá trình hoạt động, dẫn đến suy giảm tuổi thọ bóng đèn. Ưu điểm của đèn halogen nằm ở việc nó là giảp pháp tốn ít chi phí nhưng có thể tạo ra mức ánh sáng tốt nhất, khả năng tương thích với nhiều mẫu xe và có thể điều chỉnh được độ sáng. Vậy là nếu không phải so sánh với bất kỳ loại đèn nào khác, đèn halogen chỉ bị mỗi cái nhược điểm là lãng phí năng lượng.
+
+## Đèn Xenon
+
+![](https://photo2.tinhte.vn/data/attachment-files/2020/08/5111896_cac-loai-den-tinhte-5.jpg)
+
+Đèn Xenon còn có cái tên khác là đèn pha phóng điện cường độ cao (HID), được cho là giải pháp chiếu sáng hiệu quả hơn nhờ vào nhiệt độ màu cũng như lượng ánh sáng tạo ra. Loại đèn này lần đầu tiên có mặt trên chiếc BMW Series 7 đời 1991, sau đó bắt đầu trở thành lựa chọn hàng đầu các nhà sản xuất ô tô. Nguyên lý hoạt động của đèn Xenon như sau: bạn có 1 ống chứa đầy khí, ở mỗi đầu đặt 1 điện cực và cho dòng điện đi qua. Cụ thể, khí trong trường hợp này đó chính là khí xenon và còn có thêm muối kim loại. Quá trình thắp sáng đèn HID sẽ diễn ra theo các bước: đầu tiên là giai đoạn đánh lửa, khi xung điện áp cao tạo ra tia lửa điện giúp ion hoá khí xenon và tạo ra thứ gọi là đường hầm dòng điện giữa các cực. Bị kích thích, khí xenon bức xạ để tạo ra ánh sáng và người ta gọi đó là hiện tượng hồ quang. Nhiệt độ bên trong bóng đèn tăng lên nhanh chóng, đủ để làm bốc hơi muối kim loại, từ đó giảm điện trở giữa 2 điện cực. Sau cùng, sẽ có một bộ phận gọi là chấn lưu giúp duy trì điện áp nhằm cho hồ quang luôn ở trạng thái ổn định, ánh sáng không bị nhấp nháy.
+
+Điểm cộng đầu tiên của đèn Xenon đó chính là lượng ánh sáng toả ra lớn hơn so với đèn halogen. Theo dữ liệu chính thức, bóng đèn xenon có thể tạo ra ánh sáng với cường độ 3000 lumen, trong khi con số đối với đèn halogen chỉ là 1400 lumen. Hơn nữa, tuổi thọ của đèn xenon cũng cao hơn, trung bình khoảng 2.000 giờ trong điều kiện bình thường. Trong quá trìn vận hành, đèn xenon đòi hỏi nhiều năng lượng hơn để kích hoạt, nhưng khi đã đạt đến nhiệt độ ổn định, năng lượng cần cung cấp ít hơn nhiều so với đèn halogen. Nhược điểm của đèn xenon rõ ràng là chi phí, chúng đắt hơn đáng kể so với đèn halogen, việc bảo trì bảo dưỡng cũng phức tạp hơn. Chấn lưu - tụ điện dùng để điều chỉnh điện áp có lẽ chính là thành phần đắt tiền nhất. Ngoài ra, đèn xenon với các chất hoá học bên trong có thể gây tổn hại đến sức khoẻ con người nếu xử lý không đúng cách. Nhược điểm cuối cùng của đèn xenon đó chính là...quá sáng. Lượng ánh sáng tạo ra nhiều đến mức gây chói mắt và khó chịu cho những người lái xe ngược chiều, thậm chí dẫn đến tai nạn cũng là được xem là nhược điểm của đèn xenon.
+
+## Đèn LED
+
+![](https://photo2.tinhte.vn/data/attachment-files/2020/08/5111880_cac-loai-den-tinhte-2.jpg)
+
+Trong thế giới xe cộ ngày nay, tâm lý là người ta rất thích đèn LED, chẳng hiểu vì sao. Đèn LED cho ánh sáng trắng nhìn sang hơn, đèn LED nhìn hiện đại hơn,...Có vô vàn các lý do để người ta chọn đèn LED nhưng đối với các nhà sản xuất ô tô, tại sao LED dần trở thành xu hướng? Về nguyên lý, cách hoạt động của đèn LED tương đối khó giải thích, nhưng về cơ bản, nó vận hành dựa vào việc các electron âm di chuyển vào các “lỗ trống” mang cực dương trên bề mặt chất bán dẫn. Khi một electron tự do rơi vào một lỗ có mức năng lượng thấp hơn, nó sẽ bị mất năng lượng, đồng thời giải phóng ra photon - phần tử mang năng lượng nhỏ nhất của ánh sáng. Người ta gọi hiện tượng đó là điện phát quang (electroluminescence).
+
+Cứ nhân quá trình này lên hàng nghìn lần mỗi giây, bạn sẽ nhận được một lượng ánh sáng liên tục phát ra từ nguồn có chiều rộng khoảng 2 mm - đó là một đi ốt phát quang (LED). Một lợi điểm không thể quên nhắc đến khi chúng ta nói đến đèn LED đó chính là công suất tiêu thụ năng lượng rất thấp nếu so với đèn halogen truyền thống. Có lẽ, một trong những chiếc ô tô thương mại đầu tiên sở hữu công nghệ chiếu sáng LED đó chính là Audi R8 phiên bản 2004. Về khả năng chiếu sáng, đèn LED nằm ở giữa so với đèn HID và đèn halogen. Điểm nổi trội của LED đó chính là ánh sáng hình thành tập trung hơn và cũng có thể can thiệp để tạo ra các hình dạng khác nhau. Nhờ kích thước nhỏ, các nhà sản xuất có thể dễ dàng đưa nó vào bên trong hốc chiếu sáng, tự do hơn trong việc phát triển thiết kế bởi không còn phải suy nghĩ đến việc chừa không gian cho bóng đèn cũng như các tấm phản quang.
+
+![](https://photo2.tinhte.vn/data/attachment-files/2020/08/5111879_cac-loai-den-tinhte-4.jpg)
+
+Có hàng loạt các ưu điểm, điều đó không có nghĩa là đèn LED không có nhược điểm nào. Mặc dù không bị nóng như đèn halogen, tuy nhiên, trong quá trình hoạt động, đèn LED vẫn sẽ sinh ra một lượng nhiệt nhất định ở phần đầu khi dòng điện đi qua. Điều này tạo nên các nguy cơ tìm ẩn với những bộ phận có liên quan nằm gần đó. Đây cũng là lý do giải thích vì sao đèn LED thường cần có hệ thống tản nhiệt để tránh việc các linh kiện có thể bị hư hỏng do quá nhiệt. Có một ngoại lệ đó chính là đèn LED định vị ban ngày cũng như đèn hậu LED không cần phải có tản nhiệt. Đơn giản vì chúng là những loại đèn không phải chủ yếu dùng cho mục đích chiếu sáng để định hướng trong đêm. Thế nên, cường độ sáng của các loại đèn này không nhất thiết phải mạnh như đèn pha phía trước, và vì vậy, nhiệt độ sinh ra trong quá trình hoạt động cũng ít hơn rất nhiều. Tóm lại, ưu điểm của đèn LED đó là kích thước nhỏ, tiêu thụ năng lượng ít và sáng hơn đèn halogen. Tuy nhiên, nhược điểm nằm ở việc chi phí sản xuất cao, nhiệt lượng sinh ra gây ảnh hưởng đến các thành phần khác.
+
+## Đèn laser
+
+![](https://photo2.tinhte.vn/data/attachment-files/2020/08/5111876_cac-loai-den-tinhte-7.jpg)
+
+Laser là công nghệ chiếu sáng đang được khai thác bởi nhiều thương hiệu ô tô hạng sang, chẳng hạn như BMW hay Audi. Công nghệ đèn laser được cho là tốt hơn gấp 1.000 lần so với đèn LED, nhưng lại sở hữu kích thước nhỏ hơn rất nhiều. Laser là loại tia khá nguy hiểm và vùng sáng do tia này tạo thành chỉ có kích cỡ tương đương một đồng xu. Vậy làm thế nào người ta có thể ứng dụng nó lên hệ thống đèn chiếu sáng trên ô tô? Theo cách lý giải của BMW, hệ thống của họ sử dụng chùm 3 tia laser màu xanh dương được đặt nằm ở phía sau của cụm đèn pha, chiếu vào một bộ gương nhỏ có tác dụng tập trung năng lượng vào một thấu kính nhỏ khác. Bên trong thấu kính này, người ta bơm đầy vào đó khí phốt-pho màu vàng. Khi tiếp xúc với chùm tia laser, chất khí này phát quang và tạo ra ánh sáng màu trắng, sau đó bị phản xạ về phía trước nhờ hệ thống gương nêu bên trên. Do đó về cơ bản, khi gặp một chiếc xe sử dụng công nghệ đèn laser chạy trên đường, thứ ánh sáng bạn nhìn thấy thực chất được tạo ra bởi phốt-pho chứ không phải là laser.
+
+![](https://photo2.tinhte.vn/data/attachment-files/2020/08/5111877_cac-loai-den-tinhte-1.jpg)
+
+Ánh sáng tạo ra bởi hệ thống đèn laser mạnh hơn 1.000 lần so với đèn LED, trong khi chỉ đòi hỏi khoảng 2/3, thậm chí là 1/2 điện năng tiêu thụ. Nhờ có phốt-pho, nhiệt độ màu của sáng sáng đèn laser nằm trong khoảng từ 5.500 - 6.000 K, khá gần với mức ánh sáng tự nhiên ban ngày (cỡ 6.500 K). Với công suất mạnh hơn đèn LED, đèn laser có thể chiếu sáng ở khoảng cách xa gấp đôi. Nhược điểm duy nhất của đèn laser có lẽ nằm ở giá thành. Mỗi một bên đèn chiếu sáng dùng công nghệ laser của xe BMW thường đòi hỏi có 6 tia laser, hai bên là 12 tia, đồng nghĩa với 12 hệ thống chiếu laser. Và chi phí để trả cho gói thiết bị này lên đến 10.000 USD. Công nghệ của Audi cũng có cách vận hành tương tự nhưng dùng ít tia laser hơn với 4 cái mỗi bên. Ngoài giá thành, một nhược điểm khác của đèn laser là nó cũng cần phải có hệ thống tản nhiệt tốt bởi nhiệt lượng toả ra trong khi vận hành thậm chí còn nhiều hơn so với đèn LED.
+
+## REF: 
+- https://tinhte.vn/thread/tim-hieu-nhe-den-halogen-den-xenon-den-led-den-laser-la-gi-va-chung-hoat-dong-ra-sao.3174051/
