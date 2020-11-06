@@ -1,9 +1,9 @@
 ---
-title: Động cơ xăng vs. Động cơ dầu
+title: Car notes
 published: true
-date: 2019-10-11 22:00:00
+date: 2020-11-06 22:00:00
 tags: car, engine
-description: So sánh động cơ xăng với động cơ dầu
+description: Car notes
 image:
 ---
 
