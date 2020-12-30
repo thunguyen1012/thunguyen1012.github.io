@@ -7,6 +7,10 @@ description: Collection of useful thing
 image:
 ---
 
+## List LAN IPs
+```
+arp -a
+```
 ## Simple static web server everywhere
 Có python, bạn có thể dựng static web server ngay lập tức tại thư mục mình muốn. Trên Windows, mình nghĩ cũng làm được điều tương tự, nhưng do hồi giờ thường mặc định gắn với IIS nên không tìm thêm cái gì đơn giản hơn.
 
