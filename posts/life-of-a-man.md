@@ -7,7 +7,7 @@ description: though, experience of a man's life
 image:
 ---
 
-**Một series những suy nghĩ qua năm tháng của 1 người đàn ông**
+**Một series những suy nghĩ qua năm tháng của 1 người đàn ông**  
 (Nó bắt đầu khi còn tầm tháng nữa là 39 tuổi)
 
 - [2023/11/05 - Bắt đầu](#20231105---bắt-đầu)
