@@ -1,8 +1,8 @@
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - One-to-many
 published: true
-date: 2024-07-16T04:30:18.484Z
-tags: efcore, summary
+date: 2024-07-16 06:08:40
+tags: EFCore, Summary
 description: One-to-many relationships are used when a single entity is associated with any number of other entities.
 image:
 ---

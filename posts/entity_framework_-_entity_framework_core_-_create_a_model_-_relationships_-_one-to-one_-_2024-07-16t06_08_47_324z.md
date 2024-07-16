@@ -1,9 +1,8 @@
-
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - One-to-one
 published: true
-date: 2024-07-16T04:30:25.461Z
-tags: efcore, summary
+date: 2024-07-16 06:08:47
+tags: EFCore, Summary
 description: One-to-one relationships are used when one entity is associated with at most one other entity. For example, a Blog has one BlogHeader, and that BlogHeader belongs to a single Blog.
 image:
 ---

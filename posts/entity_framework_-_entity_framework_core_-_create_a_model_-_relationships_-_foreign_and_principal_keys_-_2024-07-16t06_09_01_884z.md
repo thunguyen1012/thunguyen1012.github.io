@@ -1,9 +1,8 @@
-
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - Foreign and principal keys
 published: true
-date: 2024-07-16T04:32:11.224Z
-tags: efcore, summary
+date: 2024-07-16 06:09:01
+tags: EFCore, Summary
 description: One-to-one and one-to-many relationships are composed of two one-to-many relationships, each of which is itself defined by a foreign key referencing a principal key.
 image:
 ---

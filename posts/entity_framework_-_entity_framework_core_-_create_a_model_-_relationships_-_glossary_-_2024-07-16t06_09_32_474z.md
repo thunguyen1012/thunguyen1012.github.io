@@ -1,9 +1,8 @@
-
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - Glossary
 published: true
-date: 2024-07-16T04:33:13.920Z
-tags: efcore, summary
+date: 2024-07-16 06:09:32
+tags: EFCore, Summary
 description: There are a number of terms used to describe relationships. It is not necessary to understand all these terms up-front. Refer back here as needed when reading the relationships documentation pages.
 image:
 ---

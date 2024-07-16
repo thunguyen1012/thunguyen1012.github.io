@@ -1,9 +1,8 @@
-
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - Mapping attributes
 published: true
-date: 2024-07-16T04:33:13.593Z
-tags: efcore, summary
+date: 2024-07-16 06:09:32
+tags: EFCore, Summary
 description: OnModelCreating implements the OnModelCreating mapping attribute.
 image:
 ---

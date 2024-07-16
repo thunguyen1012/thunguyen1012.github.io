@@ -1,9 +1,8 @@
-
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - Many-to-many
 published: true
-date: 2024-07-16T04:31:38.067Z
-tags: efcore, summary
+date: 2024-07-16 06:08:54
+tags: EFCore, Summary
 description: Many-to-many relationships are used when any number entities of one entity type is associated with any number of entities of the same or another entity type.
 image:
 ---

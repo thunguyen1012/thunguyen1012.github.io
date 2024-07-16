@@ -1,9 +1,8 @@
-
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - Navigations
 published: true
-date: 2024-07-16T04:32:42.369Z
-tags: efcore, summary
+date: 2024-07-16 06:09:07
+tags: EFCore, Summary
 description: This paper describes the use of navigations in the Entity Framework (EF).
 image:
 ---

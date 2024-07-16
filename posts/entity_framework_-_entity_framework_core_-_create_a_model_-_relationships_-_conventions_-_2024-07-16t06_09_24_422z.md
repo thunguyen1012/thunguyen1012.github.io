@@ -1,9 +1,8 @@
-
 ---
 title: Entity Framework - Entity Framework Core - Create a model - Relationships - Conventions
 published: true
-date: 2024-07-16T04:32:59.213Z
-tags: efcore, summary
+date: 2024-07-16 06:09:24
+tags: EFCore, Summary
 description: EF Core uses a set of conventions when discovering and building a model based on entity type classes.
 image:
 ---
