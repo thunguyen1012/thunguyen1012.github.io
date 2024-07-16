@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Relationships - One-to-one | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='One-to-one relationships are used when one entity is associated with at most one other entity. For example, a Blog has one BlogHeader, and that BlogHeader belongs to a single Blog.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function() {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga('create', 'UA-120719369-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Relationships - One-to-one</h1>
+        <hr />
+<h1><a href="#one-to-one-relationships" aria-hidden="true" class="anchor" id="one-to-one-relationships"></a><a href="https://learn.microsoft.com/en-us/ef/core/modeling/relationships/one-to-one">One-to-one relationships</a></h1>
+<ul>
+<li>
+<p>Article</p>
+</li>
+<li>
+<p>03/30/2023</p>
+</li>
+<li>
+<p>6 contributors</p>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>One-to-one relationships are used when one entity is associated with at most one other entity. For example, a <code>Blog</code> has one <code>BlogHeader</code>, and that <code>BlogHeader</code> belongs to a single <code>Blog</code>.</p>
+<p>In this document, we are going to look at some of the basics of configuration management.</p>
+<blockquote>
+<p>Tip
+The code for all the examples below can be found in OneToOne.cs.</p>
+</blockquote>
+<h2><a href="#required-one-to-one" aria-hidden="true" class="anchor" id="required-one-to-one"></a>Required one-to-one</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; } // Required foreign key property
+    public Blog Blog { get; set; } = null!; // Required reference navigation to principal
+}
+</code></pre>
+<p>A one-to-one relationship is made up from:</p>
+<ul>
+<li>
+<p>One or more primary or alternate key properties on the principal entity. For example, <code>Blog.Id</code>.</p>
+</li>
+<li>
+<p>One or more foreign key properties on the dependent entity. For example, <code>BlogHeader.BlogId</code>.</p>
+</li>
+<li>
+<p>Optionally, a reference navigation on the principal entity referencing the dependent entity. For example, <code>Blog.Header</code>.</p>
+</li>
+<li>
+<p>Optionally, a reference navigation on the dependent entity referencing the principal entity. For example, <code>BlogHeader.Blog</code>.</p>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+It is not always obvious which side of a one-to-one relationship should be the principal, and which side should be the dependent. Some considerations are:</p>
+</blockquote>
+<p>If the database tables for the two types already exist, then the table with the foreign key column(s) must map to the dependent type.
+A type is usually the dependent type if it cannot logically exist without the other type. For example, it makes no sense to have a header for a blog that does not exist, so <code>BlogHeader</code> is naturally the dependent type.
+If there is a natural parent/child relationship, then the child is usually the dependent type.</p>
+<ul>
+<li>
+<p>If the database tables for the two types already exist, then the table with the foreign key column(s) must map to the dependent type.</p>
+</li>
+<li>
+<p>A type is usually the dependent type if it cannot logically exist without the other type. For example, it makes no sense to have a header for a blog that does not exist, so <code>BlogHeader</code> is naturally the dependent type.</p>
+</li>
+<li>
+<p>If there is a natural parent/child relationship, then the child is usually the dependent type.</p>
+</li>
+</ul>
+<p>So, for the relationship in this example:</p>
+<ul>
+<li>
+<p>The foreign key property <code>BlogHeader.BlogId</code> is not nullable. This makes the relationship &quot;required&quot; because every dependent (BlogHeader) must be related to some principal (Blog), since its foreign key property must be set to some value.</p>
+</li>
+<li>
+<p>Both entities have navigations pointing to the related entity on the other side of the relationship.</p>
+</li>
+</ul>
+<blockquote>
+<p>Note
+A required relationship ensures that every dependent entity must be associated with some principal entity. However, a principal entity can always exist without any dependent entity. That is, a required relationship does not indicate that there will always be a dependent entity. There is no way in the EF model, and also no standard way in a relational database, to ensure that a principal is associated with a dependent. If this is needed, then it must be implemented in application (business) logic. See Required navigations for more information.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+A relationship with two navigations--one from dependent to principal and an inverse from principal to dependent--is known as a bidirectional relationship.</p>
+</blockquote>
+<p>This relationship is discovered by convention. That is:</p>
+<ul>
+<li>
+<p><code>Blog</code> is discovered as the principal in the relationship, and <code>BlogHeader</code> is discovered as the dependent.</p>
+</li>
+<li>
+<p><code>BlogHeader.BlogId</code> is discovered as a foreign key of the dependent referencing the <code>Blog.Id</code> primary key of the principal. The relationship is discovered as required because <code>BlogHeader.BlogId</code> is not nullable.</p>
+</li>
+<li>
+<p><code>Blog.BlogHeader</code> is discovered as a reference navigation.</p>
+</li>
+<li>
+<p><code>BlogHeader.Blog</code> is discovered as a reference navigation.</p>
+</li>
+</ul>
+<blockquote>
+<p>Important
+When using C# nullable reference types, the navigation from the dependent to the principal must be nullable if the foreign key property is nullable. If the foreign key property is non-nullable, then the navigation may be nullable or not. In this case, <code>BlogHeader.BlogId</code> is non-nullable, and <code>BlogHeader.Blog</code> is also non-nullable. The = <code>null</code>!; construct is used to mark this as intentional for the C# compiler, since EF typically sets the <code>Blog</code> instance and it cannot be <code>null</code> for a fully loaded relationship. See Working with Nullable Reference Types for more information.</p>
+</blockquote>
+<p>For cases where the navigations, foreign key, or required/optional nature of the relationship are not discovered by convention, these things can be configured explicitly. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<p>As with all relationships, configuration of the relationships starts with the principal entity type.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;BlogHeader&gt;()
+        .HasOne(e =&gt; e.Blog)
+        .WithOne(e =&gt; e.Header)
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<p>Neither of these options is better than the other; they both result in exactly the same configuration.</p>
+<blockquote>
+<p>Tip
+It is never necessary to configure a relationship twice, once starting from the principal, and then again starting from the dependent. Also, attempting to configure the principal and dependent halves of a relationship separately generally does not work. Choose to configure each relationship from either one end or the other and then write the configuration code only once.</p>
+</blockquote>
+<h2><a href="#optional-one-to-one" aria-hidden="true" class="anchor" id="optional-one-to-one"></a>Optional one-to-one</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int? BlogId { get; set; } // Optional foreign key property
+    public Blog? Blog { get; set; } // Optional reference navigation to principal
+}
+</code></pre>
+<p>The following example shows how to set the foreign key property and navigation to a principal (Blog).</p>
+<blockquote>
+<p>Important
+When using C# nullable reference types, the navigation property from dependent to principal must be nullable if the foreign key property is nullable. In this case, <code>BlogHeader.BlogId</code> is nullable, so <code>BlogHeader.Blog</code> must be nullable too. See Working with Nullable Reference Types for more information.</p>
+</blockquote>
+<p>In this release, we have added a new relationship between two objects.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired(false);
+}
+</code></pre>
+<h2><a href="#required-one-to-one-with-primary-key-to-primary-key-relationship" aria-hidden="true" class="anchor" id="required-one-to-one-with-primary-key-to-primary-key-relationship"></a>Required one-to-one with primary key to primary key relationship</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public Blog Blog { get; set; } = null!; // Required reference navigation to principal
+}
+</code></pre>
+<p>A one-to-one relationship is a relationship between a principal and a dependent.</p>
+<p>The foreign key is a property of the relationship between the two parties.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;();
+}
+</code></pre>
+<blockquote>
+<p>Tip
+HasPrincipalKey can also used for this purpose, but doing so is less common.</p>
+</blockquote>
+<p>When the primary key is suitable, then it is used as the foreign key.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.Id)
+        .IsRequired();
+}
+</code></pre>
+<h2><a href="#required-one-to-one-with-shadow-foreign-key" aria-hidden="true" class="anchor" id="required-one-to-one-with-shadow-foreign-key"></a>Required one-to-one with shadow foreign key</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public Blog Blog { get; set; } = null!; // Required reference navigation to principal
+}
+</code></pre>
+<p>A foreign key property is a detail of how the relationship between entities is represented in the database.</p>
+<p>In the previous example, EF created a shadow foreign key property called <code>BlogId</code> of type <code>int</code>.</p>
+<p>The shadow foreign key property is used to navigation from dependent to principal.</p>
+<p>This relationship again needs some configuration to indicate the principal and dependent ends:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(&quot;BlogId&quot;);
+}
+</code></pre>
+<p>For cases where the navigations, foreign key, or required/optional nature of the relationship are not discovered by convention, these things can be configured explicitly. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(&quot;BlogId&quot;)
+        .IsRequired();
+}
+</code></pre>
+<h2><a href="#optional-one-to-one-with-shadow-foreign-key" aria-hidden="true" class="anchor" id="optional-one-to-one-with-shadow-foreign-key"></a>Optional one-to-one with shadow foreign key</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public Blog? Blog { get; set; } // Optional reference navigation to principal
+}
+</code></pre>
+<p>This example shows how to create a relationship between a dependent entity type and a foreign key property.</p>
+<p>The foreign key property can be a nullable reference type or a shadow property.</p>
+<p>As before, this relationship needs some configuration to indicate the principal and dependent ends:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(&quot;BlogId&quot;);
+}
+</code></pre>
+<p>For cases where the navigations, foreign key, or required/optional nature of the relationship are not discovered by convention, these things can be configured explicitly. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(&quot;BlogId&quot;)
+        .IsRequired(false);
+}
+</code></pre>
+<h2><a href="#one-to-one-without-navigation-to-principal" aria-hidden="true" class="anchor" id="one-to-one-without-navigation-to-principal"></a>One-to-one without navigation to principal</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; } // Required foreign key property
+}
+</code></pre>
+<p>For this example, the foreign key property has been re-introduced, but the navigation on the dependent has been removed.</p>
+<blockquote>
+<p>Tip
+A relationship with only one navigation--one from dependent to principal or one from principal to dependent, but not both--is known as a unidirectional relationship.</p>
+</blockquote>
+<p>A relationship between a navigation and a foreign key is a relationship between the navigation and the foreign key.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne()
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<p>Notice that the call to <code>WithOne</code> has no arguments. This is the way to tell EF that there is no navigation from <code>BlogHeader</code> to <code>Blog</code>.</p>
+<p>If configuration starts from an entity with no navigation, then the type of the entity on the other end of the relationship must be explicitly specified using the generic <code>HasOne</code>&gt; call.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;BlogHeader&gt;()
+        .HasOne&lt;Blog&gt;()
+        .WithOne(e =&gt; e.Header)
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<h2><a href="#one-to-one-without-navigation-to-principal-and-with-shadow-foreign-key" aria-hidden="true" class="anchor" id="one-to-one-without-navigation-to-principal-and-with-shadow-foreign-key"></a>One-to-one without navigation to principal and with shadow foreign key</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+}
+</code></pre>
+<p>This example combines two of the previous examples by removing both the foreign key property and the navigation on the dependent.</p>
+<p>As before, this relationship needs some configuration to indicate the principal and dependent ends:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne()
+        .HasForeignKey&lt;BlogHeader&gt;(&quot;BlogId&quot;)
+        .IsRequired();
+}
+</code></pre>
+<p>A more complete configuration can be used to explicitly configure the navigation and foreign key name, with an appropriate call to <code>IsRequired</code>() or <code>IsRequired</code>(false) as needed. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne()
+        .HasForeignKey&lt;BlogHeader&gt;(&quot;BlogId&quot;)
+        .IsRequired();
+}
+</code></pre>
+<h2><a href="#one-to-one-without-navigation-to-dependent" aria-hidden="true" class="anchor" id="one-to-one-without-navigation-to-dependent"></a>One-to-one without navigation to dependent</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; } // Required foreign key property
+    public Blog Blog { get; set; } = null!; // Required reference navigation to principal
+}
+</code></pre>
+<p>This is the third in a series of examples of how to change the navigation on the dependent to the principal.</p>
+<p>By convention, EF will treat this as a one-to-many relationship. Some minimal configuration is needed to make it one-to-one:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;BlogHeader&gt;()
+        .HasOne(e =&gt; e.Blog)
+        .WithOne();
+}
+</code></pre>
+<p>Notice again that <code>WithOne</code>() is called with no arguments to indicate that there is no navigation in this direction.</p>
+<p>For cases where the navigations, foreign key, or required/optional nature of the relationship are not discovered by convention, these things can be configured explicitly. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;BlogHeader&gt;()
+        .HasOne(e =&gt; e.Blog)
+        .WithOne()
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<p>If configuration starts from an entity with no navigation, then the type of the entity on the other end of the relationship must be explicitly specified using the generic <code>HasOne</code>&gt; call.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne&lt;BlogHeader&gt;()
+        .WithOne(e =&gt; e.Blog)
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<h2><a href="#one-to-one-with-no-navigations" aria-hidden="true" class="anchor" id="one-to-one-with-no-navigations"></a>One-to-one with no navigations</h2>
+<p>Occasionally, it can be useful to configure a relationship with no navigations. Such a relationship can only be manipulated by changing the foreign key value directly.</p>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; } // Required foreign key property
+}
+</code></pre>
+<p>This relationship is not discovered by convention, since there are no navigations indicating that the two types are related. It can be configured explicitly in <code>OnModelCreating</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne&lt;BlogHeader&gt;()
+        .WithOne();
+}
+</code></pre>
+<p>The &quot;required&quot; relationship between the <code>BlogHeader.BlogId</code> property and the foreign key property of the blog header is set to true.</p>
+<p>A more complete explicit configuration of this relationship is::</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne&lt;BlogHeader&gt;()
+        .WithOne()
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<h2><a href="#one-to-one-with-alternate-key" aria-hidden="true" class="anchor" id="one-to-one-with-alternate-key"></a>One-to-one with alternate key</h2>
+<p>The following examples show how the foreign key property on a dependent can be used as an alternate key for the principal entity type.</p>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public int AlternateId { get; set; } // Alternate key as target of the BlogHeader.BlogId foreign key
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; } // Required foreign key property
+    public Blog Blog { get; set; } = null!; // Required reference navigation to principal
+}
+</code></pre>
+<p>The <code>HasPrincipalKey</code> relationship between an EF model and its primary key is defined explicitly in <code>OnModelCreating</code>.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasPrincipalKey&lt;Blog&gt;(e =&gt; e.AlternateId);
+}
+</code></pre>
+<p><code>HasPrincipalKey</code> can be combined with other calls to explicitly configure the navigations, foreign key properties, and required/optional nature. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .HasPrincipalKey&lt;Blog&gt;(e =&gt; e.AlternateId)
+        .HasForeignKey&lt;BlogHeader&gt;(e =&gt; e.BlogId)
+        .IsRequired();
+}
+</code></pre>
+<h2><a href="#one-to-one-with-composite-foreign-key" aria-hidden="true" class="anchor" id="one-to-one-with-composite-foreign-key"></a>One-to-one with composite foreign key</h2>
+<p>When the principal of a relationship has a primary or alternate key, then the foreign key of the principal must also be a primary or alternate key with the same number of properties.</p>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id1 { get; set; } // Composite key part 1
+    public int Id2 { get; set; } // Composite key part 2
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int BlogId1 { get; set; } // Required foreign key property part 1
+    public int BlogId2 { get; set; } // Required foreign key property part 2
+    public Blog Blog { get; set; } = null!; // Required reference navigation to principal
+}
+</code></pre>
+<p>The following example shows the relationship between two composite keys.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasKey(e =&gt; new { e.Id1, e.Id2 });
+}
+</code></pre>
+<blockquote>
+<p>Important
+A composite foreign key value is considered to be <code>null</code> if any of its property values are <code>null</code>. A composite foreign key with one property <code>null</code> and another non-null will not be considered a match for a primary or alternate key with the same values. Both will be considered <code>null</code>.</p>
+</blockquote>
+<p>Both <code>HasForeignKey</code> and <code>HasPrincipalKey</code> can be used to explicitly specify keys with multiple properties. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;(
+        nestedBuilder =&gt;
+        {
+            nestedBuilder.HasKey(e =&gt; new { e.Id1, e.Id2 });
+
+            nestedBuilder.HasOne(e =&gt; e.Header)
+                .WithOne(e =&gt; e.Blog)
+                .HasPrincipalKey&lt;Blog&gt;(e =&gt; new { e.Id1, e.Id2 })
+                .HasForeignKey&lt;BlogHeader&gt;(e =&gt; new { e.BlogId1, e.BlogId2 })
+                .IsRequired();
+        });
+}
+</code></pre>
+<blockquote>
+<p>Tip
+In the code above, the calls to <code>HasKey</code> and <code>HasOne</code> have been grouped together into a nested builder. Nested builders remove the need to call Entity&lt;&gt;() multiple times for the same entity type, but are functionally equivalent to calling Entity&lt;&gt;() multiple times.</p>
+</blockquote>
+<h2><a href="#required-one-to-one-without-cascade-delete" aria-hidden="true" class="anchor" id="required-one-to-one-without-cascade-delete"></a>Required one-to-one without cascade delete</h2>
+<pre><code class="language-csharp">// Principal (parent)
+public class Blog
+{
+    public int Id { get; set; }
+    public BlogHeader? Header { get; set; } // Reference navigation to dependent
+}
+
+// Dependent (child)
+public class BlogHeader
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; } // Required foreign key property
+    public Blog Blog { get; set; } = null!; // Required reference navigation to principal
+}
+</code></pre>
+<p>In this article, I'm going to show you how to generate an error when deleting a cascade of dependent rows.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Header)
+        .WithOne(e =&gt; e.Blog)
+        .OnDelete(DeleteBehavior.Restrict);
+}
+</code></pre>
+<h2><a href="#self-referencing-one-to-one" aria-hidden="true" class="anchor" id="self-referencing-one-to-one"></a>Self-referencing one-to-one</h2>
+<p>The following examples show how to specify the principal entity and dependent entity types.</p>
+<pre><code class="language-csharp">public class Person
+{
+    public int Id { get; set; }
+
+    public int? HusbandId { get; set; } // Optional foreign key property
+    public Person? Husband { get; set; } // Optional reference navigation to principal
+    public Person? Wife { get; set; } // Reference navigation to dependent
+}
+</code></pre>
+<p>A relationship is a relationship between two or more objects.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Person&gt;()
+        .HasOne(e =&gt; e.Husband)
+        .WithOne(e =&gt; e.Wife)
+        .HasForeignKey&lt;Person&gt;(e =&gt; e.HusbandId)
+        .IsRequired(false);
+}
+</code></pre>
+<blockquote>
+<p>Note
+For one-to-one self referencing relationships, since the principal and dependent entity types are the same, specifying which type contains the foreign key does not clarify the dependent end. In this case, the navigation specified in <code>HasOne</code> points from dependent to principal, and the navigation specified in <code>WithOne</code> points from principal to dependent.</p>
+</blockquote>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/efcore.html'>efcore</a><a class='topic-tag' href='/tags/summary.html'>summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
