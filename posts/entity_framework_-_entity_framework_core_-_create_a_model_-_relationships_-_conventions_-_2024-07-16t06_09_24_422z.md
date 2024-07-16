@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: EF Core uses a set of conventions when discovering and building a model based on entity type classes.
 image:
 ---
-# [Conventions for relationship discovery](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/conventions)
-
   - Article
 
   - 03/30/2023
@@ -501,3 +499,6 @@ Foreign key constraints are named FK_dependent type name>_principal type name>_f
 ## Additional resources
 
 - .NET Data Community Standup video on custom model conventions.
+
+
+Ref: [Conventions for relationship discovery](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/conventions)

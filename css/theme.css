@@ -1,19 +1,11 @@
 @font-face {
-  font-family: 'Inconsolata';
+  font-family: 'Lexend';
   font-display: swap;
-  src: local('Inconsolata'), url(https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese) format('woff2');
+  src: local('Lexend'), url(https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap) format('woff2');
 }
 
 * {
-  font-family: 'Inconsolata', monospace;
-}
-
-@media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-@media only screen and (min-device-width : 414px) and (max-device-width : 736px) {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Lexend', monospace;
 }
 
 html,

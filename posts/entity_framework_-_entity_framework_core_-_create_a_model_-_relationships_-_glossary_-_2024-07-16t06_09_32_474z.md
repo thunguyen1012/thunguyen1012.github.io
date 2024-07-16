@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: There are a number of terms used to describe relationships. It is not necessary to understand all these terms up-front. Refer back here as needed when reading the relationships documentation pages.
 image:
 ---
-# [Glossary of relationship terms](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/glossary)
-
   - Article
 
   - 03/30/2023
@@ -43,3 +41,5 @@ There are a number of terms used to describe relationships. It is not necessary 
 - Bidirectional relationship A relationship that has navigations on both sides of the relationship.
 
 - Unidirectional relationship A relationship that has a navigation on one side of the relationship, but no navigation on the other side.
+
+Ref: [Glossary of relationship terms](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/glossary)

@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: One-to-many relationships are used when a single entity is associated with any number of other entities.
 image:
 ---
-# [One-to-many relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/one-to-many)
-
   - Article
 
   - 03/30/2023
@@ -569,3 +567,5 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
         .IsRequired(false);
 }
 ```
+
+Ref: [One-to-many relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/one-to-many)

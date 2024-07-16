@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: This paper describes the use of navigations in the Entity Framework (EF).
 image:
 ---
-# [Relationship navigations](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/navigations)
-
   - Article
 
   - 03/30/2023
@@ -193,3 +191,4 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
         .IsRequired();
 }
 ```
+Ref: [Relationship navigations](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/navigations)

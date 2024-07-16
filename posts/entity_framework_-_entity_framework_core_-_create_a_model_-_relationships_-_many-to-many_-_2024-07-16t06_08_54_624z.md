@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: Many-to-many relationships are used when any number entities of one entity type is associated with any number of entities of the same or another entity type.
 image:
 ---
-# [Many-to-many relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/many-to-many)
-
   - Article
 
   - 03/30/2023
@@ -1039,3 +1037,5 @@ This requires no special mapping, since these are normal entity types with norma
 ## Additional resources
 
 - .NET Data Community Standup session, with a deep dive into many-to-many and the infrastructure underpinning it.
+
+Ref: [Many-to-many relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/many-to-many)

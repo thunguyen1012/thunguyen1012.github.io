@@ -52,3 +52,9 @@ Run the previewer:
 ```
 
 Then you can go to `http://localhost:3123/view/<file-name-without-the-extension>`, for example: `http://localhost:3123/view/life-with-robot`.
+
+## Grunt tasks
+```
+npm i
+```
+Run Task from VSCode
