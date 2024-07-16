@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Relationships - Many-to-many | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Many-to-many relationships are used when any number entities of one entity type is associated with any number of entities of the same or another entity type.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function() {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga('create', 'UA-120719369-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"
+        ><span class="avatar"></span
+        ><span class="header-link">Sudo's Notes</span></a
+      >
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Relationships - Many-to-many</h1>
+        <h1><a href="#many-to-many-relationships" aria-hidden="true" class="anchor" id="many-to-many-relationships"></a><a href="https://learn.microsoft.com/en-us/ef/core/modeling/relationships/many-to-many">Many-to-many relationships</a></h1>
+<ul>
+<li>
+<p>Article</p>
+</li>
+<li>
+<p>03/30/2023</p>
+</li>
+<li>
+<p>6 contributors</p>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Many-to-many relationships are used when any number entities of one entity type is associated with any number of entities of the same or another entity type.</p>
+<h2><a href="#understanding-many-to-many-relationships" aria-hidden="true" class="anchor" id="understanding-many-to-many-relationships"></a>Understanding many-to-many relationships</h2>
+<p>Many-to-many relationships can be represented using just a foreign key.</p>
+<p>Many-to-many relationships can be tricky to map to a relational database.</p>
+<pre><code class="language-sql">CREATE TABLE &quot;Posts&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Posts&quot; PRIMARY KEY AUTOINCREMENT);
+
+CREATE TABLE &quot;Tags&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Tags&quot; PRIMARY KEY AUTOINCREMENT);
+
+CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostsId&quot; INTEGER NOT NULL,
+    &quot;TagsId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostsId&quot;, &quot;TagsId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostsId&quot; FOREIGN KEY (&quot;PostsId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagsId&quot; FOREIGN KEY (&quot;TagsId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<p>The <code>PostTag</code> table is a join table for the <code>Posts</code> table.</p>
+<p>In this post, I'm going to show you how to map a schema in EF Core to a .NET class.</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostsId { get; set; }
+    public int TagsId { get; set; }
+    public Post Post { get; set; } = null!;
+    public Tag Tag { get; set; } = null!;
+}
+</code></pre>
+<p>This example shows how to map the join table's many-to-many relationships to the join table's two one-to-many relationships.</p>
+<p>EF allows for a more natural mapping through the introduction of two collection navigations, one on <code>Post</code> containing its related <code>Tags</code>, and an inverse on <code>Tag</code> containing its related <code>Posts</code>. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+    public List&lt;Post&gt; Posts { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostsId { get; set; }
+    public int TagsId { get; set; }
+    public Post Post { get; set; } = null!;
+    public Tag Tag { get; set; } = null!;
+}
+</code></pre>
+<blockquote>
+<p>Tip
+These new navigations are known as &quot;skip navigations&quot;, because they skip over the join entity to provide direct access to the other side of the many-to-many relationship.</p>
+</blockquote>
+<p>The Entity Framework (EF) can transparently map many-to-many relationships between entities.</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+}
+</code></pre>
+<p>The <code>Post</code> and <code>Tag</code> types shown here in the database schema at the top of this section are both join types.</p>
+<h2><a href="#examples" aria-hidden="true" class="anchor" id="examples"></a>Examples</h2>
+<p>The following sections contain examples of many-to-many relationships, including the configuration needed to achieve each mapping.</p>
+<blockquote>
+<p>Tip
+The code for all the examples below can be found in ManyToMany.cs.</p>
+</blockquote>
+<h2><a href="#basic-many-to-many" aria-hidden="true" class="anchor" id="basic-many-to-many"></a>Basic many-to-many</h2>
+<p>In the most basic case for a many-to-many, the entity types on each end of the relationship both have a collection navigation. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+}
+</code></pre>
+<p>This relationship is mapped by convention. Even though it is not needed, an equivalent explicit configuration for this relationship is shown below as a learning tool:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts);
+}
+</code></pre>
+<p>Even with this explicit configuration, many aspects of the relationship are still configured by convention. A more complete explicit configuration, again for learning purposes, is:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity(
+            &quot;PostTag&quot;,
+            l =&gt; l.HasOne(typeof(Tag)).WithMany().HasForeignKey(&quot;TagsId&quot;).HasPrincipalKey(nameof(Tag.Id)),
+            r =&gt; r.HasOne(typeof(Post)).WithMany().HasForeignKey(&quot;PostsId&quot;).HasPrincipalKey(nameof(Post.Id)),
+            j =&gt; j.HasKey(&quot;PostsId&quot;, &quot;TagsId&quot;));
+}
+</code></pre>
+<blockquote>
+<p>Important
+Please don't attempt to fully configure everything even when it is not needed. As can be seen above, the code gets complicated quickly and its easy to make a mistake. And even in the example above there are many things in the model that are still configured by convention. It's not realistic to think that everything in an EF model can always be fully configured explicitly.</p>
+</blockquote>
+<p>Regardless of whether the relationship is built by convention or using either of the shown explicit configurations, the resulting mapped schema (using SQLite) is:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;Posts&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Posts&quot; PRIMARY KEY AUTOINCREMENT);
+
+CREATE TABLE &quot;Tags&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Tags&quot; PRIMARY KEY AUTOINCREMENT);
+
+CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostsId&quot; INTEGER NOT NULL,
+    &quot;TagsId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostsId&quot;, &quot;TagsId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostsId&quot; FOREIGN KEY (&quot;PostsId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagsId&quot; FOREIGN KEY (&quot;TagsId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<blockquote>
+<p>Tip
+When using a Database First flow to scaffold a DbContext from an existing database, EF Core 6 and later looks for this pattern in the database schema and scaffolds a many-to-many relationship as described in this document. This behavior can be changed through use of a custom T4 template. For other options, see Many-to-many relationships without mapped join entities are now scaffolded.</p>
+</blockquote>
+<blockquote>
+<p>Important
+Currently, EF Core uses Dictionary&lt;string, object&gt; to represent join entity instances for which no .NET class has been configured. However, to improve performance, a different type may be used in a future EF Core release. Do not depend on the join type being Dictionary&lt;string, object&gt; unless this has been explicitly configured.</p>
+</blockquote>
+<h2><a href="#many-to-many-with-named-join-table" aria-hidden="true" class="anchor" id="many-to-many-with-named-join-table"></a>Many-to-many with named join table</h2>
+<p>In the previous example, the join table was named <code>PostTag</code> by convention. It can be given an explicit name with <code>UsingEntity</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity(&quot;PostsToTagsJoinTable&quot;);
+}
+</code></pre>
+<p>Everything else about the mapping remains the same, with only the name of the join table changing:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostsToTagsJoinTable&quot; (
+    &quot;PostsId&quot; INTEGER NOT NULL,
+    &quot;TagsId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostsToTagsJoinTable&quot; PRIMARY KEY (&quot;PostsId&quot;, &quot;TagsId&quot;),
+    CONSTRAINT &quot;FK_PostsToTagsJoinTable_Posts_PostsId&quot; FOREIGN KEY (&quot;PostsId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostsToTagsJoinTable_Tags_TagsId&quot; FOREIGN KEY (&quot;TagsId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-with-join-table-foreign-key-names" aria-hidden="true" class="anchor" id="many-to-many-with-join-table-foreign-key-names"></a>Many-to-many with join table foreign key names</h2>
+<p>This example shows how to change the names of the foreign key columns in the join table.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity(
+            l =&gt; l.HasOne(typeof(Tag)).WithMany().HasForeignKey(&quot;TagForeignKey&quot;),
+            r =&gt; r.HasOne(typeof(Post)).WithMany().HasForeignKey(&quot;PostForeignKey&quot;));
+}
+</code></pre>
+<p>The second way is to leave the properties with their by-convention names, but then map these properties to different column names. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity(
+            j =&gt;
+            {
+                j.Property(&quot;PostsId&quot;).HasColumnName(&quot;PostForeignKey&quot;);
+                j.Property(&quot;TagsId&quot;).HasColumnName(&quot;TagForeignKey&quot;);
+            });
+}
+</code></pre>
+<p>In either case, the mapping remains the same, with only the foreign key column names changed:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostForeignKey&quot; INTEGER NOT NULL,
+    &quot;TagForeignKey&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostForeignKey&quot;, &quot;TagForeignKey&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostForeignKey&quot; FOREIGN KEY (&quot;PostForeignKey&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagForeignKey&quot; FOREIGN KEY (&quot;TagForeignKey&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<blockquote>
+<p>Tip
+Although not shown here, the previous two examples can be combined to map change the join table name and its foreign key column names.</p>
+</blockquote>
+<h2><a href="#many-to-many-with-class-for-join-entity" aria-hidden="true" class="anchor" id="many-to-many-with-class-for-join-entity"></a>Many-to-many with class for join entity</h2>
+<p>In our series of articles on how to create a join table, we are going to look at how to create a join table with a shared-type entity type.</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostId { get; set; }
+    public int TagId { get; set; }
+}
+</code></pre>
+<blockquote>
+<p>Tip
+The class can have any name, but it is common to combine the names of the types at either end of the relationship.</p>
+</blockquote>
+<p>Now the <code>UsingEntity</code> method can be used to configure this as the join entity type for the relationship. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;();
+}
+</code></pre>
+<p>The <code>PostId</code> and <code>TagId</code> properties can be used as foreign keys for the join entity type.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;(
+            l =&gt; l.HasOne&lt;Tag&gt;().WithMany().HasForeignKey(e =&gt; e.TagId),
+            r =&gt; r.HasOne&lt;Post&gt;().WithMany().HasForeignKey(e =&gt; e.PostId));
+}
+</code></pre>
+<p>The mapped database schema for the join table in this example is structurally equivalent to the previous examples, but with some different column names:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostId&quot; INTEGER NOT NULL,
+    &quot;TagId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostId&quot;, &quot;TagId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostId&quot; FOREIGN KEY (&quot;PostId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagId&quot; FOREIGN KEY (&quot;TagId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-with-navigations-to-join-entity" aria-hidden="true" class="anchor" id="many-to-many-with-navigations-to-join-entity"></a>Many-to-many with navigations to join entity</h2>
+<p>Following on from the previous example, now that there is a class representing the join entity, it becomes easy to add navigations that reference this class. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostId { get; set; }
+    public int TagId { get; set; }
+}
+</code></pre>
+<blockquote>
+<p>Important
+As shown in this example, navigations to the join entity type can be used in addition to the skip navigations between the two ends of the many-to-many relationship. This means that the skip navigations can be used to interact with the many-to-many relationship in a natural manner, while the navigations to the join entity type can be used when greater control over the join entities themselves is needed. In a sense, this mapping provides the best of both worlds between a simple many-to-many mapping, and a mapping that more explicitly matches the database schema.</p>
+</blockquote>
+<p>This example shows how to create a join entity with a single name.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;();
+}
+</code></pre>
+<p>The navigations can be configured explicitly for cases where they cannot be determined by convention. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;(
+            l =&gt; l.HasOne&lt;Tag&gt;().WithMany(e =&gt; e.PostTags),
+            r =&gt; r.HasOne&lt;Post&gt;().WithMany(e =&gt; e.PostTags));
+}
+</code></pre>
+<p>The mapped database schema is not affected by including navigations in the model:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostId&quot; INTEGER NOT NULL,
+    &quot;TagId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostId&quot;, &quot;TagId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostId&quot; FOREIGN KEY (&quot;PostId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagId&quot; FOREIGN KEY (&quot;TagId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-with-navigations-to-and-from-join-entity" aria-hidden="true" class="anchor" id="many-to-many-with-navigations-to-and-from-join-entity"></a>Many-to-many with navigations to and from join entity</h2>
+<p>This example shows how to add navigations to the join entity type from the join entity types at either end of the many-to-many relationship.</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostId { get; set; }
+    public int TagId { get; set; }
+    public Post Post { get; set; } = null!;
+    public Tag Tag { get; set; } = null!;
+}
+</code></pre>
+<p>This example shows how to create a join entity with a single name.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;();
+}
+</code></pre>
+<p>The navigations can be configured explicitly for cases where they cannot be determined by convention. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;(
+            l =&gt; l.HasOne&lt;Tag&gt;(e =&gt; e.Tag).WithMany(e =&gt; e.PostTags),
+            r =&gt; r.HasOne&lt;Post&gt;(e =&gt; e.Post).WithMany(e =&gt; e.PostTags));
+}
+</code></pre>
+<p>The mapped database schema is not affected by including navigations in the model:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostId&quot; INTEGER NOT NULL,
+    &quot;TagId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostId&quot;, &quot;TagId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostId&quot; FOREIGN KEY (&quot;PostId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagId&quot; FOREIGN KEY (&quot;TagId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-with-navigations-and-changed-foreign-keys" aria-hidden="true" class="anchor" id="many-to-many-with-navigations-and-changed-foreign-keys"></a>Many-to-many with navigations and changed foreign keys</h2>
+<p>The previous example showed a many-to-many with navigations to and from the join entity type. This example is the same, except that the foreign key properties used are also changed. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostForeignKey { get; set; }
+    public int TagForeignKey { get; set; }
+    public Post Post { get; set; } = null!;
+    public Tag Tag { get; set; } = null!;
+}
+</code></pre>
+<p>Again, the <code>UsingEntity</code> method is used to configure this:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;(
+            l =&gt; l.HasOne&lt;Tag&gt;(e =&gt; e.Tag).WithMany(e =&gt; e.PostTags).HasForeignKey(e =&gt; e.TagForeignKey),
+            r =&gt; r.HasOne&lt;Post&gt;(e =&gt; e.Post).WithMany(e =&gt; e.PostTags).HasForeignKey(e =&gt; e.PostForeignKey));
+}
+</code></pre>
+<p>The mapped database schema is now:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostForeignKey&quot; INTEGER NOT NULL,
+    &quot;TagForeignKey&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostForeignKey&quot;, &quot;TagForeignKey&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostForeignKey&quot; FOREIGN KEY (&quot;PostForeignKey&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagForeignKey&quot; FOREIGN KEY (&quot;TagForeignKey&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#unidirectional-many-to-many" aria-hidden="true" class="anchor" id="unidirectional-many-to-many"></a>Unidirectional many-to-many</h2>
+<blockquote>
+<p>Note
+Unidirectional many-to-many relationships were introduced in EF Core 7. In earlier releases, a private navigation could be used as a workaround.</p>
+</blockquote>
+<p>It is not necessary to include a navigation on both sides of the many-to-many relationship. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+}
+</code></pre>
+<p>The following example shows how to create a relationship between two objects.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany();
+}
+</code></pre>
+<p>Removing the navigation does not affect the database schema:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;Posts&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Posts&quot; PRIMARY KEY AUTOINCREMENT);
+
+CREATE TABLE &quot;Tags&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Tags&quot; PRIMARY KEY AUTOINCREMENT);
+
+CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostId&quot; INTEGER NOT NULL,
+    &quot;TagsId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostId&quot;, &quot;TagsId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostId&quot; FOREIGN KEY (&quot;PostId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagsId&quot; FOREIGN KEY (&quot;TagsId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-and-join-table-with-payload" aria-hidden="true" class="anchor" id="many-to-many-and-join-table-with-payload"></a>Many-to-many and join table with payload</h2>
+<p>The join table is an important part of the many-to-many relationship.</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostId { get; set; }
+    public int TagId { get; set; }
+    public DateTime CreatedOn { get; set; }
+}
+</code></pre>
+<p>It is common to use generated values for payload properties--for example, a database timestamp that is automatically set when the association row is inserted.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;(
+            j =&gt; j.Property(e =&gt; e.CreatedOn).HasDefaultValueSql(&quot;CURRENT_TIMESTAMP&quot;));
+}
+</code></pre>
+<p>The result maps to a entity type schema with a timestamp set automatically when a row is inserted:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostId&quot; INTEGER NOT NULL,
+    &quot;TagId&quot; INTEGER NOT NULL,
+    &quot;CreatedOn&quot; TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostId&quot;, &quot;TagId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostId&quot; FOREIGN KEY (&quot;PostId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagId&quot; FOREIGN KEY (&quot;TagId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<blockquote>
+<p>Tip
+The SQL shown here is for SQLite. On SQL Server/Azure SQL, use .HasDefaultValueSql(&quot;GETUTCDATE()&quot;) and for <code>TEXT</code> read <code>datetime</code>.</p>
+</blockquote>
+<h2><a href="#custom-shared-type-entity-type-as-a-join-entity" aria-hidden="true" class="anchor" id="custom-shared-type-entity-type-as-a-join-entity"></a>Custom shared-type entity type as a join entity</h2>
+<p>In our previous article on CLR, we looked at how to map join tables with the same shape.</p>
+<pre><code class="language-csharp">public class JoinType
+{
+    public int Id1 { get; set; }
+    public int Id2 { get; set; }
+    public DateTime CreatedOn { get; set; }
+}
+</code></pre>
+<p>This type can then be referenced as the join entity type by multiple different many-to-many relationships. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+    public List&lt;JoinType&gt; PostTags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+    public List&lt;JoinType&gt; PostTags { get; } = [];
+}
+
+public class Blog
+{
+    public int Id { get; set; }
+    public List&lt;Author&gt; Authors { get; } = [];
+    public List&lt;JoinType&gt; BlogAuthors { get; } = [];
+}
+
+public class Author
+{
+    public int Id { get; set; }
+    public List&lt;Blog&gt; Blogs { get; } = [];
+    public List&lt;JoinType&gt; BlogAuthors { get; } = [];
+}
+</code></pre>
+<p>And these relationships can then be configured appropriately to map the join type to a different table for each relationship:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;JoinType&gt;(
+            &quot;PostTag&quot;,
+            l =&gt; l.HasOne&lt;Tag&gt;().WithMany(e =&gt; e.PostTags).HasForeignKey(e =&gt; e.Id1),
+            r =&gt; r.HasOne&lt;Post&gt;().WithMany(e =&gt; e.PostTags).HasForeignKey(e =&gt; e.Id2),
+            j =&gt; j.Property(e =&gt; e.CreatedOn).HasDefaultValueSql(&quot;CURRENT_TIMESTAMP&quot;));
+
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasMany(e =&gt; e.Authors)
+        .WithMany(e =&gt; e.Blogs)
+        .UsingEntity&lt;JoinType&gt;(
+            &quot;BlogAuthor&quot;,
+            l =&gt; l.HasOne&lt;Author&gt;().WithMany(e =&gt; e.BlogAuthors).HasForeignKey(e =&gt; e.Id1),
+            r =&gt; r.HasOne&lt;Blog&gt;().WithMany(e =&gt; e.BlogAuthors).HasForeignKey(e =&gt; e.Id2),
+            j =&gt; j.Property(e =&gt; e.CreatedOn).HasDefaultValueSql(&quot;CURRENT_TIMESTAMP&quot;));
+}
+</code></pre>
+<p>This results in the following tables in the database schema:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;BlogAuthor&quot; (
+    &quot;Id1&quot; INTEGER NOT NULL,
+    &quot;Id2&quot; INTEGER NOT NULL,
+    &quot;CreatedOn&quot; TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+    CONSTRAINT &quot;PK_BlogAuthor&quot; PRIMARY KEY (&quot;Id1&quot;, &quot;Id2&quot;),
+    CONSTRAINT &quot;FK_BlogAuthor_Authors_Id1&quot; FOREIGN KEY (&quot;Id1&quot;) REFERENCES &quot;Authors&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_BlogAuthor_Blogs_Id2&quot; FOREIGN KEY (&quot;Id2&quot;) REFERENCES &quot;Blogs&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+
+
+CREATE TABLE &quot;PostTag&quot; (
+    &quot;Id1&quot; INTEGER NOT NULL,
+    &quot;Id2&quot; INTEGER NOT NULL,
+    &quot;CreatedOn&quot; TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;Id1&quot;, &quot;Id2&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_Id2&quot; FOREIGN KEY (&quot;Id2&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_Id1&quot; FOREIGN KEY (&quot;Id1&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-with-alternate-keys" aria-hidden="true" class="anchor" id="many-to-many-with-alternate-keys"></a>Many-to-many with alternate keys</h2>
+<p>In this article, I'm going to show you how to use foreign keys in the join entity type.</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public int AlternateKey { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public int AlternateKey { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+}
+</code></pre>
+<p>The configuration for this model is:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity(
+            l =&gt; l.HasOne(typeof(Tag)).WithMany().HasPrincipalKey(nameof(Tag.AlternateKey)),
+            r =&gt; r.HasOne(typeof(Post)).WithMany().HasPrincipalKey(nameof(Post.AlternateKey)));
+}
+</code></pre>
+<p>And the resulting database schema, for clarity, including also the tables with the alternate keys:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;Posts&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Posts&quot; PRIMARY KEY AUTOINCREMENT,
+    &quot;AlternateKey&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;AK_Posts_AlternateKey&quot; UNIQUE (&quot;AlternateKey&quot;));
+
+CREATE TABLE &quot;Tags&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Tags&quot; PRIMARY KEY AUTOINCREMENT,
+    &quot;AlternateKey&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;AK_Tags_AlternateKey&quot; UNIQUE (&quot;AlternateKey&quot;));
+
+CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostsAlternateKey&quot; INTEGER NOT NULL,
+    &quot;TagsAlternateKey&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostsAlternateKey&quot;, &quot;TagsAlternateKey&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostsAlternateKey&quot; FOREIGN KEY (&quot;PostsAlternateKey&quot;) REFERENCES &quot;Posts&quot; (&quot;AlternateKey&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagsAlternateKey&quot; FOREIGN KEY (&quot;TagsAlternateKey&quot;) REFERENCES &quot;Tags&quot; (&quot;AlternateKey&quot;) ON DELETE CASCADE);
+</code></pre>
+<p>The configuration for using alternate keys is slightly different if the join entity type is represented by a .NET type. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public int AlternateKey { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public int AlternateKey { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+    public List&lt;PostTag&gt; PostTags { get; } = [];
+}
+
+public class PostTag
+{
+    public int PostId { get; set; }
+    public int TagId { get; set; }
+    public Post Post { get; set; } = null!;
+    public Tag Tag { get; set; } = null!;
+}
+</code></pre>
+<p>The configuration can now use the generic <code>UsingEntity</code>&lt;&gt; method:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;(
+            l =&gt; l.HasOne&lt;Tag&gt;(e =&gt; e.Tag).WithMany(e =&gt; e.PostTags).HasPrincipalKey(e =&gt; e.AlternateKey),
+            r =&gt; r.HasOne&lt;Post&gt;(e =&gt; e.Post).WithMany(e =&gt; e.PostTags).HasPrincipalKey(e =&gt; e.AlternateKey));
+}
+</code></pre>
+<p>And the resulting schema is:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;Posts&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Posts&quot; PRIMARY KEY AUTOINCREMENT,
+    &quot;AlternateKey&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;AK_Posts_AlternateKey&quot; UNIQUE (&quot;AlternateKey&quot;));
+
+CREATE TABLE &quot;Tags&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Tags&quot; PRIMARY KEY AUTOINCREMENT,
+    &quot;AlternateKey&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;AK_Tags_AlternateKey&quot; UNIQUE (&quot;AlternateKey&quot;));
+
+CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostId&quot; INTEGER NOT NULL,
+    &quot;TagId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostId&quot;, &quot;TagId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostId&quot; FOREIGN KEY (&quot;PostId&quot;) REFERENCES &quot;Posts&quot; (&quot;AlternateKey&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagId&quot; FOREIGN KEY (&quot;TagId&quot;) REFERENCES &quot;Tags&quot; (&quot;AlternateKey&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-and-join-table-with-separate-primary-key" aria-hidden="true" class="anchor" id="many-to-many-and-join-table-with-separate-primary-key"></a>Many-to-many and join table with separate primary key</h2>
+<p>The join entity type in all the examples has a primary key composed of the two foreign key properties.</p>
+<blockquote>
+<p>Note
+EF Core does not support duplicate entities in any collection navigation.</p>
+</blockquote>
+<p>Is it possible to define an additional primary key column in a join table?</p>
+<p>It is perhaps easiest to this by creating a class to represent the join entity. For example:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+}
+
+public class PostTag
+{
+    public int Id { get; set; }
+    public int PostId { get; set; }
+    public int TagId { get; set; }
+}
+</code></pre>
+<p>This <code>PostTag.Id</code> property is now picked up as the primary key by convention, so the only configuration needed is a call to <code>UsingEntity</code> for the <code>PostTag</code> type:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity&lt;PostTag&gt;();
+}
+</code></pre>
+<p>And the resulting schema for the join table is:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY AUTOINCREMENT,
+    &quot;PostId&quot; INTEGER NOT NULL,
+    &quot;TagId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;FK_PostTag_Posts_PostId&quot; FOREIGN KEY (&quot;PostId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagId&quot; FOREIGN KEY (&quot;TagId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<p>A primary key can also be added to the join entity without defining a class for it. For example, with just <code>Post</code> and <code>Tag</code> types:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;Tag&gt; Tags { get; } = [];
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = [];
+}
+</code></pre>
+<p>The key can be added with this configuration:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity(
+            j =&gt;
+            {
+                j.IndexerProperty&lt;int&gt;(&quot;Id&quot;);
+                j.HasKey(&quot;Id&quot;);
+            });
+}
+</code></pre>
+<p>Which results in a join table with a separate primary key column:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY AUTOINCREMENT,
+    &quot;PostsId&quot; INTEGER NOT NULL,
+    &quot;TagsId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;FK_PostTag_Posts_PostsId&quot; FOREIGN KEY (&quot;PostsId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagsId&quot; FOREIGN KEY (&quot;TagsId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#many-to-many-without-cascading-delete" aria-hidden="true" class="anchor" id="many-to-many-without-cascading-delete"></a>Many-to-many without cascading delete</h2>
+<p>In this post, I'm going to show you how to create foreign keys between the join table and the two sides of a many-to-many relationship.</p>
+<p>It's hard to imagine when it is useful to change this behavior, but it can be done if desired. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(e =&gt; e.Tags)
+        .WithMany(e =&gt; e.Posts)
+        .UsingEntity(
+            l =&gt; l.HasOne(typeof(Tag)).WithMany().OnDelete(DeleteBehavior.Restrict),
+            r =&gt; r.HasOne(typeof(Post)).WithMany().OnDelete(DeleteBehavior.Restrict));
+}
+</code></pre>
+<p>The database schema for the join table uses restricted delete behavior on the foreign key constraint:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PostTag&quot; (
+    &quot;PostsId&quot; INTEGER NOT NULL,
+    &quot;TagsId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PostTag&quot; PRIMARY KEY (&quot;PostsId&quot;, &quot;TagsId&quot;),
+    CONSTRAINT &quot;FK_PostTag_Posts_PostsId&quot; FOREIGN KEY (&quot;PostsId&quot;) REFERENCES &quot;Posts&quot; (&quot;Id&quot;) ON DELETE RESTRICT,
+    CONSTRAINT &quot;FK_PostTag_Tags_TagsId&quot; FOREIGN KEY (&quot;TagsId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE RESTRICT);
+</code></pre>
+<h2><a href="#self-referencing-many-to-many" aria-hidden="true" class="anchor" id="self-referencing-many-to-many"></a>Self-referencing many-to-many</h2>
+<p>The same entity type can be used at both ends of a many-to-many relationship; this is known as a &quot;self-referencing&quot; relationship. For example:</p>
+<pre><code class="language-csharp">public class Person
+{
+    public int Id { get; set; }
+    public List&lt;Person&gt; Parents { get; } = [];
+    public List&lt;Person&gt; Children { get; } = [];
+}
+</code></pre>
+<p>This maps to a join table called <code>PersonPerson</code>, with both foreign keys pointing back to the <code>People</code> table:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;PersonPerson&quot; (
+    &quot;ChildrenId&quot; INTEGER NOT NULL,
+    &quot;ParentsId&quot; INTEGER NOT NULL,
+    CONSTRAINT &quot;PK_PersonPerson&quot; PRIMARY KEY (&quot;ChildrenId&quot;, &quot;ParentsId&quot;),
+    CONSTRAINT &quot;FK_PersonPerson_People_ChildrenId&quot; FOREIGN KEY (&quot;ChildrenId&quot;) REFERENCES &quot;People&quot; (&quot;Id&quot;) ON DELETE CASCADE,
+    CONSTRAINT &quot;FK_PersonPerson_People_ParentsId&quot; FOREIGN KEY (&quot;ParentsId&quot;) REFERENCES &quot;People&quot; (&quot;Id&quot;) ON DELETE CASCADE);
+</code></pre>
+<h2><a href="#symmetrical-self-referencing-many-to-many" aria-hidden="true" class="anchor" id="symmetrical-self-referencing-many-to-many"></a>Symmetrical self-referencing many-to-many</h2>
+<p>Many-to-many relationships are not always symmetrical.</p>
+<pre><code class="language-csharp">public class Person
+{
+    public int Id { get; set; }
+    public List&lt;Person&gt; Friends { get; } = [];
+}
+</code></pre>
+<p>The relationship between two entities should be easy to map.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Person&gt;()
+        .HasMany(e =&gt; e.Friends)
+        .WithMany();
+}
+</code></pre>
+<p>However, to make sure two people are both related to each other, each person will need to be manually added to the other person's <code>Friends</code> collection. For example:</p>
+<pre><code class="language-csharp">ginny.Friends.Add(hermione);
+hermione.Friends.Add(ginny);
+</code></pre>
+<h2><a href="#direct-use-of-join-table" aria-hidden="true" class="anchor" id="direct-use-of-join-table"></a>Direct use of join table</h2>
+<p>This example shows how to map a join table to a normal entity type and use the two one-to-many relationships for all operations.</p>
+<p>For example, these entity types represent the mapping of two normal tables and join table without using any many-to-many relationships:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public List&lt;PostTag&gt; PostTags { get; } = new();
+}
+
+public class Tag
+{
+    public int Id { get; set; }
+    public List&lt;PostTag&gt; PostTags { get; } = new();
+}
+
+public class PostTag
+{
+    public int PostId { get; set; }
+    public int TagId { get; set; }
+    public Post Post { get; set; } = null!;
+    public Tag Tag { get; set; } = null!;
+}
+</code></pre>
+<p>This requires no special mapping, since these are normal entity types with normal one-to-many relationships.</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>.NET Data Community Standup session, with a deep dive into many-to-many and the infrastructure underpinning it.</li>
+</ul>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

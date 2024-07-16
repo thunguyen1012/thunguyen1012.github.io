@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "gen:mac": "./generator posts"
+    "gen:mac": "./generator posts",
+    "gen:win": "generator-rs.exe posts"
   },
   "devDependencies": {
     "grunt": "^1.0.4",
