@@ -8,6 +8,7 @@ First, compile the generator. You'll need to install Rust (https://rustup.rs/).
 
 ```
 cd generator-rs
+cargo update
 cargo build
 ```
 
@@ -16,6 +17,7 @@ The executable binary will be available at `./generator-rs/target/debug/generato
 ```
 ./gen posts
 ```
+Or copy exe to root folder
 
 ## How to write post?
 

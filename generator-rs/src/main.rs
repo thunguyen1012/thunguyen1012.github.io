@@ -3,6 +3,7 @@ extern crate regex;
 extern crate rss;
 extern crate time;
 extern crate dotenv;
+extern crate rustc_serialize;
 #[macro_use]
 extern crate rouille;
 extern crate chrono;
@@ -213,7 +214,7 @@ fn generate_index_page(posts: &Vec<Metadata>) {
             } else {
                 ""
             };
-            format!("<div class='home-list-item'><span class='home-date-indicator'>{}</span>{}{}<br/><a href='/posts/{}'>{}</a></div>", post_date_text, guest_tag, tag_list, file_name, p.title)
+            format!("<div class='home-list-item'><span class='read-percentage'></span><span class='home-date-indicator'>{}</span>{}{}<br/><a href='/posts/{}'>{}</a></div>", post_date_text, guest_tag, tag_list, file_name, p.title)
         }).collect();
         let markdown = html.join("\n");
         let mut post = Metadata {

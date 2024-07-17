@@ -15,30 +15,53 @@
     <script>
       window.ga =
         window.ga ||
-        function() {
+        function () {
           (ga.q = ga.q || []).push(arguments);
         };
       ga.l = +new Date();
-      ga('create', 'UA-120719369-1', 'auto');
-      ga('send', 'pageview');
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
     </script>
     <script async src="https://www.google-analytics.com/analytics.js"></script>
     <!-- End Google Analytics -->
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const links = document.querySelectorAll("div.home-list-item a");
+
+        const storedData = localStorage.getItem("readPercentage");
+        links.forEach((link) => {
+          const url = link.href;
+          const readPercentageSpan =
+            link.previousElementSibling.previousElementSibling
+              .previousElementSibling;
+
+          let percentValue = 0;
+          if (storedData) {
+            const readingItems = JSON.parse(storedData) || [];
+            const item = readingItems.find((item) => item.url === url);
+            if (item) {
+              percentValue = item.percent;
+            }
+          }
+
+          readPercentageSpan.textContent = `${percentValue}%`;
+        });
+      });
+    </script>
 
     <link href="css/theme.min.css" rel="stylesheet" type="text/css" />
     <meta name="theme-color" content="#ffffff" />
   </head>
   <body>
-    <header id="user_top" class="cf ">
+    <header id="user_top" class="cf">
       <figure id="user_logo" class="active">
         <a href="https://thunguyen1012.github.io/">Sudo's Notes</a>
       </figure>
       <h2><a href="https://thunguyen1012.github.io/">Sudo's Notes</a></h2>
     </header>
     <div class="container">
-      <div class="main">
-        {%content%}
-      </div>
+      <div class="main">{%content%}</div>
     </div>
   </body>
 </html>

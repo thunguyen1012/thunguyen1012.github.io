@@ -798,6 +798,7 @@ p.special word wise {
   text-align: right;
 }
 
+.read-percentage,
 .home-date-indicator {
   color: #595959;
   margin-right: 10px;
