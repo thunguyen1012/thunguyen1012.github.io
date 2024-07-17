@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Relationships - Mapping attributes | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='OnModelCreating implements the OnModelCreating mapping attribute.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Relationships - Mapping attributes</h1>
+        <ul>
+<li>
+<p>Article</p>
+</li>
+<li>
+<p>03/30/2023</p>
+</li>
+<li>
+<p>4 contributors</p>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p><code>OnModelCreating</code> implements the <code>OnModelCreating</code> mapping attribute.</p>
+<blockquote>
+<p>Important
+This document only covers mapping attributes in the context of relationship configuration. Other uses of mapping attributes are covered in the relevant sections of the wider modeling documentation.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+The code below can be found in MappingAttributes.cs.</p>
+</blockquote>
+<h2><a href="#where-to-get-mapping-attributes" aria-hidden="true" class="anchor" id="where-to-get-mapping-attributes"></a>Where to get mapping attributes</h2>
+<p>Mappings are part of the architecture of the .NET framework.</p>
+<p>All new mapping attributes designed for EF Core are now specific to EF Core, thereby keeping their semantics simple and clear.</p>
+<h2><a href="#requiredattribute" aria-hidden="true" class="anchor" id="requiredattribute"></a>RequiredAttribute</h2>
+<p>The Required attribute is used to indicate that a property cannot be <code>null</code>.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public string Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    [Required]
+    public string BlogId { get; set; }
+
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<blockquote>
+<p>Note
+When using C# nullable reference types, the <code>BlogId</code> property in this example is already non-nullable, which means the [Required] attribute will have no affect.</p>
+</blockquote>
+<p>[Required] placed on the dependent navigation has the same effect. That is, making the foreign key non-nullable, and thereby making the relationship required. For example:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public string Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    public string BlogId { get; set; }
+
+    [Required]
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<p>If [Required] is found on the dependent navigation and the foreign key property is in shadow state, then shadow property is made non-nullable, thereby making the relationship required. For example:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public string Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    [Required]
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<blockquote>
+<p>Note
+Using [Required] on the principal navigation side of a relationship has no effect.</p>
+</blockquote>
+<h2><a href="#foreignkeyattribute" aria-hidden="true" class="anchor" id="foreignkeyattribute"></a>ForeignKeyAttribute</h2>
+<p>ForeignKeyAttribute is used to connect a foreign key property with its navigations. [ForeignKey] can be placed on the foreign key property with the name of the dependent navigation. For example:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public string Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    [ForeignKey(nameof(Blog))]
+    public string BlogKey { get; set; }
+
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<p>Or, [ForeignKey] can be placed on either the dependent or principal navigation with the name of the property to use as the foreign key. For example:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public string Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    public string BlogKey { get; set; }
+
+    [ForeignKey(nameof(BlogKey))]
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<p>When [ForeignKey] is placed on a navigation and the name provided does not match any property name, then a shadow property with that name will be created to act as the foreign key. For example:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public string Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    [ForeignKey(&quot;BlogKey&quot;)]
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<h2><a href="#inversepropertyattribute" aria-hidden="true" class="anchor" id="inversepropertyattribute"></a>InversePropertyAttribute</h2>
+<p>This example shows how to use InversePropertyAttribute to pair navigations between entity types.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+
+    [InverseProperty(&quot;Blog&quot;)]
+    public List&lt;Post&gt; Posts { get; } = new();
+
+    public int FeaturedPostId { get; set; }
+    public Post FeaturedPost { get; set; }
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; }
+
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<blockquote>
+<p>Important
+[InverseProperty] is only needed when there is more than one relationship between the same types. With a single relationship, the two navigations are paired automatically.</p>
+</blockquote>
+<h2><a href="#deletebehaviorattribute" aria-hidden="true" class="anchor" id="deletebehaviorattribute"></a>DeleteBehaviorAttribute</h2>
+<p>The following example shows how to change the relationship between the client and the server.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public int BlogId { get; set; }
+
+    [DeleteBehavior(DeleteBehavior.Restrict)]
+    public Blog Blog { get; init; }
+}
+</code></pre>
+<p>See <code>Cascade</code> delete for more information on cascading behaviors.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/relationships/mapping-attributes">Mapping attributes (aka data annotations) for relationships</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

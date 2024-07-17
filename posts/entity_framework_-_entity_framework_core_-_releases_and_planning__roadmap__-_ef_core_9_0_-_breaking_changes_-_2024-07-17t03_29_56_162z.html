@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 9.0 - Breaking changes | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core 9 has been released and is now available for download.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 9.0 - Breaking changes</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>06/08/2024</p>
+</li>
+<li>
+<p>3 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core 9 has been released and is now available for download.</p>
+<ul>
+<li>
+<p>Breaking changes in EF Core 8</p>
+</li>
+<li>
+<p>Breaking changes in EF Core 7</p>
+</li>
+<li>
+<p>Breaking changes in EF Core 6</p>
+</li>
+</ul>
+<h2><a href="#target-framework" aria-hidden="true" class="anchor" id="target-framework"></a>Target Framework</h2>
+<p>EF Core 9 is the latest release of the Microsoft .NET Framework.</p>
+<h2><a href="#summary" aria-hidden="true" class="anchor" id="summary"></a>Summary</h2>
+<h2><a href="#medium-impact-changes" aria-hidden="true" class="anchor" id="medium-impact-changes"></a>Medium-impact changes</h2>
+<h3><a href="#sync-io-via-the-azure-cosmos-db-provider-is-no-longer-supported" aria-hidden="true" class="anchor" id="sync-io-via-the-azure-cosmos-db-provider-is-no-longer-supported"></a>Sync I/O via the Azure Cosmos DB provider is no longer supported</h3>
+<p>Tracking Issue #32563</p>
+<h4><a href="#old-behavior" aria-hidden="true" class="anchor" id="old-behavior"></a>Old behavior</h4>
+<p>EF Core has been improved to prevent deadlock when calling methods against Azure Cosmos DB SDK.</p>
+<h4><a href="#new-behavior" aria-hidden="true" class="anchor" id="new-behavior"></a>New behavior</h4>
+<p>Entity Framework (EF) now throws by default when attempting to use synchronous I/O.</p>
+<h4><a href="#why" aria-hidden="true" class="anchor" id="why"></a>Why</h4>
+<p>Synchronous blocking on asynchronous methods can result in deadlock, and the Azure Cosmos DB SDK only supports async methods.</p>
+<h4><a href="#mitigations" aria-hidden="true" class="anchor" id="mitigations"></a>Mitigations</h4>
+<p>In EF Core 9.0, the error can be suppressed with:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder.ConfigureWarnings(w =&gt; w.Ignore(CosmosEventId.SyncNotSupported));
+}
+</code></pre>
+<p>Azure Cosmos DB is now supported by EF Core.</p>
+<h2><a href="#low-impact-changes" aria-hidden="true" class="anchor" id="low-impact-changes"></a>Low-impact changes</h2>
+<h3><a href="#effunctions.unhex()-now-returns-byte[]?" aria-hidden="true" class="anchor" id="effunctions.unhex()-now-returns-byte[]?"></a>EF.Functions.Unhex() now returns byte[]?</h3>
+<p>Tracking Issue #33864</p>
+<h4><a href="#old-behavior-1" aria-hidden="true" class="anchor" id="old-behavior-1"></a>Old behavior</h4>
+<p>The EF.Functions.Unhex() function was previously annotated to return byte[].</p>
+<h4><a href="#new-behavior-1" aria-hidden="true" class="anchor" id="new-behavior-1"></a>New behavior</h4>
+<p>Starting with EF Core 9.0, Unhex() is now annotated to return byte[]?.</p>
+<h4><a href="#why-1" aria-hidden="true" class="anchor" id="why-1"></a>Why</h4>
+<p>Unhex() is translated to the SQLite <code>unhex</code> function, which returns NULL for invalid inputs. As a result, Unhex() returned <code>null</code> for those cases, in violation of the annotation.</p>
+<h4><a href="#mitigations-1" aria-hidden="true" class="anchor" id="mitigations-1"></a>Mitigations</h4>
+<p>In this article, I'm going to show you how to use the <code>null</code>-forgiving operator to ensure that the content of an invocation is always valid.</p>
+<pre><code class="language-c#">var binaryData = await context.Blogs.Select(b =&gt; EF.Functions.Unhex(b.HexString)!).ToListAsync();
+</code></pre>
+<p>Otherwise, add runtime checks for <code>null</code> on the return value of Unhex().</p>
+<h3><a href="#sqlfunctionexpressions-nullability-arguments'-arity-validated" aria-hidden="true" class="anchor" id="sqlfunctionexpressions-nullability-arguments'-arity-validated"></a><code>SqlFunctionExpression</code>'s nullability <code>arguments</code>' arity validated</h3>
+<p>Tracking Issue #33852</p>
+<h4><a href="#old-behavior-2" aria-hidden="true" class="anchor" id="old-behavior-2"></a>Old behavior</h4>
+<p>Previously it was possible to create a <code>SqlFunctionExpression</code> with a different number of <code>arguments</code> and nullability propagation <code>arguments</code>.</p>
+<h4><a href="#new-behavior-2" aria-hidden="true" class="anchor" id="new-behavior-2"></a>New behavior</h4>
+<p>Starting with EF Core 9.0, EF now throws if the number of <code>arguments</code> and nullability propagation <code>arguments</code> do not match.</p>
+<h4><a href="#why-2" aria-hidden="true" class="anchor" id="why-2"></a>Why</h4>
+<p>Not having matching number of <code>arguments</code> and nullability propagation <code>arguments</code> can lead to unexpected behavior.</p>
+<h4><a href="#mitigations-2" aria-hidden="true" class="anchor" id="mitigations-2"></a>Mitigations</h4>
+<p>Make sure the <code>argumentsPropagateNullability</code> has same number of elements as the <code>arguments</code>. When in doubt use <code>false</code> for nullability argument.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-9.0/breaking-changes">Breaking changes in EF Core 9 (EF9)</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
