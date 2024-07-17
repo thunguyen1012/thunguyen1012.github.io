@@ -6,8 +6,6 @@ tags: EFCore, summary
 description: This document provides a simple introduction to the representation of relationships in object models and relational databases, including how EF Core maps between the two.
 image:
 ---
-# [Introduction to relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships)
-
   - Article
 
   - 03/30/2023
@@ -217,3 +215,5 @@ Relationships defined in the model can be used in various ways. For example:
   - Detect changes in relationships and perform fixup
 
   - Send foreign key updates to the database with ```SaveChanges``` or ```SaveChangesAsync```
+
+Ref: [Introduction to relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships)

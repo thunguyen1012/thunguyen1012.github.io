@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: One-to-one relationships are used when one entity is associated with at most one other entity. For example, a Blog has one BlogHeader, and that BlogHeader belongs to a single Blog.
 image:
 ---
-# [One-to-one relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/one-to-one)
-
   - Article
 
   - 03/30/2023
@@ -669,3 +667,5 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 
 > Note
 For one-to-one self referencing relationships, since the principal and dependent entity types are the same, specifying which type contains the foreign key does not clarify the dependent end. In this case, the navigation specified in ```HasOne``` points from dependent to principal, and the navigation specified in ```WithOne``` points from principal to dependent.
+
+Ref: [One-to-one relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/one-to-one)

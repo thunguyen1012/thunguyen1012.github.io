@@ -1,34 +1,29 @@
 @font-face {
-  font-family: 'Inconsolata';
+  font-family: "Lexend";
   font-display: swap;
-  src: local('Inconsolata'), url(https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese) format('woff2');
+  src: local("Lexend"),
+    url(https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap)
+      format("woff2");
 }
 
 * {
-  font-family: 'Inconsolata', monospace;
+  font-family: "Lexend", monospace;
 }
 
 .center {
   text-align: center;
 }
 
-@media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-@media only screen and (min-device-width : 414px) and (max-device-width : 736px) {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
 html,
 body {
   margin: 0;
   padding: 0;
-  font-size: 16px;
-  font-weight: 100;
+  font-size: 14px;
   overflow-x: hidden;
-  background: #1d1f21;
-  color: #e3e3e3;
+  background: #e5e5e5;
+  color: #023047;
+  line-height: 1.5em;
+  font-weight: 600;
 }
 
 ul {
@@ -36,23 +31,20 @@ ul {
   padding-left: 24px;
 }
 
-ul>li:before {
+ul > li:before {
   content: "- ";
   margin-left: -18px;
   display: inline;
   float: left;
 }
 
-ul>li>ul>li:before {
+ul > li > ul > li:before {
   content: "+ ";
   margin-left: -18px;
 }
 
 ul li {
-  margin-bottom: 8px;
-  margin-top: 8px;
   padding-left: 10px;
-  line-height: 24px;
 }
 
 h1 {
@@ -93,7 +85,7 @@ h4,
 h5,
 h6 {
   padding-bottom: 5px;
-  color: #ffffff;
+  color: #000;
 }
 
 strong,
@@ -105,19 +97,21 @@ h4,
 h5,
 h6 {
   font-weight: bold;
-  color: #FFF;
+  color: #000;
 }
 
 blockquote {
   font-style: italic;
-  opacity: 0.6;
-  border-left: 3px solid #111111;
-  padding-left: 16px;
+  border-left: 3px solid #f9a825 !important;
+  padding: 1em;
+  background: #2a9d8f !important;
+  margin: 1em 0;
+  color: black;
 }
 
 code {
-  background: #c26230;
-  color: #FFFFFF;
+  background: #191a1c;
+  color: #ffc66d;
   padding: 2px;
   border-radius: 3px;
   padding-left: 6px;
@@ -128,7 +122,7 @@ code {
 .skip code {
   background: none;
   color: initial;
-  font-size: 1.0em;
+  font-size: 1em;
   font-family: initial;
   padding: initial;
 }
@@ -145,7 +139,7 @@ pre {
   overflow-x: hidden !important;
 }
 
-pre>code {
+pre > code {
   padding: 0 !important;
   margin: 0 !important;
   background: none;
@@ -153,7 +147,7 @@ pre>code {
 
 pre code,
 pre code * {
-  font-size: 1.0em !important;
+  font-size: 1em !important;
 }
 
 pre.math {
@@ -169,7 +163,7 @@ code.math {
 
 a {
   text-decoration: none;
-  color: #F9A825;
+  color: #f9a825;
 }
 
 a:hover {
@@ -184,7 +178,7 @@ img {
 table {
   width: 100%;
   border-radius: 3px;
-  border: 1px solid #DDD;
+  border: 1px solid #ddd;
 }
 
 table thead {
@@ -207,7 +201,7 @@ table tr:nth-last-child(1) td {
 }
 
 .container {
-  max-width: 700px;
+  max-width: 90vw;
   height: auto;
   min-height: calc(100% - 260px);
   margin: 0 auto;
@@ -215,8 +209,7 @@ table tr:nth-last-child(1) td {
 }
 
 .main p {
-  text-align: justify;
-  line-height: 150%;
+  margin: 0;
 }
 
 .main p img {
@@ -226,7 +219,7 @@ table tr:nth-last-child(1) td {
 
 .header {
   padding: 5px;
-  color: #FFF;
+  color: #fff;
   font-weight: bold;
   font-size: 22px;
   position: fixed;
@@ -249,13 +242,13 @@ table tr:nth-last-child(1) td {
   display: inline-block;
   margin-left: 10px;
   float: left;
-  color: #FFF;
+  color: #fff;
 }
 
 .header .avatar {
   width: 32px;
   height: 32px;
-  border: 3px solid #FFF;
+  border: 3px solid #fff;
   box-shadow: 0 0 0px 3px #333;
   border-radius: 23px;
   content: " ";
@@ -266,15 +259,13 @@ table tr:nth-last-child(1) td {
   background-color: #fff;
 }
 
-
 h1:before,
 h2:before,
 h3:before,
 h4:before,
 h5:before,
 h6:before {
-  color: #F9A825;
-  margin-left: -20px;
+  color: #f9a825;
   margin-right: 10px;
   content: "#";
 }
@@ -284,30 +275,30 @@ h2:before {
 }
 
 h3:before {
-  content: counter(first) "."counter(second) ".";
+  content: counter(first) "." counter(second) ".";
 }
 
 h4:before {
-  content: counter(first) "."counter(second) "."counter(third) ".";
+  content: counter(first) "." counter(second) "." counter(third) ".";
 }
 
 .box-green {
-  background: #F1F8E9 !important;
-  border: 1px solid #C5E1A5;
+  background: #f1f8e9 !important;
+  border: 1px solid #c5e1a5;
   border-radius: 3px;
   line-height: 1.4em;
 }
 
 .box-orange {
-  background: #FFF3E0 !important;
-  border: 1px solid #FFCC80;
+  background: #fff3e0 !important;
+  border: 1px solid #ffcc80;
   border-radius: 3px;
   line-height: 1.4em;
 }
 
 .box-yellow {
-  background: #FFFDE7 !important;
-  border: 1px solid #FFF59D;
+  background: #fffde7 !important;
+  border: 1px solid #fff59d;
   border-radius: 3px;
   line-height: 1.4em;
 }
@@ -320,22 +311,22 @@ h4:before {
 }
 
 .box-violet {
-  background: #EDE7F6 !important;
-  border: 1px solid #B39DDB;
+  background: #ede7f6 !important;
+  border: 1px solid #b39ddb;
   border-radius: 3px;
   line-height: 1.4em;
 }
 
 .box-blue {
-  background: #E1F5FE !important;
-  border: 1px solid #81D4FA;
+  background: #e1f5fe !important;
+  border: 1px solid #81d4fa;
   border-radius: 3px;
   line-height: 1.4em;
 }
 
 .box-white {
-  background: #FAFAFA !important;
-  border: 1px solid #EEEEEE;
+  background: #fafafa !important;
+  border: 1px solid #eeeeee;
   border-radius: 3px;
   line-height: 1.4em;
 }
@@ -356,7 +347,6 @@ h4:before {
 }
 
 @media print {
-
   .cover,
   .cover-holder,
   .header,
@@ -367,6 +357,7 @@ h4:before {
   html,
   body {
     font-size: 16px;
+    line-height: 1.5em;
   }
 
   h1,
@@ -387,10 +378,6 @@ h4:before {
 ::-moz-selection {
   background: #555;
   display: block;
-}
-
-.other-tags {
-  padding: 10px;
 }
 
 .topic-tag {
@@ -440,7 +427,7 @@ header#user_top h2 {
   max-width: 500px;
   margin: 0 auto;
   margin-bottom: 5px;
-  margin-top: 10px
+  margin-top: 10px;
 }
 
 header#user_top h3 {
@@ -454,7 +441,7 @@ header#user_top h3 {
   margin-bottom: 55px;
   margin-top: 5px;
   padding-left: 10px;
-  padding-right: 10px
+  padding-right: 10px;
 }
 
 header#user_top h4 {
@@ -468,19 +455,19 @@ header#user_top h4 {
   margin-top: 0px;
   padding-left: 10px;
   padding-right: 10px;
-  text-transform: uppercase
+  text-transform: uppercase;
 }
 
 ul#user_links {
   clear: both;
-  display: block
+  display: block;
 }
 
 ul#user_links li {
   display: inline-block;
   margin-right: 5px;
   margin-left: 5px;
-  margin-bottom: 10px
+  margin-bottom: 10px;
 }
 
 ul#user_links li a {
@@ -498,13 +485,13 @@ ul#user_links li a {
   -moz-transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
   -ms-transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
   -o-transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
-  transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82)
+  transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
 }
 
 ul#user_links li a:hover {
   background-color: #000;
   color: #fff;
-  font-weight: 400
+  font-weight: 400;
 }
 
 figure#user_logo {
@@ -522,7 +509,7 @@ figure#user_logo {
   -ms-transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
   -o-transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
   transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
-  -webkit-font-smoothing: antialiased
+  -webkit-font-smoothing: antialiased;
 }
 
 figure#user_logo a {
@@ -543,28 +530,28 @@ figure#user_logo a {
   -ms-transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
   -o-transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
   transition-timing-function: cubic-bezier(0.165, 0.63, 0.14, 0.82);
-  -webkit-font-smoothing: antialiased
+  -webkit-font-smoothing: antialiased;
 }
 
 figure#user_logo.active a {
-  margin-top: 5px
+  margin-top: 5px;
 }
 
 header#user_top.small {
   margin-top: 70px;
   padding-bottom: 30px;
-  margin-bottom: 0px
+  margin-bottom: 0px;
 }
 
 header#user_top.small h2 {
   font-size: 25px;
-  margin-bottom: 0px
+  margin-bottom: 0px;
 }
 
 header#user_top.small h3 {
   font-size: 18px;
   margin-bottom: 15px;
-  display: none
+  display: none;
 }
 
 header#user_top h3 a {
@@ -579,17 +566,17 @@ header#user_top.small ul#user_links {
 header#user_top.small figure#user_logo {
   width: 50px;
   height: 50px;
-  border-width: 3px
+  border-width: 3px;
 }
 
 header#user_top.small figure#user_logo a {
   width: 44px;
   height: 44px;
-  margin-top: -300px
+  margin-top: -300px;
 }
 
 header#user_top.small figure#user_logo.active a {
-  margin-top: 3px
+  margin-top: 3px;
 }
 
 header ul#user_links li::before {
@@ -598,7 +585,7 @@ header ul#user_links li::before {
 }
 
 header#user_top.small ul#user_links li a {
-  line-height: 16px
+  line-height: 16px;
 }
 
 figure.avatar a,
@@ -606,7 +593,7 @@ figure#user_logo a,
 figure#user_foot a,
 nav#overlord.user_top figure#logo_top a,
 figure.kudo.complete div.filling {
-  background-image: url('../img/avatar.svg')
+  background-image: url("../img/avatar.svg");
 }
 
 figure.kudo.activated div.filling,
@@ -718,11 +705,15 @@ section#readnext:hover p span {
 hr {
   border: 0;
   height: 1px;
-  background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+  background-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0),
+    rgba(0, 0, 0, 0.75),
+    rgba(0, 0, 0, 0)
+  );
 }
 
 @media only screen and (max-width: 768px) {
-
   pre,
   pre code {
     overflow-x: auto !important;

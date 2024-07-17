@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: OnModelCreating implements the OnModelCreating mapping attribute.
 image:
 ---
-# [Mapping attributes (aka data annotations) for relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/mapping-attributes)
-
   - Article
 
   - 03/30/2023
@@ -206,3 +204,5 @@ public class Post
 ```
 
 See ```Cascade``` delete for more information on cascading behaviors.
+
+Ref: [Mapping attributes (aka data annotations) for relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/mapping-attributes)

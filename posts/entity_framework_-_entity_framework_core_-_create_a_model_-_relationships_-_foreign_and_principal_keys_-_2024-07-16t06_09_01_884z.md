@@ -6,8 +6,6 @@ tags: EFCore, Summary
 description: One-to-one and one-to-many relationships are composed of two one-to-many relationships, each of which is itself defined by a foreign key referencing a principal key.
 image:
 ---
-# [Foreign and principal keys in relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/foreign-and-principal-keys)
-
   - Article
 
   - 03/30/2023
@@ -306,3 +304,5 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
             r => r.HasOne(typeof(Post)).WithMany().HasConstraintName("PostForeignKey_Constraint"));
 }
 ```
+
+Ref: [Foreign and principal keys in relationships](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/foreign-and-principal-keys)
