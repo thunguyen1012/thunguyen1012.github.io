@@ -1,0 +1,3698 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 7.0 - What's new? | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core 7.0 (EF7) was released in November 2022.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 7.0 - What's new?</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>03/30/2023</p>
+</li>
+<li>
+<p>7 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core 7.0 (EF7) was released in November 2022.</p>
+<blockquote>
+<p>Tip
+You can run and debug into the samples by downloading the sample code from GitHub. Each section links to the source code specific to that section.</p>
+</blockquote>
+<p>EF7 targets .NET 6, and so can be used with either .NET 6 (LTS) or .NET 7.</p>
+<h2><a href="#sample-model" aria-hidden="true" class="anchor" id="sample-model"></a>Sample model</h2>
+<p>Many of the examples below use a simple model with blogs, posts, tags, and authors:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public Blog(string name)
+    {
+        Name = name;
+    }
+
+    public int Id { get; private set; }
+    public string Name { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Post
+{
+    public Post(string title, string content, DateTime publishedOn)
+    {
+        Title = title;
+        Content = content;
+        PublishedOn = publishedOn;
+    }
+
+    public int Id { get; private set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+    public DateTime PublishedOn { get; set; }
+    public Blog Blog { get; set; } = null!;
+    public List&lt;Tag&gt; Tags { get; } = new();
+    public Author? Author { get; set; }
+    public PostMetadata? Metadata { get; set; }
+}
+
+public class FeaturedPost : Post
+{
+    public FeaturedPost(string title, string content, DateTime publishedOn, string promoText)
+        : base(title, content, publishedOn)
+    {
+        PromoText = promoText;
+    }
+
+    public string PromoText { get; set; }
+}
+
+public class Tag
+{
+    public Tag(string id, string text)
+    {
+        Id = id;
+        Text = text;
+    }
+
+    public string Id { get; private set; }
+    public string Text { get; set; }
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+
+public class Author
+{
+    public Author(string name)
+    {
+        Name = name;
+    }
+
+    public int Id { get; private set; }
+    public string Name { get; set; }
+    public ContactDetails Contact { get; set; } = null!;
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+</code></pre>
+<p>Some of the examples also use aggregate types, which are mapped in different ways in different samples. There <code>is</code> one aggregate type for contacts:</p>
+<pre><code class="language-csharp">public class ContactDetails
+{
+    public Address Address { get; set; } = null!;
+    public string? Phone { get; set; }
+}
+
+public class Address
+{
+    public Address(string street, string city, string postcode, string country)
+    {
+        Street = street;
+        City = city;
+        Postcode = postcode;
+        Country = country;
+    }
+
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string Postcode { get; set; }
+    public string Country { get; set; }
+}
+</code></pre>
+<p>And a second aggregate type for post metadata:</p>
+<pre><code class="language-csharp">public class PostMetadata
+{
+    public PostMetadata(int views)
+    {
+        Views = views;
+    }
+
+    public int Views { get; set; }
+    public List&lt;SearchTerm&gt; TopSearches { get; } = new();
+    public List&lt;Visits&gt; TopGeographies { get; } = new();
+    public List&lt;PostUpdate&gt; Updates { get; } = new();
+}
+
+public class SearchTerm
+{
+    public SearchTerm(string term, int count)
+    {
+        Term = term;
+        Count = count;
+    }
+
+    public string Term { get; private set; }
+    public int Count { get; private set; }
+}
+
+public class Visits
+{
+    public Visits(double latitude, double longitude, int count)
+    {
+        Latitude = latitude;
+        Longitude = longitude;
+        Count = count;
+    }
+
+    public double Latitude { get; private set; }
+    public double Longitude { get; private set; }
+    public int Count { get; private set; }
+    public List&lt;string&gt;? Browsers { get; set; }
+}
+
+public class PostUpdate
+{
+    public PostUpdate(IPAddress postedFrom, DateTime updatedOn)
+    {
+        PostedFrom = postedFrom;
+        UpdatedOn = updatedOn;
+    }
+
+    public IPAddress PostedFrom { get; private set; }
+    public string? UpdatedBy { get; init; }
+    public DateTime UpdatedOn { get; private set; }
+    public List&lt;Commit&gt; Commits { get; } = new();
+}
+
+public class Commit
+{
+    public Commit(DateTime committedOn, string comment)
+    {
+        CommittedOn = committedOn;
+        Comment = comment;
+    }
+
+    public DateTime CommittedOn { get; private set; }
+    public string Comment { get; set; }
+}
+</code></pre>
+<blockquote>
+<p>Tip
+The sample model can be found in BlogsContext.cs.</p>
+</blockquote>
+<h2><a href="#json-columns" aria-hidden="true" class="anchor" id="json-columns"></a>JSON Columns</h2>
+<p>A relational database <code>is</code> a computer program that stores data.</p>
+<p>The <code>Entity</code> Framework 7 (EF) has been released.</p>
+<blockquote>
+<p>Note
+SQLite support for JSON <code>is</code> planned for post EF7. The PostgreSQL and Pomelo MySQL providers already contain some support for JSON columns. We will be working with the authors of those providers to align JSON support across all providers.</p>
+</blockquote>
+<h3><a href="#mapping-to-json-columns" aria-hidden="true" class="anchor" id="mapping-to-json-columns"></a>Mapping to JSON columns</h3>
+<p>In EF Core, aggregate types are defined using <code>OwnsOne</code> and <code>OwnsMany</code>. For example, consider the aggregate type from our sample model used to store contact information:</p>
+<pre><code class="language-csharp">public class ContactDetails
+{
+    public Address Address { get; set; } = null!;
+    public string? Phone { get; set; }
+}
+
+public class Address
+{
+    public Address(string street, string city, string postcode, string country)
+    {
+        Street = street;
+        City = city;
+        Postcode = postcode;
+        Country = country;
+    }
+
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string Postcode { get; set; }
+    public string Country { get; set; }
+}
+</code></pre>
+<p>This can then be used in an &quot;owner&quot; entity type, for example, to store the contact details of an author:</p>
+<pre><code class="language-csharp">public class Author
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public ContactDetails Contact { get; set; }
+}
+</code></pre>
+<p>The aggregate type <code>is</code> configured  in <code>OnModelCreating</code> using <code>OwnsOne</code>:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Author&gt;().OwnsOne(
+        author =&gt; author.Contact, ownedNavigationBuilder =&gt;
+        {
+            ownedNavigationBuilder.OwnsOne(contactDetails =&gt; contactDetails.Address);
+        });
+}
+</code></pre>
+<blockquote>
+<p>Tip
+The code shown here comes from JsonColumnsSample.cs.</p>
+</blockquote>
+<p>This example shows how to map the <code>Authors</code> table to the <code>ContactDetails</code> table.</p>
+<p>Some saved authors with contact details will look like this:</p>
+<p><code>Authors</code></p>
+<p>If desired, each entity type making up the aggregate can be mapped to its own table instead:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Author&gt;().OwnsOne(
+        author =&gt; author.Contact, ownedNavigationBuilder =&gt;
+        {
+            ownedNavigationBuilder.ToTable(&quot;Contacts&quot;);
+            ownedNavigationBuilder.OwnsOne(
+                contactDetails =&gt; contactDetails.Address, ownedOwnedNavigationBuilder =&gt;
+                {
+                    ownedOwnedNavigationBuilder.ToTable(&quot;Addresses&quot;);
+                });
+        });
+}
+</code></pre>
+<p>The same data <code>is</code> then stored across three tables:</p>
+<p><code>Authors</code></p>
+<p>Contacts</p>
+<p><code>Addresses</code></p>
+<p>Now, for the interesting part. In EF7, the <code>ContactDetails</code> aggregate type can be mapped to a JSON column. This requires just one call to <code>ToJson</code>() when configuring the aggregate type:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Author&gt;().OwnsOne(
+        author =&gt; author.Contact, ownedNavigationBuilder =&gt;
+        {
+            ownedNavigationBuilder.ToJson();
+            ownedNavigationBuilder.OwnsOne(contactDetails =&gt; contactDetails.Address);
+        });
+}
+</code></pre>
+<p>The <code>Authors</code> table will now contain a JSON column for <code>ContactDetails</code> populated with a JSON document for each author:</p>
+<p><code>Authors</code></p>
+<blockquote>
+<p>Tip
+This use of aggregates <code>is</code> very similar to the way JSON documents are mapped when using the EF Core provider for Azure Cosmos DB. JSON columns bring the capabilities of using EF Core against document databases to documents embedded in a relational database.</p>
+</blockquote>
+<p>In this tutorial, I will show you how to map a post's metadata to a document.</p>
+<pre><code class="language-csharp">public class PostMetadata
+{
+    public PostMetadata(int views)
+    {
+        Views = views;
+    }
+
+    public int Views { get; set; }
+    public List&lt;SearchTerm&gt; TopSearches { get; } = new();
+    public List&lt;Visits&gt; TopGeographies { get; } = new();
+    public List&lt;PostUpdate&gt; Updates { get; } = new();
+}
+
+public class SearchTerm
+{
+    public SearchTerm(string term, int count)
+    {
+        Term = term;
+        Count = count;
+    }
+
+    public string Term { get; private set; }
+    public int Count { get; private set; }
+}
+
+public class Visits
+{
+    public Visits(double latitude, double longitude, int count)
+    {
+        Latitude = latitude;
+        Longitude = longitude;
+        Count = count;
+    }
+
+    public double Latitude { get; private set; }
+    public double Longitude { get; private set; }
+    public int Count { get; private set; }
+    public List&lt;string&gt;? Browsers { get; set; }
+}
+
+public class PostUpdate
+{
+    public PostUpdate(IPAddress postedFrom, DateTime updatedOn)
+    {
+        PostedFrom = postedFrom;
+        UpdatedOn = updatedOn;
+    }
+
+    public IPAddress PostedFrom { get; private set; }
+    public string? UpdatedBy { get; init; }
+    public DateTime UpdatedOn { get; private set; }
+    public List&lt;Commit&gt; Commits { get; } = new();
+}
+
+public class Commit
+{
+    public Commit(DateTime committedOn, string comment)
+    {
+        CommittedOn = committedOn;
+        Comment = comment;
+    }
+
+    public DateTime CommittedOn { get; private set; }
+    public string Comment { get; set; }
+}
+</code></pre>
+<p>This aggregate type contains several nested types and collections. Calls to <code>OwnsOne</code> and <code>OwnsMany</code> are used to map this aggregate type:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;().OwnsOne(
+    post =&gt; post.Metadata, ownedNavigationBuilder =&gt;
+    {
+        ownedNavigationBuilder.ToJson();
+        ownedNavigationBuilder.OwnsMany(metadata =&gt; metadata.TopSearches);
+        ownedNavigationBuilder.OwnsMany(metadata =&gt; metadata.TopGeographies);
+        ownedNavigationBuilder.OwnsMany(
+            metadata =&gt; metadata.Updates,
+            ownedOwnedNavigationBuilder =&gt; ownedOwnedNavigationBuilder.OwnsMany(update =&gt; update.Commits));
+    });
+</code></pre>
+<blockquote>
+<p>Tip
+ToJson <code>is</code> only needed on the aggregate root to map the entire aggregate to a JSON document.</p>
+</blockquote>
+<p>With this mapping, EF7 can create and query into a complex JSON document like this:</p>
+<pre><code class="language-json">{
+  &quot;Views&quot;: 5085,
+  &quot;TopGeographies&quot;: [
+    {
+      &quot;Browsers&quot;: &quot;Firefox, Netscape&quot;,
+      &quot;Count&quot;: 924,
+      &quot;Latitude&quot;: 110.793,
+      &quot;Longitude&quot;: 39.2431
+    },
+    {
+      &quot;Browsers&quot;: &quot;Firefox, Netscape&quot;,
+      &quot;Count&quot;: 885,
+      &quot;Latitude&quot;: 133.793,
+      &quot;Longitude&quot;: 45.2431
+    }
+  ],
+  &quot;TopSearches&quot;: [
+    {
+      &quot;Count&quot;: 9359,
+      &quot;Term&quot;: &quot;Search #1&quot;
+    }
+  ],
+  &quot;Updates&quot;: [
+    {
+      &quot;PostedFrom&quot;: &quot;127.0.0.1&quot;,
+      &quot;UpdatedBy&quot;: &quot;Admin&quot;,
+      &quot;UpdatedOn&quot;: &quot;1996-02-17T19:24:29.5429092Z&quot;,
+      &quot;Commits&quot;: []
+    },
+    {
+      &quot;PostedFrom&quot;: &quot;127.0.0.1&quot;,
+      &quot;UpdatedBy&quot;: &quot;Admin&quot;,
+      &quot;UpdatedOn&quot;: &quot;2019-11-24T19:24:29.5429093Z&quot;,
+      &quot;Commits&quot;: [
+        {
+          &quot;Comment&quot;: &quot;Commit #1&quot;,
+          &quot;CommittedOn&quot;: &quot;2022-08-21T00:00:00+01:00&quot;
+        }
+      ]
+    },
+    {
+      &quot;PostedFrom&quot;: &quot;127.0.0.1&quot;,
+      &quot;UpdatedBy&quot;: &quot;Admin&quot;,
+      &quot;UpdatedOn&quot;: &quot;1997-05-28T19:24:29.5429097Z&quot;,
+      &quot;Commits&quot;: [
+        {
+          &quot;Comment&quot;: &quot;Commit #1&quot;,
+          &quot;CommittedOn&quot;: &quot;2022-08-21T00:00:00+01:00&quot;
+        },
+        {
+          &quot;Comment&quot;: &quot;Commit #2&quot;,
+          &quot;CommittedOn&quot;: &quot;2022-08-21T00:00:00+01:00&quot;
+        }
+      ]
+    }
+  ]
+}
+</code></pre>
+<blockquote>
+<p>Note
+Mapping spatial types directly to JSON <code>is</code> not yet supported. The document above uses <code>double</code> values as a workaround. Vote for Support spatial types in JSON columns if this <code>is</code> something you are interested in.</p>
+</blockquote>
+<blockquote>
+<p>Note
+Mapping collections of primitive types to JSON <code>is</code> not yet supported. The document above uses a value converter to transform the collection into a comma-separated string. Vote for Json: add support for collection of primitive types if this <code>is</code> something you are interested in.</p>
+</blockquote>
+<blockquote>
+<p>Note
+Mapping of owned types to JSON <code>is</code> not yet supported in conjunction with TPT or TPC inheritance. Vote for Support JSON properties with TPT/TPC inheritance mapping if this <code>is</code> something you are interested in.</p>
+</blockquote>
+<h3><a href="#queries-into-json-columns" aria-hidden="true" class="anchor" id="queries-into-json-columns"></a>Queries into JSON columns</h3>
+<p>Queries into JSON columns work just the same as querying into any other aggregate type in EF Core. That <code>is</code>, just use LINQ! Here are some examples.</p>
+<p>A query for all authors that live in Chigley:</p>
+<pre><code class="language-csharp">var authorsInChigley = await context.Authors
+    .Where(author =&gt; author.Contact.Address.City == &quot;Chigley&quot;)
+    .ToListAsync();
+</code></pre>
+<p>This query generates the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[Name], JSON_QUERY([a].[Contact],'$')
+FROM [Authors] AS [a]
+WHERE CAST(JSON_VALUE([a].[Contact],'$.Address.City') AS nvarchar(max)) = N'Chigley'
+</code></pre>
+<p>Notice the use of <code>JSON_VALUE</code> to get the <code>City</code> from the <code>Address</code> inside the JSON document.</p>
+<p><code>Select</code> can be used to extract and project elements from the JSON document:</p>
+<pre><code class="language-csharp">var postcodesInChigley = await context.Authors
+    .Where(author =&gt; author.Contact.Address.City == &quot;Chigley&quot;)
+    .Select(author =&gt; author.Contact.Address.Postcode)
+    .ToListAsync();
+</code></pre>
+<p>This query generates the following SQL:</p>
+<pre><code class="language-sql">SELECT CAST(JSON_VALUE([a].[Contact],'$.Address.Postcode') AS nvarchar(max))
+FROM [Authors] AS [a]
+WHERE CAST(JSON_VALUE([a].[Contact],'$.Address.City') AS nvarchar(max)) = N'Chigley'
+</code></pre>
+<p>Here's an example that does a bit more in the filter and projection, and also orders by the phone number in the JSON document:</p>
+<pre><code class="language-csharp">var orderedAddresses = await context.Authors
+    .Where(
+        author =&gt; (author.Contact.Address.City == &quot;Chigley&quot;
+                   &amp;&amp; author.Contact.Phone != null)
+                  || author.Name.StartsWith(&quot;D&quot;))
+    .OrderBy(author =&gt; author.Contact.Phone)
+    .Select(
+        author =&gt; author.Name + &quot; (&quot; + author.Contact.Address.Street
+                  + &quot;, &quot; + author.Contact.Address.City
+                  + &quot; &quot; + author.Contact.Address.Postcode + &quot;)&quot;)
+    .ToListAsync();
+</code></pre>
+<p>This query generates the following SQL:</p>
+<pre><code class="language-sql">SELECT (((((([a].[Name] + N' (') + CAST(JSON_VALUE([a].[Contact],'$.Address.Street') AS nvarchar(max))) + N', ') + CAST(JSON_VALUE([a].[Contact],'$.Address.City') AS nvarchar(max))) + N' ') + CAST(JSON_VALUE([a].[Contact],'$.Address.Postcode') AS nvarchar(max))) + N')'
+FROM [Authors] AS [a]
+WHERE (CAST(JSON_VALUE([a].[Contact],'$.Address.City') AS nvarchar(max)) = N'Chigley' AND CAST(JSON_VALUE([a].[Contact],'$.Phone') AS nvarchar(max)) IS NOT NULL) OR ([a].[Name] LIKE N'D%')
+ORDER BY CAST(JSON_VALUE([a].[Contact],'$.Phone') AS nvarchar(max))
+</code></pre>
+<p>And when the JSON document contains collections, then these can be projected out in the results:</p>
+<pre><code class="language-csharp">var postsWithViews = await context.Posts.Where(post =&gt; post.Metadata!.Views &gt; 3000)
+    .AsNoTracking()
+    .Select(
+        post =&gt; new
+        {
+            post.Author!.Name, post.Metadata!.Views, Searches = post.Metadata.TopSearches, Commits = post.Metadata.Updates
+        })
+    .ToListAsync();
+</code></pre>
+<p>This query generates the following SQL:</p>
+<pre><code class="language-sql">SELECT [a].[Name], CAST(JSON_VALUE([p].[Metadata],'$.Views') AS int), JSON_QUERY([p].[Metadata],'$.TopSearches'), [p].[Id], JSON_QUERY([p].[Metadata],'$.Updates')
+FROM [Posts] AS [p]
+LEFT JOIN [Authors] AS [a] ON [p].[AuthorId] = [a].[Id]
+WHERE CAST(JSON_VALUE([p].[Metadata],'$.Views') AS int) &gt; 3000
+</code></pre>
+<blockquote>
+<p>Note
+More complex queries involving JSON collections require <code>jsonpath</code> support. Vote for Support <code>jsonpath</code> querying if this <code>is</code> something you are interested in.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+Consider creating indexes to improve query performance in JSON documents. For example, see <code>Index</code> Json data when using SQL Server.</p>
+</blockquote>
+<h3><a href="#updating-json-columns" aria-hidden="true" class="anchor" id="updating-json-columns"></a>Updating JSON columns</h3>
+<p>Two new features have been added to Microsoft Word to make it easier to make changes to documents.</p>
+<pre><code class="language-csharp">var jeremy = await context.Authors.SingleAsync(author =&gt; author.Name.StartsWith(&quot;Jeremy&quot;));
+
+jeremy.Contact = new() { Address = new(&quot;2 Riverside&quot;, &quot;Trimbridge&quot;, &quot;TB1 5ZS&quot;, &quot;UK&quot;), Phone = &quot;01632 88346&quot; };
+
+await context.SaveChangesAsync();
+</code></pre>
+<p>In this case, the entire new document <code>is</code> passed as a parameter:</p>
+<pre><code class="language-text">info: 8/30/2022 20:21:24.392 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (2ms) [Parameters=[@p0='{&quot;Phone&quot;:&quot;01632 88346&quot;,&quot;Address&quot;:{&quot;City&quot;:&quot;Trimbridge&quot;,&quot;Country&quot;:&quot;UK&quot;,&quot;Postcode&quot;:&quot;TB1 5ZS&quot;,&quot;Street&quot;:&quot;2 Riverside&quot;}}' (Nullable = false) (Size = 114), @p1='2'], CommandType='Text', CommandTimeout='30']
+</code></pre>
+<p>Which <code>is</code> then used in the <code>UPDATE</code> SQL:</p>
+<pre><code class="language-sql">UPDATE [Authors] SET [Contact] = @p0
+OUTPUT 1
+WHERE [Id] = @p1;
+</code></pre>
+<p>However, if only a sub-document <code>is</code> changed, then EF Core will use a <code>JSON_MODIFY</code> command to update only the sub-document. For example, changing the <code>Address</code> inside a <code>Contact</code> document:</p>
+<pre><code class="language-csharp">var brice = await context.Authors.SingleAsync(author =&gt; author.Name.StartsWith(&quot;Brice&quot;));
+
+brice.Contact.Address = new(&quot;4 Riverside&quot;, &quot;Trimbridge&quot;, &quot;TB1 5ZS&quot;, &quot;UK&quot;);
+
+await context.SaveChangesAsync();
+</code></pre>
+<p>Generates the following parameters:</p>
+<pre><code class="language-text">info: 10/2/2022 15:51:15.895 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (2ms) [Parameters=[@p0='{&quot;City&quot;:&quot;Trimbridge&quot;,&quot;Country&quot;:&quot;UK&quot;,&quot;Postcode&quot;:&quot;TB1 5ZS&quot;,&quot;Street&quot;:&quot;4 Riverside&quot;}' (Nullable = false) (Size = 80), @p1='5'], CommandType='Text', CommandTimeout='30']
+</code></pre>
+<p>Which <code>is</code> used in the <code>UPDATE</code> via a <code>JSON_MODIFY</code> call:</p>
+<pre><code class="language-sql">UPDATE [Authors] SET [Contact] = JSON_MODIFY([Contact], 'strict $.Address', JSON_QUERY(@p0))
+OUTPUT 1
+WHERE [Id] = @p1;
+</code></pre>
+<p>Finally, if only a single property <code>is</code> changed, then EF Core will again use a &quot;JSON_MODIFY&quot; command, this time to patch only the changed property value. For example:</p>
+<pre><code class="language-csharp">var arthur = await context.Authors.SingleAsync(author =&gt; author.Name.StartsWith(&quot;Arthur&quot;));
+
+arthur.Contact.Address.Country = &quot;United Kingdom&quot;;
+
+await context.SaveChangesAsync();
+</code></pre>
+<p>Generates the following parameters:</p>
+<pre><code class="language-text">info: 10/2/2022 15:54:05.112 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (2ms) [Parameters=[@p0='[&quot;United Kingdom&quot;]' (Nullable = false) (Size = 18), @p1='4'], CommandType='Text', CommandTimeout='30']
+</code></pre>
+<p>Which are again used with a <code>JSON_MODIFY</code>:</p>
+<pre><code class="language-sql">UPDATE [Authors] SET [Contact] = JSON_MODIFY([Contact], 'strict $.Address.Country', JSON_VALUE(@p0, '$[0]'))
+OUTPUT 1
+WHERE [Id] = @p1;
+</code></pre>
+<h2><a href="#executeupdate-and-executedelete-bulk-updates)" aria-hidden="true" class="anchor" id="executeupdate-and-executedelete-bulk-updates)"></a><code>ExecuteUpdate</code> and <code>ExecuteDelete</code> (Bulk updates)</h2>
+<p>EF Core tracks changes to entities, and then sends updates to the database when one of the <code>SaveChanges</code> methods <code>is</code> called.</p>
+<p>The database change tracker <code>is</code> used to update or delete entities in the database.</p>
+<p>However, keep in mind that:</p>
+<ul>
+<li>
+<p>The specific changes to make must be specified explicitly; they are not automatically detected by EF Core.</p>
+</li>
+<li>
+<p>Any tracked entities will not be kept in sync.</p>
+</li>
+<li>
+<p>Additional commands may need to be sent in the correct order so as not to violate database constraints. For example, deleting dependents before a principal can be deleted.</p>
+</li>
+</ul>
+<p>All of this means that the <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> methods complement, rather than replace, the existing <code>SaveChanges</code> mechanism.</p>
+<h3><a href="#basic-executedelete-examples" aria-hidden="true" class="anchor" id="basic-executedelete-examples"></a>Basic <code>ExecuteDelete</code> examples</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from ExecuteDeleteSample.cs.</p>
+</blockquote>
+<p>Calling <code>ExecuteDelete</code> or <code>ExecuteDeleteAsync</code> on a <code>DbSet</code> immediately deletes all entities of that <code>DbSet</code> from the database. For example, to delete all <code>Tag</code> entities:</p>
+<pre><code class="language-csharp">await context.Tags.ExecuteDeleteAsync();
+</code></pre>
+<p>This executes the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">DELETE FROM [t]
+FROM [Tags] AS [t]
+</code></pre>
+<p>More interestingly, the query can contain a filter. For example:</p>
+<pre><code class="language-csharp">await context.Tags.Where(t =&gt; t.Text.Contains(&quot;.NET&quot;)).ExecuteDeleteAsync();
+</code></pre>
+<p>This executes the following SQL:</p>
+<pre><code class="language-sql">DELETE FROM [t]
+FROM [Tags] AS [t]
+WHERE [t].[Text] LIKE N'%.NET%'
+</code></pre>
+<p>The query can also use more complex filters, including navigations to other types. For example, to delete tags only from old blog posts:</p>
+<pre><code class="language-csharp">await context.Tags.Where(t =&gt; t.Posts.All(e =&gt; e.PublishedOn.Year &lt; 2022)).ExecuteDeleteAsync();
+</code></pre>
+<p>Which executes:</p>
+<pre><code class="language-sql">DELETE FROM [t]
+FROM [Tags] AS [t]
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM [PostTag] AS [p]
+    INNER JOIN [Posts] AS [p0] ON [p].[PostsId] = [p0].[Id]
+    WHERE [t].[Id] = [p].[TagsId] AND NOT (DATEPART(year, [p0].[PublishedOn]) &lt; 2022))
+</code></pre>
+<h3><a href="#basic-executeupdate-examples" aria-hidden="true" class="anchor" id="basic-executeupdate-examples"></a>Basic <code>ExecuteUpdate</code> examples</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from ExecuteUpdateSample.cs.</p>
+</blockquote>
+<p>Two new methods have been added to the Execute method to update properties.</p>
+<pre><code class="language-csharp">await context.Blogs.ExecuteUpdateAsync(
+    s =&gt; s.SetProperty(b =&gt; b.Name, b =&gt; b.Name + &quot; *Featured!*&quot;));
+</code></pre>
+<p>This example shows how to update a property on a blog.</p>
+<pre><code class="language-sql">UPDATE [b]
+SET [b].[Name] = [b].[Name] + N' *Featured!*'
+FROM [Blogs] AS [b]
+</code></pre>
+<p>The <code>SetProperty</code> query can be used to update any property on an entity.</p>
+<pre><code class="language-csharp">await context.Posts
+    .Where(p =&gt; p.PublishedOn.Year &lt; 2022)
+    .ExecuteUpdateAsync(s =&gt; s
+        .SetProperty(b =&gt; b.Title, b =&gt; b.Title + &quot; (&quot; + b.PublishedOn.Year + &quot;)&quot;)
+        .SetProperty(b =&gt; b.Content, b =&gt; b.Content + &quot; ( This content was published in &quot; + b.PublishedOn.Year + &quot;)&quot;));
+</code></pre>
+<p>In this case the generated SQL <code>is</code> a bit more complicated:</p>
+<pre><code class="language-sql">UPDATE [p]
+SET [p].[Content] = (([p].[Content] + N' ( This content was published in ') + COALESCE(CAST(DATEPART(year, [p].[PublishedOn]) AS nvarchar(max)), N'')) + N')',
+    [p].[Title] = (([p].[Title] + N' (') + COALESCE(CAST(DATEPART(year, [p].[PublishedOn]) AS nvarchar(max)), N'')) + N')'
+FROM [Posts] AS [p]
+WHERE DATEPART(year, [p].[PublishedOn]) &lt; 2022
+</code></pre>
+<p>Finally, again as with <code>ExecuteDelete</code>, the filter can reference other tables. For example, to update all tags from old posts:</p>
+<pre><code class="language-csharp">await context.Tags
+    .Where(t =&gt; t.Posts.All(e =&gt; e.PublishedOn.Year &lt; 2022))
+    .ExecuteUpdateAsync(s =&gt; s.SetProperty(t =&gt; t.Text, t =&gt; t.Text + &quot; (old)&quot;));
+</code></pre>
+<p>Which generates:</p>
+<pre><code class="language-sql">UPDATE [t]
+SET [t].[Text] = [t].[Text] + N' (old)'
+FROM [Tags] AS [t]
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM [PostTag] AS [p]
+    INNER JOIN [Posts] AS [p0] ON [p].[PostsId] = [p0].[Id]
+    WHERE [t].[Id] = [p].[TagsId] AND NOT (DATEPART(year, [p0].[PublishedOn]) &lt; 2022))
+</code></pre>
+<p>For more information and code samples on <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>, see <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>.</p>
+<h3><a href="#inheritance-and-multiple-tables" aria-hidden="true" class="anchor" id="inheritance-and-multiple-tables"></a>Inheritance and multiple tables</h3>
+<p>The <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> methods can only act on a single table.</p>
+<pre><code class="language-csharp">await context.Set&lt;FeaturedPost&gt;().ExecuteDeleteAsync();
+</code></pre>
+<p>Generates the following SQL when using TPH mapping:</p>
+<pre><code class="language-sql">DELETE FROM [p]
+FROM [Posts] AS [p]
+WHERE [p].[Discriminator] = N'FeaturedPost'
+</code></pre>
+<p>There are also no issues for this case when using the TPC mapping strategy, since again only changes to a single table are needed:</p>
+<pre><code class="language-sql">DELETE FROM [f]
+FROM [FeaturedPosts] AS [f]
+</code></pre>
+<p>However, attempting this when using the TPT mapping strategy will fail since it would require deleting rows from two different tables.</p>
+<p>In this article I will show you how to add filters to a query.</p>
+<pre><code class="language-csharp">await context.Posts.Where(p =&gt; p.Author!.Name.StartsWith(&quot;Arthur&quot;)).ExecuteDeleteAsync();
+</code></pre>
+<p>Generates the following SQL when using TPH:</p>
+<pre><code class="language-sql">DELETE FROM [p]
+FROM [Posts] AS [p]
+LEFT JOIN [Authors] AS [a] ON [p].[AuthorId] = [a].[Id]
+WHERE [a].[Name] IS NOT NULL AND ([a].[Name] LIKE N'Arthur%')
+</code></pre>
+<p>But fails when using TPC or TPT.</p>
+<blockquote>
+<p>Tip
+Issue #10879 tracks adding support for automatically sending multiple commands in these scenarios. Vote for this issue if it's something you would like to see implemented.</p>
+</blockquote>
+<h3><a href="#executedelete-and-relationships" aria-hidden="true" class="anchor" id="executedelete-and-relationships"></a><code>ExecuteDelete</code> and relationships</h3>
+<p>To delete a relationship, you must first delete the principal of the relationship and then update its dependent entities.</p>
+<pre><code class="language-csharp">await context.Authors.ExecuteDeleteAsync();
+</code></pre>
+<p>Will result in the following exception on SQL Server:</p>
+<p>To fix this, we must first either delete the posts, or sever the relationship between each post and its author by setting <code>AuthorId</code> foreign key property to null. For example, using the delete option:</p>
+<pre><code class="language-csharp">await context.Posts.TagWith(&quot;Deleting posts...&quot;).ExecuteDeleteAsync();
+await context.Authors.TagWith(&quot;Deleting authors...&quot;).ExecuteDeleteAsync();
+</code></pre>
+<blockquote>
+<p>Tip
+TagWith can be used to tag <code>ExecuteDelete</code> or <code>ExecuteUpdate</code> in the same way as it tags normal queries.</p>
+</blockquote>
+<p>This results in two separate commands; the first to delete the dependents:</p>
+<pre><code class="language-sql">-- Deleting posts...
+
+DELETE FROM [p]
+FROM [Posts] AS [p]
+</code></pre>
+<p>And the second to delete the principals:</p>
+<pre><code class="language-sql">-- Deleting authors...
+
+DELETE FROM [a]
+FROM [Authors] AS [a]
+</code></pre>
+<blockquote>
+<p>Important
+Multiple <code>ExecuteDelete</code> and <code>ExecuteUpdate</code> commands will not be contained in a single transaction by default. However, the <code>DbContext</code> transaction APIs can be used in the normal way to wrap these commands in a transaction.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+Sending these commands in a single round-trip depends on Issue #10879. Vote for this issue if it's something you would like to see implemented.</p>
+</blockquote>
+<p>In this article we are going to look at how to delete blogs from the EF Core database.</p>
+<pre><code class="language-csharp">await context.Blogs.ExecuteDeleteAsync();
+</code></pre>
+<p>This results in the following SQL:</p>
+<pre><code class="language-sql">DELETE FROM [b]
+FROM [Blogs] AS [b]
+</code></pre>
+<p>Which, as it <code>is</code> deleting a blog, will also cause all related posts to be deleted by the configured cascade delete.</p>
+<h2><a href="#faster-savechanges" aria-hidden="true" class="anchor" id="faster-savechanges"></a>Faster <code>SaveChanges</code></h2>
+<p>In EF7, the performance of <code>SaveChanges</code> and <code>SaveChangesAsync</code> has been significantly improved. In some scenarios, saving changes <code>is</code> now up to four times faster than with EF Core 6.0!</p>
+<p>Most of these improvements come from:</p>
+<ul>
+<li>
+<p>Performing fewer roundtrips to the database</p>
+</li>
+<li>
+<p>Generating faster SQL</p>
+</li>
+</ul>
+<p>Some examples of these improvements are shown below.</p>
+<blockquote>
+<p>Note
+See Announcing <code>Entity</code> Framework Core 7 Preview 6: Performance Edition on the .NET <code>Blog</code> for an in-depth discussion of these changes.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+The code shown here comes from SaveChangesPerformanceSample.cs.</p>
+</blockquote>
+<h3><a href="#unneeded-transactions-are-eliminated" aria-hidden="true" class="anchor" id="unneeded-transactions-are-eliminated"></a>Unneeded transactions are eliminated</h3>
+<p>EF7 <code>is</code> an improved version of the relational database management system (RDMS).</p>
+<p>For example, looking at the logging for the following call to <code>SaveChanges</code>:</p>
+<pre><code class="language-csharp">await context.AddAsync(new Blog { Name = &quot;MyBlog&quot; });
+await context.SaveChangesAsync();
+</code></pre>
+<p>Shows that in EF Core 6.0, the <code>INSERT</code> command <code>is</code> wrapped by commands to begin and and then commit a transaction:</p>
+<pre><code class="language-output">dbug: 9/29/2022 11:43:09.196 RelationalEventId.TransactionStarted[20200] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Began transaction with isolation level 'ReadCommitted'.
+info: 9/29/2022 11:43:09.265 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (27ms) [Parameters=[@p0='MyBlog' (Nullable = false) (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET NOCOUNT ON;
+      INSERT INTO [Blogs] ([Name])
+      VALUES (@p0);
+      SELECT [Id]
+      FROM [Blogs]
+      WHERE @@ROWCOUNT = 1 AND [Id] = scope_identity();
+dbug: 9/29/2022 11:43:09.297 RelationalEventId.TransactionCommitted[20202] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committed transaction.
+</code></pre>
+<p>EF7 detects that the transaction <code>is</code> not needed here and so removes these calls:</p>
+<pre><code class="language-output">info: 9/29/2022 11:42:34.776 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (25ms) [Parameters=[@p0='MyBlog' (Nullable = false) (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [Blogs] ([Name])
+      OUTPUT INSERTED.[Id]
+      VALUES (@p0);
+</code></pre>
+<p>In this paper, we show how to co-locate the database on the same machine as the application.</p>
+<h3><a href="#improved-sql-for-simple-identity-insert" aria-hidden="true" class="anchor" id="improved-sql-for-simple-identity-insert"></a>Improved SQL for simple <code>Identity</code> insert</h3>
+<p>In this article I will show you how to simplify a single-row SQL query in EF7.</p>
+<h3><a href="#inserting-multiple-rows" aria-hidden="true" class="anchor" id="inserting-multiple-rows"></a>Inserting multiple rows</h3>
+<p>In this article, I'm going to show you how to insert multiple rows into an EF Core database.</p>
+<pre><code class="language-csharp">for (var i = 0; i &lt; 4; i++)
+{
+    await context.AddAsync(new Blog { Name = &quot;Foo&quot; + i });
+}
+
+await context.SaveChangesAsync();
+</code></pre>
+<p>Results in the following actions when run against SQL Server with EF Core 6.0:</p>
+<pre><code class="language-output">dbug: 9/30/2022 17:19:51.919 RelationalEventId.TransactionStarted[20200] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Began transaction with isolation level 'ReadCommitted'.
+info: 9/30/2022 17:19:51.993 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (27ms) [Parameters=[@p0='Foo0' (Nullable = false) (Size = 4000), @p1='Foo1' (Nullable = false) (Size = 4000), @p2='Foo2' (Nullable = false) (Size = 4000), @p3='Foo3' (Nullable = false) (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET NOCOUNT ON;
+      DECLARE @inserted0 TABLE ([Id] int, [_Position] [int]);
+      MERGE [Blogs] USING (
+      VALUES (@p0, 0),
+      (@p1, 1),
+      (@p2, 2),
+      (@p3, 3)) AS i ([Name], _Position) ON 1=0
+      WHEN NOT MATCHED THEN
+      INSERT ([Name])
+      VALUES (i.[Name])
+      OUTPUT INSERTED.[Id], i._Position
+      INTO @inserted0;
+
+      SELECT [i].[Id] FROM @inserted0 i
+      ORDER BY [i].[_Position];
+dbug: 9/30/2022 17:19:52.023 RelationalEventId.TransactionCommitted[20202] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committed transaction.
+</code></pre>
+<blockquote>
+<p>Important
+Even though this <code>is</code> complicated, batching multiple inserts like this <code>is</code> still significantly faster than sending a single command for each insert.</p>
+</blockquote>
+<p>In EF7, you can still get this SQL if your tables contain triggers, but for the common case we now generate much more efficient, if still somewhat complex, commands:</p>
+<pre><code class="language-output">info: 9/30/2022 17:40:37.612 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (4ms) [Parameters=[@p0='Foo0' (Nullable = false) (Size = 4000), @p1='Foo1' (Nullable = false) (Size = 4000), @p2='Foo2' (Nullable = false) (Size = 4000), @p3='Foo3' (Nullable = false) (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      MERGE [Blogs] USING (
+      VALUES (@p0, 0),
+      (@p1, 1),
+      (@p2, 2),
+      (@p3, 3)) AS i ([Name], _Position) ON 1=0
+      WHEN NOT MATCHED THEN
+      INSERT ([Name])
+      VALUES (i.[Name])
+      OUTPUT INSERTED.[Id], i._Position;
+</code></pre>
+<p>EF Core 7 introduces two new features.</p>
+<h3><a href="#triggers" aria-hidden="true" class="anchor" id="triggers"></a>Triggers</h3>
+<p>If the table has triggers, then the call to <code>SaveChanges</code> in the code above will throw an exception:</p>
+<p>The following code can be used to inform EF Core that the table has a trigger:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;BlogWithTrigger&gt;()
+    .ToTable(tb =&gt; tb.HasTrigger(&quot;TRG_InsertUpdateBlog&quot;));
+</code></pre>
+<p>EF7 will then revert to the EF Core 6.0 SQL when sending insert and update commands for this table.</p>
+<p>EF7 introduces new triggers for mapped tables.</p>
+<h3><a href="#fewer-roundtrips-for-inserting-graphs" aria-hidden="true" class="anchor" id="fewer-roundtrips-for-inserting-graphs"></a>Fewer roundtrips for inserting graphs</h3>
+<p>Consider inserting a graph of entities containing a new principal entity and also new dependent entities with foreign keys that reference the new principal. For example:</p>
+<pre><code class="language-csharp">await context.AddAsync(
+    new Blog { Name = &quot;MyBlog&quot;, Posts = { new() { Title = &quot;My first post&quot; }, new() { Title = &quot;My second post&quot; } } });
+await context.SaveChangesAsync();
+</code></pre>
+<p>In this case, the foreign key in the dependent <code>is</code> not known until the principal has been inserted.</p>
+<pre><code class="language-output">dbug: 10/1/2022 13:12:02.517 RelationalEventId.TransactionStarted[20200] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Began transaction with isolation level 'ReadCommitted'.
+info: 10/1/2022 13:12:02.517 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[@p0='MyBlog' (Nullable = false) (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [Blogs] ([Name])
+      OUTPUT INSERTED.[Id]
+      VALUES (@p0);
+info: 10/1/2022 13:12:02.529 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (5ms) [Parameters=[@p1='6', @p2='My first post' (Nullable = false) (Size = 4000), @p3='6', @p4='My second post' (Nullable = false) (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      MERGE [Post] USING (
+      VALUES (@p1, @p2, 0),
+      (@p3, @p4, 1)) AS i ([BlogId], [Title], _Position) ON 1=0
+      WHEN NOT MATCHED THEN
+      INSERT ([BlogId], [Title])
+      VALUES (i.[BlogId], i.[Title])
+      OUTPUT INSERTED.[Id], i._Position;
+dbug: 10/1/2022 13:12:02.531 RelationalEventId.TransactionCommitted[20202] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committed transaction.
+</code></pre>
+<p>However, in some cases, the primary key value <code>is</code> known before the principal <code>is</code> inserted. This includes:</p>
+<ul>
+<li>
+<p>Key values that are not automatically generated</p>
+</li>
+<li>
+<p>Key values that are generated on the client, such as Guid keys</p>
+</li>
+<li>
+<p>Key values that are generated on the server in batches, such as when using a hi-lo value generator</p>
+</li>
+</ul>
+<p>In EF7, these cases are now optimized into a single round-trip. For example, in the case above on SQL Server, the <code>Blog.Id</code> primary key can be configured to use the hi-lo generation strategy:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().Property(e =&gt; e.Id).UseHiLo();
+modelBuilder.Entity&lt;Post&gt;().Property(e =&gt; e.Id).UseHiLo();
+</code></pre>
+<p>The <code>SaveChanges</code> call from above <code>is</code> now optimized to a single roundtrip for the inserts.</p>
+<pre><code class="language-output">dbug: 10/1/2022 21:51:55.805 RelationalEventId.TransactionStarted[20200] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Began transaction with isolation level 'ReadCommitted'.
+info: 10/1/2022 21:51:55.806 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[@p0='9', @p1='MyBlog' (Nullable = false) (Size = 4000), @p2='10', @p3='9', @p4='My first post' (Nullable = false) (Size = 4000), @p5='11', @p6='9', @p7='My second post' (Nullable = false) (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET NOCOUNT ON;
+      INSERT INTO [Blogs] ([Id], [Name])
+      VALUES (@p0, @p1);
+      INSERT INTO [Posts] ([Id], [BlogId], [Title])
+      VALUES (@p2, @p3, @p4),
+      (@p5, @p6, @p7);
+dbug: 10/1/2022 21:51:55.807 RelationalEventId.TransactionCommitted[20202] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committed transaction.
+</code></pre>
+<p>Notice that a transaction <code>is</code> still needed here. This <code>is</code> because inserts are being made into two separate tables.</p>
+<p>EF7 also uses a single batch in other cases where EF Core 6.0 would create more than one. For example, when deleting and inserting rows into the same table.</p>
+<h3><a href="#the-value-of-savechanges" aria-hidden="true" class="anchor" id="the-value-of-savechanges"></a>The value of <code>SaveChanges</code></h3>
+<p>As some of the examples here show, saving results to the database can be a complex business. This <code>is</code> where using something like EF Core really shows its value. EF Core:</p>
+<ul>
+<li>
+<p>Batches multiple insert, update, and delete commands together to reduce roundtrips</p>
+</li>
+<li>
+<p>Figures out if an explicit transaction <code>is</code> needed or not</p>
+</li>
+<li>
+<p>Determines what order to insert, update, and delete entities so that database constraints are not violated</p>
+</li>
+<li>
+<p>Ensures database generated values are returned efficiently and propagated back into entities</p>
+</li>
+<li>
+<p>Automatically sets foreign key values using the values generated for primary keys</p>
+</li>
+<li>
+<p>Detect concurrency conflicts</p>
+</li>
+</ul>
+<p>In addition, different database systems require different SQL for many of these cases. The EF Core database provider works with EF Core to ensure correct and efficient commands are sent for each case.</p>
+<h2><a href="#table-per-concrete-type-tpc)-inheritance-mapping" aria-hidden="true" class="anchor" id="table-per-concrete-type-tpc)-inheritance-mapping"></a>Table-per-concrete-type (TPC) inheritance mapping</h2>
+<p>EF Core 7 introduces two new mapping strategies for inheritance of .NET types.</p>
+<blockquote>
+<p>Tip
+The code shown here comes from TpcInheritanceSample.cs.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+The EF Team demonstrated and talked in depth about TPC mapping in an episode of the .NET Data Community Standup. As with all Community Standup episodes, you can watch the TPC episode now on YouTube.</p>
+</blockquote>
+<h3><a href="#tpc-database-schema" aria-hidden="true" class="anchor" id="tpc-database-schema"></a>TPC database schema</h3>
+<p>Table-per-concrete-type (TPC) <code>is</code> a mapping strategy for the hierarchy of concrete types in a database.</p>
+<p>For example, consider mapping this hierarchy:</p>
+<pre><code class="language-csharp">public abstract class Animal
+{
+    protected Animal(string name)
+    {
+        Name = name;
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public abstract string Species { get; }
+
+    public Food? Food { get; set; }
+}
+
+public abstract class Pet : Animal
+{
+    protected Pet(string name)
+        : base(name)
+    {
+    }
+
+    public string? Vet { get; set; }
+
+    public ICollection&lt;Human&gt; Humans { get; } = new List&lt;Human&gt;();
+}
+
+public class FarmAnimal : Animal
+{
+    public FarmAnimal(string name, string species)
+        : base(name)
+    {
+        Species = species;
+    }
+
+    public override string Species { get; }
+
+    [Precision(18, 2)]
+    public decimal Value { get; set; }
+
+    public override string ToString()
+        =&gt; $&quot;Farm animal '{Name}' ({Species}/{Id}) worth {Value:C} eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+
+public class Cat : Pet
+{
+    public Cat(string name, string educationLevel)
+        : base(name)
+    {
+        EducationLevel = educationLevel;
+    }
+
+    public string EducationLevel { get; set; }
+    public override string Species =&gt; &quot;Felis catus&quot;;
+
+    public override string ToString()
+        =&gt; $&quot;Cat '{Name}' ({Species}/{Id}) with education '{EducationLevel}' eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+
+public class Dog : Pet
+{
+    public Dog(string name, string favoriteToy)
+        : base(name)
+    {
+        FavoriteToy = favoriteToy;
+    }
+
+    public string FavoriteToy { get; set; }
+    public override string Species =&gt; &quot;Canis familiaris&quot;;
+
+    public override string ToString()
+        =&gt; $&quot;Dog '{Name}' ({Species}/{Id}) with favorite toy '{FavoriteToy}' eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+
+public class Human : Animal
+{
+    public Human(string name)
+        : base(name)
+    {
+    }
+
+    public override string Species =&gt; &quot;Homo sapiens&quot;;
+
+    public Animal? FavoriteAnimal { get; set; }
+    public ICollection&lt;Pet&gt; Pets { get; } = new List&lt;Pet&gt;();
+
+    public override string ToString()
+        =&gt; $&quot;Human '{Name}' ({Species}/{Id}) with favorite animal '{FavoriteAnimal?.Name ?? &quot;&lt;Unknown&gt;&quot;}'&quot; +
+           $&quot; eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+</code></pre>
+<p>When using SQL Server, the tables created for this hierarchy are:</p>
+<pre><code class="language-sql">CREATE TABLE [Cats] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [Vet] nvarchar(max) NULL,
+    [EducationLevel] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Cats] PRIMARY KEY ([Id]));
+
+CREATE TABLE [Dogs] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [Vet] nvarchar(max) NULL,
+    [FavoriteToy] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Dogs] PRIMARY KEY ([Id]));
+
+CREATE TABLE [FarmAnimals] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [Value] decimal(18,2) NOT NULL,
+    [Species] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_FarmAnimals] PRIMARY KEY ([Id]));
+
+CREATE TABLE [Humans] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [FavoriteAnimalId] int NULL,
+    CONSTRAINT [PK_Humans] PRIMARY KEY ([Id]));
+</code></pre>
+<p>Notice that:</p>
+<ul>
+<li>
+<p>There are no tables for the <code>Animal</code> or <code>Pet</code> types, since these are <code>abstract</code> in the object model. Remember that C# does not allow instances of <code>abstract</code> types, and there <code>is</code> therefore no situation where an <code>abstract</code> type instance will be saved to the database.</p>
+</li>
+<li>
+<p>The mapping of properties in base types <code>is</code> repeated for each concrete type. For example, every table has a <code>Name</code> column, and both Cats and Dogs have a <code>Vet</code> column.</p>
+</li>
+<li>
+<p>Saving some data into this database results in the following:</p>
+</li>
+</ul>
+<p>Cats table</p>
+<p>Dogs table</p>
+<p>FarmAnimals table</p>
+<p>Humans table</p>
+<p>In this article we'll look at the characteristics of table mapping.</p>
+<h3><a href="#configuring-tpc-inheritance" aria-hidden="true" class="anchor" id="configuring-tpc-inheritance"></a>Configuring TPC inheritance</h3>
+<p>All types in an inheritance hierarchy must be explicitly included in the model when mapping the hierarchy with EF Core. This can be done by creating <code>DbSet</code> properties on your <code>DbContext</code> for every type:</p>
+<pre><code class="language-csharp">public DbSet&lt;Animal&gt; Animals =&gt; Set&lt;Animal&gt;();
+public DbSet&lt;Pet&gt; Pets =&gt; Set&lt;Pet&gt;();
+public DbSet&lt;FarmAnimal&gt; FarmAnimals =&gt; Set&lt;FarmAnimal&gt;();
+public DbSet&lt;Cat&gt; Cats =&gt; Set&lt;Cat&gt;();
+public DbSet&lt;Dog&gt; Dogs =&gt; Set&lt;Dog&gt;();
+public DbSet&lt;Human&gt; Humans =&gt; Set&lt;Human&gt;();
+</code></pre>
+<p>Or by using the <code>Entity</code> method in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;();
+modelBuilder.Entity&lt;Pet&gt;();
+modelBuilder.Entity&lt;Cat&gt;();
+modelBuilder.Entity&lt;Dog&gt;();
+modelBuilder.Entity&lt;FarmAnimal&gt;();
+modelBuilder.Entity&lt;Human&gt;();
+</code></pre>
+<blockquote>
+<p>Important
+This <code>is</code> different from the legacy EF6 behavior, where derived types of mapped base types would be automatically discovered if they were contained in the same assembly.</p>
+</blockquote>
+<p>The following example shows how to map a hierarchy as a strategy.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;().UseTphMappingStrategy();
+</code></pre>
+<p>To use TPT instead, change this to <code>UseTptMappingStrategy</code>:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;().UseTptMappingStrategy();
+</code></pre>
+<p>Likewise, <code>UseTpcMappingStrategy</code> <code>is</code> used to configure TPC:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;().UseTpcMappingStrategy();
+</code></pre>
+<p>In each case, the table name used for each type <code>is</code> taken from the <code>DbSet</code> property name on your <code>DbContext</code>, or can be configured using the <code>ToTable</code> builder method, or the [Table] attribute.</p>
+<h3><a href="#tpc-query-performance" aria-hidden="true" class="anchor" id="tpc-query-performance"></a>TPC query performance</h3>
+<p>The TPC strategy <code>is</code> an improved version of the TPT strategy.</p>
+<p>The SQL generated for three simple LINQ queries can be used to observe where TPC does well when compared to TPH and TPT. These queries are:</p>
+<ul>
+<li>A query that returns entities of all types in the hierarchy:
+context.Animals.ToList();</li>
+</ul>
+<pre><code class="language-csharp">context.Animals.ToList();
+</code></pre>
+<ul>
+<li>A query that returns entities from a subset of types in the hierarchy:
+context.Pets.ToList();</li>
+</ul>
+<pre><code class="language-csharp">context.Pets.ToList();
+</code></pre>
+<ul>
+<li>A query that returns only entities from a single leaf type in the hierarchy:
+context.Cats.ToList();</li>
+</ul>
+<pre><code class="language-csharp">context.Cats.ToList();
+</code></pre>
+<h4><a href="#tph-queries" aria-hidden="true" class="anchor" id="tph-queries"></a>TPH queries</h4>
+<p>When using TPH, all three queries only query a single table, but with different filters on the discriminator column:</p>
+<ul>
+<li>TPH SQL returning entities of all types in the hierarchy:
+SELECT [a].[Id], [a].[Discriminator], [a].[FoodId], [a].[Name], [a].[Species], [a].[Value], [a].[FavoriteAnimalId], [a].[Vet], [a].[EducationLevel], [a].[FavoriteToy]
+FROM [Animals] AS [a]</li>
+</ul>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[Discriminator], [a].[FoodId], [a].[Name], [a].[Species], [a].[Value], [a].[FavoriteAnimalId], [a].[Vet], [a].[EducationLevel], [a].[FavoriteToy]
+FROM [Animals] AS [a]
+</code></pre>
+<ul>
+<li>TPH SQL returning entities from a subset of types in the hierarchy:
+SELECT [a].[Id], [a].[Discriminator], [a].[FoodId], [a].[Name], [a].[Vet], [a].[EducationLevel], [a].[FavoriteToy]
+FROM [Animals] AS [a]
+WHERE [a].[Discriminator] IN (N'Cat', N'Dog')</li>
+</ul>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[Discriminator], [a].[FoodId], [a].[Name], [a].[Vet], [a].[EducationLevel], [a].[FavoriteToy]
+FROM [Animals] AS [a]
+WHERE [a].[Discriminator] IN (N'Cat', N'Dog')
+</code></pre>
+<ul>
+<li>TPH SQL returning only entities from a single leaf type in the hierarchy:
+SELECT [a].[Id], [a].[Discriminator], [a].[FoodId], [a].[Name], [a].[Vet], [a].[EducationLevel]
+FROM [Animals] AS [a]
+WHERE [a].[Discriminator] = N'Cat'</li>
+</ul>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[Discriminator], [a].[FoodId], [a].[Name], [a].[Vet], [a].[EducationLevel]
+FROM [Animals] AS [a]
+WHERE [a].[Discriminator] = N'Cat'
+</code></pre>
+<p>All these queries should perform well, especially with an appropriate database index on the discriminator column.</p>
+<h4><a href="#tpt-queries" aria-hidden="true" class="anchor" id="tpt-queries"></a>TPT queries</h4>
+<p>When using TPT, all of these queries require joining multiple tables, since the data for any given concrete type <code>is</code> split across many tables:</p>
+<ul>
+<li>TPT SQL returning entities of all types in the hierarchy:
+SELECT [a].[Id], [a].[FoodId], [a].[Name], [f].[Species], [f].[Value], [h].[FavoriteAnimalId], [p].[Vet], [c].[EducationLevel], [d].[FavoriteToy], CASE
+WHEN [d].[Id] IS NOT <code>NULL</code> THEN N'Dog'
+WHEN [c].[Id] IS NOT <code>NULL</code> THEN N'Cat'
+WHEN [h].[Id] IS NOT <code>NULL</code> THEN N'Human'
+WHEN [f].[Id] IS NOT <code>NULL</code> THEN N'FarmAnimal'
+END AS [Discriminator]
+FROM [Animals] AS [a]
+LEFT JOIN [FarmAnimals] AS [f] ON [a].[Id] = [f].[Id]
+LEFT JOIN [Humans] AS [h] ON [a].[Id] = [h].[Id]
+LEFT JOIN [Pets] AS [p] ON [a].[Id] = [p].[Id]
+LEFT JOIN [Cats] AS [c] ON [a].[Id] = [c].[Id]
+LEFT JOIN [Dogs] AS [d] ON [a].[Id] = [d].[Id]</li>
+</ul>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[FoodId], [a].[Name], [f].[Species], [f].[Value], [h].[FavoriteAnimalId], [p].[Vet], [c].[EducationLevel], [d].[FavoriteToy], CASE
+    WHEN [d].[Id] IS NOT NULL THEN N'Dog'
+    WHEN [c].[Id] IS NOT NULL THEN N'Cat'
+    WHEN [h].[Id] IS NOT NULL THEN N'Human'
+    WHEN [f].[Id] IS NOT NULL THEN N'FarmAnimal'
+END AS [Discriminator]
+FROM [Animals] AS [a]
+LEFT JOIN [FarmAnimals] AS [f] ON [a].[Id] = [f].[Id]
+LEFT JOIN [Humans] AS [h] ON [a].[Id] = [h].[Id]
+LEFT JOIN [Pets] AS [p] ON [a].[Id] = [p].[Id]
+LEFT JOIN [Cats] AS [c] ON [a].[Id] = [c].[Id]
+LEFT JOIN [Dogs] AS [d] ON [a].[Id] = [d].[Id]
+</code></pre>
+<ul>
+<li>TPT SQL returning entities from a subset of types in the hierarchy:
+SELECT [a].[Id], [a].[FoodId], [a].[Name], [p].[Vet], [c].[EducationLevel], [d].[FavoriteToy], CASE
+WHEN [d].[Id] IS NOT <code>NULL</code> THEN N'Dog'
+WHEN [c].[Id] IS NOT <code>NULL</code> THEN N'Cat'
+END AS [Discriminator]
+FROM [Animals] AS [a]
+INNER JOIN [Pets] AS [p] ON [a].[Id] = [p].[Id]
+LEFT JOIN [Cats] AS [c] ON [a].[Id] = [c].[Id]
+LEFT JOIN [Dogs] AS [d] ON [a].[Id] = [d].[Id]</li>
+</ul>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[FoodId], [a].[Name], [p].[Vet], [c].[EducationLevel], [d].[FavoriteToy], CASE
+    WHEN [d].[Id] IS NOT NULL THEN N'Dog'
+    WHEN [c].[Id] IS NOT NULL THEN N'Cat'
+END AS [Discriminator]
+FROM [Animals] AS [a]
+INNER JOIN [Pets] AS [p] ON [a].[Id] = [p].[Id]
+LEFT JOIN [Cats] AS [c] ON [a].[Id] = [c].[Id]
+LEFT JOIN [Dogs] AS [d] ON [a].[Id] = [d].[Id]
+</code></pre>
+<ul>
+<li>TPT SQL returning only entities from a single leaf type in the hierarchy:
+SELECT [a].[Id], [a].[FoodId], [a].[Name], [p].[Vet], [c].[EducationLevel]
+FROM [Animals] AS [a]
+INNER JOIN [Pets] AS [p] ON [a].[Id] = [p].[Id]
+INNER JOIN [Cats] AS [c] ON [a].[Id] = [c].[Id]</li>
+</ul>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[FoodId], [a].[Name], [p].[Vet], [c].[EducationLevel]
+FROM [Animals] AS [a]
+INNER JOIN [Pets] AS [p] ON [a].[Id] = [p].[Id]
+INNER JOIN [Cats] AS [c] ON [a].[Id] = [c].[Id]
+</code></pre>
+<blockquote>
+<p>Note
+EF Core uses “discriminator synthesis” to determine which table the data comes from, and hence the correct type to use. This works because the LEFT JOIN returns nulls for the dependent ID column (the “sub-tables”) which aren’t the correct type. So for a dog, [d].[Id] will be non-null, and all the other (concrete) IDs will be null.</p>
+</blockquote>
+<p>All of these queries can suffer from performance issues due to the table joins. This <code>is</code> why TPT <code>is</code> never a good choice for query performance.</p>
+<h4><a href="#tpc-queries" aria-hidden="true" class="anchor" id="tpc-queries"></a>TPC queries</h4>
+<p>TPC <code>is</code> a query language that can query a wide range of data sets, including rows, columns, and groups.</p>
+<ul>
+<li>TPC SQL returning entities of all types in the hierarchy:
+SELECT [f].[Id], [f].[FoodId], [f].[Name], [f].[Species], [f].[Value], <code>NULL</code> AS [FavoriteAnimalId], <code>NULL</code> AS [Vet], <code>NULL</code> AS [EducationLevel], <code>NULL</code> AS [FavoriteToy], N'FarmAnimal' AS [Discriminator]
+FROM [FarmAnimals] AS [f]
+UNION ALL
+SELECT [h].[Id], [h].[FoodId], [h].[Name], <code>NULL</code> AS [Species], <code>NULL</code> AS [Value], [h].[FavoriteAnimalId], <code>NULL</code> AS [Vet], <code>NULL</code> AS [EducationLevel], <code>NULL</code> AS [FavoriteToy], N'Human' AS [Discriminator]
+FROM [Humans] AS [h]
+UNION ALL
+SELECT [c].[Id], [c].[FoodId], [c].[Name], <code>NULL</code> AS [Species], <code>NULL</code> AS [Value], <code>NULL</code> AS [FavoriteAnimalId], [c].[Vet], [c].[EducationLevel], <code>NULL</code> AS [FavoriteToy], N'Cat' AS [Discriminator]
+FROM [Cats] AS [c]
+UNION ALL
+SELECT [d].[Id], [d].[FoodId], [d].[Name], <code>NULL</code> AS [Species], <code>NULL</code> AS [Value], <code>NULL</code> AS [FavoriteAnimalId], [d].[Vet], <code>NULL</code> AS [EducationLevel], [d].[FavoriteToy], N'Dog' AS [Discriminator]
+FROM [Dogs] AS [d]</li>
+</ul>
+<pre><code class="language-sql">SELECT [f].[Id], [f].[FoodId], [f].[Name], [f].[Species], [f].[Value], NULL AS [FavoriteAnimalId], NULL AS [Vet], NULL AS [EducationLevel], NULL AS [FavoriteToy], N'FarmAnimal' AS [Discriminator]
+FROM [FarmAnimals] AS [f]
+UNION ALL
+SELECT [h].[Id], [h].[FoodId], [h].[Name], NULL AS [Species], NULL AS [Value], [h].[FavoriteAnimalId], NULL AS [Vet], NULL AS [EducationLevel], NULL AS [FavoriteToy], N'Human' AS [Discriminator]
+FROM [Humans] AS [h]
+UNION ALL
+SELECT [c].[Id], [c].[FoodId], [c].[Name], NULL AS [Species], NULL AS [Value], NULL AS [FavoriteAnimalId], [c].[Vet], [c].[EducationLevel], NULL AS [FavoriteToy], N'Cat' AS [Discriminator]
+FROM [Cats] AS [c]
+UNION ALL
+SELECT [d].[Id], [d].[FoodId], [d].[Name], NULL AS [Species], NULL AS [Value], NULL AS [FavoriteAnimalId], [d].[Vet], NULL AS [EducationLevel], [d].[FavoriteToy], N'Dog' AS [Discriminator]
+FROM [Dogs] AS [d]
+</code></pre>
+<ul>
+<li>TPC SQL returning entities from a subset of types in the hierarchy:
+SELECT [c].[Id], [c].[FoodId], [c].[Name], [c].[Vet], [c].[EducationLevel], <code>NULL</code> AS [FavoriteToy], N'Cat' AS [Discriminator]
+FROM [Cats] AS [c]
+UNION ALL
+SELECT [d].[Id], [d].[FoodId], [d].[Name], [d].[Vet], <code>NULL</code> AS [EducationLevel], [d].[FavoriteToy], N'Dog' AS [Discriminator]
+FROM [Dogs] AS [d]</li>
+</ul>
+<pre><code class="language-sql">SELECT [c].[Id], [c].[FoodId], [c].[Name], [c].[Vet], [c].[EducationLevel], NULL AS [FavoriteToy], N'Cat' AS [Discriminator]
+FROM [Cats] AS [c]
+UNION ALL
+SELECT [d].[Id], [d].[FoodId], [d].[Name], [d].[Vet], NULL AS [EducationLevel], [d].[FavoriteToy], N'Dog' AS [Discriminator]
+FROM [Dogs] AS [d]
+</code></pre>
+<ul>
+<li>TPC SQL returning only entities from a single leaf type in the hierarchy:
+SELECT [c].[Id], [c].[FoodId], [c].[Name], [c].[Vet], [c].[EducationLevel]
+FROM [Cats] AS [c]</li>
+</ul>
+<pre><code class="language-sql">SELECT [c].[Id], [c].[FoodId], [c].[Name], [c].[Vet], [c].[EducationLevel]
+FROM [Cats] AS [c]
+</code></pre>
+<p>The  query returns an instance of multiple types.</p>
+<p>As the SQL for query #3 shows, TPC really excels when querying for entities of a single leaf type. The query only uses a single table and needs no filtering.</p>
+<h3><a href="#tpc-inserts-and-updates" aria-hidden="true" class="anchor" id="tpc-inserts-and-updates"></a>TPC inserts and updates</h3>
+<p>TPC performs well when saving a new entity, since this requires inserting only a single row into a single table.</p>
+<p>The same <code>is</code> often <code>true</code> for updates, although in this case if all columns being updated are in the same table, even for TPT, then the difference may not be significant.</p>
+<h3><a href="#space-considerations" aria-hidden="true" class="anchor" id="space-considerations"></a>Space considerations</h3>
+<p>The TPT and TPC tables can be used to store large amounts of data when there are many subtypes with many properties that are often not used.</p>
+<blockquote>
+<p>Tip
+If your database system supports it (e.g. SQL Server), then consider using &quot;sparse columns&quot; for TPH columns that will be rarely populated.</p>
+</blockquote>
+<h3><a href="#key-generation" aria-hidden="true" class="anchor" id="key-generation"></a>Key generation</h3>
+<p>In this paper we describe the inheritance mapping of key values between entities.</p>
+<p>The table hierarchy <code>is</code> mapped to a row in the table, and the keys for other tables are linked to this row using foreign key constraints.</p>
+<p>In this post we’re going to look at how to generate a unique key value for each entity in a hierarchy.</p>
+<p>Key values are used to define the relationships between tables in a database.</p>
+<pre><code class="language-sql">[Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence])
+</code></pre>
+<p><code>AnimalSequence</code> <code>is</code> a database sequence created by EF Core.</p>
+<p><code>Identity</code> columns can be used in TPC tables to ensure that the values generated for each table will never conflict.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Cat&gt;().ToTable(&quot;Cats&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(1, 4));
+modelBuilder.Entity&lt;Dog&gt;().ToTable(&quot;Dogs&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(2, 4));
+modelBuilder.Entity&lt;FarmAnimal&gt;().ToTable(&quot;FarmAnimals&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(3, 4));
+modelBuilder.Entity&lt;Human&gt;().ToTable(&quot;Humans&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(4, 4));
+</code></pre>
+<p>integer key generation <code>is</code> not supported when using the TPC strategy.</p>
+<h3><a href="#foreign-key-constraints" aria-hidden="true" class="anchor" id="foreign-key-constraints"></a>Foreign key constraints</h3>
+<p>In this article, I'm going to show you how to implement the TPC mapping strategy in your database.</p>
+<pre><code class="language-sql">CONSTRAINT [FK_Animals_Animals_FavoriteAnimalId] FOREIGN KEY ([FavoriteAnimalId]) REFERENCES [Animals] ([Id])
+</code></pre>
+<p>When using FK, the primary key for an animal <code>is</code> stored in the table for the concrete type of that animal.</p>
+<p>EF Core does not guarantee that the FK column will contain valid PK value at all times.</p>
+<h3><a href="#summary-and-guidance" aria-hidden="true" class="anchor" id="summary-and-guidance"></a>Summary and guidance</h3>
+<p>In this article, I'm going to show you how to use TPC to query for entities of a single leaf type.</p>
+<p>If you're writing a lot of code that needs to query lots of different types of data, then you might want to use TPC rather than .</p>
+<p>Use TPT only if constrained to do so by external factors.</p>
+<h2><a href="#custom-reverse-engineering-templates" aria-hidden="true" class="anchor" id="custom-reverse-engineering-templates"></a>Custom Reverse Engineering Templates</h2>
+<p>You can now customize the scaffolded code when reverse engineering an EF model from a database. Get started by adding the default templates to your project:</p>
+<pre><code class="language-dotnetcli">dotnet new install Microsoft.EntityFrameworkCore.Templates
+dotnet new ef-templates
+</code></pre>
+<p>The templates can then be customize and will automatically be used by <code>dotnet ef dbcontext scaffold</code> and <code>Scaffold-DbContext</code>.</p>
+<p>For more details, see Custom Reverse Engineering Templates.</p>
+<blockquote>
+<p>Tip
+The EF Team demonstrated and talked in depth about reverse engineering templates in an episode of the .NET Data Community Standup. As with all Community Standup episodes, you can watch the T4 templates episode now on YouTube.</p>
+</blockquote>
+<h2><a href="#model-building-conventions" aria-hidden="true" class="anchor" id="model-building-conventions"></a>Model building conventions</h2>
+<p>EF Core uses a metadata &quot;model&quot; to describe how the application's entity types are mapped to the underlying database.</p>
+<p>Pre-convention model building conventions can be difficult to change.</p>
+<p>Changes to the conventions used by a <code>DbContext</code> are made by overriding the <code>DbContext.ConfigureConventions</code> method. For example:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Remove(typeof(ForeignKeyIndexConvention));
+}
+</code></pre>
+<blockquote>
+<p>Tip
+To find all built-in model building conventions, look for every <code>class</code> that implements the IConvention interface.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+The code shown here comes from ModelBuildingConventionsSample.cs.</p>
+</blockquote>
+<h3><a href="#removing-an-existing-convention" aria-hidden="true" class="anchor" id="removing-an-existing-convention"></a>Removing an existing convention</h3>
+<p>Sometimes one of the built-in conventions may not be appropriate for your application, in which case it can be removed.</p>
+<h4><a href="#example-don't-create-indexes-for-foreign-key-columns" aria-hidden="true" class="anchor" id="example-don't-create-indexes-for-foreign-key-columns"></a>Example: Don't create indexes for foreign key columns</h4>
+<p>In this post, I'm going to show you how to create indexes for foreign key columns in a <code>Post</code> entity.</p>
+<pre><code class="language-text">EntityType: Post
+    Properties:
+      Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      AuthorId (no field, int?) Shadow FK Index
+      BlogId (no field, int) Shadow Required FK Index
+    Navigations:
+      Author (Author) ToPrincipal Author Inverse: Posts
+      Blog (Blog) ToPrincipal Blog Inverse: Posts
+    Keys:
+      Id PK
+    Foreign keys:
+      Post {'AuthorId'} -&gt; Author {'Id'} ToDependent: Posts ToPrincipal: Author ClientSetNull
+      Post {'BlogId'} -&gt; Blog {'Id'} ToDependent: Posts ToPrincipal: Blog Cascade
+    Indexes:
+      AuthorId
+      BlogId
+</code></pre>
+<p>The ForeignKeyIndex <code>is</code> a property of the FK column in the model.</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Remove(typeof(ForeignKeyIndexConvention));
+}
+</code></pre>
+<p>Looking at the debug view of the model for <code>Post</code> now, we see that the indexes on FKs have not been created:</p>
+<pre><code class="language-text">EntityType: Post
+    Properties:
+      Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      AuthorId (no field, int?) Shadow FK
+      BlogId (no field, int) Shadow Required FK
+    Navigations:
+      Author (Author) ToPrincipal Author Inverse: Posts
+      Blog (Blog) ToPrincipal Blog Inverse: Posts
+    Keys:
+      Id PK
+    Foreign keys:
+      Post {'AuthorId'} -&gt; Author {'Id'} ToDependent: Posts ToPrincipal: Author ClientSetNull
+      Post {'BlogId'} -&gt; Blog {'Id'} ToDependent: Posts ToPrincipal: Blog Cascade
+</code></pre>
+<p>When desired, indexes can still be explicitly created for foreign key columns, either using the IndexAttribute:</p>
+<pre><code class="language-csharp">[Index(&quot;BlogId&quot;)]
+public class Post
+{
+    // ...
+}
+</code></pre>
+<p>Or with configuration in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;(entityTypeBuilder =&gt; entityTypeBuilder.HasIndex(&quot;BlogId&quot;));
+}
+</code></pre>
+<p>Looking at the <code>Post</code> entity type again, it now contains the <code>BlogId</code> index, but not the <code>AuthorId</code> index:</p>
+<pre><code class="language-text">EntityType: Post
+    Properties:
+      Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      AuthorId (no field, int?) Shadow FK
+      BlogId (no field, int) Shadow Required FK Index
+    Navigations:
+      Author (Author) ToPrincipal Author Inverse: Posts
+      Blog (Blog) ToPrincipal Blog Inverse: Posts
+    Keys:
+      Id PK
+    Foreign keys:
+      Post {'AuthorId'} -&gt; Author {'Id'} ToDependent: Posts ToPrincipal: Author ClientSetNull
+      Post {'BlogId'} -&gt; Blog {'Id'} ToDependent: Posts ToPrincipal: Blog Cascade
+    Indexes:
+      BlogId
+</code></pre>
+<blockquote>
+<p>Tip
+If your model doesn't use mapping attributes (aka data annotations) for configuration, then all conventions ending in <code>AttributeConvention</code> can be safely removed to speed up model building.</p>
+</blockquote>
+<h3><a href="#adding-a-new-convention" aria-hidden="true" class="anchor" id="adding-a-new-convention"></a>Adding a new convention</h3>
+<p>Removing existing conventions <code>is</code> a start, but what about adding completely new model building conventions? EF7 supports this as well!</p>
+<h4><a href="#example-constrain-length-of-discriminator-properties" aria-hidden="true" class="anchor" id="example-constrain-length-of-discriminator-properties"></a>Example: Constrain length of discriminator properties</h4>
+<p>Let's create a new convention that will constrain the maximum length of discriminator strings.</p>
+<p>EF Core model building conventions are triggered based on changes being made to the model as it <code>is</code> being built.</p>
+<p>In this talk, we will look at some of the interfaces that can be used to create and manage models.</p>
+<p>Let's make this a bit more concrete by making a first attempt at implementing the discriminator-length convention:</p>
+<pre><code class="language-csharp">public class DiscriminatorLengthConvention1 : IEntityTypeBaseTypeChangedConvention
+{
+    public void ProcessEntityTypeBaseTypeChanged(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionEntityType? newBaseType,
+        IConventionEntityType? oldBaseType,
+        IConventionContext&lt;IConventionEntityType&gt; context)
+    {
+        var discriminatorProperty = entityTypeBuilder.Metadata.FindDiscriminatorProperty();
+        if (discriminatorProperty != null
+            &amp;&amp; discriminatorProperty.ClrType == typeof(string))
+        {
+            discriminatorProperty.Builder.HasMaxLength(24);
+        }
+    }
+}
+</code></pre>
+<p>This convention implements ITypeBaseChangedTypeConvention, which means it will be triggered whenever the mapped inheritance hierarchy for an entity type <code>is</code> changed.</p>
+<p>This convention <code>is</code> then used by calling <code>Add</code> in <code>ConfigureConventions</code>:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Add(_ =&gt;  new DiscriminatorLengthConvention1());
+}
+</code></pre>
+<blockquote>
+<p>Tip
+Rather than adding an instance of the convention directly, the <code>Add</code> method accepts a factory for creating instances of the convention. This allows the convention to use dependencies from the EF Core internal service provider. Since this convention has no dependencies, the service provider parameter <code>is</code> named <code>_</code>, indicating that it <code>is</code> never used.</p>
+</blockquote>
+<p>Building the model and looking at the <code>Post</code> entity type shows that this has worked--the discriminator property <code>is</code> now configured to with a maximum length of 24:</p>
+<pre><code class="language-text">Discriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(24)
+</code></pre>
+<p>But what happens if we now explicitly configure a different discriminator property? For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;()
+    .HasDiscriminator&lt;string&gt;(&quot;PostTypeDiscriminator&quot;)
+    .HasValue&lt;Post&gt;(&quot;Post&quot;)
+    .HasValue&lt;FeaturedPost&gt;(&quot;Featured&quot;);
+</code></pre>
+<p>Looking at the debug view of the model, we find that the discriminator length <code>is</code> no longer configured!</p>
+<pre><code class="language-text">PostTypeDiscriminator (no field, string) Shadow Required AfterSave:Throw
+</code></pre>
+<p>When we add a custom discriminator to our convention, it does not behave as expected.</p>
+<p>When we want to apply configuration to a model, we often need to trigger other conventions to do so.</p>
+<pre><code class="language-csharp">public class DiscriminatorLengthConvention2 : IModelFinalizingConvention
+{
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var entityType in modelBuilder.Metadata.GetEntityTypes()
+                     .Where(entityType =&gt; entityType.BaseType == null))
+        {
+            var discriminatorProperty = entityType.FindDiscriminatorProperty();
+            if (discriminatorProperty != null
+                &amp;&amp; discriminatorProperty.ClrType == typeof(string))
+            {
+                discriminatorProperty.Builder.HasMaxLength(24);
+            }
+        }
+    }
+}
+</code></pre>
+<p>After building the model with this new convention, we find that the discriminator length <code>is</code> now configured correctly even though it has been customized:</p>
+<pre><code class="language-text">PostTypeDiscriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(24)
+</code></pre>
+<p>Just for fun, let's go one step further and configure the max length to be the length of the longest discriminator value.</p>
+<pre><code class="language-csharp">public class DiscriminatorLengthConvention3 : IModelFinalizingConvention
+{
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var entityType in modelBuilder.Metadata.GetEntityTypes()
+                     .Where(entityType =&gt; entityType.BaseType == null))
+        {
+            var discriminatorProperty = entityType.FindDiscriminatorProperty();
+            if (discriminatorProperty != null
+                &amp;&amp; discriminatorProperty.ClrType == typeof(string))
+            {
+                var maxDiscriminatorValueLength =
+                    entityType.GetDerivedTypesInclusive().Select(e =&gt; ((string)e.GetDiscriminatorValue()!).Length).Max();
+
+                discriminatorProperty.Builder.HasMaxLength(maxDiscriminatorValueLength);
+            }
+        }
+    }
+}
+</code></pre>
+<p>Now the discriminator column max length <code>is</code> 8, which <code>is</code> the length of &quot;Featured&quot;, the longest discriminator value in use.</p>
+<pre><code class="language-text">PostTypeDiscriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(8)
+</code></pre>
+<blockquote>
+<p>Tip
+You might be wondering if the convention should also create an index for the discriminator column. There <code>is</code> a discussion about this on GitHub. The short answer <code>is</code> that sometimes an index might be useful, but most of the time it probably won't be. Therefore, it's best to create appropriate indexes here as needed, rather than have a convention to do it always. But if you disagree with this, then the convention above can easily be modified to create an index as well.</p>
+</blockquote>
+<h4><a href="#example-default-length-for-all-string-properties" aria-hidden="true" class="anchor" id="example-default-length-for-all-string-properties"></a>Example: Default length for all string properties</h4>
+<p>In our previous post on finalizing conventions, we looked at an example where a convention could be used to set a default length for any string property.</p>
+<pre><code class="language-csharp">public class MaxStringLengthConvention : IModelFinalizingConvention
+{
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var property in modelBuilder.Metadata.GetEntityTypes()
+                     .SelectMany(
+                         entityType =&gt; entityType.GetDeclaredProperties()
+                             .Where(
+                                 property =&gt; property.ClrType == typeof(string))))
+        {
+            property.Builder.HasMaxLength(512);
+        }
+    }
+}
+</code></pre>
+<p>In this post I'm going to show you how to implement a convention in <code>Post</code>.</p>
+<pre><code class="language-text">EntityType: Post
+  Properties:
+    Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+    AuthorId (no field, int?) Shadow FK Index
+    BlogId (no field, int) Shadow Required FK Index
+    Content (string) Required MaxLength(512)
+    Discriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(512)
+    PublishedOn (DateTime) Required
+    Title (string) Required MaxLength(512)
+</code></pre>
+<p>We're used to writing posts that are at least 512 characters long.</p>
+<pre><code class="language-csharp">[MaxLength(4000)]
+public string Content { get; set; }
+</code></pre>
+<p>Or with code in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;()
+    .Property(post =&gt; post.Content)
+    .HasMaxLength(4000);
+</code></pre>
+<p>Now all properties have a max length of 512, except <code>Content</code> which was explicitly configured with 4000:</p>
+<pre><code class="language-text">EntityType: Post
+  Properties:
+    Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+    AuthorId (no field, int?) Shadow FK Index
+    BlogId (no field, int) Shadow Required FK Index
+    Content (string) Required MaxLength(4000)
+    Discriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(512)
+    PublishedOn (DateTime) Required
+    Title (string) Required MaxLength(512)
+</code></pre>
+<p>We've all heard the argument that the maximum length of a configuration <code>is</code> too long.</p>
+<ul>
+<li>
+<p><code>Explicit</code>: The model element was explicitly configured in <code>OnModelCreating</code></p>
+</li>
+<li>
+<p><code>DataAnnotation</code>: The model element was configured using a mapping attribute (aka data annotation) on the CLR type</p>
+</li>
+<li>
+<p><code>Convention</code>: The model element was configured by a model building convention</p>
+</li>
+</ul>
+<p>The IConvention property <code>is</code> used to define a convention.</p>
+<pre><code class="language-csharp">property.Builder.HasMaxLength(512);
+</code></pre>
+<p>Calling <code>HasMaxLength</code> on the convention builder will only set the max length if it was not already configured by a mapping attribute or in <code>OnModelCreating</code>.</p>
+<p>Builder methods like this also have a second parameter: <code>fromDataAnnotation</code>. Set this to <code>true</code> if the convention <code>is</code> making the configuration on behalf of a mapping attribute. For example:</p>
+<pre><code class="language-csharp">property.Builder.HasMaxLength(512, fromDataAnnotation: true);
+</code></pre>
+<p>This sets the <code>ConfigurationSource</code> to <code>DataAnnotation</code>, which means that the value can now be overridden by explicit mapping on <code>OnModelCreating</code>, but not by non-mapping attribute conventions.</p>
+<p>In this example, we will use the MaxStringConvention to set the max length of a string, and the DiscriminatorConvention3 to set the max length of a property.</p>
+<h3><a href="#replacing-an-existing-convention" aria-hidden="true" class="anchor" id="replacing-an-existing-convention"></a>Replacing an existing convention</h3>
+<p>This example shows how to replace an existing convention with a new one.</p>
+<h4><a href="#example-opt-in-property-mapping" aria-hidden="true" class="anchor" id="example-opt-in-property-mapping"></a>Example: Opt-in property mapping</h4>
+<p>This article describes how to change the property discovery convention in EF Core.</p>
+<pre><code class="language-csharp">[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public sealed class PersistAttribute : Attribute
+{
+}
+</code></pre>
+<p>Here <code>is</code> the new convention:</p>
+<pre><code class="language-csharp">public class AttributeBasedPropertyDiscoveryConvention : PropertyDiscoveryConvention
+{
+    public AttributeBasedPropertyDiscoveryConvention(ProviderConventionSetBuilderDependencies dependencies)
+        : base(dependencies)
+    {
+    }
+
+    public override void ProcessEntityTypeAdded(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionContext&lt;IConventionEntityTypeBuilder&gt; context)
+        =&gt; Process(entityTypeBuilder);
+
+    public override void ProcessEntityTypeBaseTypeChanged(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionEntityType? newBaseType,
+        IConventionEntityType? oldBaseType,
+        IConventionContext&lt;IConventionEntityType&gt; context)
+    {
+        if ((newBaseType == null
+             || oldBaseType != null)
+            &amp;&amp; entityTypeBuilder.Metadata.BaseType == newBaseType)
+        {
+            Process(entityTypeBuilder);
+        }
+    }
+
+    private void Process(IConventionEntityTypeBuilder entityTypeBuilder)
+    {
+        foreach (var memberInfo in GetRuntimeMembers())
+        {
+            if (Attribute.IsDefined(memberInfo, typeof(PersistAttribute), inherit: true))
+            {
+                entityTypeBuilder.Property(memberInfo);
+            }
+            else if (memberInfo is PropertyInfo propertyInfo
+                     &amp;&amp; Dependencies.TypeMappingSource.FindMapping(propertyInfo) != null)
+            {
+                entityTypeBuilder.Ignore(propertyInfo.Name);
+            }
+        }
+
+        IEnumerable&lt;MemberInfo&gt; GetRuntimeMembers()
+        {
+            var clrType = entityTypeBuilder.Metadata.ClrType;
+
+            foreach (var property in clrType.GetRuntimeProperties()
+                         .Where(p =&gt; p.GetMethod != null &amp;&amp; !p.GetMethod.IsStatic))
+            {
+                yield return property;
+            }
+
+            foreach (var property in clrType.GetRuntimeFields())
+            {
+                yield return property;
+            }
+        }
+    }
+}
+</code></pre>
+<blockquote>
+<p>Tip
+When replacing a built-in convention, the new convention implementation should inherit from the existing convention <code>class</code>. Note that some conventions have relational or provider-specific implementations, in which case the new convention implementation should inherit from the most specific existing convention <code>class</code> for the database provider in use.</p>
+</blockquote>
+<p>The convention <code>is</code> then registered using the <code>Replace</code> method in <code>ConfigureConventions</code>:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Replace&lt;PropertyDiscoveryConvention&gt;(
+        serviceProvider =&gt; new AttributeBasedPropertyDiscoveryConvention(
+            serviceProvider.GetRequiredService&lt;ProviderConventionSetBuilderDependencies&gt;()));
+}
+</code></pre>
+<blockquote>
+<p>Tip
+This <code>is</code> a case where the existing convention has dependencies, represented by the <code>ProviderConventionSetBuilderDependencies</code> dependency object. These are obtained from the internal service provider using <code>GetRequiredService</code> and passed to the convention constructor.</p>
+</blockquote>
+<p>This convention works by getting all readable properties and fields from the given entity type. If the member <code>is</code> attributed with [Persist], then it <code>is</code> mapped by calling:</p>
+<pre><code class="language-csharp">entityTypeBuilder.Property(memberInfo);
+</code></pre>
+<p>On the other hand, if the member <code>is</code> a property that would otherwise have been mapped, then it <code>is</code> excluded from the model using:</p>
+<pre><code class="language-csharp">entityTypeBuilder.Ignore(propertyInfo.Name);
+</code></pre>
+<p>Notice that this convention allows fields to be mapped (in addition to properties) so long as they are marked with [Persist]. This means we can use private fields as hidden keys in the model.</p>
+<p>For example, consider the following entity types:</p>
+<pre><code class="language-csharp">public class LaundryBasket
+{
+    [Persist]
+    [Key]
+    private readonly int _id;
+
+    [Persist]
+    public int TenantId { get; init; }
+
+    public bool IsClean { get; set; }
+
+    public List&lt;Garment&gt; Garments { get; } = new();
+}
+
+public class Garment
+{
+    public Garment(string name, string color)
+    {
+        Name = name;
+        Color = color;
+    }
+
+    [Persist]
+    [Key]
+    private readonly int _id;
+
+    [Persist]
+    public int TenantId { get; init; }
+
+    [Persist]
+    public string Name { get; }
+
+    [Persist]
+    public string Color { get; }
+
+    public bool IsClean { get; set; }
+
+    public LaundryBasket? Basket { get; set; }
+}
+</code></pre>
+<p>The model built from these entity types <code>is</code>:</p>
+<pre><code class="language-text">Model:
+  EntityType: Garment
+    Properties:
+      _id (_id, int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      Basket_id (no field, int?) Shadow FK Index
+      Color (string) Required
+      Name (string) Required
+      TenantId (int) Required
+    Navigations:
+      Basket (LaundryBasket) ToPrincipal LaundryBasket Inverse: Garments
+    Keys:
+      _id PK
+    Foreign keys:
+      Garment {'Basket_id'} -&gt; LaundryBasket {'_id'} ToDependent: Garments ToPrincipal: Basket ClientSetNull
+    Indexes:
+      Basket_id
+  EntityType: LaundryBasket
+    Properties:
+      _id (_id, int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      TenantId (int) Required
+    Navigations:
+      Garments (List&lt;Garment&gt;) Collection ToDependent Garment Inverse: Basket
+    Keys:
+      _id PK
+</code></pre>
+<p><code>IsClean</code> <code>is</code> a property of laundry.</p>
+<blockquote>
+<p>Tip
+This convention could not be implemented as a model finalizing convention because mapping a property triggers many other conventions to run to further configure the mapped property.</p>
+</blockquote>
+<h2><a href="#stored-procedure-mapping" aria-hidden="true" class="anchor" id="stored-procedure-mapping"></a>Stored procedure mapping</h2>
+<p>By default, EF Core generates insert, update, and delete commands that work directly with tables or updatable views. EF7 introduces support for mapping of these commands to stored procedures.</p>
+<blockquote>
+<p>Tip
+EF Core has always supported querying via stored procedures. The new support in EF7 <code>is</code> explicitly about using stored procedures for inserts, updates, and deletes.</p>
+</blockquote>
+<blockquote>
+<p>Important
+Support for stored procedure mapping does not imply that stored procedures are recommended.</p>
+</blockquote>
+<p>Stored procedures can be used to create, update, and delete procedures.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Person&gt;()
+    .InsertUsingStoredProcedure(
+        &quot;People_Insert&quot;,
+        storedProcedureBuilder =&gt;
+        {
+            storedProcedureBuilder.HasParameter(a =&gt; a.Name);
+            storedProcedureBuilder.HasResultColumn(a =&gt; a.Id);
+        })
+    .UpdateUsingStoredProcedure(
+        &quot;People_Update&quot;,
+        storedProcedureBuilder =&gt;
+        {
+            storedProcedureBuilder.HasOriginalValueParameter(person =&gt; person.Id);
+            storedProcedureBuilder.HasOriginalValueParameter(person =&gt; person.Name);
+            storedProcedureBuilder.HasParameter(person =&gt; person.Name);
+            storedProcedureBuilder.HasRowsAffectedResultColumn();
+        })
+    .DeleteUsingStoredProcedure(
+        &quot;People_Delete&quot;,
+        storedProcedureBuilder =&gt;
+        {
+            storedProcedureBuilder.HasOriginalValueParameter(person =&gt; person.Id);
+            storedProcedureBuilder.HasOriginalValueParameter(person =&gt; person.Name);
+            storedProcedureBuilder.HasRowsAffectedResultColumn();
+        });
+</code></pre>
+<p>This configuration maps to the following stored procedures when using SQL Server:</p>
+<p>For inserts</p>
+<pre><code class="language-sql">CREATE PROCEDURE [dbo].[People_Insert]
+    @Name [nvarchar](max)
+AS
+BEGIN
+      INSERT INTO [People] ([Name])
+      OUTPUT INSERTED.[Id]
+      VALUES (@Name);
+END
+</code></pre>
+<p>For updates</p>
+<pre><code class="language-sql">CREATE PROCEDURE [dbo].[People_Update]
+    @Id [int],
+    @Name_Original [nvarchar](max),
+    @Name [nvarchar](max)
+AS
+BEGIN
+    UPDATE [People] SET [Name] = @Name
+    WHERE [Id] = @Id AND [Name] = @Name_Original
+    SELECT @@ROWCOUNT
+END
+</code></pre>
+<p>For deletes</p>
+<pre><code class="language-sql">CREATE PROCEDURE [dbo].[People_Delete]
+    @Id [int],
+    @Name_Original [nvarchar](max)
+AS
+BEGIN
+    DELETE FROM [People]
+    OUTPUT 1
+    WHERE [Id] = @Id AND [Name] = @Name_Original;
+END
+</code></pre>
+<blockquote>
+<p>Tip
+Stored procedures do not need to be used for every type in the model, or for all operations on a given type. For example, if only <code>DeleteUsingStoredProcedure</code> <code>is</code> specified for a given type, then EF Core will generate SQL as normal for insert and update operations and only use the stored procedure for deletes.</p>
+</blockquote>
+<p>The following examples show how to use stored procedure methods in EF Core.</p>
+<p>The second argument <code>is</code> a builder used to configure the input and output of the stored procedure, including parameters, return values, and result columns.</p>
+<h3><a href="#parameters" aria-hidden="true" class="anchor" id="parameters"></a>Parameters</h3>
+<p>Parameters must be added to the builder in the same order as they appear in the stored procedure definition.</p>
+<blockquote>
+<p>Note
+Parameters can be named, but EF Core always calls stored procedures using positional arguments rather than named arguments. Vote for Allow configuring sproc mapping to use parameter names for invocation if calling by name <code>is</code> something you are interested in.</p>
+</blockquote>
+<p>The first argument to each parameter builder method specifies the property in the model to which the parameter <code>is</code> bound. This can be a lambda expression:</p>
+<pre><code class="language-csharp">storedProcedureBuilder.HasParameter(a =&gt; a.Name);
+</code></pre>
+<p>Or a string, which <code>is</code> particularly useful when mapping shadow properties:</p>
+<pre><code class="language-csharp">storedProcedureBuilder.HasParameter(&quot;Name&quot;);
+</code></pre>
+<p>Parameters are, by default, configured for &quot;input&quot;. &quot;Output&quot; or &quot;input/output&quot; parameters can be configured using a nested builder. For example:</p>
+<pre><code class="language-csharp">storedProcedureBuilder.HasParameter(
+    document =&gt; document.RetrievedOn, 
+    parameterBuilder =&gt; parameterBuilder.IsOutput());
+</code></pre>
+<p>There are three different builder methods for different flavors of parameters:</p>
+<ul>
+<li>
+<p><code>HasParameter</code> specifies a normal parameter bound to the current value of the given property.</p>
+</li>
+<li>
+<p><code>HasOriginalValueParameter</code> specifies a parameter bound to the original value of the given property. The original value <code>is</code> the value that the property had when it was queried from the database, if known. If this value <code>is</code> not known, then the current value <code>is</code> used instead. Original value parameters are useful for concurrency tokens.</p>
+</li>
+<li>
+<p><code>HasRowsAffectedParameter</code> specifies a parameter used to return the number of rows affected by the stored procedure.</p>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+Original value parameters must be used for key values in &quot;update&quot; and &quot;delete&quot; stored procedures. This ensures that the correct row will be updated in future versions of EF Core that support mutable key values.</p>
+</blockquote>
+<h3><a href="#returning-values" aria-hidden="true" class="anchor" id="returning-values"></a>Returning values</h3>
+<p>EF Core supports three mechanisms for returning values from stored procedures:</p>
+<ul>
+<li>
+<p>Output parameters, as shown above.</p>
+</li>
+<li>
+<p>Result columns, which are specified using the <code>HasResultColumn</code> builder method.</p>
+</li>
+<li>
+<p>The return value, which <code>is</code> limited to returning the number of rows affected, and <code>is</code> specified using the <code>HasRowsAffectedReturnValue</code> builder method.</p>
+</li>
+</ul>
+<p>Values returned from stored procedures are often used for generated, default, or computed values, such as from an <code>Identity</code> key or a computed column.</p>
+<pre><code class="language-csharp">entityTypeBuilder.InsertUsingStoredProcedure(
+        storedProcedureBuilder =&gt;
+        {
+            storedProcedureBuilder.HasParameter(document =&gt; document.Title);
+            storedProcedureBuilder.HasResultColumn(document =&gt; document.Id);
+            storedProcedureBuilder.HasResultColumn(document =&gt; document.FirstRecordedOn);
+            storedProcedureBuilder.HasResultColumn(document =&gt; document.RetrievedOn);
+            storedProcedureBuilder.HasResultColumn(document =&gt; document.RowVersion);
+        });
+</code></pre>
+<p>These are used to return:</p>
+<ul>
+<li>
+<p>The generated key value for the <code>Id</code> property.</p>
+</li>
+<li>
+<p>The default value generated by the database for the <code>FirstRecordedOn</code> property.</p>
+</li>
+<li>
+<p>The computed value generated by the database for the <code>RetrievedOn</code> property.</p>
+</li>
+<li>
+<p>The automatically generated <code>rowversion</code> concurrency token for the <code>RowVersion</code> property.</p>
+</li>
+</ul>
+<p>This configuration maps to the following stored procedure when using SQL Server:</p>
+<pre><code class="language-sql">CREATE PROCEDURE [dbo].[Documents_Insert]
+    @Title [nvarchar](max)
+AS
+BEGIN
+    INSERT INTO [Documents] ([Title])
+    OUTPUT INSERTED.[Id], INSERTED.[FirstRecordedOn], INSERTED.[RetrievedOn], INSERTED.[RowVersion]
+    VALUES (@Title);
+END
+</code></pre>
+<h3><a href="#optimistic-concurrency" aria-hidden="true" class="anchor" id="optimistic-concurrency"></a>Optimistic concurrency</h3>
+<p>Optimistic concurrency works the same way with stored procedures as it does without. The stored procedure should:</p>
+<ul>
+<li>
+<p>Use a concurrency token in a <code>WHERE</code> clause to ensure that the row <code>is</code> only updated if it has a valid token. The value used for the concurrency token <code>is</code> typically, but does not have to be, the original value of the concurrency token property.</p>
+</li>
+<li>
+<p>Return the number of rows affected so that EF Core can compare this against the expected number of rows affected and throw a <code>DbUpdateConcurrencyException</code> if the values do not match.</p>
+</li>
+</ul>
+<p>For example, the following SQL Server stored procedure uses a <code>rowversion</code> automatic concurrency token:</p>
+<pre><code class="language-sql">CREATE PROCEDURE [dbo].[Documents_Update]
+    @Id [int],
+    @RowVersion_Original [rowversion],
+    @Title [nvarchar](max),
+    @RowVersion [rowversion] OUT
+AS
+BEGIN
+    DECLARE @TempTable table ([RowVersion] varbinary(8));
+    UPDATE [Documents] SET
+        [Title] = @Title
+    OUTPUT INSERTED.[RowVersion] INTO @TempTable
+    WHERE [Id] = @Id AND [RowVersion] = @RowVersion_Original
+    SELECT @@ROWCOUNT;
+    SELECT @RowVersion = [RowVersion] FROM @TempTable;
+END
+</code></pre>
+<p>This <code>is</code> configured in EF Core using:</p>
+<pre><code class="language-csharp">.UpdateUsingStoredProcedure(
+    storedProcedureBuilder =&gt;
+    {
+        storedProcedureBuilder.HasOriginalValueParameter(document =&gt; document.Id);
+        storedProcedureBuilder.HasOriginalValueParameter(document =&gt; document.RowVersion);
+        storedProcedureBuilder.HasParameter(document =&gt; document.Title);
+        storedProcedureBuilder.HasParameter(document =&gt; document.RowVersion, parameterBuilder =&gt; parameterBuilder.IsOutput());
+        storedProcedureBuilder.HasRowsAffectedResultColumn();
+    });
+</code></pre>
+<p>Notice that:</p>
+<ul>
+<li>
+<p>The original value of the <code>RowVersion</code> concurrency token <code>is</code> used.</p>
+</li>
+<li>
+<p>The stored procedure uses a <code>WHERE</code> clause to ensure that the row <code>is</code> only updated if the <code>RowVersion</code> original value matches.</p>
+</li>
+<li>
+<p>The new generated value for the <code>RowVersion</code> <code>is</code> inserted into a temporary table.</p>
+</li>
+<li>
+<p>The number of rows affected (@@ROWCOUNT) and the generated <code>RowVersion</code> value are returned.</p>
+</li>
+</ul>
+<h3><a href="#mapping-inheritance-hierarchies-to-stored-procedures" aria-hidden="true" class="anchor" id="mapping-inheritance-hierarchies-to-stored-procedures"></a>Mapping inheritance hierarchies to stored procedures</h3>
+<p>EF Core requires that stored procedures follow the table layout for types in a hierarchy. This means that:</p>
+<ul>
+<li>
+<p>A hierarchy mapped using TPH must have a single insert, update, and/or delete stored procedure targeting the single mapped table. The insert and update stored procedures must have a parameter for the discriminator value.</p>
+</li>
+<li>
+<p>A hierarchy mapped using TPT must have an insert, update, and/or delete stored procedure for every type, including <code>abstract</code> types. EF Core will make multiple calls as needed to update, insert, and delete rows in all tables.</p>
+</li>
+<li>
+<p>A hierarchy mapped using TPC must have an insert, update, and/or delete stored procedure for every concrete type, but not <code>abstract</code> types.</p>
+</li>
+</ul>
+<blockquote>
+<p>Note
+If using a single stored procedure per concrete type regardless of the mapping strategy <code>is</code> something you are interested in, then vote for Support using a single sproc per concrete type regardless of the inheritance mapping strategy.</p>
+</blockquote>
+<h3><a href="#mapping-owned-types-to-stored-procedures" aria-hidden="true" class="anchor" id="mapping-owned-types-to-stored-procedures"></a>Mapping owned types to stored procedures</h3>
+<p>Configuration of stored procedures for owned types <code>is</code> done in the nested owned type builder. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Person&gt;(
+    entityTypeBuilder =&gt;
+    {
+        entityTypeBuilder.OwnsOne(
+            author =&gt; author.Contact,
+            ownedNavigationBuilder =&gt;
+            {
+                ownedNavigationBuilder.ToTable(&quot;Contacts&quot;);
+                ownedNavigationBuilder
+                    .InsertUsingStoredProcedure(
+                        storedProcedureBuilder =&gt;
+                        {
+                            storedProcedureBuilder.HasParameter(&quot;PersonId&quot;);
+                            storedProcedureBuilder.HasParameter(contactDetails =&gt; contactDetails.Phone);
+                        })
+                    .UpdateUsingStoredProcedure(
+                        storedProcedureBuilder =&gt;
+                        {
+                            storedProcedureBuilder.HasOriginalValueParameter(&quot;PersonId&quot;);
+                            storedProcedureBuilder.HasParameter(contactDetails =&gt; contactDetails.Phone);
+                            storedProcedureBuilder.HasRowsAffectedResultColumn();
+                        })
+                    .DeleteUsingStoredProcedure(
+                        storedProcedureBuilder =&gt;
+                        {
+                            storedProcedureBuilder.HasOriginalValueParameter(&quot;PersonId&quot;);
+                            storedProcedureBuilder.HasRowsAffectedResultColumn();
+            });
+    });
+</code></pre>
+<blockquote>
+<p>Note
+Currently stored procedures for insert, update, and delete only support owned types must be mapped to separate tables. That <code>is</code>, the owned type cannot be represented by columns in the owner table. Vote for <code>Add</code> &quot;table&quot; splitting support to CUD sproc mapping if this <code>is</code> a limitation that you would like to see removed.</p>
+</blockquote>
+<h3><a href="#mapping-many-to-many-join-entities-to-stored-procedures" aria-hidden="true" class="anchor" id="mapping-many-to-many-join-entities-to-stored-procedures"></a>Mapping many-to-many join entities to stored procedures</h3>
+<p>Configuration of stored procedures many-to-many join entities can be performed as part of the many-to-many configuration. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Book&gt;(
+    entityTypeBuilder =&gt;
+    {
+        entityTypeBuilder
+            .HasMany(document =&gt; document.Authors)
+            .WithMany(author =&gt; author.PublishedWorks)
+            .UsingEntity&lt;Dictionary&lt;string, object&gt;&gt;(
+                &quot;BookPerson&quot;,
+                builder =&gt; builder.HasOne&lt;Person&gt;().WithMany().OnDelete(DeleteBehavior.Cascade),
+                builder =&gt; builder.HasOne&lt;Book&gt;().WithMany().OnDelete(DeleteBehavior.ClientCascade),
+                joinTypeBuilder =&gt;
+                {
+                    joinTypeBuilder
+                        .InsertUsingStoredProcedure(
+                            storedProcedureBuilder =&gt;
+                            {
+                                storedProcedureBuilder.HasParameter(&quot;AuthorsId&quot;);
+                                storedProcedureBuilder.HasParameter(&quot;PublishedWorksId&quot;);
+                            })
+                        .DeleteUsingStoredProcedure(
+                            storedProcedureBuilder =&gt;
+                            {
+                                storedProcedureBuilder.HasOriginalValueParameter(&quot;AuthorsId&quot;);
+                                storedProcedureBuilder.HasOriginalValueParameter(&quot;PublishedWorksId&quot;);
+                                storedProcedureBuilder.HasRowsAffectedResultColumn();
+                            });
+                });
+    });
+</code></pre>
+<h2><a href="#new-and-improved-interceptors-and-events" aria-hidden="true" class="anchor" id="new-and-improved-interceptors-and-events"></a>New and improved interceptors and events</h2>
+<p>EF Core interceptors enable interception, modification, and/or suppression of EF Core operations. EF Core also includes traditional .NET events and logging.</p>
+<p>EF7 includes the following enhancements to interceptors:</p>
+<ul>
+<li>
+<p>Interception for creating and populating new entity instances (aka &quot;materialization&quot;)</p>
+</li>
+<li>
+<p>Interception to modify the LINQ expression tree before a query <code>is</code> compiled</p>
+</li>
+<li>
+<p>Interception for optimistic concurrency handling (DbUpdateConcurrencyException)</p>
+</li>
+<li>
+<p>Interception for connections before checking if the connection string has been set</p>
+</li>
+<li>
+<p>Interception for when EF Core has finished consuming a result set, but before that result set <code>is</code> closed</p>
+</li>
+<li>
+<p>Interception for creation of a <code>DbConnection</code> by EF Core</p>
+</li>
+<li>
+<p>Interception for <code>DbCommand</code> after it has been initialized</p>
+</li>
+</ul>
+<p>In addition, EF7 includes new traditional .NET events for:</p>
+<ul>
+<li>
+<p>When an entity <code>is</code> about to be tracked or change state, but before it <code>is</code> actually tracked or change state</p>
+</li>
+<li>
+<p>Before and after EF Core detects changes to entities and properties (aka <code>DetectChanges</code> interception)</p>
+</li>
+</ul>
+<p>The following sections show some examples of using these new interception capabilities.</p>
+<h3><a href="#simple-actions-on-entity-creation" aria-hidden="true" class="anchor" id="simple-actions-on-entity-creation"></a>Simple actions on entity creation</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from SimpleMaterializationSample.cs.</p>
+</blockquote>
+<p>A new <code>class</code> has been released in the latest release of Apache Struts.</p>
+<ul>
+<li>
+<p>Setting unmapped properties or calling methods needed for validation, computed values, or flags.</p>
+</li>
+<li>
+<p>Using a factory to create instances.</p>
+</li>
+<li>
+<p>Creating a different entity instance than EF would normally create, such as an instance from a cache, or of a proxy type.</p>
+</li>
+<li>
+<p>Injecting services into an entity instance.</p>
+</li>
+</ul>
+<p>In this article, I'm going to show you how to define an interface for a database.</p>
+<pre><code class="language-csharp">public interface IHasRetrieved
+{
+    DateTime Retrieved { get; set; }
+}
+</code></pre>
+<p>Using an interface <code>is</code> common with interceptors since it allows the same interceptor to work with many different entity types. For example:</p>
+<pre><code class="language-csharp">public class Customer : IHasRetrieved
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? PhoneNumber { get; set; }
+
+    [NotMapped]
+    public DateTime Retrieved { get; set; }
+}
+</code></pre>
+<p>Notice that the [NotMapped] attribute <code>is</code> used to indicate that this property <code>is</code> used only while working with the entity, and should not be persisted to the database.</p>
+<p>The interceptor must then implement the appropriate method from <code>IMaterializationInterceptor</code> and set the time retrieved:</p>
+<pre><code class="language-csharp">public class SetRetrievedInterceptor : IMaterializationInterceptor
+{
+    public object InitializedInstance(MaterializationInterceptionData materializationData, object instance)
+    {
+        if (instance is IHasRetrieved hasRetrieved)
+        {
+            hasRetrieved.Retrieved = DateTime.UtcNow;
+        }
+
+        return instance;
+    }
+}
+</code></pre>
+<p>An instance of this interceptor <code>is</code> registered when configuring the <code>DbContext</code>:</p>
+<pre><code class="language-csharp">public class CustomerContext : DbContext
+{
+    private static readonly SetRetrievedInterceptor _setRetrievedInterceptor = new();
+
+    public DbSet&lt;Customer&gt; Customers
+        =&gt; Set&lt;Customer&gt;();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        =&gt; optionsBuilder
+            .AddInterceptors(_setRetrievedInterceptor)
+            .UseSqlite(&quot;Data Source = customers.db&quot;);
+}
+</code></pre>
+<blockquote>
+<p>Tip
+This interceptor <code>is</code> stateless, which <code>is</code> common, so a single instance <code>is</code> created and shared between all <code>DbContext</code> instances.</p>
+</blockquote>
+<p>Now, whenever a <code>Customer</code> <code>is</code> queried from the database, the <code>Retrieved</code> property will be set automatically. For example:</p>
+<pre><code class="language-csharp">await using (var context = new CustomerContext())
+{
+    var customer = await context.Customers.SingleAsync(e =&gt; e.Name == &quot;Alice&quot;);
+    Console.WriteLine($&quot;Customer '{customer.Name}' was retrieved at '{customer.Retrieved.ToLocalTime()}'&quot;);
+}
+</code></pre>
+<p>Produces output:</p>
+<pre><code class="language-output">Customer 'Alice' was retrieved at '9/22/2022 5:25:54 PM'
+</code></pre>
+<h3><a href="#injecting-services-into-entities" aria-hidden="true" class="anchor" id="injecting-services-into-entities"></a>Injecting services into entities</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from InjectLoggerSample.cs.</p>
+</blockquote>
+<p>EF Core already has built-in support for injecting some special services into context instances; for example, see Lazy loading without proxies, which works by injecting the <code>ILazyLoader</code> service.</p>
+<p>An <code>IMaterializationInterceptor</code> can be used to generalize this to any service. The following example shows how to inject an <code>ILogger</code> into entities such that they can perform their own logging.</p>
+<blockquote>
+<p>Note
+Injecting services into entities couples those entity types to the injected services, which some people consider to be an anti-pattern.</p>
+</blockquote>
+<p>As before, an interface <code>is</code> used to define what can be done.</p>
+<pre><code class="language-csharp">public interface IHasLogger
+{
+    ILogger? Logger { get; set; }
+}
+</code></pre>
+<p>And entity types that will log must implement this interface. For example:</p>
+<pre><code class="language-csharp">public class Customer : IHasLogger
+{
+    private string? _phoneNumber;
+
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+
+    public string? PhoneNumber
+    {
+        get =&gt; _phoneNumber;
+        set
+        {
+            Logger?.LogInformation(1, $&quot;Updating phone number for '{Name}' from '{_phoneNumber}' to '{value}'.&quot;);
+
+            _phoneNumber = value;
+        }
+    }
+
+    [NotMapped]
+    public ILogger? Logger { get; set; }
+}
+</code></pre>
+<p>In this article we will look at how to create an interceptor that can be used to retrieve data from an object.</p>
+<pre><code class="language-csharp">public class LoggerInjectionInterceptor : IMaterializationInterceptor
+{
+    private ILogger? _logger;
+
+    public object InitializedInstance(MaterializationInterceptionData materializationData, object instance)
+    {
+        if (instance is IHasLogger hasLogger)
+        {
+            _logger ??= materializationData.Context.GetService&lt;ILoggerFactory&gt;().CreateLogger(&quot;CustomersLogger&quot;);
+            hasLogger.Logger = _logger;
+        }
+
+        return instance;
+    }
+}
+</code></pre>
+<p>This time a new instance of the interceptor <code>is</code> used for each <code>DbContext</code> instance, since the <code>ILogger</code> obtained can change per <code>DbContext</code> instance, and the <code>ILogger</code> <code>is</code> cached on the interceptor:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.AddInterceptors(new LoggerInjectionInterceptor());
+</code></pre>
+<p>Now, whenever the <code>Customer.PhoneNumber</code> <code>is</code> changed, this change will be logged to the application's log. For example:</p>
+<pre><code class="language-output">info: CustomersLogger[1]
+      Updating phone number for 'Alice' from '+1 515 555 0123' to '+1 515 555 0125'.
+</code></pre>
+<h3><a href="#linq-expression-tree-interception" aria-hidden="true" class="anchor" id="linq-expression-tree-interception"></a>LINQ expression tree interception</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from QueryInterceptionSample.cs.</p>
+</blockquote>
+<p>In this article, we are going to look at how to use EF Core to query the database.</p>
+<pre><code class="language-csharp">Task&lt;List&lt;Customer&gt;&gt; GetPageOfCustomers(string sortProperty, int page)
+{
+    using var context = new CustomerContext();
+
+    return context.Customers
+        .OrderBy(e =&gt; EF.Property&lt;object&gt;(e, sortProperty))
+        .Skip(page * 20).Take(20).ToListAsync();
+}
+</code></pre>
+<blockquote>
+<p>Tip
+This query uses the EF.Property method to specify the property to sort by. This allows the application to dynamically pass in the property name, allowing sorting by any property of the entity type. Be aware that sorting by non-indexed columns can be slow.</p>
+</blockquote>
+<p>If you have a sorting query, you might want to generate a stable ordering for each item on your shopping list.</p>
+<pre><code class="language-sql">SELECT &quot;c&quot;.&quot;Id&quot;, &quot;c&quot;.&quot;City&quot;, &quot;c&quot;.&quot;Name&quot;, &quot;c&quot;.&quot;PhoneNumber&quot;
+FROM &quot;Customers&quot; AS &quot;c&quot;
+ORDER BY &quot;c&quot;.&quot;City&quot;
+LIMIT @__p_1 OFFSET @__p_0
+</code></pre>
+<p>If there are multiple customers with the same <code>City</code>, then the ordering of this query <code>is</code> not stable. This could lead to missing or duplicate results as the user pages through the data.</p>
+<p>In our previous article on <code>Entity</code> Framework 7 (EF7), we looked at the issue of entities that have multiple primary keys.</p>
+<pre><code class="language-csharp">public interface IHasIntKey
+{
+    int Id { get; }
+}
+</code></pre>
+<p>This interface <code>is</code> implemented by the entity types of interest:</p>
+<pre><code class="language-csharp">public class Customer : IHasIntKey
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? City { get; set; }
+    public string? PhoneNumber { get; set; }
+}
+</code></pre>
+<p>We then need an interceptor that implements IQueryExpressionInterceptor</p>
+<pre><code class="language-csharp">public class KeyOrderingExpressionInterceptor : IQueryExpressionInterceptor
+{
+    public Expression QueryCompilationStarting(Expression queryExpression, QueryExpressionEventData eventData)
+        =&gt; new KeyOrderingExpressionVisitor().Visit(queryExpression);
+
+    private class KeyOrderingExpressionVisitor : ExpressionVisitor
+    {
+        private static readonly MethodInfo ThenByMethod
+            = typeof(Queryable).GetMethods()
+                .Single(m =&gt; m.Name == nameof(Queryable.ThenBy) &amp;&amp; m.GetParameters().Length == 2);
+
+        protected override Expression VisitMethodCall(MethodCallExpression? methodCallExpression)
+        {
+            var methodInfo = methodCallExpression!.Method;
+            if (methodInfo.DeclaringType == typeof(Queryable)
+                &amp;&amp; methodInfo.Name == nameof(Queryable.OrderBy)
+                &amp;&amp; methodInfo.GetParameters().Length == 2)
+            {
+                var sourceType = methodCallExpression.Type.GetGenericArguments()[0];
+                if (typeof(IHasIntKey).IsAssignableFrom(sourceType))
+                {
+                    var lambdaExpression = (LambdaExpression)((UnaryExpression)methodCallExpression.Arguments[1]).Operand;
+                    var entityParameterExpression = lambdaExpression.Parameters[0];
+
+                    return Expression.Call(
+                        ThenByMethod.MakeGenericMethod(
+                            sourceType,
+                            typeof(int)),
+                        base.VisitMethodCall(methodCallExpression),
+                        Expression.Lambda(
+                            typeof(Func&lt;,&gt;).MakeGenericType(entityParameterExpression.Type, typeof(int)),
+                            Expression.Property(entityParameterExpression, nameof(IHasIntKey.Id)),
+                            entityParameterExpression));
+                }
+            }
+
+            return base.VisitMethodCall(methodCallExpression);
+        }
+    }
+}
+</code></pre>
+<p>This probably looks pretty complicated--and it <code>is</code>! Working with expression trees <code>is</code> typically not easy. Let's look at what's happening:</p>
+<ul>
+<li>
+<p>Fundamentally, the interceptor encapsulates an ExpressionVisitor. The visitor overrides VisitMethodCall, which will be called whenever there <code>is</code> a call to a method in the query expression tree.</p>
+</li>
+<li>
+<p>The visitor checks whether or not this <code>is</code> a call to the OrderBy method we are interested in.</p>
+</li>
+<li>
+<p>If it <code>is</code>, then the visitor further checks if the generic method call <code>is</code> for a type that implements our <code>IHasIntKey</code> interface.</p>
+</li>
+<li>
+<p>At this point we know that the method call <code>is</code> of the form OrderBy(e =&gt; ...). We extract the lambda expression from this call and get the parameter used in that expression--that <code>is</code>, the <code>e</code>.</p>
+</li>
+<li>
+<p>We now build a new MethodCallExpression using the Expression.Call builder method. In this case, the method being called <code>is</code> <code>ThenBy</code>(e =&gt; <code>e</code>.Id). We build this using the parameter extracted above and a property access to the <code>Id</code> property of the <code>IHasIntKey</code> interface.</p>
+</li>
+<li>
+<p>The input into this call <code>is</code> the original OrderBy(e =&gt; ...), and so the end result <code>is</code> an expression for OrderBy(e =&gt; ...).ThenBy(e =&gt; <code>e</code>.Id).</p>
+</li>
+<li>
+<p>This modified expression <code>is</code> returned from the visitor, which means the LINQ query has now been appropriately modified to include a <code>ThenBy</code> call.</p>
+</li>
+<li>
+<p>EF Core continues and compiles this query expression into the appropriate SQL for the database being used.</p>
+</li>
+</ul>
+<p>This interceptor <code>is</code> registered in the same way as we did for the first example. Executing <code>GetPageOfCustomers</code> now generates the following SQL:</p>
+<pre><code class="language-sql">SELECT &quot;c&quot;.&quot;Id&quot;, &quot;c&quot;.&quot;City&quot;, &quot;c&quot;.&quot;Name&quot;, &quot;c&quot;.&quot;PhoneNumber&quot;
+FROM &quot;Customers&quot; AS &quot;c&quot;
+ORDER BY &quot;c&quot;.&quot;City&quot;, &quot;c&quot;.&quot;Id&quot;
+LIMIT @__p_1 OFFSET @__p_0
+</code></pre>
+<p>This will now always produce a stable ordering, even if there are multiple customers with the same <code>City</code>.</p>
+<p>In this post, I'm going to show you how to change the shape of an expression visitor in a query.</p>
+<p>In our series of letters from African journalists, film-maker and columnist Ahmedou Ould-Abdallah looks at some of the challenges faced by African journalists working in the Middle East.</p>
+<p>For example, imagine if we instead changed our <code>GetPageOfCustomers</code> method like so:</p>
+<pre><code class="language-csharp">Task&lt;List&lt;Customer&gt;&gt; GetPageOfCustomers2(string sortProperty, int page)
+{
+    using var context = new CustomerContext();
+
+    return context.Customers
+        .OrderBy(e =&gt; EF.Property&lt;object&gt;(e, sortProperty))
+        .ThenBy(e =&gt; e.Id)
+        .Skip(page * 20).Take(20).ToListAsync();
+}
+</code></pre>
+<p>In this case the <code>ThenBy</code> <code>is</code> simply added to the query. Yes, it may need to be done separately to every query, but it's simple, easy to understand, and will always work.</p>
+<h3><a href="#optimistic-concurrency-interception" aria-hidden="true" class="anchor" id="optimistic-concurrency-interception"></a>Optimistic concurrency interception</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from OptimisticConcurrencyInterceptionSample.cs.</p>
+</blockquote>
+<p>EF Core supports the optimistic concurrency pattern by checking that the number of rows actually affected by an update or delete <code>is</code> the same as the number of rows expected to be affected.</p>
+<p>The optimistic concurrency method ISaveChangesInterceptor (EF) has been improved in version 7.</p>
+<p>Two requests to delete the same entity at the same time may fail.</p>
+<pre><code class="language-csharp">public class SuppressDeleteConcurrencyInterceptor : ISaveChangesInterceptor
+{
+    public InterceptionResult ThrowingConcurrencyException(
+        ConcurrencyExceptionEventData eventData,
+        InterceptionResult result)
+    {
+        if (eventData.Entries.All(e =&gt; e.State == EntityState.Deleted))
+        {
+            Console.WriteLine(&quot;Suppressing Concurrency violation for command:&quot;);
+            Console.WriteLine(((RelationalConcurrencyExceptionEventData)eventData).Command.CommandText);
+
+            return InterceptionResult.Suppress();
+        }
+
+        return result;
+    }
+
+    public ValueTask&lt;InterceptionResult&gt; ThrowingConcurrencyExceptionAsync(
+        ConcurrencyExceptionEventData eventData,
+        InterceptionResult result,
+        CancellationToken cancellationToken = default)
+        =&gt; new(ThrowingConcurrencyException(eventData, result));
+}
+</code></pre>
+<p>There are several things worth noting about this interceptor:</p>
+<ul>
+<li>
+<p>Both the synchronous and asynchronous interception methods are implemented. This <code>is</code> important if the application may call either <code>SaveChanges</code> or <code>SaveChangesAsync</code>. However, if all application code <code>is</code> async, then only <code>ThrowingConcurrencyExceptionAsync</code> needs to be implemented. Likewise, if the application never uses asynchronous database methods, then only <code>ThrowingConcurrencyException</code> needs to be implemented. This <code>is</code> generally <code>true</code> for all interceptors with sync and async methods. (It might be worthwhile implementing the method your application does not use to throw, just in case some sync/async code creeps in.)</p>
+</li>
+<li>
+<p>The interceptor has access to <code>EntityEntry</code> objects for the entities being saved. In this case, this <code>is</code> used to check whether or not the concurrency violation <code>is</code> happening for a delete operation.</p>
+</li>
+<li>
+<p>If the application <code>is</code> using a relational database provider, then the ConcurrencyExceptionEventData object can be cast to a RelationalConcurrencyExceptionEventData object. This provides additional, relational-specific information about the database operation being performed. In this case, the relational command text <code>is</code> printed to the console.</p>
+</li>
+<li>
+<p>Returning InterceptionResult.Suppress() tells EF Core to suppress the action it was about to take--in this case, throwing the <code>DbUpdateConcurrencyException</code>. This ability to change the behavior of EF Core, rather than just observing what EF Core <code>is</code> doing, <code>is</code> one of the most powerful features of interceptors.</p>
+</li>
+</ul>
+<h3><a href="#lazy-initialization-of-a-connection-string" aria-hidden="true" class="anchor" id="lazy-initialization-of-a-connection-string"></a>Lazy initialization of a connection string</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from LazyConnectionStringSample.cs.</p>
+</blockquote>
+<p>DbContexts use connection strings to communicate with each other.</p>
+<p>The latest release of the IDbContext framework, EF7, makes it easier to manage dynamic connections and connection strings through improvements to the <code>IDbConnectionInterceptor</code>.</p>
+<pre><code class="language-csharp">services.AddDbContext&lt;CustomerContext&gt;(
+    b =&gt; b.UseSqlServer());
+</code></pre>
+<p>The <code>IDbConnectionInterceptor</code> method can be used to specify a connection between two systems.</p>
+<pre><code class="language-csharp">services.AddScoped&lt;ITenantConnectionStringFactory, TestTenantConnectionStringFactory&gt;();
+</code></pre>
+<blockquote>
+<p>Warning
+Performing an asynchronous lookup for a connection string, access token, or similar every time it <code>is</code> needed can be very slow. Consider caching these things and only refreshing the cached string or token periodically. For example, access tokens can often be used for a significant period of time before needing to be refreshed.</p>
+</blockquote>
+<p>This can be injected into each <code>DbContext</code> instance using constructor injection:</p>
+<pre><code class="language-csharp">public class CustomerContext : DbContext
+{
+    private readonly ITenantConnectionStringFactory _connectionStringFactory;
+
+    public CustomerContext(
+        DbContextOptions&lt;CustomerContext&gt; options,
+        ITenantConnectionStringFactory connectionStringFactory)
+        : base(options)
+    {
+        _connectionStringFactory = connectionStringFactory;
+    }
+
+    // ...
+}
+</code></pre>
+<p>This service <code>is</code> then used when constructing the interceptor implementation for the context:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.AddInterceptors(
+        new ConnectionStringInitializationInterceptor(_connectionStringFactory));
+</code></pre>
+<p>Finally, the interceptor uses this service to obtain the connection string asynchronously and set it the first time that the connection <code>is</code> used:</p>
+<pre><code class="language-csharp">public class ConnectionStringInitializationInterceptor : DbConnectionInterceptor
+{
+    private readonly IClientConnectionStringFactory _connectionStringFactory;
+
+    public ConnectionStringInitializationInterceptor(IClientConnectionStringFactory connectionStringFactory)
+    {
+        _connectionStringFactory = connectionStringFactory;
+    }
+
+    public override InterceptionResult ConnectionOpening(
+        DbConnection connection,
+        ConnectionEventData eventData,
+        InterceptionResult result)
+        =&gt; throw new NotSupportedException(&quot;Synchronous connections not supported.&quot;);
+
+    public override async ValueTask&lt;InterceptionResult&gt; ConnectionOpeningAsync(
+        DbConnection connection, ConnectionEventData eventData, InterceptionResult result,
+        CancellationToken cancellationToken = new())
+    {
+        if (string.IsNullOrEmpty(connection.ConnectionString))
+        {
+            connection.ConnectionString = (await _connectionStringFactory.GetConnectionStringAsync(cancellationToken));
+        }
+
+        return result;
+    }
+}
+</code></pre>
+<blockquote>
+<p>Note
+The connection string <code>is</code> only obtained the first time that a connection <code>is</code> used. After that, the connection string stored on the <code>DbConnection</code> will be used without looking up a new connection string.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+This interceptor overrides the non-async <code>ConnectionOpening</code> method to throw since the service to get the connection string must be called from an async code path.</p>
+</blockquote>
+<h3><a href="#logging-sql-server-query-statistics" aria-hidden="true" class="anchor" id="logging-sql-server-query-statistics"></a>Logging SQL Server query statistics</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from QueryStatisticsLoggerSample.cs.</p>
+</blockquote>
+<p>Finally, let's create two interceptors that work together to send SQL Server query statistics to the application log. To generate the statistics, we need an IDbCommandInterceptor to do two things.</p>
+<p>First, the interceptor will prefix commands with <code>SET STATISTICS IO ON</code>, which tells SQL Server to send statistics to the client after a result set has been consumed:</p>
+<pre><code class="language-csharp">public override ValueTask&lt;InterceptionResult&lt;DbDataReader&gt;&gt; ReaderExecutingAsync(
+    DbCommand command,
+    CommandEventData eventData,
+    InterceptionResult&lt;DbDataReader&gt; result,
+    CancellationToken cancellationToken = default)
+{
+    command.CommandText = &quot;SET STATISTICS IO ON;&quot; + Environment.NewLine + command.CommandText;
+
+    return new(result);
+}
+</code></pre>
+<p>First, the interceptor will implement the new DbDataReader method, which <code>is</code> called after the DbDataReader has finished consuming results, but before it has been closed.</p>
+<pre><code class="language-csharp">public override async ValueTask&lt;InterceptionResult&gt; DataReaderClosingAsync(
+    DbCommand command,
+    DataReaderClosingEventData eventData,
+    InterceptionResult result)
+{
+    await eventData.DataReader.NextResultAsync();
+
+    return result;
+}
+</code></pre>
+<p>In this example, we'll use two interceptors to connect to an application's database.</p>
+<pre><code class="language-csharp">public override DbConnection ConnectionCreated(ConnectionCreatedEventData eventData, DbConnection result)
+{
+    var logger = eventData.Context!.GetService&lt;ILoggerFactory&gt;().CreateLogger(&quot;InfoMessageLogger&quot;);
+    ((SqlConnection)eventData.Connection).InfoMessage += (_, args) =&gt;
+    {
+        logger.LogInformation(1, args.Message);
+    };
+    return result;
+}
+</code></pre>
+<blockquote>
+<p>Important
+The <code>ConnectionCreating</code> and <code>ConnectionCreated</code> methods are only called when EF Core creates a <code>DbConnection</code>. They will not be called if the application creates the <code>DbConnection</code> and passes it to EF Core.</p>
+</blockquote>
+<p>Running some code that uses these interceptors show SQL Server query statistics in the log:</p>
+<pre><code class="language-output">info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (Size = 4000), @p1='?' (Size = 4000), @p2='?' (Size = 4000), @p3='?' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET STATISTICS IO ON;
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      MERGE [Customers] USING (
+      VALUES (@p0, @p1, 0),
+      (@p2, @p3, 1)) AS i ([Name], [PhoneNumber], _Position) ON 1=0
+      WHEN NOT MATCHED THEN
+      INSERT ([Name], [PhoneNumber])
+      VALUES (i.[Name], i.[PhoneNumber])
+      OUTPUT INSERTED.[Id], i._Position;
+info: InfoMessageLogger[1]
+      Table 'Customers'. Scan count 0, logical reads 5, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SET STATISTICS IO ON;
+      SELECT TOP(2) [c].[Id], [c].[Name], [c].[PhoneNumber]
+      FROM [Customers] AS [c]
+      WHERE [c].[Name] = N'Alice'
+info: InfoMessageLogger[1]
+      Table 'Customers'. Scan count 1, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+</code></pre>
+<h2><a href="#query-enhancements" aria-hidden="true" class="anchor" id="query-enhancements"></a>Query enhancements</h2>
+<p>EF7 contains many improvements in the translation of LINQ queries.</p>
+<h3><a href="#groupby-as-final-operator" aria-hidden="true" class="anchor" id="groupby-as-final-operator"></a><code>GroupBy</code> as final operator</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from GroupByFinalOperatorSample.cs.</p>
+</blockquote>
+<p>EF7 supports using <code>GroupBy</code> as the final operator in a query. For example, this LINQ query:</p>
+<pre><code class="language-csharp">var query = context.Books.GroupBy(s =&gt; s.Price);
+</code></pre>
+<p>Translates to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [b].[Price], [b].[Id], [b].[AuthorId]
+FROM [Books] AS [b]
+ORDER BY [b].[Price]
+</code></pre>
+<blockquote>
+<p>Note
+This type of <code>GroupBy</code> does not translate directly to SQL, so EF Core does the grouping on the returned results. However, this does not result in any additional data being transferred from the server.</p>
+</blockquote>
+<h3><a href="#groupjoin-as-final-operator" aria-hidden="true" class="anchor" id="groupjoin-as-final-operator"></a><code>GroupJoin</code> as final operator</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from GroupJoinFinalOperatorSample.cs.</p>
+</blockquote>
+<p>EF7 supports using <code>GroupJoin</code> as the final operator in a query. For example, this LINQ query:</p>
+<pre><code class="language-csharp">var query = context.Customers.GroupJoin(
+    context.Orders, c =&gt; c.Id, o =&gt; o.CustomerId, (c, os) =&gt; new { Customer = c, Orders = os });
+</code></pre>
+<p>Translates to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [c].[Name], [t].[Id], [t].[Amount], [t].[CustomerId]
+FROM [Customers] AS [c]
+OUTER APPLY (
+    SELECT [o].[Id], [o].[Amount], [o].[CustomerId]
+    FROM [Orders] AS [o]
+    WHERE [c].[Id] = [o].[CustomerId]
+) AS [t]
+ORDER BY [c].[Id]
+</code></pre>
+<h3><a href="#groupby-entity-type" aria-hidden="true" class="anchor" id="groupby-entity-type"></a><code>GroupBy</code> entity type</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from GroupByEntityTypeSample.cs.</p>
+</blockquote>
+<p>EF7 supports grouping by an entity type. For example, this LINQ query:</p>
+<pre><code class="language-csharp">var query = context.Books
+    .GroupBy(s =&gt; s.Author)
+    .Select(s =&gt; new { Author = s.Key, MaxPrice = s.Max(p =&gt; p.Price) });
+</code></pre>
+<p>Translates to the following SQL when using SQLite:</p>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[Name], MAX([b].[Price]) AS [MaxPrice]
+FROM [Books] AS [b]
+INNER JOIN [Author] AS [a] ON [b].[AuthorId] = [a].[Id]
+GROUP BY [a].[Id], [a].[Name]
+</code></pre>
+<p>grouping by entity types can be used for both keyed and keyless entity types.</p>
+<p>Grouping by entity type with a primary key will always result in one group per entity instance, since every entity must have a unique key value. Also, grouping by an entity type with a primary key will always result in one group per entity instance, since every entity must have a unique key value.</p>
+<pre><code class="language-csharp">var query = context.Authors
+    .Select(a =&gt; new { Author = a, MaxPrice = a.Books.Max(b =&gt; b.Price) });
+</code></pre>
+<p>This query translates to the following SQL when using SQLite:</p>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[Name], (
+    SELECT MAX([b].[Price])
+    FROM [Books] AS [b]
+    WHERE [a].[Id] = [b].[AuthorId]) AS [MaxPrice]
+FROM [Authors] AS [a]
+</code></pre>
+<h3><a href="#subqueries-dont-reference-ungrouped-columns-from-outer-query" aria-hidden="true" class="anchor" id="subqueries-dont-reference-ungrouped-columns-from-outer-query"></a>Subqueries don't reference ungrouped columns from outer query</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from UngroupedColumnsQuerySample.cs.</p>
+</blockquote>
+<p>In EF Core 6.0, a <code>GROUP BY</code> clause would reference columns in the outer query, which fails with some databases and <code>is</code> inefficient in others. For example, consider the following query:</p>
+<pre><code class="language-csharp">var query = from s in (from i in context.Invoices
+                       group i by i.History.Month
+                       into g
+                       select new { Month = g.Key, Total = g.Sum(p =&gt; p.Amount), })
+            select new
+            {
+                s.Month, s.Total, Payment = context.Payments.Where(p =&gt; p.History.Month == s.Month).Sum(p =&gt; p.Amount)
+            };
+</code></pre>
+<p>In EF Core 6.0 on SQL Server, this was translated to:</p>
+<pre><code class="language-sql">SELECT DATEPART(month, [i].[History]) AS [Month], COALESCE(SUM([i].[Amount]), 0.0) AS [Total], (
+    SELECT COALESCE(SUM([p].[Amount]), 0.0)
+    FROM [Payments] AS [p]
+    WHERE DATEPART(month, [p].[History]) = DATEPART(month, [i].[History])) AS [Payment]
+FROM [Invoices] AS [i]
+GROUP BY DATEPART(month, [i].[History])
+</code></pre>
+<p>On EF7, the translation <code>is</code>:</p>
+<pre><code class="language-sql">SELECT [t].[Key] AS [Month], COALESCE(SUM([t].[Amount]), 0.0) AS [Total], (
+    SELECT COALESCE(SUM([p].[Amount]), 0.0)
+    FROM [Payments] AS [p]
+    WHERE DATEPART(month, [p].[History]) = [t].[Key]) AS [Payment]
+FROM (
+    SELECT [i].[Amount], DATEPART(month, [i].[History]) AS [Key]
+    FROM [Invoices] AS [i]
+) AS [t]
+GROUP BY [t].[Key]
+</code></pre>
+<h3><a href="#read-only-collections-can-be-used-for-contains" aria-hidden="true" class="anchor" id="read-only-collections-can-be-used-for-contains"></a>Read-only collections can be used for <code>Contains</code></h3>
+<blockquote>
+<p>Tip
+The code shown here comes from ReadOnlySetQuerySample.cs.</p>
+</blockquote>
+<p>EF7 supports using <code>Contains</code> when the items to search for are contained in an <code>IReadOnlySet</code> or <code>IReadOnlyCollection</code>, or <code>IReadOnlyList</code>. For example, this LINQ query:</p>
+<pre><code class="language-csharp">IReadOnlySet&lt;int&gt; searchIds = new HashSet&lt;int&gt; { 1, 3, 5 };
+var query = context.Customers.Where(p =&gt; p.Orders.Any(l =&gt; searchIds.Contains(l.Id)));
+</code></pre>
+<p>Translates to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [c].[Name]
+FROM [Customers] AS [c]
+WHERE EXISTS (
+    SELECT 1
+    FROM [Orders] AS [o]
+    WHERE [c].[Id] = [o].[Customer1Id] AND [o].[Id] IN (1, 3, 5))
+</code></pre>
+<h3><a href="#translations-for-aggregate-functions" aria-hidden="true" class="anchor" id="translations-for-aggregate-functions"></a>Translations for aggregate functions</h3>
+<p>EF7 introduces better extensibility for providers to translate aggregate functions. This and other work in this area have resulted in several new translations across providers, including:</p>
+<ul>
+<li>
+<p>Translation of <code>String.Join</code> and <code>String.Concat</code></p>
+</li>
+<li>
+<p>Translation of spatial aggregate functions</p>
+</li>
+<li>
+<p>Translation of statistics aggregate functions</p>
+</li>
+</ul>
+<blockquote>
+<p>Note
+Aggregate functions that act on <code>IEnumerable</code> argument are typically only translated in <code>GroupBy</code> queries. Vote for Support spatial types in JSON columns if you are interested in getting this limitation removed.</p>
+</blockquote>
+<h4><a href="#string-aggregate-functions" aria-hidden="true" class="anchor" id="string-aggregate-functions"></a>String aggregate functions</h4>
+<blockquote>
+<p>Tip
+The code shown here comes from StringAggregateFunctionsSample.cs.</p>
+</blockquote>
+<p>Queries using Join and Concat are now translated when appropriate. For example:</p>
+<pre><code class="language-csharp">var query = context.Posts
+    .GroupBy(post =&gt; post.Author)
+    .Select(grouping =&gt; new { Author = grouping.Key, Books = string.Join(&quot;|&quot;, grouping.Select(post =&gt; post.Title)) });
+</code></pre>
+<p>This query translates to the following when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [a].[Id], [a].[Name], COALESCE(STRING_AGG([p].[Title], N'|'), N'') AS [Books]
+FROM [Posts] AS [p]
+LEFT JOIN [Authors] AS [a] ON [p].[AuthorId] = [a].[Id]
+GROUP BY [a].[Id], [a].[Name]
+</code></pre>
+<p>When combined with other string functions, these translations allow for some complex string manipulation on the server. For example:</p>
+<pre><code class="language-csharp">var query = context.Posts
+    .GroupBy(post =&gt; post.Author!.Name)
+    .Select(
+        grouping =&gt;
+            new
+            {
+                PostAuthor = grouping.Key,
+                Blogs = string.Concat(
+                    grouping
+                        .Select(post =&gt; post.Blog.Name)
+                        .Distinct()
+                        .Select(postName =&gt; &quot;'&quot; + postName + &quot;' &quot;)),
+                ContentSummaries = string.Join(
+                    &quot; | &quot;,
+                    grouping
+                        .Where(post =&gt; post.Content.Length &gt;= 10)
+                        .Select(post =&gt; &quot;'&quot; + post.Content.Substring(0, 10) + &quot;' &quot;))
+            });
+</code></pre>
+<p>This query translates to the following when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [t].[Name], (N'''' + [t0].[Name]) + N''' ', [t0].[Name], [t].[c]
+FROM (
+    SELECT [a].[Name], COALESCE(STRING_AGG(CASE
+        WHEN CAST(LEN([p].[Content]) AS int) &gt;= 10 THEN COALESCE((N'''' + COALESCE(SUBSTRING([p].[Content], 0 + 1, 10), N'')) + N''' ', N'')
+    END, N' | '), N'') AS [c]
+    FROM [Posts] AS [p]
+    LEFT JOIN [Authors] AS [a] ON [p].[AuthorId] = [a].[Id]
+    GROUP BY [a].[Name]
+) AS [t]
+OUTER APPLY (
+    SELECT DISTINCT [b].[Name]
+    FROM [Posts] AS [p0]
+    LEFT JOIN [Authors] AS [a0] ON [p0].[AuthorId] = [a0].[Id]
+    INNER JOIN [Blogs] AS [b] ON [p0].[BlogId] = [b].[Id]
+    WHERE [t].[Name] = [a0].[Name] OR ([t].[Name] IS NULL AND [a0].[Name] IS NULL)
+) AS [t0]
+ORDER BY [t].[Name]
+</code></pre>
+<h4><a href="#spatial-aggregate-functions" aria-hidden="true" class="anchor" id="spatial-aggregate-functions"></a>Spatial aggregate functions</h4>
+<blockquote>
+<p>Tip
+The code shown here comes from SpatialAggregateFunctionsSample.cs.</p>
+</blockquote>
+<p>It <code>is</code> now possible for database providers that support for NetTopologySuite to translate the following spatial aggregate functions:</p>
+<ul>
+<li>
+<p>GeometryCombiner.Combine()</p>
+</li>
+<li>
+<p>UnaryUnionOp.Union()</p>
+</li>
+<li>
+<p>ConvexHull.Create()</p>
+</li>
+<li>
+<p>EnvelopeCombiner.CombineAsGeometry()</p>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+These translations have been implemented by the team for SQL Server and SQLite. For other providers, contact the provider maintainer to add support if it has been implemented for that provider.</p>
+</blockquote>
+<p>For example:</p>
+<pre><code class="language-csharp">var query = context.Caches
+    .Where(cache =&gt; cache.Location.X &lt; -90)
+    .GroupBy(cache =&gt; cache.Owner)
+    .Select(
+        grouping =&gt; new { Id = grouping.Key, Combined = GeometryCombiner.Combine(grouping.Select(cache =&gt; cache.Location)) });
+</code></pre>
+<p>This query <code>is</code> translated to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [c].[Owner] AS [Id], geography::CollectionAggregate([c].[Location]) AS [Combined]
+FROM [Caches] AS [c]
+WHERE [c].[Location].Long &lt; -90.0E0
+GROUP BY [c].[Owner]
+</code></pre>
+<h4><a href="#statistical-aggregate-functions" aria-hidden="true" class="anchor" id="statistical-aggregate-functions"></a>Statistical aggregate functions</h4>
+<blockquote>
+<p>Tip
+The code shown here comes from StatisticalAggregateFunctionsSample.cs.</p>
+</blockquote>
+<p>SQL Server translations have been implemented for the following statistical functions:</p>
+<ul>
+<li>
+<p>StandardDeviationSample</p>
+</li>
+<li>
+<p>StandardDeviationPopulation</p>
+</li>
+<li>
+<p>VarianceSample</p>
+</li>
+<li>
+<p>VariancePopulation</p>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+These translations have been implemented by the team for SQL Server. For other providers, contact the provider maintainer to add support if it has been implemented for that provider.</p>
+</blockquote>
+<p>For example:</p>
+<pre><code class="language-csharp">var query = context.Downloads
+    .GroupBy(download =&gt; download.Uploader.Id)
+    .Select(
+        grouping =&gt; new
+        {
+            Author = grouping.Key,
+            TotalCost = grouping.Sum(d =&gt; d.DownloadCount),
+            AverageViews = grouping.Average(d =&gt; d.DownloadCount),
+            VariancePopulation = EF.Functions.VariancePopulation(grouping.Select(d =&gt; d.DownloadCount)),
+            VarianceSample = EF.Functions.VarianceSample(grouping.Select(d =&gt; d.DownloadCount)),
+            StandardDeviationPopulation = EF.Functions.StandardDeviationPopulation(grouping.Select(d =&gt; d.DownloadCount)),
+            StandardDeviationSample = EF.Functions.StandardDeviationSample(grouping.Select(d =&gt; d.DownloadCount))
+        });
+</code></pre>
+<p>This query <code>is</code> translated to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [u].[Id] AS [Author], COALESCE(SUM([d].[DownloadCount]), 0) AS [TotalCost], AVG(CAST([d].[DownloadCount] AS float)) AS [AverageViews], VARP([d].[DownloadCount]) AS [VariancePopulation], VAR([d].[DownloadCount]) AS [VarianceSample], STDEVP([d].[DownloadCount]) AS [StandardDeviationPopulation], STDEV([d].[DownloadCount]) AS [StandardDeviationSample]
+FROM [Downloads] AS [d]
+INNER JOIN [Uploader] AS [u] ON [d].[UploaderId] = [u].[Id]
+GROUP BY [u].[Id]
+</code></pre>
+<h3><a href="#translation-of-stringindexof" aria-hidden="true" class="anchor" id="translation-of-stringindexof"></a>Translation of <code>string.IndexOf</code></h3>
+<blockquote>
+<p>Tip
+The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
+</blockquote>
+<p>EF7 now translates String.IndexOf in LINQ queries. For example:</p>
+<pre><code class="language-csharp">var query = context.Posts
+    .Select(post =&gt; new { post.Title, IndexOfEntity = post.Content.IndexOf(&quot;Entity&quot;) })
+    .Where(post =&gt; post.IndexOfEntity &gt; 0);
+</code></pre>
+<p>This query translates to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [p].[Title], CAST(CHARINDEX(N'Entity', [p].[Content]) AS int) - 1 AS [IndexOfEntity]
+FROM [Posts] AS [p]
+WHERE (CAST(CHARINDEX(N'Entity', [p].[Content]) AS int) - 1) &gt; 0
+</code></pre>
+<h3><a href="#translation-of-gettype-for-entity-types" aria-hidden="true" class="anchor" id="translation-of-gettype-for-entity-types"></a>Translation of <code>GetType</code> for entity types</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
+</blockquote>
+<p>EF7 now translates Object.GetType() in LINQ queries. For example:</p>
+<pre><code class="language-csharp">var query = context.Posts.Where(post =&gt; post.GetType() == typeof(Post));
+</code></pre>
+<p>This query translates to the following SQL when using SQL Server with TPH inheritance:</p>
+<pre><code class="language-sql">SELECT [p].[Id], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Discriminator], [p].[PublishedOn], [p].[Title], [p].[PromoText]
+FROM [Posts] AS [p]
+WHERE [p].[Discriminator] = N'Post'
+</code></pre>
+<p>This query returns instances of type <code>Post</code> that are actually of type <code>Post</code>, and not those of any derived types.</p>
+<pre><code class="language-csharp">var query = context.Posts.OfType&lt;Post&gt;();
+</code></pre>
+<p>Which translates to different SQL:</p>
+<pre><code class="language-sql">SELECT [p].[Id], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Discriminator], [p].[PublishedOn], [p].[Title], [p].[PromoText]
+      FROM [Posts] AS [p]
+</code></pre>
+<p>And will return both <code>Post</code> and <code>FeaturedPost</code> entities.</p>
+<h3><a href="#support-for-at-time-zone" aria-hidden="true" class="anchor" id="support-for-at-time-zone"></a>Support for <code>AT TIME ZONE</code></h3>
+<blockquote>
+<p>Tip
+The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
+</blockquote>
+<p>EF7 introduces new AtTimeZone functions for DateTime and DateTimeOffset. These functions translate to <code>AT TIME ZONE</code> clauses in the generated SQL. For example:</p>
+<pre><code class="language-csharp">var query = context.Posts
+    .Select(
+        post =&gt; new
+        {
+            post.Title,
+            PacificTime = EF.Functions.AtTimeZone(post.PublishedOn, &quot;Pacific Standard Time&quot;),
+            UkTime = EF.Functions.AtTimeZone(post.PublishedOn, &quot;GMT Standard Time&quot;),
+        });
+</code></pre>
+<p>This query translates to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [p].[Title], [p].[PublishedOn] AT TIME ZONE 'Pacific Standard Time' AS [PacificTime], [p].[PublishedOn] AT TIME ZONE 'GMT Standard Time' AS [UkTime]
+FROM [Posts] AS [p]
+</code></pre>
+<blockquote>
+<p>Tip
+These translations have been implemented by the team for SQL Server. For other providers, contact the provider maintainer to add support if it has been implemented for that provider.</p>
+</blockquote>
+<h3><a href="#filtered-include-on-hidden-navigations" aria-hidden="true" class="anchor" id="filtered-include-on-hidden-navigations"></a>Filtered Include on hidden navigations</h3>
+<blockquote>
+<p>Tip
+The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
+</blockquote>
+<p>The Include methods can now be used with EF.Property. This allows filtering and ordering even for private navigation properties, or private navigations represented by fields. For example:</p>
+<pre><code class="language-csharp">var query = context.Blogs.Include(
+    blog =&gt; EF.Property&lt;ICollection&lt;Post&gt;&gt;(blog, &quot;Posts&quot;)
+        .Where(post =&gt; post.Content.Contains(&quot;.NET&quot;))
+        .OrderBy(post =&gt; post.Title));
+</code></pre>
+<p>This <code>is</code> equivalent to:</p>
+<pre><code class="language-csharp">var query = context.Blogs.Include(
+    blog =&gt; Posts
+        .Where(post =&gt; post.Content.Contains(&quot;.NET&quot;))
+        .OrderBy(post =&gt; post.Title));
+</code></pre>
+<p>But does not require <code>Blog.Posts</code> to be publicly accessible.</p>
+<p>When using SQL Server, both queries above translate to:</p>
+<pre><code class="language-sql">SELECT [b].[Id], [b].[Name], [t].[Id], [t].[AuthorId], [t].[BlogId], [t].[Content], [t].[Discriminator], [t].[PublishedOn], [t].[Title], [t].[PromoText]
+FROM [Blogs] AS [b]
+LEFT JOIN (
+    SELECT [p].[Id], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Discriminator], [p].[PublishedOn], [p].[Title], [p].[PromoText]
+    FROM [Posts] AS [p]
+    WHERE [p].[Content] LIKE N'%.NET%'
+) AS [t] ON [b].[Id] = [t].[BlogId]
+ORDER BY [b].[Id], [t].[Title]
+</code></pre>
+<h3><a href="#cosmos-translation-for-regexismatch" aria-hidden="true" class="anchor" id="cosmos-translation-for-regexismatch"></a>Cosmos translation for <code>Regex.IsMatch</code></h3>
+<blockquote>
+<p>Tip
+The code shown here comes from CosmosQueriesSample.cs.</p>
+</blockquote>
+<p>EF7 supports using <code>Regex.IsMatch</code> in LINQ queries against Azure Cosmos DB. For example:</p>
+<pre><code class="language-csharp">var containsInnerT = await context.Triangles
+    .Where(o =&gt; Regex.IsMatch(o.Name, &quot;[a-z]t[a-z]&quot;, RegexOptions.IgnoreCase))
+    .ToListAsync();
+</code></pre>
+<p>Translates to the following SQL:</p>
+<pre><code class="language-sql">SELECT c
+FROM root c
+WHERE ((c[&quot;Discriminator&quot;] = &quot;Triangle&quot;) AND RegexMatch(c[&quot;Name&quot;], &quot;[a-z]t[a-z]&quot;, &quot;i&quot;))
+</code></pre>
+<h2><a href="#dbcontext-api-and-behavior-enhancements" aria-hidden="true" class="anchor" id="dbcontext-api-and-behavior-enhancements"></a><code>DbContext</code> API and behavior enhancements</h2>
+<p>EF7 contains a variety of small improvements to <code>DbContext</code> and related classes.</p>
+<blockquote>
+<p>Tip
+The code for samples in this section comes from DbContextApiSample.cs.</p>
+</blockquote>
+<h3><a href="#suppressor-for-uninitialized-dbset-properties" aria-hidden="true" class="anchor" id="suppressor-for-uninitialized-dbset-properties"></a>Suppressor for uninitialized <code>DbSet</code> properties</h3>
+<p>Public, settable <code>DbSet</code> properties on a <code>DbContext</code> are automatically initialized by EF Core when the <code>DbContext</code> <code>is</code> constructed. For example, consider the following <code>DbContext</code> definition:</p>
+<pre><code class="language-csharp">public class SomeDbContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+}
+</code></pre>
+<p>The <code>Blogs</code> property will be set to a <code>DbSet</code><Blog> instance as part of constructing the <code>DbContext</code> instance. This allows the context to be used for queries without any additional steps.</p>
+<p>However, following the introduction of C# nullable reference types, the compiler now warns that the non-nullable property <code>Blogs</code> <code>is</code> not initialized:</p>
+<p>This example shows a warning when a property <code>is</code> declared as nullable.</p>
+<p>EF7 contains a DiagnosticSuppressor for <code>DbSet</code> properties on a <code>DbContext</code> which stops the compiler from generating this warning.</p>
+<blockquote>
+<p>Tip
+This pattern originated in the days when C# auto-properties were very limited. With modern C#, consider making the auto-properties read-only, and then either initialize them explicitly in the <code>DbContext</code> constructor, or obtain the cached <code>DbSet</code> instance from the context when needed. For example, public <code>DbSet</code><Blog> <code>Blogs</code> =&gt; Set<Blog>().</p>
+</blockquote>
+<h3><a href="#distinguish-cancellation-from-failure-in-logs" aria-hidden="true" class="anchor" id="distinguish-cancellation-from-failure-in-logs"></a>Distinguish cancellation from failure in logs</h3>
+<p>Sometimes an application will explicitly cancel a query or other database operation. This <code>is</code> usually done using a CancellationToken passed to the method performing the operation.</p>
+<p>EF7 introduces new log events specifically for database operations.</p>
+<blockquote>
+<p>Note
+Cancellation <code>is</code> detected by looking at the exception rather than checking the cancellation token. This means that cancellations not triggered via the  cancellation token will still be detected and logged in this way.</p>
+</blockquote>
+<h3><a href="#new-iproperty-and-inavigation-overloads-for-entityentry-methods" aria-hidden="true" class="anchor" id="new-iproperty-and-inavigation-overloads-for-entityentry-methods"></a>New <code>IProperty</code> and <code>INavigation</code> overloads for <code>EntityEntry</code> methods</h3>
+<p>The <code>Entity</code> Framework 7 (EF7) now supports directly passing property or navigation metadata to methods of <code>EntityEntry</code> methods.</p>
+<p>For example, consider a method to find all the siblings of a given entity:</p>
+<pre><code class="language-csharp">public static IEnumerable&lt;TEntity&gt; FindSiblings&lt;TEntity&gt;(
+    this DbContext context, TEntity entity, string navigationToParent)
+    where TEntity : class
+{
+    var parentEntry = context.Entry(entity).Reference(navigationToParent);
+
+    return context.Entry(parentEntry.CurrentValue!)
+        .Collection(parentEntry.Metadata.Inverse!)
+        .CurrentValue!
+        .OfType&lt;TEntity&gt;()
+        .Where(e =&gt; !ReferenceEquals(e, entity));
+}
+</code></pre>
+<p>The following example shows how to use the inverse <code>INavigation</code> method to find and return siblings of a given parent.</p>
+<pre><code class="language-csharp">Console.WriteLine($&quot;Siblings to {post.Id}: '{post.Title}' are...&quot;);
+foreach (var sibling in context.FindSiblings(post, nameof(post.Blog)))
+{
+    Console.WriteLine($&quot;    {sibling.Id}: '{sibling.Title}'&quot;);
+}
+</code></pre>
+<p>And the output:</p>
+<pre><code class="language-output">Siblings to 1: 'Announcing Entity Framework 7 Preview 7: Interceptors!' are...
+    5: 'Productivity comes to .NET MAUI in Visual Studio 2022'
+    6: 'Announcing .NET 7 Preview 7'
+    7: 'ASP.NET Core updates in .NET 7 Preview 7'
+</code></pre>
+<h3><a href="#entityentry-for-shared-type-entity-types" aria-hidden="true" class="anchor" id="entityentry-for-shared-type-entity-types"></a><code>EntityEntry</code> for shared-type entity types</h3>
+<p>EF Core can use the same CLR type for multiple different entity types.</p>
+<pre><code class="language-csharp">modelBuilder.SharedTypeEntity&lt;Dictionary&lt;string, object&gt;&gt;(
+    &quot;BuildMetadata&quot;, b =&gt;
+    {
+        b.IndexerProperty&lt;int&gt;(&quot;Id&quot;);
+        b.IndexerProperty&lt;string&gt;(&quot;Tag&quot;);
+        b.IndexerProperty&lt;Version&gt;(&quot;Version&quot;);
+        b.IndexerProperty&lt;string&gt;(&quot;Hash&quot;);
+        b.IndexerProperty&lt;bool&gt;(&quot;Prerelease&quot;);
+    });
+</code></pre>
+<p>In this example, we are accessing a shared-type entity type using a <code>DbSet</code> for the entity type which <code>is</code> obtained using the name.</p>
+<pre><code class="language-csharp">public DbSet&lt;Dictionary&lt;string, object&gt;&gt; BuildMetadata
+    =&gt; Set&lt;Dictionary&lt;string, object&gt;&gt;(&quot;BuildMetadata&quot;);
+</code></pre>
+<p>This <code>DbSet</code> can be used to track entity instances:</p>
+<pre><code class="language-csharp">await context.BuildMetadata.AddAsync(
+    new Dictionary&lt;string, object&gt;
+    {
+        { &quot;Tag&quot;, &quot;v7.0.0-rc.1.22426.7&quot; },
+        { &quot;Version&quot;, new Version(7, 0, 0) },
+        { &quot;Prerelease&quot;, true },
+        { &quot;Hash&quot;, &quot;dc0f3e8ef10eb1464b27f0fd4704f53c01226036&quot; }
+    });
+</code></pre>
+<p>And execute queries:</p>
+<pre><code class="language-csharp">var builds = await context.BuildMetadata
+    .Where(metadata =&gt; !EF.Property&lt;bool&gt;(metadata, &quot;Prerelease&quot;))
+    .OrderBy(metadata =&gt; EF.Property&lt;string&gt;(metadata, &quot;Tag&quot;))
+    .ToListAsync();
+</code></pre>
+<p>Now, in EF7, there <code>is</code> also an <code>Entry</code> method on <code>DbSet</code> which can be used to obtain the state of an instance, even if it <code>is</code> not yet tracked. For example:</p>
+<pre><code class="language-csharp">var state = context.BuildMetadata.Entry(build).State;
+</code></pre>
+<h3><a href="#contextinitialized-is-now-logged-as-debug" aria-hidden="true" class="anchor" id="contextinitialized-is-now-logged-as-debug"></a><code>ContextInitialized</code> <code>is</code> now logged as <code>Debug</code></h3>
+<p>In EF7, the <code>ContextInitialized</code> event <code>is</code> logged at the <code>Debug</code> level. For example:</p>
+<pre><code class="language-output">dbug: 10/7/2022 12:27:52.379 CoreEventId.ContextInitialized[10403] (Microsoft.EntityFrameworkCore.Infrastructure)
+      Entity Framework Core 7.0.0 initialized 'BlogsContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:7.0.0' with options: SensitiveDataLoggingEnabled using NetTopologySuite
+</code></pre>
+<p>In previous releases, it was logged at the <code>Information</code> level. For example:</p>
+<pre><code class="language-output">info: 10/7/2022 12:30:34.757 CoreEventId.ContextInitialized[10403] (Microsoft.EntityFrameworkCore.Infrastructure)
+      Entity Framework Core 7.0.0 initialized 'BlogsContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:7.0.0' with options: SensitiveDataLoggingEnabled using NetTopologySuite
+</code></pre>
+<p>If desired, the log level can be changed back to <code>Information</code>:</p>
+<pre><code class="language-csharp">optionsBuilder.ConfigureWarnings(
+    builder =&gt;
+    {
+        builder.Log((CoreEventId.ContextInitialized, LogLevel.Information));
+    });
+</code></pre>
+<h3><a href="#ientityentrygraphiterator-is-publicly-usable" aria-hidden="true" class="anchor" id="ientityentrygraphiterator-is-publicly-usable"></a><code>IEntityEntryGraphIterator</code> <code>is</code> publicly usable</h3>
+<p>Here's an example of how to iterate over a graph of entities.</p>
+<pre><code class="language-csharp">var blogEntry = context.ChangeTracker.Entries&lt;Blog&gt;().First();
+var found = new HashSet&lt;object&gt;();
+var iterator = context.GetService&lt;IEntityEntryGraphIterator&gt;();
+iterator.TraverseGraph(new EntityEntryGraphNode&lt;HashSet&lt;object&gt;&gt;(blogEntry, found, null, null), node =&gt;
+{
+    if (node.NodeState.Contains(node.Entry.Entity))
+    {
+        return false;
+    }
+
+    Console.Write($&quot;Found with '{node.Entry.Entity.GetType().Name}'&quot;);
+
+    if (node.InboundNavigation != null)
+    {
+        Console.Write($&quot; by traversing '{node.InboundNavigation.Name}' from '{node.SourceEntry!.Entity.GetType().Name}'&quot;);
+    }
+
+    Console.WriteLine();
+
+    node.NodeState.Add(node.Entry.Entity);
+
+    return true;
+});
+
+Console.WriteLine();
+Console.WriteLine($&quot;Finished iterating. Found {found.Count} entities.&quot;);
+Console.WriteLine();
+</code></pre>
+<p>Notice:</p>
+<ul>
+<li>
+<p>The iterator stops traversing from a given node when the callback delegate returns <code>false</code>. This example keeps track of visited entities and returns <code>false</code> when the entity has already been visited. This prevents infinite loops resulting from cycles in the graph.</p>
+</li>
+<li>
+<p>The EntityEntryGraphNode<TState> object allows the state to be passed around without capturing it into the delegate.</p>
+</li>
+<li>
+<p>For every node visited other than the first, the node it was discovered from and the navigation it was discovered via are passed to the callback.</p>
+</li>
+</ul>
+<h2><a href="#model-building-enhancements" aria-hidden="true" class="anchor" id="model-building-enhancements"></a>Model building enhancements</h2>
+<p>EF7 contains a variety of small improvements in model building.</p>
+<blockquote>
+<p>Tip
+The code for samples in this section comes from ModelBuildingSample.cs.</p>
+</blockquote>
+<h3><a href="#indexes-can-be-ascending-or-descending" aria-hidden="true" class="anchor" id="indexes-can-be-ascending-or-descending"></a>Indexes can be ascending or descending</h3>
+<p>By default, EF Core creates ascending indexes. EF7 also supports the creation of descending indexes. For example:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Post&gt;()
+    .HasIndex(post =&gt; post.Title)
+    .IsDescending();
+</code></pre>
+<p>Or, using the <code>Index</code> mapping attribute:</p>
+<pre><code class="language-csharp">[Index(nameof(Title), AllDescending = true)]
+public class Post
+{
+    public int Id { get; set; }
+
+    [MaxLength(64)]
+    public string? Title { get; set; }
+}
+</code></pre>
+<p>For indexes over a single column, the order on each column can be important.</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Blog&gt;()
+    .HasIndex(blog =&gt; new { blog.Name, blog.Owner })
+    .IsDescending(false, true);
+</code></pre>
+<p>Or, using a mapping attribute:</p>
+<pre><code class="language-csharp">[Index(nameof(Name), nameof(Owner), IsDescending = new[] { false, true })]
+public class Blog
+{
+    public int Id { get; set; }
+
+    [MaxLength(64)]
+    public string? Name { get; set; }
+
+    [MaxLength(64)]
+    public string? Owner { get; set; }
+
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+</code></pre>
+<p>This results in the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">CREATE INDEX [IX_Blogs_Name_Owner] ON [Blogs] ([Name], [Owner] DESC);
+</code></pre>
+<p>Finally, multiple indexes can be created over the same ordered set of columns by giving the indexes names. For example:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Blog&gt;()
+    .HasIndex(blog =&gt; new { blog.Name, blog.Owner }, &quot;IX_Blogs_Name_Owner_1&quot;)
+    .IsDescending(false, true);
+
+modelBuilder
+    .Entity&lt;Blog&gt;()
+    .HasIndex(blog =&gt; new { blog.Name, blog.Owner }, &quot;IX_Blogs_Name_Owner_2&quot;)
+    .IsDescending(true, true);
+</code></pre>
+<p>Or, using mapping attributes:</p>
+<pre><code class="language-csharp">[Index(nameof(Name), nameof(Owner), IsDescending = new[] { false, true }, Name = &quot;IX_Blogs_Name_Owner_1&quot;)]
+[Index(nameof(Name), nameof(Owner), IsDescending = new[] { true, true }, Name = &quot;IX_Blogs_Name_Owner_2&quot;)]
+public class Blog
+{
+    public int Id { get; set; }
+
+    [MaxLength(64)]
+    public string? Name { get; set; }
+
+    [MaxLength(64)]
+    public string? Owner { get; set; }
+
+    public List&lt;Post&gt; Posts { get; } = new();
+}
+</code></pre>
+<p>This generates the following SQL on SQL Server:</p>
+<pre><code class="language-sql">CREATE INDEX [IX_Blogs_Name_Owner_1] ON [Blogs] ([Name], [Owner] DESC);
+CREATE INDEX [IX_Blogs_Name_Owner_2] ON [Blogs] ([Name] DESC, [Owner] DESC);
+</code></pre>
+<h3><a href="#mapping-attribute-for-composite-keys" aria-hidden="true" class="anchor" id="mapping-attribute-for-composite-keys"></a>Mapping attribute for composite keys</h3>
+<p>EF7 introduces a new mapping (aka &quot;data annotation) for the primary key property or properties of any entity type.</p>
+<pre><code class="language-csharp">[PrimaryKey(nameof(PostKey))]
+public class Post
+{
+    public int PostKey { get; set; }
+}
+</code></pre>
+<p>This makes it a natural fit for defining composite keys:</p>
+<pre><code class="language-csharp">[PrimaryKey(nameof(PostId), nameof(CommentId))]
+public class Comment
+{
+    public int PostId { get; set; }
+    public int CommentId { get; set; }
+    public string CommentText { get; set; } = null!;
+}
+</code></pre>
+<p>Defining the index on the <code>class</code> also means it can be used to specify private properties or fields as keys, even though these would usually be ignored when building the EF model. For example:</p>
+<pre><code class="language-csharp">[PrimaryKey(nameof(_id))]
+public class Tag
+{
+    private readonly int _id;
+}
+</code></pre>
+<h3><a href="#deletebehavior-mapping-attribute" aria-hidden="true" class="anchor" id="deletebehavior-mapping-attribute"></a><code>DeleteBehavior</code> mapping attribute</h3>
+<p>A new feature in the latest version of Adobe Photoshop allows users to Delete relationships.</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public string? Title { get; set; }
+
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public Blog Blog { get; set; } = null!;
+}
+</code></pre>
+<p>This will disable cascade deletes for the <code>Blog</code>-Posts relationship.</p>
+<h3><a href="#properties-mapped-to-different-column-names" aria-hidden="true" class="anchor" id="properties-mapped-to-different-column-names"></a>Properties mapped to different column names</h3>
+<p>In our series of articles on inheritance, we are going to look at how to map CLR properties to columns in a table.</p>
+<pre><code class="language-csharp">public abstract class Animal
+{
+    public int Id { get; set; }
+    public string Breed { get; set; } = null!;
+}
+
+public class Cat : Animal
+{
+    public string? EducationalLevel { get; set; }
+}
+
+public class Dog : Animal
+{
+    public string? FavoriteToy { get; set; }
+}
+</code></pre>
+<p>With the TPT inheritance mapping strategy, these types will be mapped to three tables. However, the primary key column in each table may have a different name. For example:</p>
+<pre><code class="language-sql">CREATE TABLE [Animals] (
+    [Id] int NOT NULL IDENTITY,
+    [Breed] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Animals] PRIMARY KEY ([Id])
+);
+
+CREATE TABLE [Cats] (
+    [CatId] int NOT NULL,
+    [EducationalLevel] nvarchar(max) NULL,
+    CONSTRAINT [PK_Cats] PRIMARY KEY ([CatId]),
+    CONSTRAINT [FK_Cats_Animals_CatId] FOREIGN KEY ([CatId]) REFERENCES [Animals] ([Id]) ON DELETE CASCADE
+);
+
+CREATE TABLE [Dogs] (
+    [DogId] int NOT NULL,
+    [FavoriteToy] nvarchar(max) NULL,
+    CONSTRAINT [PK_Dogs] PRIMARY KEY ([DogId]),
+    CONSTRAINT [FK_Dogs_Animals_DogId] FOREIGN KEY ([DogId]) REFERENCES [Animals] ([Id]) ON DELETE CASCADE
+);
+</code></pre>
+<p>EF7 allows this mapping to be configured using a nested table builder:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;().ToTable(&quot;Animals&quot;);
+
+modelBuilder.Entity&lt;Cat&gt;()
+    .ToTable(
+        &quot;Cats&quot;,
+        tableBuilder =&gt; tableBuilder.Property(cat =&gt; cat.Id).HasColumnName(&quot;CatId&quot;));
+
+modelBuilder.Entity&lt;Dog&gt;()
+    .ToTable(
+        &quot;Dogs&quot;,
+        tableBuilder =&gt; tableBuilder.Property(dog =&gt; dog.Id).HasColumnName(&quot;DogId&quot;));
+</code></pre>
+<p>With the TPC inheritance mapping, the <code>Breed</code> property can also be mapped to different column names in different tables. For example, consider the following TPC tables:</p>
+<pre><code class="language-sql">CREATE TABLE [Cats] (
+    [CatId] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [CatBreed] nvarchar(max) NOT NULL,
+    [EducationalLevel] nvarchar(max) NULL,
+    CONSTRAINT [PK_Cats] PRIMARY KEY ([CatId])
+);
+
+CREATE TABLE [Dogs] (
+    [DogId] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [DogBreed] nvarchar(max) NOT NULL,
+    [FavoriteToy] nvarchar(max) NULL,
+    CONSTRAINT [PK_Dogs] PRIMARY KEY ([DogId])
+);
+</code></pre>
+<p>EF7 supports this table mapping:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;().UseTpcMappingStrategy();
+
+modelBuilder.Entity&lt;Cat&gt;()
+    .ToTable(
+        &quot;Cats&quot;,
+        builder =&gt;
+        {
+            builder.Property(cat =&gt; cat.Id).HasColumnName(&quot;CatId&quot;);
+            builder.Property(cat =&gt; cat.Breed).HasColumnName(&quot;CatBreed&quot;);
+        });
+
+modelBuilder.Entity&lt;Dog&gt;()
+    .ToTable(
+        &quot;Dogs&quot;,
+        builder =&gt;
+        {
+            builder.Property(dog =&gt; dog.Id).HasColumnName(&quot;DogId&quot;);
+            builder.Property(dog =&gt; dog.Breed).HasColumnName(&quot;DogBreed&quot;);
+        });
+</code></pre>
+<h3><a href="#unidirectional-many-to-many-relationships" aria-hidden="true" class="anchor" id="unidirectional-many-to-many-relationships"></a>Unidirectional many-to-many relationships</h3>
+<p>EF7 supports many-to-many relationships where one side or the other does not have a navigation property. For example, consider <code>Post</code> and <code>Tag</code> types:</p>
+<pre><code class="language-csharp">public class Post
+{
+    public int Id { get; set; }
+    public string? Title { get; set; }
+    public Blog Blog { get; set; } = null!;
+    public List&lt;Tag&gt; Tags { get; } = new();
+}
+</code></pre>
+<pre><code class="language-csharp">public class Tag
+{
+    public int Id { get; set; }
+    public string TagName { get; set; } = null!;
+}
+</code></pre>
+<p>In this example, I'm going to show you how to use the <code>Tag</code> type with the <code>Post</code> type.</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Post&gt;()
+    .HasMany(post =&gt; post.Tags)
+    .WithMany();
+</code></pre>
+<p>This results in mapping to the appropriate join table:</p>
+<pre><code class="language-sql">CREATE TABLE [Tags] (
+    [Id] int NOT NULL IDENTITY,
+    [TagName] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Tags] PRIMARY KEY ([Id])
+);
+
+CREATE TABLE [Posts] (
+    [Id] int NOT NULL IDENTITY,
+    [Title] nvarchar(64) NULL,
+    [BlogId] int NOT NULL,
+    CONSTRAINT [PK_Posts] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Posts_Blogs_BlogId] FOREIGN KEY ([BlogId]) REFERENCES [Blogs] ([Id])
+);
+
+CREATE TABLE [PostTag] (
+    [PostId] int NOT NULL,
+    [TagsId] int NOT NULL,
+    CONSTRAINT [PK_PostTag] PRIMARY KEY ([PostId], [TagsId]),
+    CONSTRAINT [FK_PostTag_Posts_PostId] FOREIGN KEY ([PostId]) REFERENCES [Posts] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_PostTag_Tags_TagsId] FOREIGN KEY ([TagsId]) REFERENCES [Tags] ([Id]) ON DELETE CASCADE
+);
+</code></pre>
+<p>And the relationship can be used as a many-to-many in the normal way. For example, inserting some posts which share various tags from a common set:</p>
+<pre><code class="language-csharp">var tags = new Tag[] { new() { TagName = &quot;Tag1&quot; }, new() { TagName = &quot;Tag2&quot; }, new() { TagName = &quot;Tag2&quot; }, };
+
+await context.AddRangeAsync(new Blog { Posts =
+{
+    new Post { Tags = { tags[0], tags[1] } },
+    new Post { Tags = { tags[1], tags[0], tags[2] } },
+    new Post()
+} });
+
+await context.SaveChangesAsync();
+</code></pre>
+<h3><a href="#entity-splitting" aria-hidden="true" class="anchor" id="entity-splitting"></a><code>Entity</code> splitting</h3>
+<p><code>Entity</code> splitting maps a single entity type to multiple tables. For example, consider a database with three tables that hold customer data:</p>
+<ul>
+<li>
+<p>A <code>Customers</code> table for customer information</p>
+</li>
+<li>
+<p>A <code>PhoneNumbers</code> table for the customer's phone number</p>
+</li>
+<li>
+<p>A <code>Addresses</code> table for the customer's address</p>
+</li>
+</ul>
+<p>Here are definitions for these tables in SQL Server:</p>
+<pre><code class="language-sql">CREATE TABLE [Customers] (
+    [Id] int NOT NULL IDENTITY,
+    [Name] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Customers] PRIMARY KEY ([Id])
+);
+    
+CREATE TABLE [PhoneNumbers] (
+    [CustomerId] int NOT NULL,
+    [PhoneNumber] nvarchar(max) NULL,
+    CONSTRAINT [PK_PhoneNumbers] PRIMARY KEY ([CustomerId]),
+    CONSTRAINT [FK_PhoneNumbers_Customers_CustomerId] FOREIGN KEY ([CustomerId]) REFERENCES [Customers] ([Id]) ON DELETE CASCADE
+);
+
+CREATE TABLE [Addresses] (
+    [CustomerId] int NOT NULL,
+    [Street] nvarchar(max) NOT NULL,
+    [City] nvarchar(max) NOT NULL,
+    [PostCode] nvarchar(max) NULL,
+    [Country] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Addresses] PRIMARY KEY ([CustomerId]),
+    CONSTRAINT [FK_Addresses_Customers_CustomerId] FOREIGN KEY ([CustomerId]) REFERENCES [Customers] ([Id]) ON DELETE CASCADE
+);
+</code></pre>
+<p>For example, you might have three tables in your application - one for your customers, one for your suppliers, and one for your partners.</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public Customer(string name, string street, string city, string? postCode, string country)
+    {
+        Name = name;
+        Street = street;
+        City = city;
+        PostCode = postCode;
+        Country = country;
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string? PostCode { get; set; }
+    public string Country { get; set; }
+}
+</code></pre>
+<p>The following code splits the <code>Customer</code> entity type to the <code>Customers</code>, <code>PhoneNumbers</code>, and <code>Addresses</code> tables.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Customer&gt;(
+    entityBuilder =&gt;
+    {
+        entityBuilder
+            .ToTable(&quot;Customers&quot;)
+            .SplitToTable(
+                &quot;PhoneNumbers&quot;,
+                tableBuilder =&gt;
+                {
+                    tableBuilder.Property(customer =&gt; customer.Id).HasColumnName(&quot;CustomerId&quot;);
+                    tableBuilder.Property(customer =&gt; customer.PhoneNumber);
+                })
+            .SplitToTable(
+                &quot;Addresses&quot;,
+                tableBuilder =&gt;
+                {
+                    tableBuilder.Property(customer =&gt; customer.Id).HasColumnName(&quot;CustomerId&quot;);
+                    tableBuilder.Property(customer =&gt; customer.Street);
+                    tableBuilder.Property(customer =&gt; customer.City);
+                    tableBuilder.Property(customer =&gt; customer.PostCode);
+                    tableBuilder.Property(customer =&gt; customer.Country);
+                });
+    });
+</code></pre>
+<p>Notice also that, if necessary, different primary key column names can be specified for each of the tables.</p>
+<h3><a href="#sql-server-utf-8-strings" aria-hidden="true" class="anchor" id="sql-server-utf-8-strings"></a>SQL Server UTF-8 strings</h3>
+<p>The <code>nchar</code> and <code>varchar</code> data types are used to store non-Unicode strings.</p>
+<p>SQL Server now supports Unicode encoding for some data types.</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Comment&gt;()
+    .Property(comment =&gt; comment.CommentText)
+    .HasColumnType(&quot;varchar(max)&quot;)
+    .UseCollation(&quot;LATIN1_GENERAL_100_CI_AS_SC_UTF8&quot;);
+</code></pre>
+<p>This configuration generates the following SQL Server column definition:</p>
+<pre><code class="language-sql">CREATE TABLE [Comment] (
+    [PostId] int NOT NULL,
+    [CommentId] int NOT NULL,
+    [CommentText] varchar(max) COLLATE LATIN1_GENERAL_100_CI_AS_SC_UTF8 NOT NULL,
+    CONSTRAINT [PK_Comment] PRIMARY KEY ([PostId], [CommentId])
+);
+</code></pre>
+<h3><a href="#temporal-tables-support-owned-entities" aria-hidden="true" class="anchor" id="temporal-tables-support-owned-entities"></a>Temporal tables support owned entities</h3>
+<p>EF Core SQL Server temporal tables mapping has been enhanced in EF7 to support table sharing. Most notably, the default mapping for owned single entities uses table sharing.</p>
+<p>For example, consider an owner entity type <code>Employee</code> and its owned entity type <code>EmployeeInfo</code>:</p>
+<pre><code class="language-csharp">public class Employee
+{
+    public Guid EmployeeId { get; set; }
+    public string Name { get; set; } = null!;
+
+    public EmployeeInfo Info { get; set; } = null!;
+}
+
+public class EmployeeInfo
+{
+    public string Position { get; set; } = null!;
+    public string Department { get; set; } = null!;
+    public string? Address { get; set; }
+    public decimal? AnnualSalary { get; set; }
+}
+</code></pre>
+<p>If these types are mapped to the same table, then in EF7 that table can be made a temporal table:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Employee&gt;()
+    .ToTable(
+        &quot;Employees&quot;,
+        tableBuilder =&gt;
+        {
+            tableBuilder.IsTemporal();
+            tableBuilder.Property&lt;DateTime&gt;(&quot;PeriodStart&quot;).HasColumnName(&quot;PeriodStart&quot;);
+            tableBuilder.Property&lt;DateTime&gt;(&quot;PeriodEnd&quot;).HasColumnName(&quot;PeriodEnd&quot;);
+        })
+    .OwnsOne(
+        employee =&gt; employee.Info,
+        ownedBuilder =&gt; ownedBuilder.ToTable(
+            &quot;Employees&quot;,
+            tableBuilder =&gt;
+            {
+                tableBuilder.IsTemporal();
+                tableBuilder.Property&lt;DateTime&gt;(&quot;PeriodStart&quot;).HasColumnName(&quot;PeriodStart&quot;);
+                tableBuilder.Property&lt;DateTime&gt;(&quot;PeriodEnd&quot;).HasColumnName(&quot;PeriodEnd&quot;);
+            }));
+</code></pre>
+<blockquote>
+<p>Note
+Making this configuration easier <code>is</code> tracked by Issue #29303. Vote for this issue if it's something you would like to see implemented.</p>
+</blockquote>
+<h2><a href="#improved-value-generation" aria-hidden="true" class="anchor" id="improved-value-generation"></a>Improved value generation</h2>
+<p>EF7 includes two significant improvements to the automatic generation of values for key properties.</p>
+<blockquote>
+<p>Tip
+The code for samples in this section comes from ValueGenerationSample.cs.</p>
+</blockquote>
+<h3><a href="#value-generation-for-ddd-guarded-types" aria-hidden="true" class="anchor" id="value-generation-for-ddd-guarded-types"></a>Value generation for DDD guarded types</h3>
+<p>This article describes the use of &quot;guarded keys&quot; to improve the type safety of key properties.</p>
+<pre><code class="language-csharp">public readonly struct ProductId
+{
+    public ProductId(int value) =&gt; Value = value;
+    public int Value { get; }
+}
+
+public readonly struct CategoryId
+{
+    public CategoryId(int value) =&gt; Value = value;
+    public int Value { get; }
+}
+</code></pre>
+<p>These are then used in <code>Product</code> and <code>Category</code> entity types:</p>
+<pre><code class="language-csharp">public class Product
+{
+    public Product(string name) =&gt; Name = name;
+    public ProductId Id { get; set; }
+    public string Name { get; set; }
+    public CategoryId CategoryId { get; set; }
+    public Category Category { get; set; } = null!;
+}
+
+public class Category
+{
+    public Category(string name) =&gt; Name = name;
+    public CategoryId Id { get; set; }
+    public string Name { get; set; }
+    public List&lt;Product&gt; Products { get; } = new();
+}
+</code></pre>
+<p>This makes it impossible to accidentally assign the ID for a category to a product, or vice versa.</p>
+<blockquote>
+<p>Warning
+As with many DDD concepts, this improved type safety comes at the expense of additional code complexity. It <code>is</code> worth considering whether, for example, assigning a product ID to a category <code>is</code> something that <code>is</code> ever likely to happen. Keeping things simple may be overall more beneficial to the codebase.</p>
+</blockquote>
+<p>The guarded key types shown here both wrap <code>int</code> key values, which means integer values will be used in the mapped database tables. This <code>is</code> achieved by defining value converters for the types:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Properties&lt;ProductId&gt;().HaveConversion&lt;ProductIdConverter&gt;();
+    configurationBuilder.Properties&lt;CategoryId&gt;().HaveConversion&lt;CategoryIdConverter&gt;();
+}
+
+private class ProductIdConverter : ValueConverter&lt;ProductId, int&gt;
+{
+    public ProductIdConverter()
+        : base(v =&gt; v.Value, v =&gt; new(v))
+    {
+    }
+}
+
+private class CategoryIdConverter : ValueConverter&lt;CategoryId, int&gt;
+{
+    public CategoryIdConverter()
+        : base(v =&gt; v.Value, v =&gt; new(v))
+    {
+    }
+}
+</code></pre>
+<blockquote>
+<p>Note
+The code here uses <code>struct</code> types. This means they have appropriate value-type semantics for use as keys. If <code>class</code> types are used instead, then they need to either override equality semantics or also specify a value comparer.</p>
+</blockquote>
+<p>In EF7, key types based on value converters can use automatically generated key values so long as the underlying type supports this. This <code>is</code> configured in the normal way using <code>ValueGeneratedOnAdd</code>:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Product&gt;().Property(product =&gt; product.Id).ValueGeneratedOnAdd();
+modelBuilder.Entity&lt;Category&gt;().Property(category =&gt; category.Id).ValueGeneratedOnAdd();
+</code></pre>
+<p>By default, this results in <code>IDENTITY</code> columns when used with SQL Server:</p>
+<pre><code class="language-sql">CREATE TABLE [Categories] (
+    [Id] int NOT NULL IDENTITY,
+    [Name] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Categories] PRIMARY KEY ([Id]));
+
+CREATE TABLE [Products] (
+    [Id] int NOT NULL IDENTITY,
+    [Name] nvarchar(max) NOT NULL,
+    [CategoryId] int NOT NULL,
+    CONSTRAINT [PK_Products] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Products_Categories_CategoryId] FOREIGN KEY ([CategoryId]) REFERENCES [Categories] ([Id]) ON DELETE CASCADE);
+</code></pre>
+<p>Which are used in the normal way to generate key values when inserting entities:</p>
+<pre><code class="language-sql">MERGE [Categories] USING (
+VALUES (@p0, 0),
+(@p1, 1)) AS i ([Name], _Position) ON 1=0
+WHEN NOT MATCHED THEN
+INSERT ([Name])
+VALUES (i.[Name])
+OUTPUT INSERTED.[Id], i._Position;
+</code></pre>
+<h3><a href="#sequence-based-key-generation-for-sql-server" aria-hidden="true" class="anchor" id="sequence-based-key-generation-for-sql-server"></a>Sequence-based key generation for SQL Server</h3>
+<p>EF7 introduces new key generation and database sequence support for EF Core.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Product&gt;().Property(product =&gt; product.Id).UseSequence();
+</code></pre>
+<p>This results in a sequence being defined in the database:</p>
+<pre><code class="language-sql">CREATE SEQUENCE [ProductSequence] START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE NO CYCLE;
+</code></pre>
+<p>Which <code>is</code> then used in the key column default constraint:</p>
+<pre><code class="language-sql">CREATE TABLE [Products] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [ProductSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [CategoryId] int NOT NULL,
+    CONSTRAINT [PK_Products] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Products_Categories_CategoryId] FOREIGN KEY ([CategoryId]) REFERENCES [Categories] ([Id]) ON DELETE CASCADE);
+</code></pre>
+<blockquote>
+<p>Note
+This form of key generation <code>is</code> used by default for generated keys in entity type hierarchies using the TPC mapping strategy.</p>
+</blockquote>
+<p>If desired, the sequence can be given a different name and schema. For example:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Product&gt;()
+    .Property(product =&gt; product.Id)
+    .UseSequence(&quot;ProductsSequence&quot;, &quot;northwind&quot;);
+</code></pre>
+<p>Further configuration of the sequence <code>is</code> formed by configuring it explicitly in the model. For example:</p>
+<pre><code class="language-csharp">modelBuilder
+    .HasSequence&lt;int&gt;(&quot;ProductsSequence&quot;, &quot;northwind&quot;)
+    .StartsAt(1000)
+    .IncrementsBy(2);
+</code></pre>
+<h2><a href="#migrations-tooling-improvements" aria-hidden="true" class="anchor" id="migrations-tooling-improvements"></a>Migrations tooling improvements</h2>
+<p>EF7 includes two significant improvements when using the EF Core Migrations command-line tools.</p>
+<h3><a href="#usesqlserver-etc-accept-null" aria-hidden="true" class="anchor" id="usesqlserver-etc-accept-null"></a><code>UseSqlServer</code> etc. accept null</h3>
+<p>It <code>is</code> very common to read a connection string from a configuration file and then pass that connection string to <code>UseSqlServer</code>, <code>UseSqlite</code>, or the equivalent method for another provider. For example:</p>
+<pre><code class="language-csharp">services.AddDbContext&lt;BloggingContext&gt;(options =&gt;
+    options.UseSqlServer(Configuration.GetConnectionString(&quot;BloggingDatabase&quot;)));
+</code></pre>
+<p>It <code>is</code> also common to pass a connection string when applying migrations. For example:</p>
+<pre><code class="language-text">dotnet ef database update --connection &quot;Server=(localdb)\mssqllocaldb;Database=MyAppDb&quot;
+</code></pre>
+<p>Or when using a Migrations bundle.</p>
+<pre><code class="language-dotnetcli">./bundle.exe --connection &quot;Server=(localdb)\mssqllocaldb;Database=MyAppDb&quot;
+</code></pre>
+<p>If the connection string <code>is</code> not set later, then the application startup code still attempts to read it from configuration and pass it to <code>UseSqlServer</code>.</p>
+<blockquote>
+<p>Note
+This change has been made for <code>UseSqlServer</code> and <code>UseSqlite</code>. For other providers, contact the provider maintainer to make an equivalent change if it has not yet been done for that provider.</p>
+</blockquote>
+<h3><a href="#detect-when-tools-are-running" aria-hidden="true" class="anchor" id="detect-when-tools-are-running"></a>Detect when tools are running</h3>
+<p>This article describes how to detect inappropriate code being executed at design-time in EF Core.</p>
+<pre><code class="language-csharp">if (!EF.IsDesignTime)
+{
+    await context.Database.MigrateAsync();
+}
+</code></pre>
+<p>EF Core sets the <code>IsDesignTime</code> to <code>true</code> when application code <code>is</code> running on behalf of tools.</p>
+<h2><a href="#performance-enhancements-for-proxies" aria-hidden="true" class="anchor" id="performance-enhancements-for-proxies"></a>Performance enhancements for proxies</h2>
+<p>EF Core supports dynamically generated proxies for lazy-loading and change-tracking. EF7 contains two performance improvements when using these proxies:</p>
+<ul>
+<li>
+<p>The proxy types are now created lazily. This means that the initial model building time when using proxies can be massively faster with EF7 than it was with EF Core 6.0.</p>
+</li>
+<li>
+<p>Proxies can now be used with compiled models.</p>
+</li>
+</ul>
+<p>Here are some performance results for a model with 449 entity types, 6390 properties, and 720 relationships.</p>
+<p>So, in this case, a model with change-tracking proxies can be ready to execute the first query 80 times faster in EF7 than was possible with EF Core 6.0.</p>
+<h2><a href="#first-class-windows-forms-data-binding" aria-hidden="true" class="anchor" id="first-class-windows-forms-data-binding"></a>First-class Windows Forms data binding</h2>
+<p>The Windows Forms team has been making some great improvements to the Visual Studio Designer experience. This includes new experiences for data binding that integrates well with EF Core.</p>
+<p>In brief, the new experience provides Visual Studio U.I. for creating an ObjectDataSource:</p>
+<p>This can then be bound to an EF Core <code>DbSet</code> with some simple code:</p>
+<pre><code class="language-csharp">public partial class MainForm : Form
+{
+    private ProductsContext? dbContext;
+
+    public MainForm()
+    {
+        InitializeComponent();
+    }
+
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+
+        this.dbContext = new ProductsContext();
+
+        this.dbContext.Categories.Load();
+        this.categoryBindingSource.DataSource = dbContext.Categories.Local.ToBindingList();
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+
+        this.dbContext?.Dispose();
+        this.dbContext = null;
+    }
+}
+</code></pre>
+<p>See Getting Started with Windows Forms for a complete walkthrough and downloadable WinForms sample application.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-7.0/whatsnew">What's New in EF Core 7.0</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

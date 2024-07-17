@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 7.0 - High-level plan | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='As described in the planning process, we have gathered input from stakeholders into a plan for Entity Framework Core 7.0 (EF Core 7.0.) For brevity, EF Core 7.0 is also referred to as just EF7.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 7.0 - High-level plan</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>01/30/2023</p>
+</li>
+<li>
+<p>2 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>As described in the planning process, we have gathered input from stakeholders into a plan for Entity Framework Core 7.0 (EF Core 7.0.) For brevity, EF Core 7.0 is also referred to as just EF7.</p>
+<blockquote>
+<p>Important
+This plan is not a commitment; it will evolve as we continue to learn throughout the release. Some things not currently planned for EF7 may get pulled in. Some things currently planned for EF7 may get punted out.</p>
+</blockquote>
+<h2><a href="#general-information" aria-hidden="true" class="anchor" id="general-information"></a>General information</h2>
+<p>EF Core 7.0 is the next release after EF Core 6.0 and is currently scheduled for release in November 2022 at the same time as .NET 7. There are no plans for an EF Core 6.1 release.</p>
+<h3><a href="#supported-platforms" aria-hidden="true" class="anchor" id="supported-platforms"></a>Supported platforms</h3>
+<p>EF7 is the latest release of the .NET Development Framework.</p>
+<p>EF7 will align with the .NET support policy and will therefore not be a long-term support (LTS) release.</p>
+<h3><a href="#breaking-changes" aria-hidden="true" class="anchor" id="breaking-changes"></a>Breaking changes</h3>
+<p>EF7 will contain a small number of breaking changes as we continue to evolve both EF Core and the .NET platform. Our goal is to minimize breaking changes as much as possible.</p>
+<h2><a href="#themes" aria-hidden="true" class="anchor" id="themes"></a>Themes</h2>
+<p>The large investments in EF7 will fall mainly under the following themes:</p>
+<ul>
+<li>
+<p>Highly requested features</p>
+</li>
+<li>
+<p>NET platforms and ecosystem</p>
+</li>
+<li>
+<p>Clear path forward from EF6</p>
+</li>
+<li>
+<p>Performance</p>
+</li>
+</ul>
+<p>The following themes have been updated with new features.</p>
+<h2><a href="#theme-highly-requested-features" aria-hidden="true" class="anchor" id="theme-highly-requested-features"></a>Theme: Highly requested features</h2>
+<p>We are planning to release EF7 later this year.</p>
+<h3><a href="#json-columns" aria-hidden="true" class="anchor" id="json-columns"></a>JSON columns</h3>
+<p>Tracked by Issue #4021: Map JSON values stored in database to EF properties</p>
+<p>Value proposition: Save and query into JSON-based documents stored in relational database columns.</p>
+<p>We are working on a new support feature for Npg and Pomelo.</p>
+<h3><a href="#bulk-updates" aria-hidden="true" class="anchor" id="bulk-updates"></a>Bulk updates</h3>
+<p>Tracked by Issue #795: Bulk (i.e. set-based) CUD operations (without loading data into memory)</p>
+<p>Value proposition: Efficient, predicate-based updates for many database rows without loading data into memory.</p>
+<p>This article describes how to use change tracking followed by <code>SaveChanges</code> in EF Core.</p>
+<p>tracked updates involve loading entities into memory and then executing those changes.</p>
+<p>We want to make it easier for users to update and delete entities in the database.</p>
+<h3><a href="#lifecycle-hooks" aria-hidden="true" class="anchor" id="lifecycle-hooks"></a>Lifecycle hooks</h3>
+<p>Tracked by Issue #626: Lifecycle hooks</p>
+<p>Value proposition: Allow applications to react when interesting things happen in EF code.</p>
+<p>The Entity Framework (EF) has a number of lifecycle hooks.</p>
+<h3><a href="#table-per-concrete-type-tpc)-mapping" aria-hidden="true" class="anchor" id="table-per-concrete-type-tpc)-mapping"></a>Table-per-concrete-type (TPC) mapping</h3>
+<p>Tracked by Issue #3170: TPC inheritance mapping pattern</p>
+<p>Value proposition: Map entities in a hierarchy to separate tables without taking the performance hit of TPT mapping.</p>
+<p>EF Core supports inheritance mapping for .NET inheritance hierarchies. EF Core supports table-per-hierarchy () and table-per-type (TPT) mapping for .NET inheritance hierarchies.</p>
+<p>The work for TPC mapping also covers more general entity splitting, and support for specifying different facets per table in TPT, TPC or entity splitting.</p>
+<h3><a href="#map-cud-operations-to-stored-procedures" aria-hidden="true" class="anchor" id="map-cud-operations-to-stored-procedures"></a>Map CUD operations to stored procedures</h3>
+<p>Tracked by Issue #245: Map inserts, updates, and deletes (CUD operations) to stored procedures</p>
+<p>Value proposition: Use stored procedures to manage data modifications.</p>
+<p>EF Core already supports querying data from stored procedures. This feature will allow mapping the inserts, updates, and deletes generated by <code>SaveChanges</code> to stored procedures in the database.</p>
+<h3><a href="#value-objects" aria-hidden="true" class="anchor" id="value-objects"></a>Value objects</h3>
+<p>Tracked by Issue #9906: Use C# structs or classes as value objects</p>
+<p>Value proposition: Applications can use DDD-style value objects in EF models.</p>
+<p>The team view on value objects has changed.</p>
+<p>This work is initially scoped to allow value converters which map to multiple columns. We may pull in additional support based on feedback during the release.</p>
+<h3><a href="#support-value-generation-when-using-value-converters" aria-hidden="true" class="anchor" id="support-value-generation-when-using-value-converters"></a>Support value generation when using value converters</h3>
+<p>Tracked by Issue #11597: Support more types of value generation with converters</p>
+<p>Value proposition: DDD-style encapsulated key types can make full use of automatically generated key values.</p>
+<p>EF Core 6.0 allowed more types of value generation to be used with keys mapped through value converters. We plan to generalize and expand this support in EF7.</p>
+<h3><a href="#raw-sql-queries-for-unmapped-types" aria-hidden="true" class="anchor" id="raw-sql-queries-for-unmapped-types"></a>Raw SQL queries for unmapped types</h3>
+<p>Tracked by Issue #10753: Support raw SQL queries without defining an entity type for the result</p>
+<p>Value proposition: Applications can execute more types of raw SQL query without dropping down to ADO.NET or using third-party libraries.</p>
+<p>raw SQL queries can return types that are not contained in the EF model.</p>
+<p>The work here will also cover raw SQL queries that return simple/scalar types, such as <code>Guid</code>, <code>DateTime</code>, <code>int</code>, and <code>string</code>.</p>
+<h3><a href="#database-scaffolding-templates" aria-hidden="true" class="anchor" id="database-scaffolding-templates"></a>Database scaffolding templates</h3>
+<p>Tracked by Issue #4038: Code templates for scaffolding entity types and <code>DbContext</code> from an existing database</p>
+<p>Value proposition: The code generated by <code>dotnet ef database scaffold</code> can be fully customized.</p>
+<p>Developers will be able to adjust the code generated when scaffolding (reverse engineering) from an existing database.</p>
+<h2><a href="#theme-.net-platforms-and-ecosystem" aria-hidden="true" class="anchor" id="theme-.net-platforms-and-ecosystem"></a>Theme: .NET platforms and ecosystem</h2>
+<p>EF7 is the next release of the .NET Framework.</p>
+<ul>
+<li>
+<p>.NET MAUI</p>
+</li>
+<li>
+<p>ASP.NET Core</p>
+</li>
+<li>
+<p>Azure Synapse</p>
+</li>
+<li>
+<p>Blazor Server</p>
+</li>
+<li>
+<p>Blazor WebAssembly</p>
+</li>
+<li>
+<p>Windows Forms</p>
+</li>
+<li>
+<p>Windows Presentation Foundation (WPF)</p>
+</li>
+</ul>
+<p>This list is based on many factors, including customer data, strategic direction, and available resources. The general areas we will be working on for these platforms are outlined below.</p>
+<h3><a href="#distributed-transactions" aria-hidden="true" class="anchor" id="distributed-transactions"></a>Distributed transactions</h3>
+<p>Tracked by Issue #715 in dotnet/runtime: Implement distributed/promoted transactions in <code>System.Transactions</code></p>
+<p>Value proposition: .NET Framework applications using distributed transactions can be ported to .NET 7.</p>
+<p>.NET 7 will support distributed transactions in database scenarios where the ADO.NET provider also supports distributed transactions.</p>
+<h3><a href="#ef-core-tooling" aria-hidden="true" class="anchor" id="ef-core-tooling"></a>EF Core tooling</h3>
+<p>Tracked by Issue #26798: Modernize EF Core tooling</p>
+<p>Value proposition: <code>dotnet ef</code> commands are easy to use and work with modern platforms and technologies.</p>
+<p>We're excited to announce the release of EF7, our next generation of tooling for .NET projects.</p>
+<h3><a href="#ef-core-and-graphical-user-interfaces" aria-hidden="true" class="anchor" id="ef-core-and-graphical-user-interfaces"></a>EF Core and graphical user interfaces</h3>
+<p>Tracked by Issue #26799: Improve experience for data binding and graphical interfaces</p>
+<p>Value proposition: It is easy to build data-bound graphical applications with EF Core.</p>
+<p>In this talk, we will look at how EF Core can be used with Visual Studio to build data-bound applications.</p>
+<h3><a href="#sqlservercore-(woodstar)" aria-hidden="true" class="anchor" id="sqlservercore-(woodstar)"></a>SqlServer.Core (Woodstar)</h3>
+<p>Tracked in the .NET Data Lab repo</p>
+<p>Value proposition: Fast, fully managed access to SQL Server and Azure SQL for modern .NET applications.</p>
+<p>This paper aims to investigate the potential gains that could be made using newer .NET Core features with Microsoft.Data.SqlClient.</p>
+<p>We are working on a project to improve the performance of Microsoft's .NET Framework.</p>
+<blockquote>
+<p>Important
+Investment in Microsoft.Data.SqlClient is not changing. It will continue to be the recommended way to connect to SQL Server and Azure SQL, both with and without EF Core. It will continue to support new SQL Server features as they are introduced.</p>
+</blockquote>
+<h3><a href="#azure-cosmos-db-provider" aria-hidden="true" class="anchor" id="azure-cosmos-db-provider"></a>Azure Cosmos DB provider</h3>
+<p>Tracked by issues labeled with 'area-cosmos' and in the 7.0 milestone</p>
+<p>Value proposition: Continue to make EF Core the easiest and most productive way to work with Azure Cosmos DB.</p>
+<p>EF is excited to announce the release of EF7 with further enhancements to the Azure Cosmos DB database provider.</p>
+<ul>
+<li>
+<p>Issue #16146: Support aggregate operators</p>
+</li>
+<li>
+<p>Issue #17306: Allow to use a custom JSON serializer</p>
+</li>
+<li>
+<p>Issue #17670: Translate non-persisted property in query when possible</p>
+</li>
+<li>
+<p>Issue #19944: Support trigger execution</p>
+</li>
+<li>
+<p>Issue #20350: Detect partition key filters in more queries</p>
+</li>
+<li>
+<p>Issue #20910: Add translation for <code>string</code>.Compare for Azure Cosmos DB</p>
+</li>
+<li>
+<p>Issue #23538: Improve query tree during translation</p>
+</li>
+<li>
+<p>Issue #24571: Allow terminating operators after Skip and Take</p>
+</li>
+<li>
+<p>Issue #24513: Add support for pagination (MaxItemCount)</p>
+</li>
+<li>
+<p>Issue #25700: translate Length/Count on collections</p>
+</li>
+<li>
+<p>Issue #25701: translate indexing into collection</p>
+</li>
+<li>
+<p>Issue #26478: Implement interceptors for Azure Cosmos DB</p>
+</li>
+<li>
+<p>Issue #26491: Support AAD RBAC via the ClientSecretCredential</p>
+</li>
+</ul>
+<p>Please make sure to vote (👍) for the Azure Cosmos DB provider features that you need so that we can assess where to invest for the most benefit.</p>
+<h3><a href="#migrations-experience" aria-hidden="true" class="anchor" id="migrations-experience"></a>Migrations experience</h3>
+<p>Tracked by Issue #22946: Improvements to database migrations</p>
+<p>Value proposition: It is easy to get started with migrations and later use them effectively in CI/CD pipelines.</p>
+<p>We have been listening to our customers about how we can improve the experience of migrating applications to the cloud.</p>
+<p>We plan to make it easier for developers to manage database migrations.</p>
+<h3><a href="#modern-net" aria-hidden="true" class="anchor" id="modern-net"></a>Modern .NET</h3>
+<p>As .NET continues to evolve we want to ensure that accessing data continues to be a great experience. To facilitate this, we plan to make progress on three areas during the EF7 timeframe.</p>
+<h4><a href="#trimming" aria-hidden="true" class="anchor" id="trimming"></a>Trimming</h4>
+<p>Tracked by Issue #21894: Improve trimming support for EF Core apps to reduce application size</p>
+<p>Value proposition: Smaller applications that can be efficiently AOT compiled.</p>
+<p>We are working on improving the performance of EF Core.</p>
+<h4><a href="#evolve-systemlinq.expression" aria-hidden="true" class="anchor" id="evolve-systemlinq.expression"></a>Evolve System.Linq.Expression</h4>
+<p>Value proposition: Use modern C# language features in LINQ queries.</p>
+<p>We are working with the Roslyn team on a plan to allow more C# features to be used in LINQ expressions. This is ongoing work which will mostly be tracked outside the EF Core repo.</p>
+<h4><a href="#translate-new-linq-operators" aria-hidden="true" class="anchor" id="translate-new-linq-operators"></a>Translate new LINQ operators</h4>
+<p>Tracked by Issue #25570: Support new .NET LINQ features</p>
+<p>Value proposition: Use new LINQ operators when translating LINQ queries to SQL.</p>
+<p>The following operators have been added to the British Council's English language support database (BCL).</p>
+<h3><a href="#open-telemetry-for-adonet-providers" aria-hidden="true" class="anchor" id="open-telemetry-for-adonet-providers"></a>Open telemetry for ADO.NET providers</h3>
+<p>Tracked by Issue #22336: Standardize on DiagnosticSource/OpenTelemetry for database tracing</p>
+<p>Value proposition: Cross-platform, industry-standard telemetry that can be monitored in your tool of choice.</p>
+<p>We want to bring open telemetry to ADO.NET providers.</p>
+<h3><a href="#enhancements-to-systemdata" aria-hidden="true" class="anchor" id="enhancements-to-systemdata"></a>Enhancements to System.Data</h3>
+<p>Tracked by issues in the dotnet\runtime repo labeled with <code>area-System.Data</code> in the 7.0 milestone</p>
+<p>Value proposition: Better low-level data access to benefit all higher-level code.</p>
+<p>The next release of the .NET Framework will be released later this year.</p>
+<p>The scope of the precise improvements will be determined later based on feasibility.</p>
+<h3><a href="#research-data-access-for-cloud-native" aria-hidden="true" class="anchor" id="research-data-access-for-cloud-native"></a>Research data access for cloud-native</h3>
+<p>Value proposition: Future evolution of .NET data access that supports modern approaches such as microservices and cloud native.</p>
+<p>The European Bioinformatics Institute (EBI) has launched the European Data Access Research Group (EDG) as part of the European Foundation Seven (EF7) project.</p>
+<h2><a href="#theme-clear-path-forward-from-ef6" aria-hidden="true" class="anchor" id="theme-clear-path-forward-from-ef6"></a>Theme: Clear path forward from EF6</h2>
+<p>Tracked by Docs issue #1180: Provide a more complete guide to porting from EF6</p>
+<p>Value proposition: Easily move your application from EF6 to EF7.</p>
+<p>EF7 will add support for many scenarios not covered by the legacy EF6 stack, allowing more applications to port from legacy EF6 to EF7.</p>
+<p>Much of the work in this theme overlaps with work already outlined above. Some of the more significant work items are:</p>
+<ul>
+<li>
+<p>Issue #214: Expose model building conventions to applications</p>
+</li>
+<li>
+<p>Issue #245: Map inserts, updates, and deletes (CUD operations) to stored procedures</p>
+</li>
+<li>
+<p>Issue #620: Entity splitting support</p>
+</li>
+<li>
+<p>Issue #3170: TPC inheritance mapping pattern</p>
+</li>
+<li>
+<p>Issue #3864: Support unidirectional many-to-many relationships through shadow navigations</p>
+</li>
+<li>
+<p>Issue #4038: Code templates for scaffolding entity types and <code>DbContext</code> from an existing database</p>
+</li>
+<li>
+<p>Issue #10753: Support raw SQL queries without defining an entity type for the result</p>
+</li>
+<li>
+<p>Issue #11003: KeyAttribute support for composite primary key</p>
+</li>
+<li>
+<p>Issue #11624: Support raw SQL Queries for basic types like <code>Guid</code>, <code>DateTime</code> and <code>int</code></p>
+</li>
+<li>
+<p>Issue #15911: Implement ObjectMaterialized event</p>
+</li>
+<li>
+<p>Issue #17653: Support for GroupBy entityType</p>
+</li>
+<li>
+<p>Issue #19929: Support GroupBy when it is final operator</p>
+</li>
+<li>
+<p>Issue #19930: Support GroupJoin when it is final query operator</p>
+</li>
+<li>
+<p>issue #26626: Use EF6 as an oracle for procedural testing of EF Core queries</p>
+</li>
+</ul>
+<p>We plan to make it clear on the EF6 GitHub repo that we are not planning any future work on EF6.</p>
+<p>EF Core is the latest release of the Entity Framework.</p>
+<h2><a href="#theme-performance" aria-hidden="true" class="anchor" id="theme-performance"></a>Theme: Performance</h2>
+<p>This week we are looking at performance.</p>
+<h3><a href="#performance-of-database-inserts-and-updates" aria-hidden="true" class="anchor" id="performance-of-database-inserts-and-updates"></a>Performance of database inserts and updates</h3>
+<p>Tracked by Issue 26797: Improve change tracking and update performance</p>
+<p>Value proposition: High performance database inserts and updates from EF Core.</p>
+<p>We will be focusing on improving performance of database inserts and updates in EF7.</p>
+<p>We are currently working on improving the performance of traditional software updates.</p>
+<h3><a href="#techempower-composite-score" aria-hidden="true" class="anchor" id="techempower-composite-score"></a>TechEmpower composite score</h3>
+<p>Tracked by Issue 26796: Improve performance in the TechEmpower composite score</p>
+<p>Value proposition: High performing low-level data updates for all .NET applications.</p>
+<p>We have been running the Fortunes benchmark on .NET against a database for several years.</p>
+<p>In the EF7 timeframe we plan to specifically target improvements to the TechEmpower composite score. This measures performance over a wider range of scenarios.</p>
+<h2><a href="#miscellaneous-features" aria-hidden="true" class="anchor" id="miscellaneous-features"></a>Miscellaneous features</h2>
+<p>Tracked by issues labeled with <code>type-enhancement</code> in the 7.0 milestone</p>
+<p>Value proposition: Continuous improvement to EF Core to meet existing and evolving application requirements.</p>
+<p>Miscellaneous features planned for EF 7.0 include, but are not limited to:</p>
+<ul>
+<li>
+<p>Issue #14545: Design: Modernize generated C#</p>
+</li>
+<li>
+<p>Issue #15762: Provide easy way to get script from latest applied on database to latest in the codebase</p>
+</li>
+<li>
+<p>Issue #16406: Fully embrace provider-specific migrations</p>
+</li>
+<li>
+<p>Issue #18844: SQLite: Translate TimeSpan members</p>
+</li>
+<li>
+<p>Issue #18950: Enable nullability in migrations and model snapshots</p>
+</li>
+<li>
+<p>Issue #18990: Use the new batching API from ADO.NET</p>
+</li>
+<li>
+<p>Issue #21615: dotnet-ef database update -1 (down latest migration)</p>
+</li>
+<li>
+<p>Issue #21995: Generate the script for all migrations that have not yet been applied to a given database</p>
+</li>
+<li>
+<p>Issue #22138: Upgrade to SpatiaLite 5</p>
+</li>
+<li>
+<p>Issue #23085: Don't check for a connection <code>string</code> until after ConnectionOpening has been called</p>
+</li>
+<li>
+<p>Issue #24685: Allow value converters to change nullability of columns</p>
+</li>
+<li>
+<p>Issue #25103: SQLite: Translate more DateOnly and TimeOnly members</p>
+</li>
+<li>
+<p>Issue #25872: Provide more info about a migration bundle</p>
+</li>
+<li>
+<p>Issue #26155: Sugar for getting a migration script for just the last migration</p>
+</li>
+<li>
+<p>Issue #26417: Revisit the reporting of exceptions and stack traces in logging</p>
+</li>
+<li>
+<p>Issue #26528: Register a scoped <code>DbContext</code> automatically when using AddPooledDbContextFactory</p>
+</li>
+</ul>
+<h2><a href="#suggestions" aria-hidden="true" class="anchor" id="suggestions"></a>Suggestions</h2>
+<p>Planning for the next release is under way.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-7.0/plan">Plan for Entity Framework Core 7.0</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
