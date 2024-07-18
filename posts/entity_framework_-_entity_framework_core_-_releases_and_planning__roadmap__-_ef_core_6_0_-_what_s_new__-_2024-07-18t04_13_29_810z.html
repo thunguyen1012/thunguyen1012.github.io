@@ -1,0 +1,2957 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 6.0 - What's new? | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core 6.0 has shipped to NuGet. This page contains an overview of interesting changes introduced in this release.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 6.0 - What's new?</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>03/27/2023</p>
+</li>
+<li>
+<p>8 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core 6.0 has shipped to NuGet. This page contains an overview of interesting changes introduced in this release.</p>
+<blockquote>
+<p>Tip
+You can run and debug into the samples shown below by downloading the sample code from GitHub.</p>
+</blockquote>
+<h2><a href="#sql-server-temporal-tables" aria-hidden="true" class="anchor" id="sql-server-temporal-tables"></a>SQL Server temporal tables</h2>
+<p>GitHub Issue: #4693.</p>
+<p>SQL Server temporal tables automatically keep track of all data ever stored in a table, even after that data has been updated or deleted.</p>
+<p>EF Core now supports:</p>
+<ul>
+<li>
+<p>The creation of temporal tables using Migrations</p>
+</li>
+<li>
+<p>Transformation of existing tables into temporal tables, again using Migrations</p>
+</li>
+<li>
+<p>Querying historical data</p>
+</li>
+<li>
+<p>Restoring data from some point in the past</p>
+</li>
+</ul>
+<h3><a href="#configuring-a-temporal-table" aria-hidden="true" class="anchor" id="configuring-a-temporal-table"></a>Configuring a temporal table</h3>
+<p>The model builder can be used to configure a table as temporal. For example:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Employee&gt;()
+    .ToTable(&quot;Employees&quot;, b =&gt; b.IsTemporal());
+</code></pre>
+<p>In this article, you will learn how to create a new table in the EF Core database.</p>
+<pre><code class="language-csharp">public class Employee
+{
+    public Guid EmployeeId { get; set; }
+    public string Name { get; set; }
+    public string Position { get; set; }
+    public string Department { get; set; }
+    public string Address { get; set; }
+    public decimal AnnualSalary { get; set; }
+}
+</code></pre>
+<p>The temporal table created will look like this:</p>
+<pre><code class="language-sql">DECLARE @historyTableSchema sysname = SCHEMA_NAME()
+EXEC(N'CREATE TABLE [Employees] (
+    [EmployeeId] uniqueidentifier NOT NULL,
+    [Name] nvarchar(100) NULL,
+    [Position] nvarchar(100) NULL,
+    [Department] nvarchar(100) NULL,
+    [Address] nvarchar(1024) NULL,
+    [AnnualSalary] decimal(10,2) NOT NULL,
+    [PeriodEnd] datetime2 GENERATED ALWAYS AS ROW END NOT NULL,
+    [PeriodStart] datetime2 GENERATED ALWAYS AS ROW START NOT NULL,
+    CONSTRAINT [PK_Employees] PRIMARY KEY ([EmployeeId]),
+    PERIOD FOR SYSTEM_TIME([PeriodStart], [PeriodEnd])
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [' + @historyTableSchema + N'].[EmployeeHistory]))');
+</code></pre>
+<p>In this article, I'm going to show you how to use <code>datetime2</code> in SQL Server.</p>
+<blockquote>
+<p>Important
+The times in these columns are always UTC time generated by SQL Server. UTC times are used for all operations involving temporal tables, such as in the queries shown below.</p>
+</blockquote>
+<p>This example shows how to create a new period column in the model builder.</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Employee&gt;()
+    .ToTable(
+        &quot;Employees&quot;,
+        b =&gt; b.IsTemporal(
+            b =&gt;
+            {
+                b.HasPeriodStart(&quot;ValidFrom&quot;);
+                b.HasPeriodEnd(&quot;ValidTo&quot;);
+                b.UseHistoryTable(&quot;EmployeeHistoricalData&quot;);
+            }));
+</code></pre>
+<p>This is reflected in the table created by SQL Server:</p>
+<pre><code class="language-sql">DECLARE @historyTableSchema sysname = SCHEMA_NAME()
+EXEC(N'CREATE TABLE [Employees] (
+    [EmployeeId] uniqueidentifier NOT NULL,
+    [Name] nvarchar(100) NULL,
+    [Position] nvarchar(100) NULL,
+    [Department] nvarchar(100) NULL,
+    [Address] nvarchar(1024) NULL,
+    [AnnualSalary] decimal(10,2) NOT NULL,
+    [ValidFrom] datetime2 GENERATED ALWAYS AS ROW START NOT NULL,
+    [ValidTo] datetime2 GENERATED ALWAYS AS ROW END NOT NULL,
+    CONSTRAINT [PK_Employees] PRIMARY KEY ([EmployeeId]),
+    PERIOD FOR SYSTEM_TIME([ValidFrom], [ValidTo])
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [' + @historyTableSchema + N'].[EmployeeHistoricalData]))');
+</code></pre>
+<h3><a href="#using-temporal-tables" aria-hidden="true" class="anchor" id="using-temporal-tables"></a>Using temporal tables</h3>
+<p>A temporal table is a row-by-row representation of a time period in a database.</p>
+<pre><code class="language-csharp">context.AddRange(
+    new Employee
+    {
+        Name = &quot;Pinky Pie&quot;,
+        Address = &quot;Sugarcube Corner, Ponyville, Equestria&quot;,
+        Department = &quot;DevDiv&quot;,
+        Position = &quot;Party Organizer&quot;,
+        AnnualSalary = 100.0m
+    },
+    new Employee
+    {
+        Name = &quot;Rainbow Dash&quot;,
+        Address = &quot;Cloudominium, Ponyville, Equestria&quot;,
+        Department = &quot;DevDiv&quot;,
+        Position = &quot;Ponyville weather patrol&quot;,
+        AnnualSalary = 900.0m
+    },
+    new Employee
+    {
+        Name = &quot;Fluttershy&quot;,
+        Address = &quot;Everfree Forest, Equestria&quot;,
+        Department = &quot;DevDiv&quot;,
+        Position = &quot;Animal caretaker&quot;,
+        AnnualSalary = 30.0m
+    });
+
+context.SaveChanges();
+</code></pre>
+<p>This data can then be queried, updated, and deleted in the normal way. For example:</p>
+<pre><code class="language-csharp">var employee = context.Employees.Single(e =&gt; e.Name == &quot;Rainbow Dash&quot;);
+context.Remove(employee);
+context.SaveChanges();
+</code></pre>
+<p>Also, after a normal tracking query, the values from the period columns of the current data can be accessed from the tracked entities. For example:</p>
+<pre><code class="language-csharp">var employees = context.Employees.ToList();
+foreach (var employee in employees)
+{
+    var employeeEntry = context.Entry(employee);
+    var validFrom = employeeEntry.Property&lt;DateTime&gt;(&quot;ValidFrom&quot;).CurrentValue;
+    var validTo = employeeEntry.Property&lt;DateTime&gt;(&quot;ValidTo&quot;).CurrentValue;
+
+    Console.WriteLine($&quot;  Employee {employee.Name} valid from {validFrom} to {validTo}&quot;);
+}
+</code></pre>
+<p>This prints:</p>
+<pre><code class="language-none">Starting data:
+  Employee Pinky Pie valid from 8/26/2021 4:38:58 PM to 12/31/9999 11:59:59 PM
+  Employee Rainbow Dash valid from 8/26/2021 4:38:58 PM to 12/31/9999 11:59:59 PM
+  Employee Fluttershy valid from 8/26/2021 4:38:58 PM to 12/31/9999 11:59:59 PM
+</code></pre>
+<p>The datetime column (by default called <code>PeriodEnd</code>) contains the UTC time that the row was inserted.</p>
+<h3><a href="#querying-historical-data" aria-hidden="true" class="anchor" id="querying-historical-data"></a>Querying historical data</h3>
+<p>EF Core supports queries that include historical data through several new query operators:</p>
+<ul>
+<li>
+<p><code>TemporalAsOf</code>: Returns rows that were active (current) at the given UTC time. This is a single row from the current table or history table for a given primary key.</p>
+</li>
+<li>
+<p><code>TemporalAll</code>: Returns all rows in the historical data. This is typically many rows from the history table and/or the current table for a given primary key.</p>
+</li>
+<li>
+<p><code>TemporalFromTo</code>: Returns all rows that were active between two given UTC times. This may be many rows from the history table and/or the current table for a given primary key.</p>
+</li>
+<li>
+<p><code>TemporalBetween</code>: The same as <code>TemporalFromTo</code>, except that rows are included that became active on the upper boundary.</p>
+</li>
+<li>
+<p><code>TemporalContainedIn</code>: Returns all rows that started being active and ended being active between two given UTC times. This may be many rows from the history table and/or the current table for a given primary key.</p>
+</li>
+</ul>
+<blockquote>
+<p>Note
+See the SQL Server temporal tables documentation for more information on exactly which rows are included for each of these operators.</p>
+</blockquote>
+<p>For example, after making some updates and deletes to our data, we can run a query using <code>TemporalAll</code> to see the historical data:</p>
+<pre><code class="language-csharp">var history = context
+    .Employees
+    .TemporalAll()
+    .Where(e =&gt; e.Name == &quot;Rainbow Dash&quot;)
+    .OrderBy(e =&gt; EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;))
+    .Select(
+        e =&gt; new
+        {
+            Employee = e,
+            ValidFrom = EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;),
+            ValidTo = EF.Property&lt;DateTime&gt;(e, &quot;ValidTo&quot;)
+        })
+    .ToList();
+
+foreach (var pointInTime in history)
+{
+    Console.WriteLine(
+        $&quot;  Employee {pointInTime.Employee.Name} was '{pointInTime.Employee.Position}' from {pointInTime.ValidFrom} to {pointInTime.ValidTo}&quot;);
+}
+</code></pre>
+<p>This example shows how to use the property method EF.Property to access data from the period columns.</p>
+<p>This query brings back the following data:</p>
+<pre><code class="language-none">Historical data for Rainbow Dash:
+  Employee Rainbow Dash was 'Ponyville weather patrol' from 8/26/2021 4:38:58 PM to 8/26/2021 4:40:29 PM
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:40:29 PM to 8/26/2021 4:41:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Reservist' from 8/26/2021 4:41:59 PM to 8/26/2021 4:43:29 PM
+  Employee Rainbow Dash was 'Wonderbolt' from 8/26/2021 4:43:29 PM to 8/26/2021 4:44:59 PM
+</code></pre>
+<p>The following table displays the latest active rows for Rainbow Dash.</p>
+<p>Similar queries can be written using <code>TemporalFromTo</code>, <code>TemporalBetween</code>, or <code>TemporalContainedIn</code>. For example:</p>
+<pre><code class="language-csharp">var history = context
+    .Employees
+    .TemporalBetween(timeStamp2, timeStamp3)
+    .Where(e =&gt; e.Name == &quot;Rainbow Dash&quot;)
+    .OrderBy(e =&gt; EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;))
+    .Select(
+        e =&gt; new
+        {
+            Employee = e,
+            ValidFrom = EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;),
+            ValidTo = EF.Property&lt;DateTime&gt;(e, &quot;ValidTo&quot;)
+        })
+    .ToList();
+</code></pre>
+<p>This query returns the following rows:</p>
+<pre><code class="language-none">Historical data for Rainbow Dash between 8/26/2021 4:41:14 PM and 8/26/2021 4:42:44 PM:
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:40:29 PM to 8/26/2021 4:41:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Reservist' from 8/26/2021 4:41:59 PM to 8/26/2021 4:43:29 PM
+</code></pre>
+<h3><a href="#restoring-historical-data" aria-hidden="true" class="anchor" id="restoring-historical-data"></a>Restoring historical data</h3>
+<p>As mentioned above, Rainbow Dash was deleted from the <code>Employees</code> table. This was clearly a mistake, so let's go back to a point-in-time and restore the missing row from that time.</p>
+<pre><code class="language-csharp">var employee = context
+    .Employees
+    .TemporalAsOf(timeStamp2)
+    .Single(e =&gt; e.Name == &quot;Rainbow Dash&quot;);
+
+context.Add(employee);
+context.SaveChanges();
+</code></pre>
+<p>This query returns a single row for Rainbow Dash as it was at the given UTC time.</p>
+<p>After re-inserting the row Rainbow Dash, querying the historical data shows that the row was restored as it was at the given UTC time:</p>
+<pre><code class="language-none">Historical data for Rainbow Dash:
+  Employee Rainbow Dash was 'Ponyville weather patrol' from 8/26/2021 4:38:58 PM to 8/26/2021 4:40:29 PM
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:40:29 PM to 8/26/2021 4:41:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Reservist' from 8/26/2021 4:41:59 PM to 8/26/2021 4:43:29 PM
+  Employee Rainbow Dash was 'Wonderbolt' from 8/26/2021 4:43:29 PM to 8/26/2021 4:44:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:44:59 PM to 12/31/9999 11:59:59 PM
+</code></pre>
+<h2><a href="#migration-bundles" aria-hidden="true" class="anchor" id="migration-bundles"></a>Migration Bundles</h2>
+<p>GitHub Issue: #19693.</p>
+<p>EF Core migrations are used to generate database schema updates based on changes to the EF model.</p>
+<p>EF Core now includes a new way to apply schema updates: migration bundles.</p>
+<blockquote>
+<p>Note
+See Introducing DevOps-friendly EF Core Migration Bundles on the .NET <code>Blog</code> for a more in-depth discussion on migrations, bundles, and deployment.</p>
+</blockquote>
+<p>Migration bundles are created using the <code>dotnet ef</code> command-line tool. Ensure that you have installed the latest version of the tool before continuing.</p>
+<p>This article explains how to create a <code>dotnet ef migrations bundle</code>.</p>
+<pre><code class="language-dotnetcli">PS C:\local\AllTogetherNow\SixOh&gt; dotnet ef migrations bundle
+Build started...
+Build succeeded.
+Building bundle...
+Done. Migrations Bundle: C:\local\AllTogetherNow\SixOh\efbundle.exe
+PS C:\local\AllTogetherNow\SixOh&gt;
+</code></pre>
+<p><code>efbundle.exe</code> is a utility that produces an output package containing all the information you will need to migrate from one operating system to another.</p>
+<pre><code class="language-dotnetcli">PS C:\local\AllTogetherNow\SixOh&gt; .\efbundle.exe
+Applying migration '20210903083845_MyMigration'.
+Done.
+PS C:\local\AllTogetherNow\SixOh&gt;
+</code></pre>
+<p>Migrations are applied to the database only if they have not been already applied. For example, running the same bundle again does nothing, since there are no new migrations to apply:</p>
+<pre><code class="language-dotnetcli">PS C:\local\AllTogetherNow\SixOh&gt; .\efbundle.exe
+No migrations were applied. The database is already up to date.
+Done.
+PS C:\local\AllTogetherNow\SixOh&gt;
+</code></pre>
+<p>However, if changes are made to the model and more migrations are generated with <code>dotnet ef migrations add</code>, then these can be bundled into a new executable ready to apply. For example:</p>
+<pre><code class="language-dotnetcli">PS C:\local\AllTogetherNow\SixOh&gt; dotnet ef migrations add SecondMigration
+Build started...
+Build succeeded.
+Done. To undo this action, use 'ef migrations remove'
+PS C:\local\AllTogetherNow\SixOh&gt; dotnet ef migrations add Number3
+Build started...
+Build succeeded.
+Done. To undo this action, use 'ef migrations remove'
+PS C:\local\AllTogetherNow\SixOh&gt; dotnet ef migrations bundle --force
+Build started...
+Build succeeded.
+Building bundle...
+Done. Migrations Bundle: C:\local\AllTogetherNow\SixOh\efbundle.exe
+PS C:\local\AllTogetherNow\SixOh&gt;
+</code></pre>
+<p>Notice that the <code>--force</code> option can be used to overwrite the existing bundle with a new one.</p>
+<p>Executing this new bundle applies these two new migrations to the database:</p>
+<pre><code class="language-dotnetcli">PS C:\local\AllTogetherNow\SixOh&gt; .\efbundle.exe
+Applying migration '20210903084526_SecondMigration'.
+Applying migration '20210903084538_Number3'.
+Done.
+PS C:\local\AllTogetherNow\SixOh&gt;
+</code></pre>
+<p>The database bundle can be used to migrate a database from one operating system to another.</p>
+<pre><code class="language-dotnetcli">PS C:\local\AllTogetherNow\SixOh&gt; .\efbundle.exe --connection &quot;Data Source=(LocalDb)\MSSQLLocalDB;Database=SixOhProduction&quot;
+Applying migration '20210903083845_MyMigration'.
+Applying migration '20210903084526_SecondMigration'.
+Applying migration '20210903084538_Number3'.
+Done.
+PS C:\local\AllTogetherNow\SixOh&gt;
+</code></pre>
+<p>Notice that this time all three migrations were applied, since none of them had yet been applied to the production database.</p>
+<p>Other options can be passed to the command line. Some common options are:</p>
+<ul>
+<li>
+<p><code>--output</code> to specify the path of executable file to create.</p>
+</li>
+<li>
+<p><code>--context</code> to specify the <code>DbContext</code> type to use when the project contains multiple context types.</p>
+</li>
+<li>
+<p><code>--project</code> to specify the project to use. Defaults to the current working directory.</p>
+</li>
+<li>
+<p><code>--startup-project</code> to specify the startup project to use. Defaults to the current working directory.</p>
+</li>
+<li>
+<p><code>--no-build</code> to prevent the project from being built before running the command. This should only be used if the project is known to be up-to-date.</p>
+</li>
+<li>
+<p><code>--verbose</code> to see detailed information on what the command is doing. Use this option when including information in bug reports.</p>
+</li>
+</ul>
+<p>Use <code>dotnet ef migrations bundle --help</code> to see all available options.</p>
+<p>Note that by default each migration is applied in its own transaction. See GitHub issue #22616 for a discussion of possible future enhancements in this area.</p>
+<h2><a href="#pre-convention-model-configuration" aria-hidden="true" class="anchor" id="pre-convention-model-configuration"></a>Pre-convention model configuration</h2>
+<p>GitHub Issue: #12229.</p>
+<p>This release of EF Core adds support for &quot;facets&quot; in the mapping of property types.</p>
+<p>This necessitated either:</p>
+<ul>
+<li>
+<p>Model builder configuration for each property</p>
+</li>
+<li>
+<p>A mapping attribute on each property</p>
+</li>
+<li>
+<p>Explicit iteration over all properties of all entity types and use of the low-level metadata APIs when building the model.</p>
+</li>
+</ul>
+<p>Note that explicit iteration is error-prone and hard to do robustly because the list of entity types and mapped properties may not be final at the time this iteration happens.</p>
+<p>EF Core 6.0 introduces the ability to specify a mapping configuration for a given type of model.</p>
+<pre><code class="language-csharp">public class SomeDbContext : DbContext
+{
+    protected override void ConfigureConventions(
+        ModelConfigurationBuilder configurationBuilder)
+    {
+        // Pre-convention model configuration goes here
+    }
+}
+</code></pre>
+<p>For example, consider the following entity types:</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public bool IsActive { get; set; }
+    public Money AccountValue { get; set; }
+
+    public Session CurrentSession { get; set; }
+
+    public ICollection&lt;Order&gt; Orders { get; } = new List&lt;Order&gt;();
+}
+
+public class Order
+{
+    public int Id { get; set; }
+    public string SpecialInstructions { get; set; }
+    public DateTime OrderDate { get; set; }
+    public bool IsComplete { get; set; }
+    public Money Price { get; set; }
+    public Money? Discount { get; set; }
+
+    public Customer Customer { get; set; }
+}
+</code></pre>
+<p>All <code>string</code> properties can be configured to be ANSI (instead of <code>Unicode</code>) and have a maximum length of 1024:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .Properties&lt;string&gt;()
+    .AreUnicode(false)
+    .HaveMaxLength(1024);
+</code></pre>
+<p>All DateTime properties can be converted to 64-bit integers in the database, using the default conversion from DateTimes to longs:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .Properties&lt;DateTime&gt;()
+    .HaveConversion&lt;long&gt;();
+</code></pre>
+<p>All bool properties can be converted to the integers <code>0</code> or <code>1</code> using one of the built-in value converters:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .Properties&lt;bool&gt;()
+    .HaveConversion&lt;BoolToZeroOneConverter&lt;int&gt;&gt;();
+</code></pre>
+<p>Assuming <code>Session</code> is a transient property of the entity and should not be persisted, it can be ignored everywhere in the model:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .IgnoreAny&lt;Session&gt;();
+</code></pre>
+<p>Pre-convention model configuration is very useful when working with value objects. For example, the type <code>Money</code> in the model above is represented by read-only struct:</p>
+<pre><code class="language-csharp">public readonly struct Money
+{
+    [JsonConstructor]
+    public Money(decimal amount, Currency currency)
+    {
+        Amount = amount;
+        Currency = currency;
+    }
+
+    public override string ToString()
+        =&gt; (Currency == Currency.UsDollars ? &quot;$&quot; : &quot;£&quot;) + Amount;
+
+    public decimal Amount { get; }
+    public Currency Currency { get; }
+}
+
+public enum Currency
+{
+    UsDollars,
+    PoundsSterling
+}
+</code></pre>
+<p>This is then serialized to and from JSON using a custom value converter:</p>
+<pre><code class="language-csharp">public class MoneyConverter : ValueConverter&lt;Money, string&gt;
+{
+    public MoneyConverter()
+        : base(
+            v =&gt; JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+            v =&gt; JsonSerializer.Deserialize&lt;Money&gt;(v, (JsonSerializerOptions)null))
+    {
+    }
+}
+</code></pre>
+<p>This value converter can be configured once for all uses of <code>Money</code>:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .Properties&lt;Money&gt;()
+    .HaveConversion&lt;MoneyConverter&gt;()
+    .HaveMaxLength(64);
+</code></pre>
+<p>Notice also that additional facets can be specified for the <code>string</code> column into which the serialized JSON is stored. In this case, the column is limited to a maximum length of 64.</p>
+<p>The tables created for SQL Server using migrations show how the configuration has been applied to all mapped columns:</p>
+<pre><code class="language-sql">CREATE TABLE [Customers] (
+    [Id] int NOT NULL IDENTITY,
+    [Name] varchar(1024) NULL,
+    [IsActive] int NOT NULL,
+    [AccountValue] nvarchar(64) NOT NULL,
+    CONSTRAINT [PK_Customers] PRIMARY KEY ([Id])
+);
+CREATE TABLE [Order] (
+    [Id] int NOT NULL IDENTITY,
+    [SpecialInstructions] varchar(1024) NULL,
+    [OrderDate] bigint NOT NULL,
+    [IsComplete] int NOT NULL,
+    [Price] nvarchar(64) NOT NULL,
+    [Discount] nvarchar(64) NULL,
+    [CustomerId] int NULL,
+    CONSTRAINT [PK_Order] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Order_Customers_CustomerId] FOREIGN KEY ([CustomerId]) REFERENCES [Customers] ([Id])
+);
+</code></pre>
+<p>It is also possible to specify a default type mapping for a given type. For example:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .DefaultTypeMapping&lt;string&gt;()
+    .IsUnicode(false);
+</code></pre>
+<p>This is rarely needed, but can be useful if a type is used in query in a way that is uncorrelated with any mapped property of the model.</p>
+<blockquote>
+<p>Note
+See Announcing Entity Framework Core 6.0 Preview 6: Configure Conventions on the .NET <code>Blog</code> for more discussion and examples of pre-convention model configuration.</p>
+</blockquote>
+<h2><a href="#compiled-models" aria-hidden="true" class="anchor" id="compiled-models"></a>Compiled models</h2>
+<p>GitHub Issue: #1906.</p>
+<p>Compiled models can improve EF Core startup time for applications with large models. A large model typically means 100s to 1000s of entity types and relationships.</p>
+<p>This Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Chore</p>
+<p>Compiled models are created using the <code>dotnet ef</code> command-line tool. Ensure that you have installed the latest version of the tool before continuing.</p>
+<p>A new <code>dbcontext optimize</code> command is used to generate the compiled model. For example:</p>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext optimize
+</code></pre>
+<p>The <code>--output-dir</code> and <code>--namespace</code> options can be used to specify the directory and namespace into which the compiled model will be generated. For example:</p>
+<pre><code class="language-dotnetcli">PS C:\dotnet\efdocs\samples\core\Miscellaneous\CompiledModels&gt; dotnet ef dbcontext optimize --output-dir MyCompiledModels --namespace MyCompiledModels
+Build started...
+Build succeeded.
+Successfully generated a compiled model, to use it call 'options.UseModel(MyCompiledModels.BlogsContextModel.Instance)'. Run this command again when the model is modified.
+PS C:\dotnet\efdocs\samples\core\Miscellaneous\CompiledModels&gt;
+</code></pre>
+<p>The output from running this command includes a piece of code to copy-and-paste into your <code>DbContext</code> configuration to cause EF Core to use the compiled model. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .UseModel(MyCompiledModels.BlogsContextModel.Instance)
+        .UseSqlite(@&quot;Data Source=test.db&quot;);
+</code></pre>
+<h3><a href="#compiled-model-bootstrapping" aria-hidden="true" class="anchor" id="compiled-model-bootstrapping"></a>Compiled model bootstrapping</h3>
+<p>It is typically not necessary to look at the generated bootstrapping code. However, sometimes it can be useful to customize the model or its loading. The bootstrapping code looks something like this:</p>
+<pre><code class="language-csharp">[DbContext(typeof(BlogsContext))]
+partial class BlogsContextModel : RuntimeModel
+{
+    private static BlogsContextModel _instance;
+    public static IModel Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new BlogsContextModel();
+                _instance.Initialize();
+                _instance.Customize();
+            }
+
+            return _instance;
+        }
+    }
+
+    partial void Initialize();
+
+    partial void Customize();
+}
+</code></pre>
+<p>This is a partial class with partial methods that can be implemented to customize the model as needed.</p>
+<p>The <code>DbContext</code> class can be used to generate a model of a connection between two applications.</p>
+<pre><code class="language-csharp">public static class RuntimeModelCache
+{
+    private static readonly ConcurrentDictionary&lt;string, IModel&gt; _runtimeModels
+        = new();
+
+    public static IModel GetOrCreateModel(string connectionString)
+        =&gt; _runtimeModels.GetOrAdd(
+            connectionString, cs =&gt;
+            {
+                if (cs.Contains(&quot;X&quot;))
+                {
+                    return BlogsContextModel1.Instance;
+                }
+
+                if (cs.Contains(&quot;Y&quot;))
+                {
+                    return BlogsContextModel2.Instance;
+                }
+
+                throw new InvalidOperationException(&quot;No appropriate compiled model found.&quot;);
+            });
+}
+</code></pre>
+<h3><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h3>
+<p>Compiled models have some limitations:</p>
+<ul>
+<li>
+<p>Global query filters are not supported.</p>
+</li>
+<li>
+<p>Lazy loading and change-tracking proxies are not supported.</p>
+</li>
+<li>
+<p>Custom IModelCacheKeyFactory implementations are not supported. However, you can compile multiple models and load the appropriate one as needed.</p>
+</li>
+<li>
+<p>The model must be manually synchronized by regenerating it any time the model definition or configuration change.</p>
+</li>
+</ul>
+<p>Because of these limitations, you should only use compiled models if your EF Core startup time is too slow. Compiling small models is typically not worth it.</p>
+<p>If supporting any of these features is critical to your success, then please vote for the appropriate issues linked above.</p>
+<h3><a href="#benchmarks" aria-hidden="true" class="anchor" id="benchmarks"></a>Benchmarks</h3>
+<blockquote>
+<p>Tip
+You can try compiling a large model and running a benchmark on it by downloading the sample code from GitHub.</p>
+</blockquote>
+<p>I've been working on improving the time it takes to query large sets of data.</p>
+<blockquote>
+<p>Note
+See Announcing Entity Framework Core 6.0 Preview 5: Compiled Models on the .NET <code>Blog</code> for a more in-depth discussion of EF Core startup performance and compiled models.</p>
+</blockquote>
+<h2><a href="#improved-performance-on-techempower-fortunes" aria-hidden="true" class="anchor" id="improved-performance-on-techempower-fortunes"></a>Improved performance on TechEmpower Fortunes</h2>
+<p>GitHub Issue: #23611.</p>
+<p>We made significant improvements to query performance for EF Core 6.0. Specifically:</p>
+<ul>
+<li>
+<p>EF Core 6.0 performance is now 70% faster on the industry-standard TechEmpower Fortunes benchmark, compared to 5.0.</p>
+<ul>
+<li>This is the full-stack perf improvement, including improvements in the benchmark code, the .NET runtime, etc.</li>
+</ul>
+</li>
+<li>
+<p>EF Core 6.0 itself is 31% faster executing untracked queries.</p>
+</li>
+<li>
+<p>Heap allocations have been reduced by 43% when executing queries.</p>
+</li>
+</ul>
+<p>After these improvements, the gap between the popular &quot;micro-ORM&quot; Dapper and EF Core in the TechEmpower Fortunes benchmark narrowed from 55% to around a little under 5%.</p>
+<blockquote>
+<p>Note
+See Announcing Entity Framework Core 6.0 Preview 4: Performance Edition on the .NET <code>Blog</code> for a detailed discussion of query performance improvements in EF Core 6.0.</p>
+</blockquote>
+<h2><a href="#azure-cosmos-db-provider-enhancements" aria-hidden="true" class="anchor" id="azure-cosmos-db-provider-enhancements"></a>Azure Cosmos DB provider enhancements</h2>
+<p>EF Core 6.0 contains many improvements to the Azure Cosmos DB database provider.</p>
+<blockquote>
+<p>Tip
+You can run and debug into all the the Cosmos-specific samples by downloading the sample code from GitHub.</p>
+</blockquote>
+<h3><a href="#default-to-implicit-ownership" aria-hidden="true" class="anchor" id="default-to-implicit-ownership"></a>Default to implicit ownership</h3>
+<p>GitHub Issue: #24803.</p>
+<p>EF Core 6.0 adds support for Azure Cosmos DB child entity types.</p>
+<p>For example, consider these entity types:</p>
+<pre><code class="language-csharp">public class Family
+{
+    [JsonPropertyName(&quot;id&quot;)]
+    public string Id { get; set; }
+
+    public string LastName { get; set; }
+    public bool IsRegistered { get; set; }
+
+    public Address Address { get; set; }
+
+    public IList&lt;Parent&gt; Parents { get; } = new List&lt;Parent&gt;();
+    public IList&lt;Child&gt; Children { get; } = new List&lt;Child&gt;();
+}
+
+public class Parent
+{
+    public string FamilyName { get; set; }
+    public string FirstName { get; set; }
+}
+
+public class Child
+{
+    public string FamilyName { get; set; }
+    public string FirstName { get; set; }
+    public int Grade { get; set; }
+
+    public string Gender { get; set; }
+
+    public IList&lt;Pet&gt; Pets { get; } = new List&lt;Pet&gt;();
+}
+</code></pre>
+<p>In EF Core 5.0, these types would have been modeled for Azure Cosmos DB with the following configuration:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Family&gt;()
+    .HasPartitionKey(e =&gt; e.LastName)
+    .OwnsMany(f =&gt; f.Parents);
+
+modelBuilder.Entity&lt;Family&gt;()
+    .OwnsMany(f =&gt; f.Children)
+    .OwnsMany(c =&gt; c.Pets);
+
+modelBuilder.Entity&lt;Family&gt;()
+    .OwnsOne(f =&gt; f.Address);
+</code></pre>
+<p>In EF Core 6.0, the ownership is implicit, reducing the model configuration to:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Family&gt;().HasPartitionKey(e =&gt; e.LastName);
+</code></pre>
+<p>The resulting Azure Cosmos DB documents have the family's parents, children, pets, and address embedded in the family document. For example:</p>
+<pre><code class="language-json">{
+  &quot;Id&quot;: &quot;Wakefield.7&quot;,
+  &quot;LastName&quot;: &quot;Wakefield&quot;,
+  &quot;Discriminator&quot;: &quot;Family&quot;,
+  &quot;IsRegistered&quot;: true,
+  &quot;id&quot;: &quot;Family|Wakefield.7&quot;,
+  &quot;Address&quot;: {
+    &quot;City&quot;: &quot;NY&quot;,
+    &quot;County&quot;: &quot;Manhattan&quot;,
+    &quot;State&quot;: &quot;NY&quot;
+  },
+  &quot;Children&quot;: [
+    {
+      &quot;FamilyName&quot;: &quot;Merriam&quot;,
+      &quot;FirstName&quot;: &quot;Jesse&quot;,
+      &quot;Gender&quot;: &quot;female&quot;,
+      &quot;Grade&quot;: 8,
+      &quot;Pets&quot;: [
+        {
+          &quot;GivenName&quot;: &quot;Goofy&quot;
+        },
+        {
+          &quot;GivenName&quot;: &quot;Shadow&quot;
+        }
+      ]
+    },
+    {
+      &quot;FamilyName&quot;: &quot;Miller&quot;,
+      &quot;FirstName&quot;: &quot;Lisa&quot;,
+      &quot;Gender&quot;: &quot;female&quot;,
+      &quot;Grade&quot;: 1,
+      &quot;Pets&quot;: []
+    }
+  ],
+  &quot;Parents&quot;: [
+    {
+      &quot;FamilyName&quot;: &quot;Wakefield&quot;,
+      &quot;FirstName&quot;: &quot;Robin&quot;
+    },
+    {
+      &quot;FamilyName&quot;: &quot;Miller&quot;,
+      &quot;FirstName&quot;: &quot;Ben&quot;
+    }
+  ],
+  &quot;_rid&quot;: &quot;x918AKh6p20CAAAAAAAAAA==&quot;,
+  &quot;_self&quot;: &quot;dbs/x918AA==/colls/x918AKh6p20=/docs/x918AKh6p20CAAAAAAAAAA==/&quot;,
+  &quot;_etag&quot;: &quot;\&quot;00000000-0000-0000-adee-87f30c8c01d7\&quot;&quot;,
+  &quot;_attachments&quot;: &quot;attachments/&quot;,
+  &quot;_ts&quot;: 1632121802
+}
+</code></pre>
+<blockquote>
+<p>Note
+It's important to remember that the <code>OwnsOne</code>/OwnsMany configuration must be used if you need to further configure these owned types.</p>
+</blockquote>
+<h3><a href="#collections-of-primitive-types" aria-hidden="true" class="anchor" id="collections-of-primitive-types"></a>Collections of primitive types</h3>
+<p>GitHub Issue: #14762.</p>
+<p>EF Core 6.0 natively maps collections of primitive types when using the Azure Cosmos DB database provider. For example, consider this entity type:</p>
+<pre><code class="language-csharp">public class Book
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; }
+    public IList&lt;string&gt; Quotes { get; set; }
+    public IDictionary&lt;string, string&gt; Notes { get; set; }
+}
+</code></pre>
+<p>Both the list and the dictionary can be populated and inserted into the database in the normal way:</p>
+<pre><code class="language-csharp">using var context = new BooksContext();
+
+var book = new Book
+{
+    Title = &quot;How It Works: Incredible History&quot;,
+    Quotes = new List&lt;string&gt;
+    {
+        &quot;Thomas (Tommy) Flowers was the British engineer behind the design of the Colossus computer.&quot;,
+        &quot;Invented originally for Guinness, plastic widgets are nitrogen-filled spheres.&quot;,
+        &quot;For 20 years after its introduction in 1979, the Walkman dominated the personal stereo market.&quot;
+    },
+    Notes = new Dictionary&lt;string, string&gt;
+    {
+        { &quot;121&quot;, &quot;Fridges&quot; },
+        { &quot;144&quot;, &quot;Peter Higgs&quot; },
+        { &quot;48&quot;, &quot;Saint Mark's Basilica&quot; },
+        { &quot;36&quot;, &quot;The Terracotta Army&quot; }
+    }
+};
+
+context.Add(book);
+await context.SaveChangesAsync();
+</code></pre>
+<p>This results in the following JSON document:</p>
+<pre><code class="language-json">{
+    &quot;Id&quot;: &quot;0b32283e-22a8-4103-bb4f-6052604868bd&quot;,
+    &quot;Discriminator&quot;: &quot;Book&quot;,
+    &quot;Notes&quot;: {
+        &quot;36&quot;: &quot;The Terracotta Army&quot;,
+        &quot;48&quot;: &quot;Saint Mark's Basilica&quot;,
+        &quot;121&quot;: &quot;Fridges&quot;,
+        &quot;144&quot;: &quot;Peter Higgs&quot;
+    },
+    &quot;Quotes&quot;: [
+        &quot;Thomas (Tommy) Flowers was the British engineer behind the design of the Colossus computer.&quot;,
+        &quot;Invented originally for Guinness, plastic widgets are nitrogen-filled spheres.&quot;,
+        &quot;For 20 years after its introduction in 1979, the Walkman dominated the personal stereo market.&quot;
+    ],
+    &quot;Title&quot;: &quot;How It Works: Incredible History&quot;,
+    &quot;id&quot;: &quot;Book|0b32283e-22a8-4103-bb4f-6052604868bd&quot;,
+    &quot;_rid&quot;: &quot;t-E3AIxaencBAAAAAAAAAA==&quot;,
+    &quot;_self&quot;: &quot;dbs/t-E3AA==/colls/t-E3AIxaenc=/docs/t-E3AIxaencBAAAAAAAAAA==/&quot;,
+    &quot;_etag&quot;: &quot;\&quot;00000000-0000-0000-9b50-fc769dc901d7\&quot;&quot;,
+    &quot;_attachments&quot;: &quot;attachments/&quot;,
+    &quot;_ts&quot;: 1630075016
+}
+</code></pre>
+<p>These collections can then be updated, again in the normal way:</p>
+<pre><code class="language-csharp">book.Quotes.Add(&quot;Pressing the emergency button lowered the rods again.&quot;);
+book.Notes[&quot;48&quot;] = &quot;Chiesa d'Oro&quot;;
+
+await context.SaveChangesAsync();
+</code></pre>
+<p>Limitations:</p>
+<ul>
+<li>
+<p>Only dictionaries with <code>string</code> keys are supported</p>
+</li>
+<li>
+<p>Querying into the contents of primitive collections is not currently supported. Vote for #16926, #25700, and #25701 if these features are important to you.</p>
+</li>
+</ul>
+<h3><a href="#translations-to-built-in-functions" aria-hidden="true" class="anchor" id="translations-to-built-in-functions"></a>Translations to built-in functions</h3>
+<p>GitHub Issue: #16143.</p>
+<p>The Azure Cosmos DB provider now translates more Base Class Library (BCL) methods to Azure Cosmos DB built-in-functions. The following tables show translations that are new in EF Core 6.0.</p>
+<p>String translations</p>
+<p>Translations for <code>LOWER</code>, <code>LTRIM</code>, <code>RTRIM</code>, <code>TRIM</code>, <code>UPPER</code>, and <code>SUBSTRING</code> were contributed by @Marusyk. Many thanks!</p>
+<p>For Example:</p>
+<pre><code class="language-csharp">var stringResults = await context.Triangles.Where(
+        e =&gt; e.Name.Length &gt; 4
+             &amp;&amp; e.Name.Trim().ToLower() != &quot;obtuse&quot;
+             &amp;&amp; e.Name.TrimStart().Substring(2, 2).Equals(&quot;uT&quot;, StringComparison.OrdinalIgnoreCase))
+    .ToListAsync();
+</code></pre>
+<p>Which translates to:</p>
+<pre><code class="language-sql">SELECT c
+FROM root c
+WHERE ((c[&quot;Discriminator&quot;] = &quot;Triangle&quot;) AND (((LENGTH(c[&quot;Name&quot;]) &gt; 4) AND (LOWER(TRIM(c[&quot;Name&quot;])) != &quot;obtuse&quot;)) AND STRINGEQUALS(SUBSTRING(LTRIM(c[&quot;Name&quot;]), 2, 2), &quot;uT&quot;, true)))
+</code></pre>
+<p>Math translations</p>
+<p>These translations were contributed by @Marusyk. Many thanks!</p>
+<p>For Example:</p>
+<pre><code class="language-csharp">var hypotenuse = 42.42;
+var mathResults = await context.Triangles.Where(
+        e =&gt; (Math.Round(e.Angle1) == 90.0
+              || Math.Round(e.Angle2) == 90.0)
+             &amp;&amp; (hypotenuse * Math.Sin(e.Angle1) &gt; 30.0
+                 || hypotenuse * Math.Cos(e.Angle2) &gt; 30.0))
+    .ToListAsync();
+</code></pre>
+<p>Which translates to:</p>
+<pre><code class="language-sql">SELECT c
+FROM root c
+WHERE ((c[&quot;Discriminator&quot;] = &quot;Triangle&quot;) AND (((ROUND(c[&quot;Angle1&quot;]) = 90.0) OR (ROUND(c[&quot;Angle2&quot;]) = 90.0)) AND (((@__hypotenuse_0 * SIN(c[&quot;Angle1&quot;])) &gt; 30.0) OR ((@__hypotenuse_0 * COS(c[&quot;Angle2&quot;])) &gt; 30.0))))
+</code></pre>
+<p>DateTime translations</p>
+<p>These translations were contributed by @Marusyk. Many thanks!</p>
+<p>For Example:</p>
+<pre><code class="language-csharp">var timeResults = await context.Triangles.Where(
+        e =&gt; e.InsertedOn &lt;= DateTime.UtcNow)
+    .ToListAsync();
+</code></pre>
+<p>Which translates to:</p>
+<pre><code class="language-sql">SELECT c
+FROM root c
+WHERE ((c[&quot;Discriminator&quot;] = &quot;Triangle&quot;) AND (c[&quot;InsertedOn&quot;] &lt;= GetCurrentDateTime()))
+</code></pre>
+<h3><a href="#raw-sql-queries-with-fromsql" aria-hidden="true" class="anchor" id="raw-sql-queries-with-fromsql"></a>Raw SQL queries with <code>FromSql</code></h3>
+<p>GitHub Issue: #17311.</p>
+<p>Azure CosmosDB now supports raw SQL queries.</p>
+<pre><code class="language-csharp">var maxAngle = 60;
+var results = await context.Triangles.FromSqlRaw(
+        @&quot;SELECT * FROM root c WHERE c[&quot;&quot;Angle1&quot;&quot;] &lt;= {0} OR c[&quot;&quot;Angle2&quot;&quot;] &lt;= {0}&quot;, maxAngle)
+    .ToListAsync();
+</code></pre>
+<p>Which is executed as:</p>
+<pre><code class="language-sql">SELECT c
+FROM (
+    SELECT * FROM root c WHERE c[&quot;Angle1&quot;] &lt;= @p0 OR c[&quot;Angle2&quot;] &lt;= @p0
+) c
+</code></pre>
+<h3><a href="#distinct-queries" aria-hidden="true" class="anchor" id="distinct-queries"></a><code>Distinct</code> queries</h3>
+<p>GitHub Issue: #16144.</p>
+<p>Simple queries using <code>Distinct</code> are now translated. For example:</p>
+<pre><code class="language-csharp">var distinctResults = await context.Triangles
+    .Select(e =&gt; e.Angle1).OrderBy(e =&gt; e).Distinct()
+    .ToListAsync();
+</code></pre>
+<p>Which translates to:</p>
+<pre><code class="language-sql">SELECT DISTINCT c[&quot;Angle1&quot;]
+FROM root c
+WHERE (c[&quot;Discriminator&quot;] = &quot;Triangle&quot;)
+ORDER BY c[&quot;Angle1&quot;]
+</code></pre>
+<h3><a href="#diagnostics" aria-hidden="true" class="anchor" id="diagnostics"></a>Diagnostics</h3>
+<p>GitHub Issue: #17298.</p>
+<p>Microsoft has released an update to its CosmosDB database.</p>
+<blockquote>
+<p>Note
+The logs show here use EnableSensitiveDataLogging() so that ID values are shown.</p>
+</blockquote>
+<p>Inserting an item into the Azure Cosmos DB database generates the <code>CosmosEventId.ExecutedCreateItem</code> event. For example, this code:</p>
+<pre><code class="language-csharp">var triangle = new Triangle
+{
+    Name = &quot;Impossible&quot;,
+    PartitionKey = &quot;TrianglesPartition&quot;,
+    Angle1 = 90,
+    Angle2 = 90,
+    InsertedOn = DateTime.UtcNow
+};
+context.Add(triangle);
+await context.SaveChangesAsync();
+</code></pre>
+<p>Logs the following diagnostic event:</p>
+<pre><code class="language-none">info: 8/30/2021 14:41:13.356 CosmosEventId.ExecutedCreateItem[30104] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed CreateItem (5 ms, 7.43 RU) ActivityId='417db46f-fcdd-49d9-a7f0-77210cd06f84', Container='Shapes', Id='Impossible', Partition='TrianglesPartition'
+</code></pre>
+<p>This code shows how to retrieve items from the Cosmos DB database using a query.</p>
+<pre><code class="language-csharp">var equilateral = await context.Triangles.SingleAsync(e =&gt; e.Name == &quot;Equilateral&quot;);
+</code></pre>
+<p>Logs the following diagnostic events:</p>
+<pre><code class="language-none">info: 8/30/2021 14:41:13.475 CosmosEventId.ExecutingSqlQuery[30100] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executing SQL query for container 'Shapes' in partition '(null)' [Parameters=[]]
+      SELECT c
+      FROM root c
+      WHERE ((c[&quot;Discriminator&quot;] = &quot;Triangle&quot;) AND (c[&quot;id&quot;] = &quot;Equilateral&quot;))
+      OFFSET 0 LIMIT 2
+info: 8/30/2021 14:41:13.651 CosmosEventId.ExecutedReadNext[30102] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed ReadNext (169.6126 ms, 2.93 RU) ActivityId='4e465fae-3d49-4c1f-bd04-142bc5d0b0a1', Container='Shapes', Partition='(null)', Parameters=[]
+      SELECT c
+      FROM root c
+      WHERE ((c[&quot;Discriminator&quot;] = &quot;Triangle&quot;) AND (c[&quot;id&quot;] = &quot;Equilateral&quot;))
+      OFFSET 0 LIMIT 2
+</code></pre>
+<p>This code shows how to retrieve a single item from an Azure Cosmos database using <code>Find</code> with a partition key.</p>
+<pre><code class="language-csharp">var isosceles = await context.Triangles.FindAsync(&quot;Isosceles&quot;, &quot;TrianglesPartition&quot;);
+</code></pre>
+<p>Logs the following diagnostic events:</p>
+<pre><code class="language-none">info: 8/30/2021 14:53:39.326 CosmosEventId.ExecutingReadItem[30101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Reading resource 'Isosceles' item from container 'Shapes' in partition 'TrianglesPartition'.
+info: 8/30/2021 14:53:39.330 CosmosEventId.ExecutedReadItem[30103] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed ReadItem (1 ms, 1 RU) ActivityId='3c278643-4e7f-4bb2-9953-6055b5f1288f', Container='Shapes', Id='Isosceles', Partition='TrianglesPartition'
+</code></pre>
+<p>Saving an updated item to the Azure Cosmos DB database generates the <code>CosmosEventId.ExecutedReplaceItem</code> event. For example, this code:</p>
+<pre><code class="language-csharp">triangle.Angle2 = 89;
+await context.SaveChangesAsync();
+</code></pre>
+<p>Logs the following diagnostic event:</p>
+<pre><code class="language-none">info: 8/30/2021 14:53:39.343 CosmosEventId.ExecutedReplaceItem[30105] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed ReplaceItem (6 ms, 10.67 RU) ActivityId='1525b958-fea1-49e8-89f9-d429d0351fdb', Container='Shapes', Id='Impossible', Partition='TrianglesPartition'
+</code></pre>
+<p>Deleting an item from the Azure Cosmos DB database generates the <code>CosmosEventId.ExecutedDeleteItem</code> event. For example, this code:</p>
+<pre><code class="language-csharp">context.Remove(triangle);
+await context.SaveChangesAsync();
+</code></pre>
+<p>Logs the following diagnostic event:</p>
+<pre><code class="language-none">info: 8/30/2021 14:53:39.359 CosmosEventId.ExecutedDeleteItem[30106] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DeleteItem (6 ms, 7.43 RU) ActivityId='cbc54463-405b-48e7-8c32-2c6502a4138f', Container='Shapes', Id='Impossible', Partition='TrianglesPartition'
+</code></pre>
+<h3><a href="#configure-throughput" aria-hidden="true" class="anchor" id="configure-throughput"></a>Configure throughput</h3>
+<p>GitHub Issue: #17301.</p>
+<p>The Azure Cosmos DB model can now be configured with manual or auto-scale throughput. These values provision throughput on the database. For example:</p>
+<pre><code class="language-csharp">modelBuilder.HasManualThroughput(2000);
+modelBuilder.HasAutoscaleThroughput(4000);
+</code></pre>
+<p>In addition, individual entity types can be configured to provision throughput for the corresponding container. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Family&gt;(
+    entityTypeBuilder =&gt;
+    {
+        entityTypeBuilder.HasManualThroughput(5000);
+        entityTypeBuilder.HasAutoscaleThroughput(3000);
+    });
+</code></pre>
+<h3><a href="#configure-time-to-live" aria-hidden="true" class="anchor" id="configure-time-to-live"></a>Configure time-to-live</h3>
+<p>GitHub Issue: #17307.</p>
+<p>Entity types in the Azure Cosmos DB model can now be configured with the default time-to-live and time-to-live for the analytical store. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Family&gt;(
+    entityTypeBuilder =&gt;
+    {
+        entityTypeBuilder.HasDefaultTimeToLive(100);
+        entityTypeBuilder.HasAnalyticalStoreTimeToLive(200);
+    });
+</code></pre>
+<h3><a href="#resolve-http-client-factory" aria-hidden="true" class="anchor" id="resolve-http-client-factory"></a>Resolve HTTP client factory</h3>
+<p>GitHub Issue: #21274. This feature was contributed by @dnperfors. Many thanks!</p>
+<p>Microsoft has released an update to the Azure Cosmos DB platform.</p>
+<pre><code class="language-csharp">optionsBuilder
+    .EnableSensitiveDataLogging()
+    .UseCosmos(
+        &quot;https://localhost:8081&quot;,
+        &quot;C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==&quot;,
+        &quot;PrimitiveCollections&quot;,
+        cosmosOptionsBuilder =&gt;
+        {
+            cosmosOptionsBuilder.HttpClientFactory(
+                () =&gt; new HttpClient(
+                    new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback =
+                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                    }));
+        });
+</code></pre>
+<blockquote>
+<p>Note
+See Taking the EF Core Azure Cosmos DB Provider for a Test Drive on the .NET <code>Blog</code> for a detailed example of applying the Azure Cosmos DB provider improvements to an existing application.</p>
+</blockquote>
+<h2><a href="#improvements-to-scaffolding-from-an-existing-database" aria-hidden="true" class="anchor" id="improvements-to-scaffolding-from-an-existing-database"></a>Improvements to scaffolding from an existing database</h2>
+<p>EF Core 6.0 contains several improvements when reverse engineering an EF model from an existing database.</p>
+<h3><a href="#scaffolding-many-to-many-relationships" aria-hidden="true" class="anchor" id="scaffolding-many-to-many-relationships"></a>Scaffolding many-to-many relationships</h3>
+<p>GitHub Issue: #22475.</p>
+<p>EF Core 6.0 detects simple join tables and automatically generates a many-to-many mapping for them. For example, consider tables for <code>Posts</code> and <code>Tags</code>, and a join table <code>PostTag</code> connecting them:</p>
+<pre><code class="language-sql">CREATE TABLE [Tags] (
+  [Id] int NOT NULL IDENTITY,
+  [Name] nvarchar(max) NOT NULL,
+  [Description] nvarchar(max) NULL,
+  CONSTRAINT [PK_Tags] PRIMARY KEY ([Id]));
+
+CREATE TABLE [Posts] (
+    [Id] int NOT NULL IDENTITY,
+    [Title] nvarchar(max) NOT NULL,
+    [Contents] nvarchar(max) NOT NULL,
+    [PostedOn] datetime2 NOT NULL,
+    [UpdatedOn] datetime2 NULL,
+    CONSTRAINT [PK_Posts] PRIMARY KEY ([Id]));
+
+CREATE TABLE [PostTag] (
+    [PostsId] int NOT NULL,
+    [TagsId] int NOT NULL,
+    CONSTRAINT [PK_PostTag] PRIMARY KEY ([PostsId], [TagsId]),
+    CONSTRAINT [FK_PostTag_Posts_TagsId] FOREIGN KEY ([TagsId]) REFERENCES [Tags] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_PostTag_Tags_PostsId] FOREIGN KEY ([PostsId]) REFERENCES [Posts] ([Id]) ON DELETE CASCADE);
+</code></pre>
+<p>These tables can be scaffolded from the command line. For example:</p>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold &quot;Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=BloggingWithNRTs&quot; Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<p>This results in a class for Post:</p>
+<pre><code class="language-csharp">public partial class Post
+{
+    public Post()
+    {
+        Tags = new HashSet&lt;Tag&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Title { get; set; } = null!;
+    public string Contents { get; set; } = null!;
+    public DateTime PostedOn { get; set; }
+    public DateTime? UpdatedOn { get; set; }
+    public int BlogId { get; set; }
+
+    public virtual Blog Blog { get; set; } = null!;
+
+    public virtual ICollection&lt;Tag&gt; Tags { get; set; }
+}
+</code></pre>
+<p>And a class for Tag:</p>
+<pre><code class="language-csharp">public partial class Tag
+{
+    public Tag()
+    {
+        Posts = new HashSet&lt;Post&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+
+    public virtual ICollection&lt;Post&gt; Posts { get; set; }
+}
+</code></pre>
+<p>But no class for the <code>PostTag</code> table. Instead, configuration for a many-to-many relationship is scaffolded:</p>
+<pre><code class="language-csharp">entity.HasMany(d =&gt; d.Tags)
+    .WithMany(p =&gt; p.Posts)
+    .UsingEntity&lt;Dictionary&lt;string, object&gt;&gt;(
+        &quot;PostTag&quot;,
+        l =&gt; l.HasOne&lt;Tag&gt;().WithMany().HasForeignKey(&quot;PostsId&quot;),
+        r =&gt; r.HasOne&lt;Post&gt;().WithMany().HasForeignKey(&quot;TagsId&quot;),
+        j =&gt;
+            {
+                j.HasKey(&quot;PostsId&quot;, &quot;TagsId&quot;);
+                j.ToTable(&quot;PostTag&quot;);
+                j.HasIndex(new[] { &quot;TagsId&quot; }, &quot;IX_PostTag_TagsId&quot;);
+            });
+</code></pre>
+<h3><a href="#scaffold-c-nullable-reference-types" aria-hidden="true" class="anchor" id="scaffold-c-nullable-reference-types"></a>Scaffold C# nullable reference types</h3>
+<p>GitHub Issue: #15520.</p>
+<p>EF Core 6.0 now scaffolds EF model and entity types that use C# nullable reference types.</p>
+<p>For example, the following <code>Tags</code> table contains both nullable non-nullable <code>string</code> columns:</p>
+<pre><code class="language-sql">CREATE TABLE [Tags] (
+  [Id] int NOT NULL IDENTITY,
+  [Name] nvarchar(max) NOT NULL,
+  [Description] nvarchar(max) NULL,
+  CONSTRAINT [PK_Tags] PRIMARY KEY ([Id]));
+</code></pre>
+<p>This results in corresponding nullable and non-nullable <code>string</code> properties in the generated class:</p>
+<pre><code class="language-csharp">public partial class Tag
+{
+    public Tag()
+    {
+        Posts = new HashSet&lt;Post&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+
+    public virtual ICollection&lt;Post&gt; Posts { get; set; }
+}
+</code></pre>
+<p>Similarly, the following <code>Posts</code> tables contains a required relationship to the <code>Blogs</code> table:</p>
+<pre><code class="language-sql">CREATE TABLE [Posts] (
+    [Id] int NOT NULL IDENTITY,
+    [Title] nvarchar(max) NOT NULL,
+    [Contents] nvarchar(max) NOT NULL,
+    [PostedOn] datetime2 NOT NULL,
+    [UpdatedOn] datetime2 NULL,
+    [BlogId] int NOT NULL,
+    CONSTRAINT [PK_Posts] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Posts_Blogs_BlogId] FOREIGN KEY ([BlogId]) REFERENCES [Blogs] ([Id]));
+</code></pre>
+<p>This results in the scaffolding of non-nullable (required) relationship between blogs:</p>
+<pre><code class="language-csharp">public partial class Blog
+{
+    public Blog()
+    {
+        Posts = new HashSet&lt;Post&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+
+    public virtual ICollection&lt;Post&gt; Posts { get; set; }
+}
+</code></pre>
+<p>And posts:</p>
+<pre><code class="language-csharp">public partial class Post
+{
+    public Post()
+    {
+        Tags = new HashSet&lt;Tag&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Title { get; set; } = null!;
+    public string Contents { get; set; } = null!;
+    public DateTime PostedOn { get; set; }
+    public DateTime? UpdatedOn { get; set; }
+    public int BlogId { get; set; }
+
+    public virtual Blog Blog { get; set; } = null!;
+
+    public virtual ICollection&lt;Tag&gt; Tags { get; set; }
+}
+</code></pre>
+<p>Finally, DbSet properties in the generated <code>DbContext</code> are created in a NRT-friendly way. For example:</p>
+<pre><code class="language-csharp">public virtual DbSet&lt;Blog&gt; Blogs { get; set; } = null!;
+public virtual DbSet&lt;Post&gt; Posts { get; set; } = null!;
+public virtual DbSet&lt;Tag&gt; Tags { get; set; } = null!;
+</code></pre>
+<h3><a href="#database-comments-are-scaffolded-to-code-comments" aria-hidden="true" class="anchor" id="database-comments-are-scaffolded-to-code-comments"></a>Database comments are scaffolded to code comments</h3>
+<p>GitHub Issue: #19113. This feature was contributed by @ErikEJ. Many thanks!</p>
+<p>Comments on SQL tables and columns are now scaffolded into the entity types created when reverse-engineering an EF Core model from an existing SQL Server database.</p>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// The Blog table.
+/// &lt;/summary&gt;
+public partial class Blog
+{
+    /// &lt;summary&gt;
+    /// The primary key.
+    /// &lt;/summary&gt;
+    [Key]
+    public int Id { get; set; }
+}
+</code></pre>
+<h2><a href="#linq-query-enhancements" aria-hidden="true" class="anchor" id="linq-query-enhancements"></a>LINQ query enhancements</h2>
+<p>EF Core 6.0 contains several improvements in the translation and execution of LINQ queries.</p>
+<h3><a href="#improved-groupby-support" aria-hidden="true" class="anchor" id="improved-groupby-support"></a>Improved <code>GroupBy</code> support</h3>
+<p>GitHub Issues: #12088, #13805, and #22609.</p>
+<p>EF Core 6.0 contains better support for <code>GroupBy</code> queries. Specifically, EF Core now:</p>
+<ul>
+<li>
+<p>Translate <code>GroupBy</code> followed by <code>FirstOrDefault</code> (or similar) over a group</p>
+</li>
+<li>
+<p>Supports selecting the top N results from a group</p>
+</li>
+<li>
+<p>Expands navigations after the <code>GroupBy</code> operator has been applied</p>
+</li>
+</ul>
+<p>The following are example queries from customer reports and their translation on SQL Server.</p>
+<p>Example <code>1</code>:</p>
+<pre><code class="language-csharp">var people = context.People
+    .Include(e =&gt; e.Shoes)
+    .GroupBy(e =&gt; e.FirstName)
+    .Select(
+        g =&gt; g.OrderBy(e =&gt; e.FirstName)
+            .ThenBy(e =&gt; e.LastName)
+            .FirstOrDefault())
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [t0].[Id], [t0].[Age], [t0].[FirstName], [t0].[LastName], [t0].[MiddleInitial], [t].[FirstName], [s].[Id], [s].[Age], [s].[PersonId], [s].[Style]
+FROM (
+    SELECT [p].[FirstName]
+    FROM [People] AS [p]
+    GROUP BY [p].[FirstName]
+) AS [t]
+LEFT JOIN (
+    SELECT [t1].[Id], [t1].[Age], [t1].[FirstName], [t1].[LastName], [t1].[MiddleInitial]
+    FROM (
+        SELECT [p0].[Id], [p0].[Age], [p0].[FirstName], [p0].[LastName], [p0].[MiddleInitial], ROW_NUMBER() OVER(PARTITION BY [p0].[FirstName] ORDER BY [p0].[FirstName], [p0].[LastName]) AS [row]
+        FROM [People] AS [p0]
+    ) AS [t1]
+    WHERE [t1].[row] &lt;= 1
+) AS [t0] ON [t].[FirstName] = [t0].[FirstName]
+LEFT JOIN [Shoes] AS [s] ON [t0].[Id] = [s].[PersonId]
+ORDER BY [t].[FirstName], [t0].[FirstName]
+</code></pre>
+<p>Example 2:</p>
+<pre><code class="language-csharp">var group = context.People
+    .Select(
+        p =&gt; new
+        {
+            p.FirstName,
+            FullName = p.FirstName + &quot; &quot; + p.MiddleInitial + &quot; &quot; + p.LastName
+        })
+    .GroupBy(p =&gt; p.FirstName)
+    .Select(g =&gt; g.First())
+    .First();
+</code></pre>
+<pre><code class="language-sql">SELECT [t0].[FirstName], [t0].[FullName], [t0].[c]
+FROM (
+    SELECT TOP(1) [p].[FirstName]
+    FROM [People] AS [p]
+    GROUP BY [p].[FirstName]
+) AS [t]
+LEFT JOIN (
+    SELECT [t1].[FirstName], [t1].[FullName], [t1].[c]
+    FROM (
+        SELECT [p0].[FirstName], (((COALESCE([p0].[FirstName], N'') + N' ') + COALESCE([p0].[MiddleInitial], N'')) + N' ') + COALESCE([p0].[LastName], N'') AS [FullName], 1 AS [c], ROW_NUMBER() OVER(PARTITION BY [p0].[FirstName] ORDER BY [p0].[FirstName]) AS [row]
+        FROM [People] AS [p0]
+    ) AS [t1]
+    WHERE [t1].[row] &lt;= 1
+) AS [t0] ON [t].[FirstName] = [t0].[FirstName]
+</code></pre>
+<p>Example 3:</p>
+<pre><code class="language-csharp">var people = context.People
+    .Where(e =&gt; e.MiddleInitial == &quot;Q&quot; &amp;&amp; e.Age == 20)
+    .GroupBy(e =&gt; e.LastName)
+    .Select(g =&gt; g.First().LastName)
+    .OrderBy(e =&gt; e.Length)
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT (
+    SELECT TOP(1) [p1].[LastName]
+    FROM [People] AS [p1]
+    WHERE (([p1].[MiddleInitial] = N'Q') AND ([p1].[Age] = 20)) AND (([p].[LastName] = [p1].[LastName]) OR ([p].[LastName] IS NULL AND [p1].[LastName] IS NULL)))
+FROM [People] AS [p]
+WHERE ([p].[MiddleInitial] = N'Q') AND ([p].[Age] = 20)
+GROUP BY [p].[LastName]
+ORDER BY CAST(LEN((
+    SELECT TOP(1) [p1].[LastName]
+    FROM [People] AS [p1]
+    WHERE (([p1].[MiddleInitial] = N'Q') AND ([p1].[Age] = 20)) AND (([p].[LastName] = [p1].[LastName]) OR ([p].[LastName] IS NULL AND [p1].[LastName] IS NULL)))) AS int)
+</code></pre>
+<p>Example 4:</p>
+<pre><code class="language-csharp">var results = (from person in context.People
+               join shoes in context.Shoes on person.Age equals shoes.Age
+               group shoes by shoes.Style
+               into people
+               select new
+               {
+                   people.Key,
+                   Style = people.Select(p =&gt; p.Style).FirstOrDefault(),
+                   Count = people.Count()
+               })
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [s].[Style] AS [Key], (
+    SELECT TOP(1) [s0].[Style]
+    FROM [People] AS [p0]
+    INNER JOIN [Shoes] AS [s0] ON [p0].[Age] = [s0].[Age]
+    WHERE ([s].[Style] = [s0].[Style]) OR ([s].[Style] IS NULL AND [s0].[Style] IS NULL)) AS [Style], COUNT(*) AS [Count]
+FROM [People] AS [p]
+INNER JOIN [Shoes] AS [s] ON [p].[Age] = [s].[Age]
+GROUP BY [s].[Style]
+</code></pre>
+<p>Example 5:</p>
+<pre><code class="language-csharp">var results = context.People
+    .GroupBy(e =&gt; e.FirstName)
+    .Select(g =&gt; g.First().LastName)
+    .OrderBy(e =&gt; e)
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT (
+    SELECT TOP(1) [p1].[LastName]
+    FROM [People] AS [p1]
+    WHERE ([p].[FirstName] = [p1].[FirstName]) OR ([p].[FirstName] IS NULL AND [p1].[FirstName] IS NULL))
+FROM [People] AS [p]
+GROUP BY [p].[FirstName]
+ORDER BY (
+    SELECT TOP(1) [p1].[LastName]
+    FROM [People] AS [p1]
+    WHERE ([p].[FirstName] = [p1].[FirstName]) OR ([p].[FirstName] IS NULL AND [p1].[FirstName] IS NULL))
+</code></pre>
+<p>Example 6:</p>
+<pre><code class="language-csharp">var results = context.People.Where(e =&gt; e.Age == 20)
+    .GroupBy(e =&gt; e.Id)
+    .Select(g =&gt; g.First().MiddleInitial)
+    .OrderBy(e =&gt; e)
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT (
+    SELECT TOP(1) [p1].[MiddleInitial]
+    FROM [People] AS [p1]
+    WHERE ([p1].[Age] = 20) AND ([p].[Id] = [p1].[Id]))
+FROM [People] AS [p]
+WHERE [p].[Age] = 20
+GROUP BY [p].[Id]
+ORDER BY (
+    SELECT TOP(1) [p1].[MiddleInitial]
+    FROM [People] AS [p1]
+    WHERE ([p1].[Age] = 20) AND ([p].[Id] = [p1].[Id]))
+</code></pre>
+<p>Example 7:</p>
+<pre><code class="language-csharp">var size = 11;
+var results
+    = context.People
+        .Where(
+            p =&gt; p.Feet.Size == size
+                 &amp;&amp; p.MiddleInitial != null
+                 &amp;&amp; p.Feet.Id != 1)
+        .GroupBy(
+            p =&gt; new
+            {
+                p.Feet.Size,
+                p.Feet.Person.LastName
+            })
+        .Select(
+            g =&gt; new
+            {
+                g.Key.LastName,
+                g.Key.Size,
+                Min = g.Min(p =&gt; p.Feet.Size),
+            })
+        .ToList();
+</code></pre>
+<pre><code class="language-sql">Executed DbCommand (12ms) [Parameters=[@__size_0='11'], CommandType='Text', CommandTimeout='30']
+SELECT [p0].[LastName], [f].[Size], MIN([f0].[Size]) AS [Min]
+FROM [People] AS [p]
+LEFT JOIN [Feet] AS [f] ON [p].[Id] = [f].[Id]
+LEFT JOIN [People] AS [p0] ON [f].[Id] = [p0].[Id]
+LEFT JOIN [Feet] AS [f0] ON [p].[Id] = [f0].[Id]
+WHERE (([f].[Size] = @__size_0) AND [p].[MiddleInitial] IS NOT NULL) AND (([f].[Id] &lt;&gt; 1) OR [f].[Id] IS NULL)
+GROUP BY [f].[Size], [p0].[LastName]
+</code></pre>
+<p>Example 8:</p>
+<pre><code class="language-csharp">var result = context.People
+    .Include(x =&gt; x.Shoes)
+    .Include(x =&gt; x.Feet)
+    .GroupBy(
+        x =&gt; new
+        {
+            x.Feet.Id,
+            x.Feet.Size
+        })
+    .Select(
+        x =&gt; new
+        {
+            Key = x.Key.Id + x.Key.Size,
+            Count = x.Count(),
+            Sum = x.Sum(el =&gt; el.Id),
+            SumOver60 = x.Sum(el =&gt; el.Id) / (decimal)60,
+            TotalCallOutCharges = x.Sum(el =&gt; el.Feet.Size == 11 ? 1 : 0)
+        })
+    .Count();
+</code></pre>
+<pre><code class="language-sql">SELECT COUNT(*)
+FROM (
+    SELECT [f].[Id], [f].[Size]
+    FROM [People] AS [p]
+    LEFT JOIN [Feet] AS [f] ON [p].[Id] = [f].[Id]
+    GROUP BY [f].[Id], [f].[Size]
+) AS [t]
+</code></pre>
+<p>Example 9:</p>
+<pre><code class="language-csharp">var results = context.People
+    .GroupBy(n =&gt; n.FirstName)
+    .Select(g =&gt; new
+    {
+        Feet = g.Key,
+        Total = g.Sum(n =&gt; n.Feet.Size)
+    })
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [p].[FirstName] AS [Feet], COALESCE(SUM([f].[Size]), 0) AS [Total]
+FROM [People] AS [p]
+LEFT JOIN [Feet] AS [f] ON [p].[Id] = [f].[Id]
+GROUP BY [p].[FirstName]
+</code></pre>
+<p>Example 10:</p>
+<pre><code class="language-csharp">var results = from Person person1
+                  in from Person person2
+                         in context.People
+                     select person2
+              join Shoes shoes
+                  in context.Shoes
+                  on person1.Age equals shoes.Age
+              group shoes by
+                  new
+                  {
+                      person1.Id,
+                      shoes.Style,
+                      shoes.Age
+                  }
+              into temp
+              select
+                  new
+                  {
+                      temp.Key.Id,
+                      temp.Key.Age,
+                      temp.Key.Style,
+                      Values = from t
+                                   in temp
+                               select
+                                   new
+                                   {
+                                       t.Id,
+                                       t.Style,
+                                       t.Age
+                                   }
+                  };
+</code></pre>
+<pre><code class="language-sql">SELECT [t].[Id], [t].[Age], [t].[Style], [t0].[Id], [t0].[Style], [t0].[Age], [t0].[Id0]
+FROM (
+    SELECT [p].[Id], [s].[Age], [s].[Style]
+    FROM [People] AS [p]
+    INNER JOIN [Shoes] AS [s] ON [p].[Age] = [s].[Age]
+    GROUP BY [p].[Id], [s].[Style], [s].[Age]
+) AS [t]
+LEFT JOIN (
+    SELECT [s0].[Id], [s0].[Style], [s0].[Age], [p0].[Id] AS [Id0]
+    FROM [People] AS [p0]
+    INNER JOIN [Shoes] AS [s0] ON [p0].[Age] = [s0].[Age]
+) AS [t0] ON (([t].[Id] = [t0].[Id0]) AND (([t].[Style] = [t0].[Style]) OR ([t].[Style] IS NULL AND [t0].[Style] IS NULL))) AND ([t].[Age] = [t0].[Age])
+ORDER BY [t].[Id], [t].[Style], [t].[Age], [t0].[Id0]
+</code></pre>
+<p>Example 11:</p>
+<pre><code class="language-csharp">var grouping = context.People
+    .GroupBy(i =&gt; i.LastName)
+    .Select(g =&gt; new { LastName = g.Key, Count = g.Count() , First = g.FirstOrDefault(), Take = g.Take(2)})
+    .OrderByDescending(e =&gt; e.LastName)
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [t].[LastName], [t].[c], [t0].[Id], [t2].[Id], [t2].[Age], [t2].[FirstName], [t2].[LastName], [t2].[MiddleInitial], [t0].[Age], [t0].[FirstName], [t0].[LastName], [t0].[MiddleInitial]
+FROM (
+    SELECT [p].[LastName], COUNT(*) AS [c]
+    FROM [People] AS [p]
+    GROUP BY [p].[LastName]
+) AS [t]
+LEFT JOIN (
+    SELECT [t1].[Id], [t1].[Age], [t1].[FirstName], [t1].[LastName], [t1].[MiddleInitial]
+    FROM (
+        SELECT [p0].[Id], [p0].[Age], [p0].[FirstName], [p0].[LastName], [p0].[MiddleInitial], ROW_NUMBER() OVER(PARTITION BY [p0].[LastName] ORDER BY [p0].[Id]) AS [row]
+        FROM [People] AS [p0]
+    ) AS [t1]
+    WHERE [t1].[row] &lt;= 1
+) AS [t0] ON [t].[LastName] = [t0].[LastName]
+LEFT JOIN (
+    SELECT [t3].[Id], [t3].[Age], [t3].[FirstName], [t3].[LastName], [t3].[MiddleInitial]
+    FROM (
+        SELECT [p1].[Id], [p1].[Age], [p1].[FirstName], [p1].[LastName], [p1].[MiddleInitial], ROW_NUMBER() OVER(PARTITION BY [p1].[LastName] ORDER BY [p1].[Id]) AS [row]
+        FROM [People] AS [p1]
+    ) AS [t3]
+    WHERE [t3].[row] &lt;= 2
+) AS [t2] ON [t].[LastName] = [t2].[LastName]
+ORDER BY [t].[LastName] DESC, [t0].[Id], [t2].[LastName], [t2].[Id]
+</code></pre>
+<p>Example 12:</p>
+<pre><code class="language-csharp">var grouping = context.People
+    .Include(e =&gt; e.Shoes)
+    .OrderBy(e =&gt; e.FirstName)
+    .ThenBy(e =&gt; e.LastName)
+    .GroupBy(e =&gt; e.FirstName)
+    .Select(g =&gt; new { Name = g.Key, People = g.ToList()})
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [t].[FirstName], [t0].[Id], [t0].[Age], [t0].[FirstName], [t0].[LastName], [t0].[MiddleInitial], [t0].[Id0], [t0].[Age0], [t0].[PersonId], [t0].[Style]
+FROM (
+    SELECT [p].[FirstName]
+    FROM [People] AS [p]
+    GROUP BY [p].[FirstName]
+) AS [t]
+LEFT JOIN (
+    SELECT [p0].[Id], [p0].[Age], [p0].[FirstName], [p0].[LastName], [p0].[MiddleInitial], [s].[Id] AS [Id0], [s].[Age] AS [Age0], [s].[PersonId], [s].[Style]
+    FROM [People] AS [p0]
+    LEFT JOIN [Shoes] AS [s] ON [p0].[Id] = [s].[PersonId]
+) AS [t0] ON [t].[FirstName] = [t0].[FirstName]
+ORDER BY [t].[FirstName], [t0].[Id]
+</code></pre>
+<p>Example 13:</p>
+<pre><code class="language-csharp">var grouping = context.People
+    .GroupBy(m =&gt; new {m.FirstName, m.MiddleInitial })
+    .Select(am =&gt; new
+    {
+        Key = am.Key,
+        Items = am.ToList()
+    })
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [t].[FirstName], [t].[MiddleInitial], [p0].[Id], [p0].[Age], [p0].[FirstName], [p0].[LastName], [p0].[MiddleInitial]
+FROM (
+    SELECT [p].[FirstName], [p].[MiddleInitial]
+    FROM [People] AS [p]
+    GROUP BY [p].[FirstName], [p].[MiddleInitial]
+) AS [t]
+LEFT JOIN [People] AS [p0] ON (([t].[FirstName] = [p0].[FirstName]) OR ([t].[FirstName] IS NULL AND [p0].[FirstName] IS NULL)) AND (([t].[MiddleInitial] = [p0].[MiddleInitial]) OR ([t].[MiddleInitial] IS NULL AND [p0].[MiddleInitial] IS NULL))
+ORDER BY [t].[FirstName], [t].[MiddleInitial]
+</code></pre>
+<p>Model</p>
+<p>The entity types used for these examples are:</p>
+<pre><code class="language-csharp">public class Person
+{
+    public int Id { get; set; }
+    public int Age { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string MiddleInitial { get; set; }
+    public Feet Feet { get; set; }
+    public ICollection&lt;Shoes&gt; Shoes { get; } = new List&lt;Shoes&gt;();
+}
+
+public class Shoes
+{
+    public int Id { get; set; }
+    public int Age { get; set; }
+    public string Style { get; set; }
+    public Person Person { get; set; }
+}
+
+public class Feet
+{
+    public int Id { get; set; }
+    public int Size { get; set; }
+    public Person Person { get; set; }
+}
+</code></pre>
+<h3><a href="#translate-stringconcat-with-multiple-arguments" aria-hidden="true" class="anchor" id="translate-stringconcat-with-multiple-arguments"></a>Translate String.Concat with multiple arguments</h3>
+<p>GitHub Issue: #23859. This feature was contributed by @wmeints. Many thanks!</p>
+<p>Starting with EF Core 6.0, calls to String.Concat with multiple arguments are now translated to SQL. For example, the following query:</p>
+<pre><code class="language-csharp">var shards = context.Shards
+    .Where(e =&gt; string.Concat(e.Token1, e.Token2, e.Token3) != e.TokensProcessed).ToList();
+</code></pre>
+<p>Will be translated to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [s].[Id], [s].[Token1], [s].[Token2], [s].[Token3], [s].[TokensProcessed]
+FROM [Shards] AS [s]
+WHERE (([s].[Token1] + ([s].[Token2] + [s].[Token3])) &lt;&gt; [s].[TokensProcessed]) OR [s].[TokensProcessed] IS NULL
+</code></pre>
+<h3><a href="#smoother-integration-with-systemlinq.async" aria-hidden="true" class="anchor" id="smoother-integration-with-systemlinq.async"></a>Smoother integration with System.Linq.Async</h3>
+<p>GitHub Issue: #24041.</p>
+<p>In this paper we present a new approach to async processing in EF Core.</p>
+<p>Note that most applications do not need to use System.Linq.Async since EF Core queries are usually fully translated on the server.</p>
+<h3><a href="#more-flexible-sql-server-free-text-search" aria-hidden="true" class="anchor" id="more-flexible-sql-server-free-text-search"></a>More flexible SQL Server free-text search</h3>
+<p>GitHub Issue: #23921.</p>
+<p><code>FreeText</code> functions can now be used with binary columns, or with columns mapped using a value converter.</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+
+    public Name Name{ get; set; }
+}
+
+public class Name
+{
+    public string First { get; set; }
+    public string MiddleInitial { get; set; }
+    public string Last { get; set; }
+}
+</code></pre>
+<p>This is mapped to JSON in the database:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Customer&gt;()
+    .Property(e =&gt; e.Name)
+    .HasConversion(
+        v =&gt; JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+        v =&gt; JsonSerializer.Deserialize&lt;Name&gt;(v, (JsonSerializerOptions)null));
+</code></pre>
+<p>A query can now be executed using <code>Contains</code> or <code>FreeText</code> even though the type of the property is <code>Name</code> not <code>string</code>. For example:</p>
+<pre><code class="language-csharp">var result = context.Customers.Where(e =&gt; EF.Functions.Contains(e.Name, &quot;Martin&quot;)).ToList();
+</code></pre>
+<p>This generates the following SQL, when using SQL Server:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [c].[Name]
+FROM [Customers] AS [c]
+WHERE CONTAINS([c].[Name], N'Martin')
+</code></pre>
+<h3><a href="#translate-tostring-on-sqlite" aria-hidden="true" class="anchor" id="translate-tostring-on-sqlite"></a>Translate <code>ToString</code> on SQLite</h3>
+<p>GitHub Issue: #17223. This feature was contributed by @ralmsdeveloper. Many thanks!</p>
+<p>New features have been added to the <code>ToString</code> query language.</p>
+<pre><code class="language-csharp">public class User
+{
+    public int Id { get; set; }
+    public string Username { get; set; }
+    public long PhoneNumber { get; set; }
+}
+</code></pre>
+<p><code>ToString</code> is a library that can be used to find patterns in numbers.</p>
+<pre><code class="language-csharp">var users = context.Users.Where(u =&gt; EF.Functions.Like(u.PhoneNumber.ToString(), &quot;%555%&quot;)).ToList();
+</code></pre>
+<p>This translates to the following SQL when using a SQLite database:</p>
+<pre><code class="language-sql">SELECT &quot;u&quot;.&quot;Id&quot;, &quot;u&quot;.&quot;PhoneNumber&quot;, &quot;u&quot;.&quot;Username&quot;
+FROM &quot;Users&quot; AS &quot;u&quot;
+WHERE CAST(&quot;u&quot;.&quot;PhoneNumber&quot; AS TEXT) LIKE '%555%'
+</code></pre>
+<p>Note that translation of <code>ToString</code>() for SQL Server is already supported in EF Core 5.0, and may also be supported by other database providers.</p>
+<h3><a href="#effunctions.random" aria-hidden="true" class="anchor" id="effunctions.random"></a><code>EF.Functions.Random</code></h3>
+<p>GitHub Issue: #16141. This feature was contributed by @RaymondHuy. Many thanks!</p>
+<p><code>EF.Functions.Random</code> maps to a database function returning a pseudo-random number between <code>0</code> and <code>1</code> exclusive.</p>
+<pre><code class="language-csharp">public class User
+{
+    public int Id { get; set; }
+    public string Username { get; set; }
+    public int Popularity { get; set; }
+}
+</code></pre>
+<p><code>Popularity</code> can have values from <code>1</code> to 5 inclusive. Using <code>EF.Functions.Random</code> we can write a query to return all users with a randomly chosen popularity:</p>
+<pre><code class="language-csharp">var users = context.Users.Where(u =&gt; u.Popularity == (int)(EF.Functions.Random() * 4.0) + 1).ToList();
+</code></pre>
+<p>This translates to the following SQL when using a SQL Server database:</p>
+<pre><code class="language-sql">SELECT [u].[Id], [u].[Popularity], [u].[Username]
+FROM [Users] AS [u]
+WHERE [u].[Popularity] = (CAST((RAND() * 4.0E0) AS int) + 1)
+</code></pre>
+<h3><a href="#improved-sql-server-translation-for-isnullorwhitespace" aria-hidden="true" class="anchor" id="improved-sql-server-translation-for-isnullorwhitespace"></a>Improved SQL Server translation for IsNullOrWhitespace</h3>
+<p>GitHub Issue: #22916. This feature was contributed by @Marusyk. Many thanks!</p>
+<p>Consider the following query:</p>
+<pre><code class="language-csharp">var users = context.Users.Where(
+    e =&gt; string.IsNullOrWhiteSpace(e.FirstName)
+         || string.IsNullOrWhiteSpace(e.LastName)).ToList();
+</code></pre>
+<p>Before EF Core 6.0, this was translated to the following on SQL Server:</p>
+<pre><code class="language-sql">SELECT [u].[Id], [u].[FirstName], [u].[LastName]
+FROM [Users] AS [u]
+WHERE ([u].[FirstName] IS NULL OR (LTRIM(RTRIM([u].[FirstName])) = N'')) OR ([u].[LastName] IS NULL OR (LTRIM(RTRIM([u].[LastName])) = N''))
+</code></pre>
+<p>This translation has been improved for EF Core 6.0 to:</p>
+<pre><code class="language-sql">SELECT [u].[Id], [u].[FirstName], [u].[LastName]
+FROM [Users] AS [u]
+WHERE ([u].[FirstName] IS NULL OR ([u].[FirstName] = N'')) OR ([u].[LastName] IS NULL OR ([u].[LastName] = N''))
+</code></pre>
+<h3><a href="#defining-query-for-in-memory-provider" aria-hidden="true" class="anchor" id="defining-query-for-in-memory-provider"></a>Defining query for in-memory provider</h3>
+<p>GitHub Issue: #24600.</p>
+<p>This article describes a new way to query against in-memory databases.</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public Address Address { get; set; }
+}
+
+public class Address
+{
+    public int Id { get; set; }
+    public string House { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>Now, imagine we want a view over this data that shows how many customers their are into each postcode area. We can create a keyless entity type to represent this:</p>
+<pre><code class="language-csharp">public class CustomerDensity
+{
+    public string Postcode { get; set; }
+    public int CustomerCount { get; set; }
+}
+</code></pre>
+<p>And define a DbSet property for it on the <code>DbContext</code>, along with sets for other top-level entity types:</p>
+<pre><code class="language-csharp">public DbSet&lt;Customer&gt; Customers { get; set; }
+public DbSet&lt;CustomerDensity&gt; CustomerDensities { get; set; }
+</code></pre>
+<p>Then, in <code>OnModelCreating</code>, we can write a LINQ query that defines the data to be returned for <code>CustomerDensities</code>:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .Entity&lt;CustomerDensity&gt;()
+        .HasNoKey()
+        .ToInMemoryQuery(
+            () =&gt; Customers
+                .GroupBy(c =&gt; c.Address.Postcode.Substring(0, 3))
+                .Select(
+                    g =&gt;
+                        new CustomerDensity
+                        {
+                            Postcode = g.Key,
+                            CustomerCount = g.Count()
+                        }));
+}
+</code></pre>
+<p>This can then be queried just like any other DbSet property:</p>
+<pre><code class="language-csharp">var results = context.CustomerDensities.ToList();
+</code></pre>
+<h3><a href="#translate-substring-with-single-parameter" aria-hidden="true" class="anchor" id="translate-substring-with-single-parameter"></a>Translate Substring with single parameter</h3>
+<p>GitHub Issue: #20173. This feature was contributed by @stevendarby. Many thanks!</p>
+<p>EF Core 6.0 now translates uses of <code>string.Substring</code> with a single argument. For example:</p>
+<pre><code class="language-csharp">var result = context.Customers
+    .Select(a =&gt; new { Name = a.Name.Substring(3) })
+    .FirstOrDefault(a =&gt; a.Name == &quot;hur&quot;);
+</code></pre>
+<p>This translates to the following SQL when using SQL Server:</p>
+<pre><code class="language-sql">SELECT TOP(1) SUBSTRING([c].[Name], 3 + 1, LEN([c].[Name])) AS [Name]
+FROM [Customers] AS [c]
+WHERE SUBSTRING([c].[Name], 3 + 1, LEN([c].[Name])) = N'hur'
+</code></pre>
+<h3><a href="#split-queries-for-non-navigation-collections" aria-hidden="true" class="anchor" id="split-queries-for-non-navigation-collections"></a>Split-queries for non-navigation collections</h3>
+<p>GitHub Issue: #21234.</p>
+<p>EF Core 6.0 adds support for splitting a single query into multiple SQL queries.</p>
+<p>The following are example queries showing the translation on SQL Server into either a single query or multiple queries.</p>
+<p>Example <code>1</code>:</p>
+<p>LINQ query:</p>
+<pre><code class="language-csharp">context.Customers
+    .Select(
+        c =&gt; new
+        {
+            c,
+            Orders = c.Orders
+                .Where(o =&gt; o.Id &gt; 1)
+        })
+    .ToList();
+</code></pre>
+<p>Single SQL query:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [t].[Id], [t].[CustomerId], [t].[OrderDate]
+FROM [Customers] AS [c]
+LEFT JOIN (
+    SELECT [o].[Id], [o].[CustomerId], [o].[OrderDate]
+    FROM [Order] AS [o]
+    WHERE [o].[Id] &gt; 1
+) AS [t] ON [c].[Id] = [t].[CustomerId]
+ORDER BY [c].[Id]
+</code></pre>
+<p>Multiple SQL queries:</p>
+<pre><code class="language-sql">SELECT [c].[Id]
+FROM [Customers] AS [c]
+ORDER BY [c].[Id]
+
+SELECT [t].[Id], [t].[CustomerId], [t].[OrderDate], [c].[Id]
+FROM [Customers] AS [c]
+INNER JOIN (
+    SELECT [o].[Id], [o].[CustomerId], [o].[OrderDate]
+    FROM [Order] AS [o]
+    WHERE [o].[Id] &gt; 1
+) AS [t] ON [c].[Id] = [t].[CustomerId]
+ORDER BY [c].[Id]
+</code></pre>
+<p>Example 2:</p>
+<p>LINQ query:</p>
+<pre><code class="language-csharp">context.Customers
+    .Select(
+        c =&gt; new
+        {
+            c,
+            OrderDates = c.Orders
+                .Where(o =&gt; o.Id &gt; 1)
+                .Select(o =&gt; o.OrderDate)
+        })
+    .ToList();
+</code></pre>
+<p>Single SQL query:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [t].[OrderDate], [t].[Id]
+FROM [Customers] AS [c]
+  LEFT JOIN (
+  SELECT [o].[OrderDate], [o].[Id], [o].[CustomerId]
+  FROM [Order] AS [o]
+  WHERE [o].[Id] &gt; 1
+  ) AS [t] ON [c].[Id] = [t].[CustomerId]
+ORDER BY [c].[Id]
+</code></pre>
+<p>Multiple SQL queries:</p>
+<pre><code class="language-sql">SELECT [c].[Id]
+FROM [Customers] AS [c]
+ORDER BY [c].[Id]
+
+SELECT [t].[Id], [t].[CustomerId], [t].[OrderDate], [c].[Id]
+FROM [Customers] AS [c]
+INNER JOIN (
+    SELECT [o].[Id], [o].[CustomerId], [o].[OrderDate]
+    FROM [Order] AS [o]
+    WHERE [o].[Id] &gt; 1
+) AS [t] ON [c].[Id] = [t].[CustomerId]
+ORDER BY [c].[Id]
+</code></pre>
+<p>Example 3:</p>
+<p>LINQ query:</p>
+<pre><code class="language-csharp">context.Customers
+    .Select(
+        c =&gt; new
+        {
+            c,
+            OrderDates = c.Orders
+                .Where(o =&gt; o.Id &gt; 1)
+                .Select(o =&gt; o.OrderDate)
+                .Distinct()
+        })
+    .ToList();
+</code></pre>
+<p>Single SQL query:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [t].[OrderDate]
+FROM [Customers] AS [c]
+  OUTER APPLY (
+  SELECT DISTINCT [o].[OrderDate]
+  FROM [Order] AS [o]
+  WHERE ([c].[Id] = [o].[CustomerId]) AND ([o].[Id] &gt; 1)
+  ) AS [t]
+ORDER BY [c].[Id]
+</code></pre>
+<p>Multiple SQL queries:</p>
+<pre><code class="language-sql">SELECT [c].[Id]
+FROM [Customers] AS [c]
+ORDER BY [c].[Id]
+
+SELECT [t].[OrderDate], [c].[Id]
+FROM [Customers] AS [c]
+  CROSS APPLY (
+  SELECT DISTINCT [o].[OrderDate]
+  FROM [Order] AS [o]
+  WHERE ([c].[Id] = [o].[CustomerId]) AND ([o].[Id] &gt; 1)
+  ) AS [t]
+ORDER BY [c].[Id]
+</code></pre>
+<h3><a href="#remove-last-order-by-clause-when-joining-for-collection" aria-hidden="true" class="anchor" id="remove-last-order-by-clause-when-joining-for-collection"></a>Remove last ORDER BY clause when joining for collection</h3>
+<p>GitHub Issue: #19828.</p>
+<p>EF Core 6.0 removes the last ORDER BY clause from the Entity Framework.</p>
+<p>For example, consider this query:</p>
+<pre><code class="language-csharp">context.Customers
+    .Select(
+        e =&gt; new
+        {
+            e.Id,
+            FirstOrder = e.Orders.Where(i =&gt; i.Id == 1).ToList()
+        })
+    .ToList();
+</code></pre>
+<p>With EF Core 5.0 on SQL Server, this query is translated to:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [t].[Id], [t].[CustomerId], [t].[OrderDate]
+FROM [Customers] AS [c]
+LEFT JOIN (
+    SELECT [o].[Id], [o].[CustomerId], [o].[OrderDate]
+    FROM [Order] AS [o]
+    WHERE [o].[Id] = 1
+) AS [t] ON [c].[Id] = [t].[CustomerId]
+ORDER BY [c].[Id], [t].[Id]
+</code></pre>
+<p>With EF Core 6.0, it is instead translated to:</p>
+<pre><code class="language-sql">SELECT [c].[Id], [t].[Id], [t].[CustomerId], [t].[OrderDate]
+FROM [Customers] AS [c]
+LEFT JOIN (
+    SELECT [o].[Id], [o].[CustomerId], [o].[OrderDate]
+    FROM [Order] AS [o]
+    WHERE [o].[Id] = 1
+) AS [t] ON [c].[Id] = [t].[CustomerId]
+ORDER BY [c].[Id]
+</code></pre>
+<h3><a href="#tag-queries-with-file-name-and-line-number" aria-hidden="true" class="anchor" id="tag-queries-with-file-name-and-line-number"></a>Tag queries with file name and line number</h3>
+<p>GitHub Issue: #14176. This feature was contributed by @michalczerwinski. Many thanks!</p>
+<p>EF Core 6.0 introduces a new functionality called query tags.</p>
+<pre><code class="language-csharp">var results1 = context
+    .Customers
+    .TagWithCallSite()
+    .Where(c =&gt; c.Name.StartsWith(&quot;A&quot;))
+    .ToList();
+</code></pre>
+<p>This results in the following generated SQL when using SQL Server:</p>
+<pre><code class="language-sql">-- file: C:\dotnet\efdocs\samples\core\Miscellaneous\NewInEFCore6\TagWithFileAndLineSample.cs:21
+
+SELECT [c].[Id], [c].[Name]
+FROM [Customers] AS [c]
+WHERE [c].[Name] IS NOT NULL AND ([c].[Name] LIKE N'A%')
+</code></pre>
+<h3><a href="#changes-to-owned-optional-dependent-handling" aria-hidden="true" class="anchor" id="changes-to-owned-optional-dependent-handling"></a>Changes to owned optional dependent handling</h3>
+<p>GitHub Issue: #24558.</p>
+<p>An optional dependent entity is a property of a table.</p>
+<p>For example, consider a <code>Customer</code> class where each customer has an owned <code>Address</code>:</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public Address Address { get; set; }
+}
+
+public class Address
+{
+    public string House { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+
+    [Required]
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>The address is optional, meaning that it is valid to save a customer with no address:</p>
+<pre><code class="language-csharp">context.Customers1.Add(
+    new()
+    {
+        Name = &quot;Foul Ole Ron&quot;
+    });
+</code></pre>
+<p>However, if a customer does have an address, then that address must have at least a non-null postcode:</p>
+<pre><code class="language-csharp">context.Customers1.Add(
+    new()
+    {
+        Name = &quot;Havelock Vetinari&quot;,
+        Address = new()
+        {
+            Postcode = &quot;AN1 1PL&quot;,
+        }
+    });
+</code></pre>
+<p>This is ensured by marking the <code>Postcode</code> property as <code>Required</code>.</p>
+<p>Iterating through customers using the <code>Address</code> property.</p>
+<pre><code class="language-csharp">foreach (var customer in context.Customers1)
+{
+    Console.Write(customer.Name);
+
+    if (customer.Address == null)
+    {
+        Console.WriteLine(&quot; has no address.&quot;);
+    }
+    else
+    {
+        Console.WriteLine($&quot; has postcode {customer.Address.Postcode}.&quot;);
+    }
+}
+</code></pre>
+<p>Generates the following results:</p>
+<pre><code class="language-output">Foul Ole Ron has no address.
+Havelock Vetinari has postcode AN1 1PL.
+</code></pre>
+<p>Consider instead the case where no property off the address is required:</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public Address Address { get; set; }
+}
+
+public class Address
+{
+    public string House { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>Now it is possible to save both a customer with no address, and a customer with an address where all the address properties are null:</p>
+<pre><code class="language-csharp">context.Customers2.Add(
+    new()
+    {
+        Name = &quot;Foul Ole Ron&quot;
+    });
+
+context.Customers2.Add(
+    new()
+    {
+        Name = &quot;Havelock Vetinari&quot;,
+        Address = new()
+    });
+</code></pre>
+<p>However, in the database, these two cases are indistinguishable, as we can see by directly querying the database columns:</p>
+<pre><code class="language-output">Id  Name               House   Street  City    Postcode
+1   Foul Ole Ron       NULL    NULL    NULL    NULL
+2   Havelock Vetinari  NULL    NULL    NULL    NULL
+</code></pre>
+<p>For this reason, EF Core 6.0 will now warn you when saving an optional dependent where all of its properties are null. For example:</p>
+<p>For example, if an optional dependent is mapped to a table that is owned by another optional dependent, it can be tricky to tell which optional dependent is the owner of which table.</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public ContactInfo ContactInfo { get; set; }
+}
+
+public class ContactInfo
+{
+    public string Phone { get; set; }
+    public Address Address { get; set; }
+}
+
+public class Address
+{
+    public string House { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>If the relationship between <code>ContactInfo.Phone</code> and <code>Address</code> is optional, then EF Core will not create an instance of <code>Address</code> if the relationship itself is optional.</p>
+<p>The bottom line here is to avoid the case where an optional dependent can contain all nullable property values and shares a table with its principal. There are three easy ways to avoid this:</p>
+<ul>
+<li>
+<p>Make the dependent required. This means that the dependent entity will always have a value after it is queried, even if all its properties are null.</p>
+</li>
+<li>
+<p>Make sure that the dependent contains at least one required property, as described above.</p>
+</li>
+<li>
+<p>Save optional dependents to their own table, instead of sharing a table with the principal.</p>
+</li>
+</ul>
+<p>A dependent can be made required by using the <code>Required</code> attribute on it's navigation:</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    [Required]
+    public Address Address { get; set; }
+}
+
+public class Address
+{
+    public string House { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>Or by specifying it is required in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;WithRequiredNavigation.Customer&gt;(
+    b =&gt;
+        {
+            b.OwnsOne(e =&gt; e.Address);
+            b.Navigation(e =&gt; e.Address).IsRequired();
+        });
+</code></pre>
+<p>Dependents can be saved to a different table by specifying the tables to use in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;WithDifferentTable.Customer&gt;(
+        b =&gt;
+            {
+                b.ToTable(&quot;Customers&quot;);
+                b.OwnsOne(
+                    e =&gt; e.Address,
+                    b =&gt; b.ToTable(&quot;CustomerAddresses&quot;));
+            });
+</code></pre>
+<p>See the OptionalDependentsSample in GitHub for more examples of optional dependents, including cases with nested optional dependents.</p>
+<h2><a href="#new-mapping-attributes" aria-hidden="true" class="anchor" id="new-mapping-attributes"></a>New mapping attributes</h2>
+<p>EF Core 6.0 contains several new attributes that can be applied to code to change the way it is mapped to the database.</p>
+<h3><a href="#unicodeattribute" aria-hidden="true" class="anchor" id="unicodeattribute"></a><code>UnicodeAttribute</code></h3>
+<p>GitHub Issue: #19794. This feature was contributed by @RaymondHuy. Many thanks!</p>
+<p>EF now supports non-Unicode mappings.</p>
+<pre><code class="language-csharp">public class Book
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+
+    [Unicode(false)]
+    [MaxLength(22)]
+    public string Isbn { get; set; }
+}
+</code></pre>
+<p>The varchar attribute is used to specify the length of a <code>string</code>.</p>
+<pre><code class="language-sql">CREATE TABLE [Book] (
+    [Id] int NOT NULL IDENTITY,
+    [Title] nvarchar(max) NULL,
+    [Isbn] varchar(22) NULL,
+    CONSTRAINT [PK_Book] PRIMARY KEY ([Id]));
+</code></pre>
+<blockquote>
+<p>Note
+EF Core maps <code>string</code> properties to <code>Unicode</code> columns by default. <code>UnicodeAttribute</code> is ignored when the database system supports only <code>Unicode</code> types.</p>
+</blockquote>
+<h3><a href="#precisionattribute" aria-hidden="true" class="anchor" id="precisionattribute"></a>PrecisionAttribute</h3>
+<p>GitHub Issue: #17914. This feature was contributed by @RaymondHuy. Many thanks!</p>
+<p>The latest release of SQL Server 2016 introduces a new mapping attribute that can be used to specify the precision and scale of a database column without specifying the database type directly.</p>
+<pre><code class="language-csharp">public class Product
+{
+    public int Id { get; set; }
+
+    [Precision(precision: 10, scale: 2)]
+    public decimal Price { get; set; }
+}
+</code></pre>
+<p>EF Core will map this property to a database column with precision 10 and scale 2. For example, on SQL Server:</p>
+<pre><code class="language-sql">CREATE TABLE [Product] (
+    [Id] int NOT NULL IDENTITY,
+    [Price] decimal(10,2) NOT NULL,
+    CONSTRAINT [PK_Product] PRIMARY KEY ([Id]));
+</code></pre>
+<h3><a href="#entitytypeconfigurationattribute" aria-hidden="true" class="anchor" id="entitytypeconfigurationattribute"></a><code>EntityTypeConfigurationAttribute</code></h3>
+<p>GitHub Issue: #23163. This feature was contributed by @KaloyanIT. Many thanks!</p>
+<p><code>IEntityTypeConfiguration</code><TEntity> instances allow <code>ModelBuilder</code> configuration for each entity type to be contained in its own configuration class. For example:</p>
+<pre><code class="language-csharp">public class BookConfiguration : IEntityTypeConfiguration&lt;Book&gt;
+{
+    public void Configure(EntityTypeBuilder&lt;Book&gt; builder)
+    {
+        builder
+            .Property(e =&gt; e.Isbn)
+            .IsUnicode(false)
+            .HasMaxLength(22);
+    }
+}
+</code></pre>
+<p>Normally, this configuration class must be instantiated and called into from <code>DbContext</code>.OnModelCreating. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    new BookConfiguration().Configure(modelBuilder.Entity&lt;Book&gt;());
+}
+</code></pre>
+<p>Starting with EF Core 6.0, an <code>EntityTypeConfigurationAttribute</code> can be placed on the entity type such that EF Core can find and use appropriate configuration. For example:</p>
+<pre><code class="language-csharp">[EntityTypeConfiguration(typeof(BookConfiguration))]
+public class Book
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Isbn { get; set; }
+}
+</code></pre>
+<p>The <code>Book</code> entity type is included in a model using one of the normal mechanisms.</p>
+<pre><code class="language-csharp">public class BooksContext : DbContext
+{
+    public DbSet&lt;Book&gt; Books { get; set; }
+
+    //...
+</code></pre>
+<p>Or by registering it in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Book&gt;();
+}
+</code></pre>
+<blockquote>
+<p>Note
+EntityTypeConfigurationAttribute types will not be automatically discovered in an assembly. Entity types must be added to the model before the attribute will be discovered on that entity type.</p>
+</blockquote>
+<h2><a href="#model-building-improvements" aria-hidden="true" class="anchor" id="model-building-improvements"></a>Model building improvements</h2>
+<p>In addition to new mapping attributes, EF Core 6.0 contains several other improvements to the model building process.</p>
+<h3><a href="#support-for-sql-server-sparse-columns" aria-hidden="true" class="anchor" id="support-for-sql-server-sparse-columns"></a>Support for SQL Server sparse columns</h3>
+<p>GitHub Issue: #8023.</p>
+<p>In our series of articles on inheritance, we will look at how to map SQL Server columns to subtype classes.</p>
+<pre><code class="language-csharp">public class ForumUser
+{
+    public int Id { get; set; }
+    public string Username { get; set; }
+}
+
+public class ForumModerator : ForumUser
+{
+    public string ForumName { get; set; }
+}
+</code></pre>
+<p>If you've ever wondered what it would be like to be a moderator on a forum, then you've come to the right place.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .Entity&lt;ForumModerator&gt;()
+        .Property(e =&gt; e.ForumName)
+        .IsSparse();
+}
+</code></pre>
+<p>EF Core migrations will then mark the column as sparse. For example:</p>
+<pre><code class="language-sql">CREATE TABLE [ForumUser] (
+    [Id] int NOT NULL IDENTITY,
+    [Username] nvarchar(max) NULL,
+    [Discriminator] nvarchar(max) NOT NULL,
+    [ForumName] nvarchar(max) SPARSE NULL,
+    CONSTRAINT [PK_ForumUser] PRIMARY KEY ([Id]));
+</code></pre>
+<blockquote>
+<p>Note
+Sparse columns have limitations. Make sure to read the SQL Server sparse columns documentation to ensure that sparse columns are the right choice for your scenario.</p>
+</blockquote>
+<h3><a href="#improvements-to-hasconversion-api" aria-hidden="true" class="anchor" id="improvements-to-hasconversion-api"></a>Improvements to <code>HasConversion</code> API</h3>
+<p>GitHub Issue: #25468.</p>
+<p>Before EF Core 6.0, the generic overloads of the <code>HasConversion</code> methods used the generic parameter to specify the type to convert to. For example, consider a <code>Currency</code> enum:</p>
+<pre><code class="language-csharp">public enum Currency
+{
+    UsDollars,
+    PoundsSterling,
+    Euros
+}
+</code></pre>
+<p>EF Core can be configured to save values of this enum as the strings &quot;UsDollars&quot;, &quot;PoundsStirling&quot;, and &quot;Euros&quot; using <code>HasConversion</code><string>. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;TestEntity1&gt;()
+    .Property(e =&gt; e.Currency)
+    .HasConversion&lt;string&gt;();
+</code></pre>
+<p>In the latest release of the EF compiler, the generic type can no longer be used.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;TestEntity2&gt;()
+    .Property(e =&gt; e.Currency)
+    .HasConversion&lt;EnumToNumberConverter&lt;Currency, short&gt;&gt;();
+</code></pre>
+<p>Or it can be a custom value converter type. For example, consider a converter that stores the enum values as their currency symbols:</p>
+<pre><code class="language-csharp">public class CurrencyToSymbolConverter : ValueConverter&lt;Currency, string&gt;
+{
+    public CurrencyToSymbolConverter()
+        : base(
+            v =&gt; v == Currency.PoundsSterling ? &quot;£&quot; : v == Currency.Euros ? &quot;€&quot; : &quot;$&quot;,
+            v =&gt; v == &quot;£&quot; ? Currency.PoundsSterling : v == &quot;€&quot; ? Currency.Euros : Currency.UsDollars)
+    {
+    }
+}
+</code></pre>
+<p>This can now be configured using the generic <code>HasConversion</code> method:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;TestEntity3&gt;()
+    .Property(e =&gt; e.Currency)
+    .HasConversion&lt;CurrencyToSymbolConverter&gt;();
+</code></pre>
+<h3><a href="#less-configuration-for-many-to-many-relationships" aria-hidden="true" class="anchor" id="less-configuration-for-many-to-many-relationships"></a>Less configuration for many-to-many relationships</h3>
+<p>GitHub Issue: #21535.</p>
+<p>Unambiguous many-to-many relationships between two entity types are discovered by convention. Where necessary or if desired, the navigations can be specified explicitly. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Cat&gt;()
+    .HasMany(e =&gt; e.Humans)
+    .WithMany(e =&gt; e.Cats);
+</code></pre>
+<p>EF Core can be used to create two types of entities: one for storing data and one for retrieving it.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Cat&gt;()
+    .HasMany(e =&gt; e.Humans)
+    .WithMany(e =&gt; e.Cats)
+    .UsingEntity&lt;CatHuman&gt;();
+</code></pre>
+<p>In addition, the join entity type can be additional configured without needing to specify the left and right relationships explicitly. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Cat&gt;()
+    .HasMany(e =&gt; e.Humans)
+    .WithMany(e =&gt; e.Cats)
+    .UsingEntity&lt;CatHuman&gt;(
+        e =&gt; e.HasKey(e =&gt; new { e.CatsId, e.HumansId }));
+</code></pre>
+<p>And finally, the full configuration can be supplied. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Cat&gt;()
+    .HasMany(e =&gt; e.Humans)
+    .WithMany(e =&gt; e.Cats)
+    .UsingEntity&lt;CatHuman&gt;(
+        e =&gt; e.HasOne&lt;Human&gt;().WithMany().HasForeignKey(e =&gt; e.CatsId),
+        e =&gt; e.HasOne&lt;Cat&gt;().WithMany().HasForeignKey(e =&gt; e.HumansId),
+        e =&gt; e.HasKey(e =&gt; new { e.CatsId, e.HumansId }));
+</code></pre>
+<h3><a href="#allow-value-converters-to-convert-nulls" aria-hidden="true" class="anchor" id="allow-value-converters-to-convert-nulls"></a>Allow value converters to convert nulls</h3>
+<p>GitHub Issue: #13850.</p>
+<blockquote>
+<p>Important
+Due to the problems outlined below, the constructors for <code>ValueConverter</code> that allow conversion of nulls have been marked with [EntityFrameworkInternal] for the EF Core 6.0 release. Using these constructors will now generate a build warning.</p>
+</blockquote>
+<p>This converter converts null to FK.</p>
+<p>In our series of articles on object-oriented programming, we look at some of the problems with converting nulls.</p>
+<ul>
+<li>
+<p>Value conversion to null in the store generates bad queries</p>
+</li>
+<li>
+<p>Value conversion from null in the store generates bad queries</p>
+</li>
+<li>
+<p>Value converters do not handle cases where the database column has multiple different values that convert to the same value</p>
+</li>
+<li>
+<p>Allow value converters to change nullability of columns</p>
+</li>
+</ul>
+<p>We have found a number of issues with the EF1001 compiler.</p>
+<p>nulls can be used to specify a default value for an entity type.</p>
+<pre><code class="language-csharp">public enum Breed
+{
+    Unknown,
+    Burmese,
+    Tonkinese
+}
+</code></pre>
+<p>However, the database may have null values when the breed is unknown. In EF Core 6.0, a value converter can be used to account for this:</p>
+<pre><code class="language-csharp">public class BreedConverter : ValueConverter&lt;Breed, string&gt;
+    {
+#pragma warning disable EF1001
+        public BreedConverter()
+            : base(
+                v =&gt; v == Breed.Unknown ? null : v.ToString(),
+                v =&gt; v == null ? Breed.Unknown : Enum.Parse&lt;Breed&gt;(v),
+                convertsNulls: true)
+        {
+        }
+#pragma warning restore EF1001
+    }
+</code></pre>
+<p>Cats with a breed of &quot;Unknown&quot; will have their <code>Breed</code> column set to null in the database. For example:</p>
+<pre><code class="language-csharp">context.AddRange(
+    new Cat { Name = &quot;Mac&quot;, Breed = Breed.Unknown },
+    new Cat { Name = &quot;Clippy&quot;, Breed = Breed.Burmese },
+    new Cat { Name = &quot;Sid&quot;, Breed = Breed.Tonkinese });
+
+context.SaveChanges();
+</code></pre>
+<p>Which generates the following insert statements on SQL Server:</p>
+<pre><code class="language-output">info: 9/27/2021 19:43:55.966 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (16ms) [Parameters=[@p0=NULL (Size = 4000), @p1='Mac' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET NOCOUNT ON;
+      INSERT INTO [Cats] ([Breed], [Name])
+      VALUES (@p0, @p1);
+      SELECT [Id]
+      FROM [Cats]
+      WHERE @@ROWCOUNT = 1 AND [Id] = scope_identity();
+info: 9/27/2021 19:43:55.983 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[@p0='Burmese' (Size = 4000), @p1='Clippy' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET NOCOUNT ON;
+      INSERT INTO [Cats] ([Breed], [Name])
+      VALUES (@p0, @p1);
+      SELECT [Id]
+      FROM [Cats]
+      WHERE @@ROWCOUNT = 1 AND [Id] = scope_identity();
+info: 9/27/2021 19:43:55.983 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[@p0='Tonkinese' (Size = 4000), @p1='Sid' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SET NOCOUNT ON;
+      INSERT INTO [Cats] ([Breed], [Name])
+      VALUES (@p0, @p1);
+      SELECT [Id]
+      FROM [Cats]
+      WHERE @@ROWCOUNT = 1 AND [Id] = scope_identity();
+</code></pre>
+<h2><a href="#dbcontext-factory-improvements" aria-hidden="true" class="anchor" id="dbcontext-factory-improvements"></a><code>DbContext</code> factory improvements</h2>
+<h3><a href="#adddbcontextfactory-also-registers-dbcontext-directly" aria-hidden="true" class="anchor" id="adddbcontextfactory-also-registers-dbcontext-directly"></a><code>AddDbContextFactory</code> also registers <code>DbContext</code> directly</h3>
+<p>GitHub Issue: #25164.</p>
+<p>A <code>DbContext</code> is a type of instance of an application context.</p>
+<p>To support this, <code>AddDbContextFactory</code> now also registers the <code>DbContext</code> type as a scoped service. For example, consider this registration in the application's D.I. container:</p>
+<pre><code class="language-csharp">var container = services
+    .AddDbContextFactory&lt;SomeDbContext&gt;(
+        builder =&gt; builder.UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=EFCoreSample;ConnectRetryCount=0&quot;))
+    .BuildServiceProvider();
+</code></pre>
+<p>With this registration, the factory can be resolved from the root D.I. container, just as in previous versions:</p>
+<pre><code class="language-csharp">var factory = container.GetService&lt;IDbContextFactory&lt;SomeDbContext&gt;&gt;();
+using (var context = factory.CreateDbContext())
+{
+    // Contexts obtained from the factory must be explicitly disposed
+}
+</code></pre>
+<p>Note that context instances created by the factory must be explicitly disposed.</p>
+<p>In addition, a <code>DbContext</code> instance can be resolved directly from a container scope:</p>
+<pre><code class="language-csharp">using (var scope = container.CreateScope())
+{
+    var context = scope.ServiceProvider.GetService&lt;SomeDbContext&gt;();
+    // Context is disposed when the scope is disposed
+}
+</code></pre>
+<p>In this case the context instance is disposed when the container scope is disposed; the context should not be disposed explicitly.</p>
+<p>At a higher level, this means that either the <code>DbContext</code> of the factory can be injected into other D.I. types. For example:</p>
+<pre><code class="language-csharp">private class MyController2
+{
+    private readonly IDbContextFactory&lt;SomeDbContext&gt; _contextFactory;
+
+    public MyController2(IDbContextFactory&lt;SomeDbContext&gt; contextFactory)
+    {
+        _contextFactory = contextFactory;
+    }
+
+    public void DoSomething()
+    {
+        using var context1 = _contextFactory.CreateDbContext();
+        using var context2 = _contextFactory.CreateDbContext();
+
+        var results1 = context1.Blogs.ToList();
+        var results2 = context2.Blogs.ToList();
+
+        // Contexts obtained from the factory must be explicitly disposed
+    }
+}
+</code></pre>
+<p>Or:</p>
+<pre><code class="language-csharp">private class MyController1
+{
+    private readonly SomeDbContext _context;
+
+    public MyController1(SomeDbContext context)
+    {
+        _context = context;
+    }
+
+    public void DoSomething()
+    {
+        var results = _context.Blogs.ToList();
+
+        // Injected context is disposed when the request scope is disposed
+    }
+}
+</code></pre>
+<h3><a href="#dbcontextfactory-ignores-dbcontext-parameterless-constructor" aria-hidden="true" class="anchor" id="dbcontextfactory-ignores-dbcontext-parameterless-constructor"></a>DbContextFactory ignores <code>DbContext</code> parameterless constructor</h3>
+<p>GitHub Issue: #24124.</p>
+<p>The latest release of the Eclipse Framework (EF) introduces new constructors for factory contexts.</p>
+<pre><code class="language-csharp">public class SomeDbContext : DbContext
+{
+    public SomeDbContext()
+    {
+    }
+
+    public SomeDbContext(DbContextOptions&lt;SomeDbContext&gt; options)
+        : base(options)
+    {
+    }
+
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+}
+</code></pre>
+<h3><a href="#dbcontext-pooling-can-be-used-without-dependency-injection" aria-hidden="true" class="anchor" id="dbcontext-pooling-can-be-used-without-dependency-injection"></a><code>DbContext</code> pooling can be used without dependency injection</h3>
+<p>GitHub Issue: #24137.</p>
+<p><code>DbContext</code> instances can now be created using a new type of pool.</p>
+<pre><code class="language-csharp">var options = new DbContextOptionsBuilder&lt;SomeDbContext&gt;()
+    .EnableSensitiveDataLogging()
+    .UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=EFCoreSample;ConnectRetryCount=0&quot;)
+    .Options;
+
+var factory = new PooledDbContextFactory&lt;SomeDbContext&gt;(options);
+</code></pre>
+<p>The factory can then be used to create and pool instances. For example:</p>
+<pre><code class="language-csharp">for (var i = 0; i &lt; 2; i++)
+{
+    using var context1 = factory.CreateDbContext();
+    Console.WriteLine($&quot;Created DbContext with ID {context1.ContextId}&quot;);
+
+    using var context2 = factory.CreateDbContext();
+    Console.WriteLine($&quot;Created DbContext with ID {context2.ContextId}&quot;);
+}
+</code></pre>
+<p>Instances are returned to the pool when they are disposed.</p>
+<h2><a href="#miscellaneous-improvements" aria-hidden="true" class="anchor" id="miscellaneous-improvements"></a>Miscellaneous improvements</h2>
+<p>And finally, EF Core contains several improvements in areas not covered above.</p>
+<h3><a href="#use-columnattribute.order]-when-creating-tables" aria-hidden="true" class="anchor" id="use-columnattribute.order]-when-creating-tables"></a>Use [ColumnAttribute.Order] when creating tables</h3>
+<p>GitHub Issue: #10059.</p>
+<p>The <code>Order</code> property of <code>ColumnAttribute</code> can now be used to order columns when creating a table with migrations. For example, consider the following model:</p>
+<pre><code class="language-csharp">public class EntityBase
+{
+    public int Id { get; set; }
+    public DateTime UpdatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
+}
+
+public class PersonBase : EntityBase
+{
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+}
+
+public class Employee : PersonBase
+{
+    public string Department { get; set; }
+    public decimal AnnualSalary { get; set; }
+    public Address Address { get; set; }
+}
+
+[Owned]
+public class Address
+{
+    public string House { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+
+    [Required]
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>EF Core orders the properties of a table by key columns.</p>
+<pre><code class="language-sql">CREATE TABLE [EmployeesWithoutOrdering] (
+    [Id] int NOT NULL IDENTITY,
+    [Department] nvarchar(max) NULL,
+    [AnnualSalary] decimal(18,2) NOT NULL,
+    [Address_House] nvarchar(max) NULL,
+    [Address_Street] nvarchar(max) NULL,
+    [Address_City] nvarchar(max) NULL,
+    [Address_Postcode] nvarchar(max) NULL,
+    [UpdatedOn] datetime2 NOT NULL,
+    [CreatedOn] datetime2 NOT NULL,
+    [FirstName] nvarchar(max) NULL,
+    [LastName] nvarchar(max) NULL,
+    CONSTRAINT [PK_EmployeesWithoutOrdering] PRIMARY KEY ([Id]));
+</code></pre>
+<p>In EF Core 6.0, <code>ColumnAttribute</code> can be used to specify a different column order. For example:</p>
+<pre><code class="language-csharp">public class EntityBase
+{
+    [Column(Order = 1)]
+    public int Id { get; set; }
+
+    [Column(Order = 98)]
+    public DateTime UpdatedOn { get; set; }
+
+    [Column(Order = 99)]
+    public DateTime CreatedOn { get; set; }
+}
+
+public class PersonBase : EntityBase
+{
+    [Column(Order = 2)]
+    public string FirstName { get; set; }
+
+    [Column(Order = 3)]
+    public string LastName { get; set; }
+}
+
+public class Employee : PersonBase
+{
+    [Column(Order = 20)]
+    public string Department { get; set; }
+
+    [Column(Order = 21)]
+    public decimal AnnualSalary { get; set; }
+
+    public Address Address { get; set; }
+}
+
+[Owned]
+public class Address
+{
+    [Column(&quot;House&quot;, Order = 10)]
+    public string House { get; set; }
+
+    [Column(&quot;Street&quot;, Order = 11)]
+    public string Street { get; set; }
+
+    [Column(&quot;City&quot;, Order = 12)]
+    public string City { get; set; }
+
+    [Required]
+    [Column(&quot;Postcode&quot;, Order = 13)]
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>On SQL Server, the table generated is now:</p>
+<pre><code class="language-sql">CREATE TABLE [EmployeesWithOrdering] (
+    [Id] int NOT NULL IDENTITY,
+    [FirstName] nvarchar(max) NULL,
+    [LastName] nvarchar(max) NULL,
+    [House] nvarchar(max) NULL,
+    [Street] nvarchar(max) NULL,
+    [City] nvarchar(max) NULL,
+    [Postcode] nvarchar(max) NULL,
+    [Department] nvarchar(max) NULL,
+    [AnnualSalary] decimal(18,2) NOT NULL,
+    [UpdatedOn] datetime2 NOT NULL,
+    [CreatedOn] datetime2 NOT NULL,
+    CONSTRAINT [PK_EmployeesWithOrdering] PRIMARY KEY ([Id]));
+</code></pre>
+<p>This Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Choreo Chore</p>
+<p>This example also shows how the same <code>ColumnAttribute</code> can be used to specify both the column name and order.</p>
+<p>Column ordering can also be configured using the <code>ModelBuilder</code> API in <code>OnModelCreating</code>. For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;UsingModelBuilder.Employee&gt;(
+    entityBuilder =&gt;
+    {
+        entityBuilder.Property(e =&gt; e.Id).HasColumnOrder(1);
+        entityBuilder.Property(e =&gt; e.FirstName).HasColumnOrder(2);
+        entityBuilder.Property(e =&gt; e.LastName).HasColumnOrder(3);
+
+        entityBuilder.OwnsOne(
+            e =&gt; e.Address,
+            ownedBuilder =&gt;
+            {
+                ownedBuilder.Property(e =&gt; e.House).HasColumnName(&quot;House&quot;).HasColumnOrder(4);
+                ownedBuilder.Property(e =&gt; e.Street).HasColumnName(&quot;Street&quot;).HasColumnOrder(5);
+                ownedBuilder.Property(e =&gt; e.City).HasColumnName(&quot;City&quot;).HasColumnOrder(6);
+                ownedBuilder.Property(e =&gt; e.Postcode).HasColumnName(&quot;Postcode&quot;).HasColumnOrder(7).IsRequired();
+            });
+
+        entityBuilder.Property(e =&gt; e.Department).HasColumnOrder(8);
+        entityBuilder.Property(e =&gt; e.AnnualSalary).HasColumnOrder(9);
+        entityBuilder.Property(e =&gt; e.UpdatedOn).HasColumnOrder(10);
+        entityBuilder.Property(e =&gt; e.CreatedOn).HasColumnOrder(11);
+    });
+</code></pre>
+<p><code>HasColumnOrder</code> can be used to override ordering made with attributes, including resolving conflicts when attributes on different properties specify the same order number.</p>
+<blockquote>
+<p>Important
+Note that, in the general case, most databases only support ordering columns when the table is created. This means that the column order attribute cannot be used to re-order columns in an existing table. One notable exception to this is SQLite, where migrations will rebuild the entire table with new column orders.</p>
+</blockquote>
+<h3><a href="#ef-core-minimal-api" aria-hidden="true" class="anchor" id="ef-core-minimal-api"></a>EF Core Minimal API</h3>
+<p>GitHub Issue: #25192.</p>
+<p>.NET Core 6.0 includes updated templates that feature simplified &quot;minimal APIs&quot; which remove a lot of the boilerplate code traditionally needed in .NET applications.</p>
+<p>EF Core 6.0 contains a new extension method that registers a <code>DbContext</code> type and supplies the configuration for a database provider in a single line. For example:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSqlite&lt;MyDbContext&gt;(&quot;Data Source=mydatabase.db&quot;);
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSqlServer&lt;MyDbContext&gt;(@&quot;Server=(localdb)\mssqllocaldb;Database=MyDatabase&quot;);
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCosmos&lt;MyDbContext&gt;(
+    &quot;https://localhost:8081&quot;,
+    &quot;C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==&quot;);
+</code></pre>
+<p>These are exactly equivalent to:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext&lt;MyDbContext&gt;(
+    options =&gt; options.UseSqlite(&quot;Data Source=mydatabase.db&quot;));
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext&lt;MyDbContext&gt;(
+    options =&gt; options.UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=MyDatabase;ConnectRetryCount=0&quot;));
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext&lt;MyDbContext&gt;(
+    options =&gt; options.UseCosmos(
+        &quot;https://localhost:8081&quot;,
+        &quot;C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==&quot;));
+</code></pre>
+<blockquote>
+<p>Note
+The EF Core minimal APIs support only very basic registration and configuration of a <code>DbContext</code> and provider. Use <code>AddDbContext</code>, <code>AddDbContextPool</code>, <code>AddDbContextFactory</code>, etc. to access all types of registration and configuration available in EF Core.</p>
+</blockquote>
+<p>Check out these resources to learn more about minimal APIs:</p>
+<ul>
+<li>
+<p>The presentation Minimal APIs in .NET 6 by Maria Naggaga</p>
+</li>
+<li>
+<p>A .NET 6 Minimal API Todo example Playground on Scott Hanselman's blog</p>
+</li>
+<li>
+<p>The gist Minimal APIs at a glance by David Fowler</p>
+</li>
+<li>
+<p>A minimal API Playground by Damian Edwards on GitHub</p>
+</li>
+</ul>
+<h3><a href="#preserve-synchronization-context-in-savechangesasync" aria-hidden="true" class="anchor" id="preserve-synchronization-context-in-savechangesasync"></a>Preserve synchronization context in SaveChangesAsync</h3>
+<p>GitHub Issue: #23971.</p>
+<p>We are reverting a change in the EF Core code in the 5.0 release for the SaveChangesAsync method.</p>
+<h3><a href="#in-memory-database-validate-required-properties-are-not-null" aria-hidden="true" class="anchor" id="in-memory-database-validate-required-properties-are-not-null"></a>In-memory database: validate required properties are not null</h3>
+<p>GitHub Issue: #10613. This feature was contributed by @fagnercarvalho. Many thanks!</p>
+<p>A new bug in the EF database has been fixed.</p>
+<pre><code class="language-csharp">public class User
+{
+    public int Id { get; set; }
+
+    [Required]
+    public string Username { get; set; }
+}
+</code></pre>
+<p>Attempting to save an entity with a null <code>Username</code> will result in the following exception:</p>
+<p>This validation can be disabled if necessary. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder
+        .LogTo(Console.WriteLine, new[] { InMemoryEventId.ChangesSaved })
+        .UseInMemoryDatabase(&quot;UserContextWithNullCheckingDisabled&quot;, b =&gt; b.EnableNullChecks(false));
+}
+</code></pre>
+<h3><a href="#command-source-information-for-diagnostics-and-interceptors" aria-hidden="true" class="anchor" id="command-source-information-for-diagnostics-and-interceptors"></a>Command source information for diagnostics and interceptors</h3>
+<p>GitHub Issue: #23719. This feature was contributed by @Giorgi. Many thanks!</p>
+<p>This release adds a new property to the <code>CommandEventData</code> supplied to EF diagnostics sources and interceptors.</p>
+<pre><code class="language-csharp">public class CommandSourceInterceptor : DbCommandInterceptor
+{
+    public override InterceptionResult&lt;DbDataReader&gt; ReaderExecuting(
+        DbCommand command, CommandEventData eventData, InterceptionResult&lt;DbDataReader&gt; result)
+    {
+        if (eventData.CommandSource == CommandSource.SaveChanges)
+        {
+            Console.WriteLine($&quot;Saving changes for {eventData.Context!.GetType().Name}:&quot;);
+            Console.WriteLine();
+            Console.WriteLine(command.CommandText);
+        }
+
+        return result;
+    }
+}
+</code></pre>
+<p>This filters the interceptor to only <code>SaveChanges</code> events when used in an application which also generates migrations and queries. For example:</p>
+<pre><code class="language-output">Saving changes for CustomersContext:
+
+SET NOCOUNT ON;
+INSERT INTO [Customers] ([Name])
+VALUES (@p0);
+SELECT [Id]
+FROM [Customers]
+WHERE @@ROWCOUNT = 1 AND [Id] = scope_identity();
+</code></pre>
+<h3><a href="#better-temporary-values-handling" aria-hidden="true" class="anchor" id="better-temporary-values-handling"></a>Better temporary values handling</h3>
+<p>GitHub Issue: #24245.</p>
+<p>EF Core does not expose temporary values on entity type instances. For example, consider a <code>Blog</code> entity type with a store-generated key:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+
+    public ICollection&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+</code></pre>
+<p>The <code>Id</code> key property will get a temporary value as soon as a <code>Blog</code> is tracked by the context. For example, when calling <code>DbContext.Add</code>:</p>
+<pre><code class="language-csharp">var blog = new Blog();
+context.Add(blog);
+</code></pre>
+<p>The temporary value can be obtained from the context change tracker, but is not set into the entity instance. For example, this code:</p>
+<pre><code class="language-csharp">Console.WriteLine($&quot;Blog.Id value on entity instance = {blog.Id}&quot;);
+Console.WriteLine($&quot;Blog.Id value tracked by EF = {context.Entry(blog).Property(e =&gt; e.Id).CurrentValue}&quot;);
+</code></pre>
+<p>Generates the following output:</p>
+<pre><code class="language-output">Blog.Id value on entity instance = 0
+Blog.Id value tracked by EF = -2147482647
+</code></pre>
+<p>When generating a temporary value for an object, such as a <code>string</code>, it is usually best to treat it as a non-temporary value.</p>
+<pre><code class="language-csharp">var blog = new Blog { Id = -1 };
+var post1 = new Post { Id = -1, BlogId = -1 };
+var post2 = new Post { Id = -2, BlogId = -1 };
+
+context.Add(blog).Property(e =&gt; e.Id).IsTemporary = true;
+context.Add(post1).Property(e =&gt; e.Id).IsTemporary = true;
+context.Add(post2).Property(e =&gt; e.Id).IsTemporary = true;
+
+Console.WriteLine($&quot;Blog has explicit temporary ID = {blog.Id}&quot;);
+Console.WriteLine($&quot;Post 1 has explicit temporary ID = {post1.Id} and FK to Blog = {post1.BlogId}&quot;);
+Console.WriteLine($&quot;Post 2 has explicit temporary ID = {post2.Id} and FK to Blog = {post2.BlogId}&quot;);
+</code></pre>
+<p>In EF Core 6.0, the value will remain on the entity instance even though it is now marked as temporary. For example, the code above generates the following output:</p>
+<pre><code class="language-output">Blog has explicit temporary ID = -1
+Post 1 has explicit temporary ID = -1 and FK to Blog = -1
+Post 2 has explicit temporary ID = -2 and FK to Blog = -1
+</code></pre>
+<p>Key values generated by EF Core can be set explicitly on to entity instances and marked as key values.</p>
+<pre><code class="language-csharp">var post1 = new Post();
+var post2 = new Post();
+
+var blogIdEntry = context.Entry(blog).Property(e =&gt; e.Id);
+blog.Id = blogIdEntry.CurrentValue;
+blogIdEntry.IsTemporary = true;
+
+var post1IdEntry = context.Add(post1).Property(e =&gt; e.Id);
+post1.Id = post1IdEntry.CurrentValue;
+post1IdEntry.IsTemporary = true;
+post1.BlogId = blog.Id;
+
+var post2IdEntry = context.Add(post2).Property(e =&gt; e.Id);
+post2.Id = post2IdEntry.CurrentValue;
+post2IdEntry.IsTemporary = true;
+post2.BlogId = blog.Id;
+
+Console.WriteLine($&quot;Blog has generated temporary ID = {blog.Id}&quot;);
+Console.WriteLine($&quot;Post 1 has generated temporary ID = {post1.Id} and FK to Blog = {post1.BlogId}&quot;);
+Console.WriteLine($&quot;Post 2 has generated temporary ID = {post2.Id} and FK to Blog = {post2.BlogId}&quot;);
+</code></pre>
+<p>Resulting in:</p>
+<pre><code class="language-output">Blog has generated temporary ID = -2147482647
+Post 1 has generated temporary ID = -2147482647 and FK to Blog = -2147482647
+Post 2 has generated temporary ID = -2147482646 and FK to Blog = -2147482647
+</code></pre>
+<h3><a href="#ef-core-annotated-for-c-nullable-reference-types" aria-hidden="true" class="anchor" id="ef-core-annotated-for-c-nullable-reference-types"></a>EF Core annotated for C# nullable reference types</h3>
+<p>GitHub Issue: #19007.</p>
+<p>The EF Core codebase now uses C# nullable reference types (NRTs) throughout. This means that you will get the correct compiler indications for null usage when using EF Core 6.0 from your own code.</p>
+<h2><a href="#microsoftdata.sqlite-6.0" aria-hidden="true" class="anchor" id="microsoftdata.sqlite-6.0"></a>Microsoft.Data.Sqlite 6.0</h2>
+<blockquote>
+<p>Tip
+You can run and debug into all the samples shown below by downloading the sample code from GitHub.</p>
+</blockquote>
+<h3><a href="#connection-pooling" aria-hidden="true" class="anchor" id="connection-pooling"></a>Connection Pooling</h3>
+<p>GitHub Issue: #13837.</p>
+<p>In our series of articles on how to use EF Core, we look at how to keep database connections open while performing database operations.</p>
+<pre><code class="language-csharp">Console.WriteLine(&quot;Starting query...&quot;);
+Console.WriteLine();
+
+var users = context.Users.ToList();
+
+Console.WriteLine();
+Console.WriteLine(&quot;Query finished.&quot;);
+Console.WriteLine();
+
+foreach (var user in users)
+{
+    if (user.Username.Contains(&quot;microsoft&quot;))
+    {
+        user.Username = &quot;msft:&quot; + user.Username;
+
+        Console.WriteLine(&quot;Starting SaveChanges...&quot;);
+        Console.WriteLine();
+
+        context.SaveChanges();
+
+        Console.WriteLine();
+        Console.WriteLine(&quot;SaveChanges finished.&quot;);
+    }
+}
+</code></pre>
+<p>The output from this code, with logging for connections turned on, is:</p>
+<pre><code class="language-none">Starting query...
+
+dbug: 8/27/2021 09:26:57.810 RelationalEventId.ConnectionOpened[20001] (Microsoft.EntityFrameworkCore.Database.Connection)
+      Opened connection to database 'main' on server 'C:\dotnet\efdocs\samples\core\Miscellaneous\NewInEFCore6\bin\Debug\net6.0\test.db'.
+dbug: 8/27/2021 09:26:57.813 RelationalEventId.ConnectionClosed[20003] (Microsoft.EntityFrameworkCore.Database.Connection)
+      Closed connection to database 'main' on server 'test.db'.
+
+Query finished.
+
+Starting SaveChanges...
+
+dbug: 8/27/2021 09:26:57.813 RelationalEventId.ConnectionOpened[20001] (Microsoft.EntityFrameworkCore.Database.Connection)
+      Opened connection to database 'main' on server 'C:\dotnet\efdocs\samples\core\Miscellaneous\NewInEFCore6\bin\Debug\net6.0\test.db'.
+dbug: 8/27/2021 09:26:57.814 RelationalEventId.ConnectionClosed[20003] (Microsoft.EntityFrameworkCore.Database.Connection)
+      Closed connection to database 'main' on server 'test.db'.
+
+SaveChanges finished.
+</code></pre>
+<p>Notice that the connection is opened and closed rapidly for each operation.</p>
+<p>ADO.NET databases can be accessed via the web browser.</p>
+<p>Data.Sqlite is a utility that allows you to access encrypted databases.</p>
+<h3><a href="#support-dateonly-and-timeonly" aria-hidden="true" class="anchor" id="support-dateonly-and-timeonly"></a>Support <code>DateOnly</code> and <code>TimeOnly</code></h3>
+<p>GitHub Issue: #24506.</p>
+<p>The latest release of Microsoft's EFSqlite is now available.</p>
+<pre><code class="language-csharp">public class User
+{
+    public int Id { get; set; }
+    public string Username { get; set; }
+    
+    public DateOnly Birthday { get; set; }
+    public TimeOnly TokensRenewed { get; set; }
+}
+</code></pre>
+<p>Maps to the following table in the SQLite database:</p>
+<pre><code class="language-sql">CREATE TABLE &quot;Users&quot; (
+    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Users&quot; PRIMARY KEY AUTOINCREMENT,
+    &quot;Username&quot; TEXT NULL,
+    &quot;Birthday&quot; TEXT NOT NULL,
+    &quot;TokensRenewed&quot; TEXT NOT NULL);
+</code></pre>
+<p>Values can then be saved, queried, and updated in the normal way. For example, this EF Core LINQ query:</p>
+<pre><code class="language-csharp">var users = context.Users.Where(u =&gt; u.Birthday &lt; new DateOnly(1900, 1, 1)).ToList();
+</code></pre>
+<p>Is translated into the following on SQLite:</p>
+<pre><code class="language-sql">SELECT &quot;u&quot;.&quot;Id&quot;, &quot;u&quot;.&quot;Birthday&quot;, &quot;u&quot;.&quot;TokensRenewed&quot;, &quot;u&quot;.&quot;Username&quot;
+FROM &quot;Users&quot; AS &quot;u&quot;
+WHERE &quot;u&quot;.&quot;Birthday&quot; &lt; '1900-01-01'
+</code></pre>
+<p>And returns only uses with birthdays before 1900 CE:</p>
+<pre><code class="language-output">Found 'ajcvickers'
+Found 'wendy'
+</code></pre>
+<h3><a href="#savepoints-api" aria-hidden="true" class="anchor" id="savepoints-api"></a>Savepoints API</h3>
+<p>GitHub Issue: #20228.</p>
+<p>We have been standardizing on a common API for savepoints in ADO.NET providers. Microsoft.Data.Sqlite now supports this API, including:</p>
+<ul>
+<li>
+<p>Save(String) to create a savepoint in the transaction</p>
+</li>
+<li>
+<p>Rollback(String) to roll back to a previous savepoint</p>
+</li>
+<li>
+<p>Release(String) to release a savepoint</p>
+</li>
+</ul>
+<p>Using a savepoint allows part of a transaction to be rolled back without rolling back the entire transaction. For example, the code below:</p>
+<ul>
+<li>
+<p>Creates a transaction</p>
+</li>
+<li>
+<p>Sends an update to the database</p>
+</li>
+<li>
+<p>Creates a savepoint</p>
+</li>
+<li>
+<p>Sends another update to the database</p>
+</li>
+<li>
+<p>Rolls back to the savepoint previous created</p>
+</li>
+<li>
+<p>Commits the transaction</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using var connection = new SqliteConnection(&quot;Command Timeout=60;DataSource=test.db&quot;);
+connection.Open();
+
+using var transaction = connection.BeginTransaction();
+
+using (var command = connection.CreateCommand())
+{
+    command.CommandText = @&quot;UPDATE Users SET Username = 'ajcvickers' WHERE Id = 1&quot;;
+    command.ExecuteNonQuery();
+}
+
+transaction.Save(&quot;MySavepoint&quot;);
+
+using (var command = connection.CreateCommand())
+{
+    command.CommandText = @&quot;UPDATE Users SET Username = 'wfvickers' WHERE Id = 2&quot;;
+    command.ExecuteNonQuery();
+}
+
+transaction.Rollback(&quot;MySavepoint&quot;);
+
+transaction.Commit();
+</code></pre>
+<p>This will result in the first update being committed to the database, while the second update is not committed since the savepoint was rolled back before committing the transaction.</p>
+<h3><a href="#command-timeout-in-the-connection-string" aria-hidden="true" class="anchor" id="command-timeout-in-the-connection-string"></a>Command timeout in the connection <code>string</code></h3>
+<p>GitHub Issue: #22505. This feature was contributed by @nmichels. Many thanks!</p>
+<p>ADO.NET providers support two distinct timeouts:</p>
+<ul>
+<li>
+<p>The connection timeout, which determines the maximum time to wait when making a connection to the database.</p>
+</li>
+<li>
+<p>The command timeout, which determines the maximum time to wait for a command to complete executing.</p>
+</li>
+</ul>
+<p>The default timeout for commands created by a connection is 60 seconds.</p>
+<blockquote>
+<p>Tip
+Sqlite treats <code>Default Timeout</code> as a synonym for <code>Command Timeout</code> and so can be used instead if preferred.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-6.0/whatsnew">What's New in EF Core 6.0</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

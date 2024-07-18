@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 6.0 - Breaking changes | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The following API and behavior changes have the potential to break existing applications updating to EF Core 6.0.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Releases and planning (roadmap) - EF Core 6.0 - Breaking changes</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>01/30/2023</p>
+</li>
+<li>
+<p>7 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The following API and behavior changes have the potential to break existing applications updating to EF Core 6.0.</p>
+<h2><a href="#target-framework" aria-hidden="true" class="anchor" id="target-framework"></a>Target Framework</h2>
+<p>EF Core 6.0 targets .NET 6. Applications targeting older .NET, .NET Core, and .NET Framework versions will need to target .NET 6 to use EF Core 6.0.</p>
+<h2><a href="#summary" aria-hidden="true" class="anchor" id="summary"></a>Summary</h2>
+<ul>
+<li>These changes are of particular interest to authors of database providers and extensions.</li>
+</ul>
+<h2><a href="#high-impact-changes" aria-hidden="true" class="anchor" id="high-impact-changes"></a>High-impact changes</h2>
+<h3><a href="#nested-optional-dependents-sharing-a-table-and-with-no-required-properties-are-disallowed" aria-hidden="true" class="anchor" id="nested-optional-dependents-sharing-a-table-and-with-no-required-properties-are-disallowed"></a>Nested optional dependents sharing a table and with no required properties are disallowed</h3>
+<p>Tracking Issue #24558</p>
+<h4><a href="#old-behavior" aria-hidden="true" class="anchor" id="old-behavior"></a>Old behavior</h4>
+<p>In our series of articles on data protection, we look at some of the best practices for protecting data against loss.</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public ContactInfo ContactInfo { get; set; }
+}
+
+[Owned]
+public class ContactInfo
+{
+    public string Phone { get; set; }
+    public Address Address { get; set; }
+}
+
+[Owned]
+public class Address
+{
+    public string House { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string Postcode { get; set; }
+}
+</code></pre>
+<p>Is there a way to query for the owner <code>Customer</code> without creating an instance of <code>ContactInfo</code> or <code>Address</code>?</p>
+<h4><a href="#new-behavior" aria-hidden="true" class="anchor" id="new-behavior"></a>New behavior</h4>
+<p>Attempting to use this model will now throw the following exception:</p>
+<p>This prevents data loss when querying and saving data.</p>
+<h4><a href="#why" aria-hidden="true" class="anchor" id="why"></a>Why</h4>
+<p>Using models with nested optional dependents sharing a table and with no required properties often resulted in silent data loss.</p>
+<h4><a href="#mitigations" aria-hidden="true" class="anchor" id="mitigations"></a>Mitigations</h4>
+<p>Avoid using optional dependents sharing a table and with no required properties. There are three easy ways to do this:</p>
+<ul>
+<li>
+<p>Make the dependents required. This means that the dependent entity will always have a value after it is queried, even if all its properties are <code>null</code>. For example:
+public class <code>Customer</code>
+{
+public <code>int</code> Id { get; set; }
+public string Name { get; set; }</p>
+<p>[Required]
+public <code>Address</code> <code>Address</code> { get; set; }
+}</p>
+</li>
+</ul>
+<p>Or:
+modelBuilder.Entity<Customer>(
+b =&gt;
+{
+b.OwnsOne(e =&gt; e.Address);
+b.Navigation(e =&gt; e.Address).IsRequired();
+});</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    [Required]
+    public Address Address { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Customer&gt;(
+    b =&gt;
+        {
+            b.OwnsOne(e =&gt; e.Address);
+            b.Navigation(e =&gt; e.Address).IsRequired();
+        });
+</code></pre>
+<ul>
+<li>
+<p>Make sure that the dependent contains at least one required property.</p>
+</li>
+<li>
+<p>Map optional dependents to their own table, instead of sharing a table with the principal. For example:
+modelBuilder.Entity<Customer>(
+b =&gt;
+{
+b.ToTable(&quot;Customers&quot;);
+b.OwnsOne(e =&gt; e.Address, b =&gt; b.ToTable(&quot;CustomerAddresses&quot;));
+});</p>
+</li>
+</ul>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Customer&gt;(
+    b =&gt;
+        {
+            b.ToTable(&quot;Customers&quot;);
+            b.OwnsOne(e =&gt; e.Address, b =&gt; b.ToTable(&quot;CustomerAddresses&quot;));
+        });
+</code></pre>
+<p>The problems with optional dependents and examples of these mitigations are included in the documentation for What's new in EF Core 6.0.</p>
+<h2><a href="#medium-impact-changes" aria-hidden="true" class="anchor" id="medium-impact-changes"></a>Medium-impact changes</h2>
+<h3><a href="#changing-the-owner-of-an-owned-entity-now-throws-an-exception" aria-hidden="true" class="anchor" id="changing-the-owner-of-an-owned-entity-now-throws-an-exception"></a>Changing the owner of an owned entity now throws an exception</h3>
+<p>Tracking Issue #4073</p>
+<h4><a href="#old-behavior-1" aria-hidden="true" class="anchor" id="old-behavior-1"></a>Old behavior</h4>
+<p>It was possible to reassign an owned entity to a different owner entity.</p>
+<h4><a href="#new-behavior-1" aria-hidden="true" class="anchor" id="new-behavior-1"></a>New behavior</h4>
+<p>This action will now throw an exception:</p>
+<h4><a href="#why-1" aria-hidden="true" class="anchor" id="why-1"></a>Why</h4>
+<p>When an entity is changed it causes the owner entity to change, and since they are also used as the primary key this results in the entity identity changing. When the owner entity is changed it causes the values of the foreign key on the owned entity to change, and since they are also used as the primary key</p>
+<h4><a href="#mitigations-1" aria-hidden="true" class="anchor" id="mitigations-1"></a>Mitigations</h4>
+<p>Instead of assigning the same owned instance to a new owner you can assign a copy and delete the old one.</p>
+<h3><a href="#azure-cosmos-db-related-entity-types-are-discovered-as-owned" aria-hidden="true" class="anchor" id="azure-cosmos-db-related-entity-types-are-discovered-as-owned"></a>Azure Cosmos DB: Related entity types are discovered as owned</h3>
+<p>Tracking Issue #24803
+What's new: Default to implicit ownership</p>
+<h4><a href="#old-behavior-2" aria-hidden="true" class="anchor" id="old-behavior-2"></a>Old behavior</h4>
+<p>As in other providers, related entity types were discovered as normal (non-owned) types.</p>
+<h4><a href="#new-behavior-2" aria-hidden="true" class="anchor" id="new-behavior-2"></a>New behavior</h4>
+<p>Related entity types will now be owned by the entity type on which they were discovered. Only the entity types that correspond to a <code>DbSet</code><TEntity> property will be discovered as non-owned.</p>
+<h4><a href="#why-2" aria-hidden="true" class="anchor" id="why-2"></a>Why</h4>
+<p>Azure Cosmos DB does not support embedding related entities into a single document.</p>
+<h4><a href="#mitigations-2" aria-hidden="true" class="anchor" id="mitigations-2"></a>Mitigations</h4>
+<p>To configure an entity type to be non-owned call modelBuilder.Entity<MyEntity>();</p>
+<h3><a href="#sqlite-connections-are-pooled" aria-hidden="true" class="anchor" id="sqlite-connections-are-pooled"></a>SQLite: Connections are pooled</h3>
+<p>Tracking Issue #13837
+What's new: Default to implicit ownership</p>
+<h4><a href="#old-behavior-3" aria-hidden="true" class="anchor" id="old-behavior-3"></a>Old behavior</h4>
+<p>Previously, connections in Microsoft.Data.Sqlite were not pooled.</p>
+<h4><a href="#new-behavior-3" aria-hidden="true" class="anchor" id="new-behavior-3"></a>New behavior</h4>
+<p>Starting in 6.0, connections are now pooled by default. This results in database files being kept open by the process even after the ADO.NET connection object is closed.</p>
+<h4><a href="#why-3" aria-hidden="true" class="anchor" id="why-3"></a>Why</h4>
+<p>Pooling the underlying connections greatly improves the performance of opening and closing ADO.NET connection objects.</p>
+<h4><a href="#mitigations-3" aria-hidden="true" class="anchor" id="mitigations-3"></a>Mitigations</h4>
+<p>Connection pooling can be disabled by adding <code>Pooling=False</code> to a connection string.</p>
+<p>The connection pool for a database file has been cleared.</p>
+<pre><code class="language-csharp">SqliteConnection.ClearPool(connection);
+File.Delete(databaseFile);
+</code></pre>
+<h3><a href="#many-to-many-relationships-without-mapped-join-entities-are-now-scaffolded" aria-hidden="true" class="anchor" id="many-to-many-relationships-without-mapped-join-entities-are-now-scaffolded"></a>Many-to-many relationships without mapped join entities are now scaffolded</h3>
+<p>Tracking Issue #22475</p>
+<h4><a href="#old-behavior-4" aria-hidden="true" class="anchor" id="old-behavior-4"></a>Old behavior</h4>
+<p>Scaffolding (reverse engineering) a <code>DbContext</code> and entity types from an existing database always explicitly mapped join tables to join entity types for many-to-many relationships.</p>
+<h4><a href="#new-behavior-4" aria-hidden="true" class="anchor" id="new-behavior-4"></a>New behavior</h4>
+<p>The following changes have been made to the syntax of the join table constructor.</p>
+<h4><a href="#why-4" aria-hidden="true" class="anchor" id="why-4"></a>Why</h4>
+<p>Many-to-many relationships without explicit join types were introduced in EF Core 5.0 and are a cleaner, more natural way to represent simple join tables.</p>
+<h4><a href="#mitigations-4" aria-hidden="true" class="anchor" id="mitigations-4"></a>Mitigations</h4>
+<p>Many-to-many relationships need to be joined directly to many-to-many relationships.</p>
+<p>In this article, I'm going to show you how to add back the join type and navigations using partial classes.</p>
+<pre><code class="language-csharp">public partial class PostTag
+{
+    public int PostsId { get; set; }
+    public int TagsId { get; set; }
+
+    public virtual Post Posts { get; set; }
+    public virtual Tag Tags { get; set; }
+}
+
+public partial class Post
+{
+    public virtual ICollection&lt;PostTag&gt; PostTags { get; set; }
+}
+
+public partial class Tag
+{
+    public virtual ICollection&lt;PostTag&gt; PostTags { get; set; }
+}
+</code></pre>
+<p>Then add configuration for the join type and navigations to a partial class for the <code>DbContext</code>:</p>
+<pre><code class="language-csharp">public partial class DailyContext
+{
+    partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;Post&gt;(entity =&gt;
+        {
+            entity.HasMany(d =&gt; d.Tags)
+                .WithMany(p =&gt; p.Posts)
+                .UsingEntity&lt;PostTag&gt;(
+                    l =&gt; l.HasOne&lt;Tag&gt;(e =&gt; e.Tags).WithMany(e =&gt; e.PostTags).HasForeignKey(e =&gt; e.TagsId),
+                    r =&gt; r.HasOne&lt;Post&gt;(e =&gt; e.Posts).WithMany(e =&gt; e.PostTags).HasForeignKey(e =&gt; e.PostsId),
+                    j =&gt;
+                    {
+                        j.HasKey(&quot;PostsId&quot;, &quot;TagsId&quot;);
+                        j.ToTable(&quot;PostTag&quot;);
+                    });
+        });
+    }
+}
+</code></pre>
+<p>In this post I will show you how to scaffold the many-to-many relationship between two entities.</p>
+<p>This example shows how to use the join entity as a many-to-many relationship in EF Core.</p>
+<h2><a href="#low-impact-changes" aria-hidden="true" class="anchor" id="low-impact-changes"></a>Low-impact changes</h2>
+<h3><a href="#cleaned-up-mapping-between-deletebehavior-and-on-delete-values" aria-hidden="true" class="anchor" id="cleaned-up-mapping-between-deletebehavior-and-on-delete-values"></a>Cleaned up mapping between DeleteBehavior and <code>ON DELETE</code> values</h3>
+<p>Tracking Issue #21252</p>
+<h4><a href="#old-behavior-5" aria-hidden="true" class="anchor" id="old-behavior-5"></a>Old behavior</h4>
+<p>Some of the mappings between a relationship's OnDelete() behavior and the foreign keys' <code>ON DELETE</code> behavior in the database were inconsistent in both Migrations and Scaffolding.</p>
+<h4><a href="#new-behavior-5" aria-hidden="true" class="anchor" id="new-behavior-5"></a>New behavior</h4>
+<p>The following table illustrates the changes for Migrations.</p>
+<p>The changes for Scaffolding are as follows.</p>
+<h4><a href="#why-5" aria-hidden="true" class="anchor" id="why-5"></a>Why</h4>
+<p>The new mappings are more consistent. The default database behavior of NO ACTION is now preferred over the more restrictive and less performant RESTRICT behavior.</p>
+<h4><a href="#mitigations-5" aria-hidden="true" class="anchor" id="mitigations-5"></a>Mitigations</h4>
+<p>If you are upgrading to EF Core 6.0 from EF 5.0 or earlier, you may want to consider changing the OnDelete behavior of optional relationships.</p>
+<p>You can choose to either apply these operations or manually remove them from the migration since they have no functional impact on EF Core.</p>
+<p>SQL Server doesn't support RESTRICT, so these foreign keys were already created using NO ACTION. The migration operations will have no affect on SQL Server and are safe to remove.</p>
+<h3><a href="#in-memory-database-validates-required-properties-do-not-contain-nulls" aria-hidden="true" class="anchor" id="in-memory-database-validates-required-properties-do-not-contain-nulls"></a>In-memory database validates required properties do not contain nulls</h3>
+<p>Tracking Issue #10613</p>
+<h4><a href="#old-behavior-6" aria-hidden="true" class="anchor" id="old-behavior-6"></a>Old behavior</h4>
+<p>The in-memory database allowed saving <code>null</code> values even when the property was configured as required.</p>
+<h4><a href="#new-behavior-6" aria-hidden="true" class="anchor" id="new-behavior-6"></a>New behavior</h4>
+<p>The in-memory database throws a <code>Microsoft.EntityFrameworkCore.DbUpdateException</code> when <code>SaveChanges</code> or <code>SaveChangesAsync</code> is called and a required property is set to <code>null</code>.</p>
+<h4><a href="#why-6" aria-hidden="true" class="anchor" id="why-6"></a>Why</h4>
+<p>The in-memory database behavior now matches the behavior of other databases.</p>
+<h4><a href="#mitigations-6" aria-hidden="true" class="anchor" id="mitigations-6"></a>Mitigations</h4>
+<p>The previous behavior (i.e. not checking <code>null</code> values) can be restored when configuring the in-memory provider. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder
+        .UseInMemoryDatabase(&quot;MyDatabase&quot;, b =&gt; b.EnableNullChecks(false));
+}
+</code></pre>
+<h3><a href="#removed-last-order-by-when-joining-for-collections" aria-hidden="true" class="anchor" id="removed-last-order-by-when-joining-for-collections"></a>Removed last ORDER BY when joining for collections</h3>
+<p>Tracking Issue #19828</p>
+<h4><a href="#old-behavior-7" aria-hidden="true" class="anchor" id="old-behavior-7"></a>Old behavior</h4>
+<p>In this article, I'm going to show you how to perform SQL JOINs on collections (one-to-many relationships).</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[Name], [p].[PostId], [p].[BlogId], [p].[Title]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[BlogId] = [p].[BlogId]
+ORDER BY [b].[BlogId], [p].[PostId]
+</code></pre>
+<p>These orderings are necessary for proper materialization of the entities.</p>
+<h4><a href="#new-behavior-7" aria-hidden="true" class="anchor" id="new-behavior-7"></a>New behavior</h4>
+<p>The very last ORDER BY for a collection join is now omitted:</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[Name], [p].[PostId], [p].[BlogId], [p].[Title]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[BlogId] = [p].[BlogId]
+ORDER BY [b].[BlogId]
+</code></pre>
+<p>An ORDER BY for the <code>Post</code>'s ID column is no longer generated.</p>
+<h4><a href="#why-7" aria-hidden="true" class="anchor" id="why-7"></a>Why</h4>
+<p>This paper shows how to remove the last ordering at the database side of EF Core.</p>
+<h4><a href="#mitigations-7" aria-hidden="true" class="anchor" id="mitigations-7"></a>Mitigations</h4>
+<p>If your application expects joined entities to be returned in a particular order, make that explicit by adding a LINQ <code>OrderBy</code> operator to your query.</p>
+<h3><a href="#dbset-no-longer-implements-iasyncenumerable" aria-hidden="true" class="anchor" id="dbset-no-longer-implements-iasyncenumerable"></a><code>DbSet</code> no longer implements <code>IAsyncEnumerable</code></h3>
+<p>Tracking Issue #24041</p>
+<h4><a href="#old-behavior-8" aria-hidden="true" class="anchor" id="old-behavior-8"></a>Old behavior</h4>
+<p><code>DbSet</code><TEntity>, which is used to execute queries on <code>DbContext</code>, used to implement <code>IAsyncEnumerable</code><T>.</p>
+<h4><a href="#new-behavior-8" aria-hidden="true" class="anchor" id="new-behavior-8"></a>New behavior</h4>
+<p><code>DbSet</code><TEntity> no longer directly implements <code>IAsyncEnumerable</code><T>.</p>
+<h4><a href="#why-8" aria-hidden="true" class="anchor" id="why-8"></a>Why</h4>
+<p>DbSetT&gt; and IAsyncEnumerableT&gt; have been removed from System.Linq.</p>
+<p>The deprecated <code>DbSet</code> method has been removed from <code>IAsyncEnumerable</code>.</p>
+<h4><a href="#mitigations-8" aria-hidden="true" class="anchor" id="mitigations-8"></a>Mitigations</h4>
+<p>If you need to refer to a <code>DbSet</code><TEntity> as an <code>IAsyncEnumerable</code><T>, call <code>DbSet</code><TEntity>.AsAsyncEnumerable to explicitly cast it.</p>
+<h3><a href="#tvf-return-entity-type-is-also-mapped-to-a-table-by-default" aria-hidden="true" class="anchor" id="tvf-return-entity-type-is-also-mapped-to-a-table-by-default"></a>TVF return entity type is also mapped to a table by default</h3>
+<p>Tracking Issue #23408</p>
+<h4><a href="#old-behavior-9" aria-hidden="true" class="anchor" id="old-behavior-9"></a>Old behavior</h4>
+<p>An entity type was not mapped to a table by default when used as a return type of a TVF configured with HasDbFunction.</p>
+<h4><a href="#new-behavior-9" aria-hidden="true" class="anchor" id="new-behavior-9"></a>New behavior</h4>
+<p>An entity type used as a return type of a TVF retains the default table mapping.</p>
+<h4><a href="#why-9" aria-hidden="true" class="anchor" id="why-9"></a>Why</h4>
+<p>It isn't intuitive that configuring a TVF removes the default table mapping for the return entity type.</p>
+<h4><a href="#mitigations-9" aria-hidden="true" class="anchor" id="mitigations-9"></a>Mitigations</h4>
+<p>To remove the default table mapping, call ToTable(EntityTypeBuilder, String):</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;MyEntity&gt;().ToTable((string?)null));
+</code></pre>
+<h3><a href="#check-constraint-name-uniqueness-is-now-validated" aria-hidden="true" class="anchor" id="check-constraint-name-uniqueness-is-now-validated"></a>Check constraint name uniqueness is now validated</h3>
+<p>Tracking Issue #25061</p>
+<h4><a href="#old-behavior-10" aria-hidden="true" class="anchor" id="old-behavior-10"></a>Old behavior</h4>
+<p>Check constraints with the same name were allowed to be declared and used on the same table.</p>
+<h4><a href="#new-behavior-10" aria-hidden="true" class="anchor" id="new-behavior-10"></a>New behavior</h4>
+<p>Explicitly configuring two check constraints with the same name on the same table will now result in an exception. Check constraints created by a convention will be assigned a unique name.</p>
+<h4><a href="#why-10" aria-hidden="true" class="anchor" id="why-10"></a>Why</h4>
+<p>Is there a way to create two check constraints with the same name on the same table?</p>
+<h4><a href="#mitigations-10" aria-hidden="true" class="anchor" id="mitigations-10"></a>Mitigations</h4>
+<p>In some cases, valid check constraint names might be different due to this change. To specify the desired name explicitly, call HasName:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;MyEntity&gt;().HasCheckConstraint(&quot;CK_Id&quot;, &quot;Id &gt; 0&quot;, c =&gt; c.HasName(&quot;CK_MyEntity_Id&quot;));
+</code></pre>
+<h3><a href="#added-ireadonly-metadata-interfaces-and-removed-extension-methods" aria-hidden="true" class="anchor" id="added-ireadonly-metadata-interfaces-and-removed-extension-methods"></a><code>Added</code> <code>IReadOnly</code> Metadata interfaces and removed extension methods</h3>
+<p>Tracking Issue #19213</p>
+<h4><a href="#old-behavior-11" aria-hidden="true" class="anchor" id="old-behavior-11"></a>Old behavior</h4>
+<p>There were three sets of metadata interfaces: IModel, IMutableModel and IConventionModel as well as extension methods.</p>
+<h4><a href="#new-behavior-11" aria-hidden="true" class="anchor" id="new-behavior-11"></a>New behavior</h4>
+<p>A new set of <code>IReadOnly</code> interfaces has been added, e.g. IReadOnlyModel. Extension methods that were previously defined for the metadata interfaces have been converted to default interface methods.</p>
+<h4><a href="#why-11" aria-hidden="true" class="anchor" id="why-11"></a>Why</h4>
+<p>Default interface methods allow the implementation to be overridden, this is leveraged by the new run-time model implementation to offer better performance.</p>
+<h4><a href="#mitigations-11" aria-hidden="true" class="anchor" id="mitigations-11"></a>Mitigations</h4>
+<p>These changes shouldn't affect most code. However, if you were using the extension methods via the static invocation syntax, it would need to be converted to instance invocation syntax.</p>
+<h3><a href="#iexecutionstrategy-is-now-a-singleton-service" aria-hidden="true" class="anchor" id="iexecutionstrategy-is-now-a-singleton-service"></a>IExecutionStrategy is now a singleton service</h3>
+<p>Tracking Issue #21350</p>
+<h4><a href="#new-behavior-12" aria-hidden="true" class="anchor" id="new-behavior-12"></a>New behavior</h4>
+<p>IExecutionStrategy has been renamed to IExecutionStrategy.</p>
+<h4><a href="#why-12" aria-hidden="true" class="anchor" id="why-12"></a>Why</h4>
+<p>This reduced allocations on two hot paths in EF.</p>
+<h4><a href="#mitigations-12" aria-hidden="true" class="anchor" id="mitigations-12"></a>Mitigations</h4>
+<p>Implementations deriving from ExecutionStrategy should clear any state in OnFirstExecution().</p>
+<p>Conditional logic in the delegate passed to ExecutionStrategy should be moved to a custom implementation of IExecutionStrategy.</p>
+<h3><a href="#sql-server-more-errors-are-considered-transient" aria-hidden="true" class="anchor" id="sql-server-more-errors-are-considered-transient"></a>SQL Server: More errors are considered transient</h3>
+<p>Tracking Issue #25050</p>
+<h4><a href="#new-behavior-13" aria-hidden="true" class="anchor" id="new-behavior-13"></a>New behavior</h4>
+<p>The errors listed in the issue above are now considered transient. When using the default (non-retrying) execution strategy, these errors will now be wrapped in an addition exception instance.</p>
+<h4><a href="#why-13" aria-hidden="true" class="anchor" id="why-13"></a>Why</h4>
+<p>We continue to gather feedback from both users and SQL Server team on which errors should be considered transient.</p>
+<h4><a href="#mitigations-13" aria-hidden="true" class="anchor" id="mitigations-13"></a>Mitigations</h4>
+<p>To change the set of errors that are considered transient, use a custom execution strategy that could be derived from SqlServerRetryingExecutionStrategy - Connection Resiliency - EF Core.</p>
+<h3><a href="#azure-cosmos-db-more-characters-are-escaped-in-'id'-values" aria-hidden="true" class="anchor" id="azure-cosmos-db-more-characters-are-escaped-in-'id'-values"></a>Azure Cosmos DB: More characters are escaped in 'id' values</h3>
+<p>Tracking Issue #25100</p>
+<h4><a href="#old-behavior-12" aria-hidden="true" class="anchor" id="old-behavior-12"></a>Old behavior</h4>
+<p>In EF Core 5, only '|' was escaped in <code>id</code> values.</p>
+<h4><a href="#new-behavior-14" aria-hidden="true" class="anchor" id="new-behavior-14"></a>New behavior</h4>
+<p>In EF Core 6, '/', '', '?' and '#' are also escaped in <code>id</code> values.</p>
+<h4><a href="#why-14" aria-hidden="true" class="anchor" id="why-14"></a>Why</h4>
+<p>These characters are invalid, as documented in Resource.Id. Using them in <code>id</code> will cause queries to fail.</p>
+<h4><a href="#mitigations-14" aria-hidden="true" class="anchor" id="mitigations-14"></a>Mitigations</h4>
+<p>You can override the generated value by setting it before the entity is marked as <code>Added</code>:</p>
+<pre><code class="language-csharp">var entry = context.Attach(entity);
+entry.Property(&quot;__id&quot;).CurrentValue = &quot;MyEntity|/\\?#&quot;;
+entry.State = EntityState.Added;
+</code></pre>
+<h3><a href="#some-singleton-services-are-now-scoped" aria-hidden="true" class="anchor" id="some-singleton-services-are-now-scoped"></a>Some <code>Singleton</code> services are now <code>Scoped</code></h3>
+<p>Tracking Issue #25084</p>
+<h4><a href="#new-behavior-15" aria-hidden="true" class="anchor" id="new-behavior-15"></a>New behavior</h4>
+<p>Many query services and some design-time services that were registered as <code>Singleton</code> are now registered as <code>Scoped</code>.</p>
+<h4><a href="#why-15" aria-hidden="true" class="anchor" id="why-15"></a>Why</h4>
+<p>The lifetime had to be changed to allow a new feature - DefaultTypeMapping - to affect queries.</p>
+<p>The design-time services lifetimes have been adjusted to match the run-time services lifetimes to avoid errors when using both.</p>
+<h4><a href="#mitigations-15" aria-hidden="true" class="anchor" id="mitigations-15"></a>Mitigations</h4>
+<p>Use TryAdd to register EF Core services using the default lifetime. Only use TryAddProviderSpecificServices for services that are not added by EF.</p>
+<h3><a href="#new-caching-api-for-extensions-that-add-or-replace-services" aria-hidden="true" class="anchor" id="new-caching-api-for-extensions-that-add-or-replace-services"></a>New caching API for extensions that add or replace services</h3>
+<p>Tracking Issue #19152</p>
+<h4><a href="#old-behavior-13" aria-hidden="true" class="anchor" id="old-behavior-13"></a>Old behavior</h4>
+<p>In EF Core 5, GetServiceProviderHashCode returned <code>long</code> and was used directly as part of the cache key for the service provider.</p>
+<h4><a href="#new-behavior-16" aria-hidden="true" class="anchor" id="new-behavior-16"></a>New behavior</h4>
+<p>GetServiceProviderHashCode now returns <code>int</code> and is only used to calculate the hash code of the cache key for the service provider.</p>
+<p>Also, ShouldUseSameServiceProvider needs to be implemented to indicate whether the current object represents the same service configuration and thus can use the same service provider.</p>
+<h4><a href="#why-16" aria-hidden="true" class="anchor" id="why-16"></a>Why</h4>
+<p>A new method has been developed to ensure that the same service provider is used on every workstation.</p>
+<h4><a href="#mitigations-16" aria-hidden="true" class="anchor" id="mitigations-16"></a>Mitigations</h4>
+<p>Many extensions don't expose any options that affect registered services and can use the following implementation of ShouldUseSameServiceProvider:</p>
+<pre><code class="language-csharp">private sealed class ExtensionInfo : DbContextOptionsExtensionInfo
+{
+    public ExtensionInfo(IDbContextOptionsExtension extension)
+        : base(extension)
+    {
+    }
+
+    ...
+
+    public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other)
+        =&gt; other is ExtensionInfo;
+}
+</code></pre>
+<p>Otherwise, additional predicates should be added to compare all relevant options.</p>
+<h3><a href="#new-snapshot-and-design-time-model-initialization-procedure" aria-hidden="true" class="anchor" id="new-snapshot-and-design-time-model-initialization-procedure"></a>New snapshot and design-time model initialization procedure</h3>
+<p>Tracking Issue #22031</p>
+<h4><a href="#old-behavior-14" aria-hidden="true" class="anchor" id="old-behavior-14"></a>Old behavior</h4>
+<p>In EF Core 5, specific conventions needed to be invoked before the snapshot model was ready to be used.</p>
+<h4><a href="#new-behavior-17" aria-hidden="true" class="anchor" id="new-behavior-17"></a>New behavior</h4>
+<p>The following changes have been made to the IModelRuntimer package.</p>
+<h4><a href="#why-17" aria-hidden="true" class="anchor" id="why-17"></a>Why</h4>
+<p>IModelRuntimeInitializer abstracts away the model finalization steps, so these can now be changed without further breaking changes for the users.</p>
+<p>The optimized run-time model was introduced to improve run-time performance. It has several optimizations, one of which is removing metadata that is not used at run-time.</p>
+<h4><a href="#mitigations-17" aria-hidden="true" class="anchor" id="mitigations-17"></a>Mitigations</h4>
+<p>The following snippet illustrates how to check whether the current model is different from the snapshot model:</p>
+<pre><code class="language-csharp">var snapshotModel = migrationsAssembly.ModelSnapshot?.Model;
+
+if (snapshotModel is IMutableModel mutableModel)
+{
+    snapshotModel = mutableModel.FinalizeModel();
+}
+
+if (snapshotModel != null)
+{
+    snapshotModel = context.GetService&lt;IModelRuntimeInitializer&gt;().Initialize(snapshotModel);
+}
+
+var hasDifferences = context.GetService&lt;IMigrationsModelDiffer&gt;().HasDifferences(
+    snapshotModel?.GetRelationalModel(),
+    context.GetService&lt;IDesignTimeModel&gt;().Model.GetRelationalModel());
+</code></pre>
+<p>This snippet shows how to implement IDesignTimeDbContextFactory<TContext> by creating a model externally and calling UseModel:</p>
+<pre><code class="language-csharp">internal class MyDesignContext : IDesignTimeDbContextFactory&lt;MyContext&gt;
+{
+    public TestContext CreateDbContext(string[] args)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder();
+        optionsBuilder.UseSqlServer(Configuration.GetConnectionString(&quot;DB&quot;));
+
+        var modelBuilder = SqlServerConventionSetBuilder.CreateModelBuilder();
+        CustomizeModel(modelBuilder);
+        var model = modelBuilder.Model.FinalizeModel();
+
+        var serviceContext = new MyContext(optionsBuilder.Options);
+        model = serviceContext.GetService&lt;IModelRuntimeInitializer&gt;().Initialize(model);
+        return new MyContext(optionsBuilder.Options);
+    }
+}
+</code></pre>
+<h3><a href="#ownednavigationbuilderhasindex-returns-a-different-type-now" aria-hidden="true" class="anchor" id="ownednavigationbuilderhasindex-returns-a-different-type-now"></a><code>OwnedNavigationBuilder.HasIndex</code> returns a different type now</h3>
+<p>Tracking Issue #24005</p>
+<h4><a href="#old-behavior-15" aria-hidden="true" class="anchor" id="old-behavior-15"></a>Old behavior</h4>
+<p>In EF Core 5, HasIndex returned IndexBuilder<TEntity> where <code>TEntity</code> is the owner type.</p>
+<h4><a href="#new-behavior-18" aria-hidden="true" class="anchor" id="new-behavior-18"></a>New behavior</h4>
+<p>HasIndex now returns IndexBuilder<TDependentEntity>, where <code>TDependentEntity</code> is the owned type.</p>
+<h4><a href="#why-18" aria-hidden="true" class="anchor" id="why-18"></a>Why</h4>
+<p>The returned builder object wasn't typed correctly.</p>
+<h4><a href="#mitigations-18" aria-hidden="true" class="anchor" id="mitigations-18"></a>Mitigations</h4>
+<p>Recompiling your assembly against the latest version of EF Core will be enough to fix any issues caused by this change.</p>
+<h3><a href="#dbfunctionbuilderhasschema(null)-overrides-[dbfunction(schema-=-"schema")]" aria-hidden="true" class="anchor" id="dbfunctionbuilderhasschema(null)-overrides-[dbfunction(schema-=-"schema")]"></a>DbFunctionBuilder.HasSchema(null) overrides [DbFunction(Schema = &quot;schema&quot;)]</h3>
+<p>Tracking Issue #24228</p>
+<h4><a href="#old-behavior-16" aria-hidden="true" class="anchor" id="old-behavior-16"></a>Old behavior</h4>
+<p>In EF Core 5, calling <code>HasSchema</code> with <code>null</code> value didn't store the configuration source, thus DbFunctionAttribute was able to override it.</p>
+<h4><a href="#new-behavior-19" aria-hidden="true" class="anchor" id="new-behavior-19"></a>New behavior</h4>
+<p>Calling <code>HasSchema</code> with <code>null</code> value now stores the configuration source and prevents the attribute from overriding it.</p>
+<h4><a href="#why-19" aria-hidden="true" class="anchor" id="why-19"></a>Why</h4>
+<p>Configuration specified with the ModelBuilder API should not be overridable by data annotations.</p>
+<h4><a href="#mitigations-19" aria-hidden="true" class="anchor" id="mitigations-19"></a>Mitigations</h4>
+<p>Remove the <code>HasSchema</code> call to let the attribute configure the schema.</p>
+<h3><a href="#pre-initialized-navigations-are-overridden-by-values-from-database-queries" aria-hidden="true" class="anchor" id="pre-initialized-navigations-are-overridden-by-values-from-database-queries"></a>Pre-initialized navigations are overridden by values from database queries</h3>
+<p>Tracking Issue #23851</p>
+<h4><a href="#old-behavior-17" aria-hidden="true" class="anchor" id="old-behavior-17"></a>Old behavior</h4>
+<p>Navigation properties set to an empty object were left unchanged for tracking queries, but were overwritten for non-tracking queries. For example, consider the following entity types:</p>
+<pre><code class="language-csharp">public class Foo
+{
+    public int Id { get; set; }
+
+    public Bar Bar { get; set; } = new(); // Don't do this.
+}
+
+public class Bar
+{
+    public int Id { get; set; }
+}
+</code></pre>
+<p>A no-tracking query for <code>Foo</code> including <code>Bar</code> set <code>Foo.Bar</code> to the entity queried from the database. For example, this code:</p>
+<pre><code class="language-csharp">var foo = context.Foos.AsNoTracking().Include(e =&gt; e.Bar).Single();
+Console.WriteLine($&quot;Foo.Bar.Id = {foo.Bar.Id}&quot;);
+</code></pre>
+<p>Printed <code>Foo.Bar.Id = 1</code>.</p>
+<p>However, the same query run for tracking didn't overwrite <code>Foo.Bar</code> with the entity queried from the database. For example, this code:</p>
+<pre><code class="language-csharp">var foo = context.Foos.Include(e =&gt; e.Bar).Single();
+Console.WriteLine($&quot;Foo.Bar.Id = {foo.Bar.Id}&quot;);
+</code></pre>
+<p>Printed <code>Foo.Bar.Id = 0</code>.</p>
+<h4><a href="#new-behavior-20" aria-hidden="true" class="anchor" id="new-behavior-20"></a>New behavior</h4>
+<p>In EF Core 6.0, the behavior of tracking queries now matches that of no-tracking queries. This means that both this code:</p>
+<pre><code class="language-csharp">var foo = context.Foos.AsNoTracking().Include(e =&gt; e.Bar).Single();
+Console.WriteLine($&quot;Foo.Bar.Id = {foo.Bar.Id}&quot;);
+</code></pre>
+<p>And this code:</p>
+<pre><code class="language-csharp">var foo = context.Foos.Include(e =&gt; e.Bar).Single();
+Console.WriteLine($&quot;Foo.Bar.Id = {foo.Bar.Id}&quot;);
+</code></pre>
+<p>Print <code>Foo.Bar.Id = 1</code>.</p>
+<h4><a href="#why-20" aria-hidden="true" class="anchor" id="why-20"></a>Why</h4>
+<p>There are two reasons for making this change:</p>
+<ul>
+<li>
+<p>To ensure that tracking and no-tracking queries have consistent behavior.</p>
+</li>
+<li>
+<p>When a database is queried it is reasonable to assume that the application code wants to get back the values that are stored in the database.</p>
+</li>
+</ul>
+<h4><a href="#mitigations-20" aria-hidden="true" class="anchor" id="mitigations-20"></a>Mitigations</h4>
+<p>There are two mitigations:</p>
+<ul>
+<li>
+<p>Do not query for objects from the database that should not be included in the results. For example, in the code snippets above, do not <code>Include</code> <code>Foo.Bar</code> if the <code>Bar</code> instance should not be returned from the database and included in the results.</p>
+</li>
+<li>
+<p>Set the value of the navigation after querying from the database. For example, in the code snippets above, call foo.Bar = new() after running the query.</p>
+</li>
+</ul>
+<p>Consider not initializing related entity instances to default objects.</p>
+<h3><a href="#unknown-enum-string-values-in-the-database-are-not-converted-to-the-enum-default-when-queried" aria-hidden="true" class="anchor" id="unknown-enum-string-values-in-the-database-are-not-converted-to-the-enum-default-when-queried"></a>Unknown enum string values in the database are not converted to the enum default when queried</h3>
+<p>Tracking Issue #24084</p>
+<h4><a href="#old-behavior-18" aria-hidden="true" class="anchor" id="old-behavior-18"></a>Old behavior</h4>
+<p>The Enum property can be set to the default value for an enum type.</p>
+<h4><a href="#new-behavior-21" aria-hidden="true" class="anchor" id="new-behavior-21"></a>New behavior</h4>
+<p>EF Core 6.0 now throws an <code>InvalidOperationException</code> with the message &quot;Cannot convert string value '{value}' from the database to any value in the mapped '{enumType}' enum.&quot;</p>
+<h4><a href="#why-21" aria-hidden="true" class="anchor" id="why-21"></a>Why</h4>
+<p>Converting to the default value can result in database corruption if the entity is later saved back to the database.</p>
+<h4><a href="#mitigations-21" aria-hidden="true" class="anchor" id="mitigations-21"></a>Mitigations</h4>
+<p>Ideally, ensure that the database column only contains valid values. Alternately, implement a <code>ValueConverter</code> with the old behavior.</p>
+<h3><a href="#dbfunctionbuilderhastranslation-now-provides-the-function-arguments-as-ireadonlylist-rather-than-ireadonlycollection" aria-hidden="true" class="anchor" id="dbfunctionbuilderhastranslation-now-provides-the-function-arguments-as-ireadonlylist-rather-than-ireadonlycollection"></a>DbFunctionBuilder.HasTranslation now provides the function arguments as <code>IReadOnlyList</code> rather than <code>IReadOnlyCollection</code></h3>
+<p>Tracking Issue #23565</p>
+<h4><a href="#old-behavior-19" aria-hidden="true" class="anchor" id="old-behavior-19"></a>Old behavior</h4>
+<p>When configuring translation for a user-defined function using <code>HasTranslation</code> method, the arguments to the function were provided as <code>IReadOnlyCollection</code><SqlExpression>.</p>
+<h4><a href="#new-behavior-22" aria-hidden="true" class="anchor" id="new-behavior-22"></a>New behavior</h4>
+<p>In EF Core 6.0, the arguments are now provided as <code>IReadOnlyList</code><SqlExpression>.</p>
+<h4><a href="#why-22" aria-hidden="true" class="anchor" id="why-22"></a>Why</h4>
+<p><code>IReadOnlyList</code> allows to use indexers, so the arguments are now easier to access.</p>
+<h4><a href="#mitigations-22" aria-hidden="true" class="anchor" id="mitigations-22"></a>Mitigations</h4>
+<p>None. <code>IReadOnlyList</code> implements <code>IReadOnlyCollection</code> interface, so the transition should be straightforward.</p>
+<h3><a href="#default-table-mapping-is-not-removed-when-the-entity-is-mapped-to-a-table-valued-function" aria-hidden="true" class="anchor" id="default-table-mapping-is-not-removed-when-the-entity-is-mapped-to-a-table-valued-function"></a>Default table mapping is not removed when the entity is mapped to a table-valued function</h3>
+<p>Tracking Issue #23408</p>
+<h4><a href="#old-behavior-20" aria-hidden="true" class="anchor" id="old-behavior-20"></a>Old behavior</h4>
+<p>When an entity was mapped to a table-valued function, its default mapping to a table was removed.</p>
+<h4><a href="#new-behavior-23" aria-hidden="true" class="anchor" id="new-behavior-23"></a>New behavior</h4>
+<p>In EF Core 6.0, the entity is still mapped to a table using default mapping, even if it's also mapped to table-valued function.</p>
+<h4><a href="#why-23" aria-hidden="true" class="anchor" id="why-23"></a>Why</h4>
+<p>Table-valued functions which return entities are often used either as a helper or to encapsulate an operation returning a collection of entities, rather than a strict replacement of the entire table.</p>
+<h4><a href="#mitigations-23" aria-hidden="true" class="anchor" id="mitigations-23"></a>Mitigations</h4>
+<p>Mapping to a table can be explicitly disabled in the model configuration:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;MyEntity&gt;().ToTable((string)null);
+</code></pre>
+<h3><a href="#dotnet-ef-targets-net-6" aria-hidden="true" class="anchor" id="dotnet-ef-targets-net-6"></a>dotnet-ef targets .NET 6</h3>
+<p>Tracking Issue #27787</p>
+<h4><a href="#old-behavior-21" aria-hidden="true" class="anchor" id="old-behavior-21"></a>Old behavior</h4>
+<p>The dotnet-ef command has targeted .NET Core 3.1 for a while now. This allowed you to use newer version of the tool without installing newer versions of the .NET runtime.</p>
+<h4><a href="#new-behavior-24" aria-hidden="true" class="anchor" id="new-behavior-24"></a>New behavior</h4>
+<p>EF has updated its dotnet-ef tool to target .NET 6.</p>
+<h4><a href="#why-24" aria-hidden="true" class="anchor" id="why-24"></a>Why</h4>
+<p>The .NET 6.0.200 SDK updated the behavior of <code>dotnet tool install</code> on osx-arm64 to create an osx-x64 shim for tools targeting .NET Core 3.1.</p>
+<h4><a href="#mitigations-24" aria-hidden="true" class="anchor" id="mitigations-24"></a>Mitigations</h4>
+<p>To run dotnet-ef without installing the .NET 6 runtime, you can install an older version of the tool:</p>
+<pre><code class="language-dotnetcli">dotnet tool install dotnet-ef --version 3.1.*
+</code></pre>
+<h3><a href="#imodelcachekeyfactory-implementations-may-need-to-be-updated-to-handle-design-time-caching" aria-hidden="true" class="anchor" id="imodelcachekeyfactory-implementations-may-need-to-be-updated-to-handle-design-time-caching"></a><code>IModelCacheKeyFactory</code> implementations may need to be updated to handle design-time caching</h3>
+<p>Tracking Issue #25154</p>
+<h4><a href="#old-behavior-22" aria-hidden="true" class="anchor" id="old-behavior-22"></a>Old behavior</h4>
+<p><code>IModelCacheKeyFactory</code> did not have an option to cache the design-time model separately from the runtime model.</p>
+<h4><a href="#new-behavior-25" aria-hidden="true" class="anchor" id="new-behavior-25"></a>New behavior</h4>
+<p><code>IModelCacheKeyFactory</code> has a new overload that allows the design-time model to be cached separately from the runtime model. Not implementing this method may result in an exception similar to:</p>
+<h4><a href="#why-25" aria-hidden="true" class="anchor" id="why-25"></a>Why</h4>
+<p>This paper describes how to implement compiled models in C.</p>
+<h4><a href="#mitigations-25" aria-hidden="true" class="anchor" id="mitigations-25"></a>Mitigations</h4>
+<p>Implement the new overload. For example:</p>
+<pre><code class="language-csharp">public object Create(DbContext context, bool designTime)
+    =&gt; context is DynamicContext dynamicContext
+        ? (context.GetType(), dynamicContext.UseIntProperty, designTime)
+        : (object)context.GetType();
+</code></pre>
+<p>A fix-up has been released to fix a bug in the query 'Include'.</p>
+<h3><a href="#navigationbaseincludeignored-is-now-an-error-by-default" aria-hidden="true" class="anchor" id="navigationbaseincludeignored-is-now-an-error-by-default"></a><code>NavigationBaseIncludeIgnored</code> is now an error by default</h3>
+<p>Tracking Issue #4315</p>
+<h4><a href="#old-behavior-23" aria-hidden="true" class="anchor" id="old-behavior-23"></a>Old behavior</h4>
+<p>The event <code>CoreEventId.NavigationBaseIncludeIgnored</code> was logged as a warning by default.</p>
+<h4><a href="#new-behavior-26" aria-hidden="true" class="anchor" id="new-behavior-26"></a>New behavior</h4>
+<p>The event <code>CoreEventId.NavigationBaseIncludeIgnored</code> was logged as an error by default and causes an exception to be thrown.</p>
+<h4><a href="#why-26" aria-hidden="true" class="anchor" id="why-26"></a>Why</h4>
+<p>These query patterns are not allowed, so EF Core now throws to indicate that the queries should be updated.</p>
+<h4><a href="#mitigations-26" aria-hidden="true" class="anchor" id="mitigations-26"></a>Mitigations</h4>
+<p>The old behavior can be restored by configuring the event as a warning. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.ConfigureWarnings(b =&gt; b.Warn(CoreEventId.NavigationBaseIncludeIgnored));
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-6.0/breaking-changes">Breaking changes in EF Core 6.0</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
