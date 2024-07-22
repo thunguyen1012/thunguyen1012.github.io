@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core uses a metadata model to describe how the application's entity types are mapped to the underlying database.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Overview</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>03/28/2023</p>
+</li>
+<li>
+<p>18 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core uses a metadata model to describe how the application's entity types are mapped to the underlying database.</p>
+<p>configuration can be applied to a model targeting any data store.</p>
+<blockquote>
+<p>Tip
+You can view this article's samples on GitHub.</p>
+</blockquote>
+<h2><a href="#use-fluent-api-to-configure-a-model" aria-hidden="true" class="anchor" id="use-fluent-api-to-configure-a-model"></a>Use fluent API to configure a model</h2>
+<p>You can use the <code>OnModelCreating</code> method to create a new model.</p>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+namespace EFModeling.EntityProperties.FluentAPI.Required;
+
+internal class MyContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+
+    #region Required
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;Blog&gt;()
+            .Property(b =&gt; b.Url)
+            .IsRequired();
+    }
+    #endregion
+}
+
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+}
+</code></pre>
+<blockquote>
+<p>Tip
+To apply the same configuration to multiple objects in the model see bulk configuration.</p>
+</blockquote>
+<h3><a href="#grouping-configuration" aria-hidden="true" class="anchor" id="grouping-configuration"></a>Grouping configuration</h3>
+<p>To reduce the size of the <code>OnModelCreating</code> method all configuration for an entity type can be extracted to a separate class implementing <code>IEntityTypeConfiguration</code><TEntity>.</p>
+<pre><code class="language-csharp">public class BlogEntityTypeConfiguration : IEntityTypeConfiguration&lt;Blog&gt;
+{
+    public void Configure(EntityTypeBuilder&lt;Blog&gt; builder)
+    {
+        builder
+            .Property(b =&gt; b.Url)
+            .IsRequired();
+    }
+}
+</code></pre>
+<p>Then just invoke the <code>Configure</code> method from <code>OnModelCreating</code>.</p>
+<pre><code class="language-csharp">new BlogEntityTypeConfiguration().Configure(modelBuilder.Entity&lt;Blog&gt;());
+</code></pre>
+<h4><a href="#applying-all-configurations-in-an-assembly" aria-hidden="true" class="anchor" id="applying-all-configurations-in-an-assembly"></a>Applying all configurations in an assembly</h4>
+<p>It is possible to apply all configuration specified in types implementing <code>IEntityTypeConfiguration</code> in a given assembly.</p>
+<pre><code class="language-csharp">modelBuilder.ApplyConfigurationsFromAssembly(typeof(BlogEntityTypeConfiguration).Assembly);
+</code></pre>
+<blockquote>
+<p>Note
+The order in which the configurations will be applied is undefined, therefore this method should only be used when the order doesn't matter.</p>
+</blockquote>
+<h4><a href="#using-entitytypeconfigurationattribute-on-entity-types" aria-hidden="true" class="anchor" id="using-entitytypeconfigurationattribute-on-entity-types"></a>Using <code>EntityTypeConfigurationAttribute</code> on entity types</h4>
+<p>Rather than explicitly calling <code>Configure</code>, an <code>EntityTypeConfigurationAttribute</code> can instead be placed on the entity type such that EF Core can find and use appropriate configuration. For example:</p>
+<pre><code class="language-csharp">[EntityTypeConfiguration(typeof(BookConfiguration))]
+public class Book
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Isbn { get; set; }
+}
+</code></pre>
+<p>The <code>Book</code> entity type is included in a model using one of the normal mechanisms.</p>
+<pre><code class="language-csharp">public class BooksContext : DbContext
+{
+    public DbSet&lt;Book&gt; Books { get; set; }
+
+    //...
+</code></pre>
+<p>Or by registering it in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Book&gt;();
+}
+</code></pre>
+<blockquote>
+<p>Note
+EntityTypeConfigurationAttribute types will not be automatically discovered in an assembly. Entity types must be added to the model before the attribute will be discovered on that entity type.</p>
+</blockquote>
+<h2><a href="#use-data-annotations-to-configure-a-model" aria-hidden="true" class="anchor" id="use-data-annotations-to-configure-a-model"></a>Use data annotations to configure a model</h2>
+<p>You can also apply certain attributes (known as Data Annotations) to your classes and properties. Data annotations will override conventions, but will be overridden by Fluent API configuration.</p>
+<pre><code class="language-csharp">using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+
+namespace EFModeling.EntityProperties.DataAnnotations.Annotations;
+
+internal class MyContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+}
+
+[Table(&quot;Blogs&quot;)]
+public class Blog
+{
+    public int BlogId { get; set; }
+
+    [Required]
+    public string Url { get; set; }
+}
+</code></pre>
+<h2><a href="#built-in-conventions" aria-hidden="true" class="anchor" id="built-in-conventions"></a>Built-in conventions</h2>
+<p>This article explains how to use the IConvention interface in EF Core.</p>
+<p>Applications can remove or replace any of these conventions, as well as add new custom conventions that apply configuration for patterns that are not recognized by EF out of the box.</p>
+<blockquote>
+<p>Tip
+The code shown below comes from ModelBuildingConventionsSample.cs.</p>
+</blockquote>
+<h3><a href="#removing-an-existing-convention" aria-hidden="true" class="anchor" id="removing-an-existing-convention"></a>Removing an existing convention</h3>
+<p>Sometimes one of the built-in conventions may not appropriate for your application, in which case it can be removed.</p>
+<blockquote>
+<p>Tip
+If your model doesn't use mapping attributes (aka data annotations) for configuration, then all conventions with the name ending in <code>AttributeConvention</code> can be safely removed to speed up model building.</p>
+</blockquote>
+<h4><a href="#example-don't-create-indexes-for-foreign-key-columns" aria-hidden="true" class="anchor" id="example-don't-create-indexes-for-foreign-key-columns"></a>Example: Don't create indexes for foreign key columns</h4>
+<p>In this post, I'm going to show you how to create indexes for foreign key columns in a <code>Post</code> entity.</p>
+<pre><code class="language-text">EntityType: Post
+    Properties:
+      Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      AuthorId (no field, int?) Shadow FK Index
+      BlogId (no field, int) Shadow Required FK Index
+    Navigations:
+      Author (Author) ToPrincipal Author Inverse: Posts
+      Blog (Blog) ToPrincipal Blog Inverse: Posts
+    Keys:
+      Id PK
+    Foreign keys:
+      Post {'AuthorId'} -&gt; Author {'Id'} ToDependent: Posts ToPrincipal: Author ClientSetNull
+      Post {'BlogId'} -&gt; Blog {'Id'} ToDependent: Posts ToPrincipal: Blog Cascade
+    Indexes:
+      AuthorId
+      BlogId
+</code></pre>
+<p>However, indexes have overhead, and it may not always be appropriate to create them for all FK columns. To achieve this, the <code>ForeignKeyIndexConvention</code> can be removed when building the model:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Remove(typeof(ForeignKeyIndexConvention));
+}
+</code></pre>
+<p>Looking at the debug view of the model for <code>Post</code> now, we see that the indexes on FKs have not been created:</p>
+<pre><code class="language-text">EntityType: Post
+    Properties:
+      Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      AuthorId (no field, int?) Shadow FK
+      BlogId (no field, int) Shadow Required FK
+    Navigations:
+      Author (Author) ToPrincipal Author Inverse: Posts
+      Blog (Blog) ToPrincipal Blog Inverse: Posts
+    Keys:
+      Id PK
+    Foreign keys:
+      Post {'AuthorId'} -&gt; Author {'Id'} ToDependent: Posts ToPrincipal: Author ClientSetNull
+      Post {'BlogId'} -&gt; Blog {'Id'} ToDependent: Posts ToPrincipal: Blog Cascade
+</code></pre>
+<p>When desired, indexes can still be explicitly created for foreign key columns, either using the IndexAttribute or with configuration in <code>OnModelCreating</code>.</p>
+<h2><a href="#debug-view" aria-hidden="true" class="anchor" id="debug-view"></a>Debug view</h2>
+<p>The model builder debug view can be accessed in the debugger of your IDE. For example, with Visual Studio:</p>
+<p>It can also be accessed directly from code, for example to send the debug view to the console:</p>
+<pre><code class="language-csharp">Console.WriteLine(context.Model.ToDebugString());
+</code></pre>
+<p>Microsoft has released a debug view for Visual Studio that can be accessed from code.</p>
+<pre><code class="language-csharp">Console.WriteLine(context.Model.ToDebugString(MetadataDebugStringOptions.LongDefault));
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/">Creating and Configuring a Model</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
