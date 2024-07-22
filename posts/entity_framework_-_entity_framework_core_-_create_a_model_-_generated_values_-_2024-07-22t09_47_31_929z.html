@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Generated values | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core generates values for database columns.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Generated values</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>01/12/2023</p>
+</li>
+<li>
+<p>14 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core generates values for database columns.</p>
+<h2><a href="#default-values" aria-hidden="true" class="anchor" id="default-values"></a>Default values</h2>
+<p>On relational databases, a column can be configured with a default value; if a row is inserted without a value for that column, the default value will be used.</p>
+<p>You can configure a default value on a property:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(b =&gt; b.Rating)
+        .HasDefaultValue(3);
+}
+</code></pre>
+<p>You can also specify a SQL fragment that is used to calculate the default value:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(b =&gt; b.Created)
+        .HasDefaultValueSql(&quot;getdate()&quot;);
+}
+</code></pre>
+<h2><a href="#computed-columns" aria-hidden="true" class="anchor" id="computed-columns"></a>Computed columns</h2>
+<p>On most relational databases, a column can be configured to have its value computed in the database, typically with an expression referring to other columns:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Person&gt;()
+    .Property(p =&gt; p.DisplayName)
+    .HasComputedColumnSql(&quot;[LastName] + ', ' + [FirstName]&quot;);
+</code></pre>
+<p>The following example creates a virtual computed column, whose value is computed every time it is fetched from the database.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Person&gt;()
+    .Property(p =&gt; p.NameLength)
+    .HasComputedColumnSql(&quot;LEN([LastName]) + LEN([FirstName])&quot;, stored: true);
+</code></pre>
+<h2><a href="#primary-keys" aria-hidden="true" class="anchor" id="primary-keys"></a>Primary keys</h2>
+<p>A primary key is a key parameter in a database.</p>
+<p>For more information, see the documentation about keys and guidance for specific inheritance mapping strategies.</p>
+<h2><a href="#explicitly-configuring-value-generation" aria-hidden="true" class="anchor" id="explicitly-configuring-value-generation"></a>Explicitly configuring value generation</h2>
+<p>How do you generate value for non-key properties in EF Core?</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public DateTime Inserted { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(b =&gt; b.Inserted)
+        .ValueGeneratedOnAdd();
+}
+</code></pre>
+<p>Similarly, a property can be configured to have its value generated on add or update:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+
+    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+    public DateTime LastUpdated { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(b =&gt; b.LastUpdated)
+        .ValueGeneratedOnAddOrUpdate();
+}
+</code></pre>
+<p>The following examples show how to generate values for property types.</p>
+<p>The GUIDProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProviderProvider</p>
+<p>byte[] properties that are configured as generated on add or update and marked as concurrency tokens are set up with the rowversion data type, so that values are automatically generated in the database.</p>
+<p>Consult your provider's documentation for the specific value generation techniques it supports. The SQL Server value generation documentation can be found here.</p>
+<h2><a href="#datetime-value-generation" aria-hidden="true" class="anchor" id="datetime-value-generation"></a>Date/time value generation</h2>
+<p>EF Core providers usually don't set up value generation automatically for date/time columns - you have to configure this yourself.</p>
+<h3><a href="#creation-timestamp" aria-hidden="true" class="anchor" id="creation-timestamp"></a>Creation timestamp</h3>
+<p>In this article we are going to look at how to create a timestamp row.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(b =&gt; b.Created)
+        .HasDefaultValueSql(&quot;getdate()&quot;);
+}
+</code></pre>
+<p>Be sure to select the appropriate function, as several may exist (e.g. GETDATE() vs. GETUTCDATE()).</p>
+<h3><a href="#update-timestamp" aria-hidden="true" class="anchor" id="update-timestamp"></a>Update timestamp</h3>
+<p>In this article, I'm going to show you how to trigger a stored computed column in a database.</p>
+<pre><code class="language-sql">CREATE TRIGGER [dbo].[Blogs_UPDATE] ON [dbo].[Blogs]
+    AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF ((SELECT TRIGGER_NESTLEVEL()) &gt; 1) RETURN;
+
+    UPDATE B
+    SET LastUpdated = GETDATE()
+    FROM dbo.Blogs AS B
+    INNER JOIN INSERTED AS I
+        ON B.BlogId = I.BlogId
+END
+</code></pre>
+<p>For information on creating triggers, see the documentation on using raw SQL in migrations.</p>
+<h2><a href="#overriding-value-generation" aria-hidden="true" class="anchor" id="overriding-value-generation"></a>Overriding value generation</h2>
+<p>In this article we will look at how to specify an explicit value for a property.</p>
+<p>You can override value generation with an explicit value by setting the property to any value that is not the CLR default value for that property's type (null for <code>string</code>, <code>0</code> for <code>int</code>, <code>Guid</code>, etc.).</p>
+<blockquote>
+<p>Note
+Trying to insert explicit values into SQL Server IDENTITY fails by default; see these docs for a workaround.</p>
+</blockquote>
+<p>To provide an explicit value for properties that have been configured as value generated on add or update, you must also configure the property as follows:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;().Property(b =&gt; b.LastUpdated)
+        .ValueGeneratedOnAddOrUpdate()
+        .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Save);
+}
+</code></pre>
+<h2><a href="#no-value-generation" aria-hidden="true" class="anchor" id="no-value-generation"></a>No value generation</h2>
+<p>A property is a type of object that can be added to a database context.</p>
+<p>In most cases you do not need to generate value for a key of type <code>int</code>.</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Blog
+{
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public int BlogId { get; set; }
+
+    public string Url { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(b =&gt; b.BlogId)
+        .ValueGeneratedNever();
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/generated-properties">Generated Values</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

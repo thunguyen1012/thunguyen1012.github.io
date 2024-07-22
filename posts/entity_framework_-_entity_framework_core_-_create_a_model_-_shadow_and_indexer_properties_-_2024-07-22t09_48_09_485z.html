@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Shadow and indexer properties | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article describes the use of shadow properties in the EF Core model.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Shadow and indexer properties</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>02/07/2024</p>
+</li>
+<li>
+<p>13 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article describes the use of shadow properties in the EF Core model.</p>
+<p>This article describes how to use indexer properties in .NET.</p>
+<h2><a href="#foreign-key-shadow-properties" aria-hidden="true" class="anchor" id="foreign-key-shadow-properties"></a>Foreign key shadow properties</h2>
+<p>A shadow property represents a relationship between two or more properties in a model.</p>
+<p>The name of a property will be the name of the property's principal key property.</p>
+<p>For example, the following code listing will result in a <code>BlogId</code> shadow property being introduced to the <code>Post</code> entity:</p>
+<pre><code class="language-csharp">internal class MyContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+    public DbSet&lt;Post&gt; Posts { get; set; }
+}
+
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+
+    public List&lt;Post&gt; Posts { get; set; }
+}
+
+public class Post
+{
+    public int PostId { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    // Since there is no CLR property which holds the foreign
+    // key for this relationship, a shadow property is created.
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<h2><a href="#configuring-shadow-properties" aria-hidden="true" class="anchor" id="configuring-shadow-properties"></a>Configuring shadow properties</h2>
+<p>Fluent supports shadow properties.</p>
+<pre><code class="language-csharp">internal class MyContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;Blog&gt;()
+            .Property&lt;DateTime&gt;(&quot;LastUpdated&quot;);
+    }
+}
+
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+}
+</code></pre>
+<p>This method returns the name of an existing property or one defined on the entity class.</p>
+<h2><a href="#accessing-shadow-properties" aria-hidden="true" class="anchor" id="accessing-shadow-properties"></a>Accessing shadow properties</h2>
+<p>Shadow property values can be obtained and changed through the <code>ChangeTracker</code> API:</p>
+<pre><code class="language-csharp">context.Entry(myBlog).Property(&quot;LastUpdated&quot;).CurrentValue = DateTime.Now;
+</code></pre>
+<p>Shadow properties can be referenced in LINQ queries via the <code>EF.Property</code> static method:</p>
+<pre><code class="language-csharp">var blogs = context.Blogs
+    .OrderBy(b =&gt; EF.Property&lt;DateTime&gt;(b, &quot;LastUpdated&quot;));
+</code></pre>
+<p>Shadow properties cannot be accessed after a no-tracking query since the entities returned are not tracked by the change tracker.</p>
+<h2><a href="#configuring-indexer-properties" aria-hidden="true" class="anchor" id="configuring-indexer-properties"></a>Configuring indexer properties</h2>
+<p>In our series of articles on how to use the Fluent API, we'll be looking at how to create indexer properties.</p>
+<pre><code class="language-csharp">internal class MyContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;Blog&gt;().IndexerProperty&lt;DateTime&gt;(&quot;LastUpdated&quot;);
+    }
+}
+
+public class Blog
+{
+    private readonly Dictionary&lt;string, object&gt; _data = new Dictionary&lt;string, object&gt;();
+    public int BlogId { get; set; }
+
+    public object this[string key]
+    {
+        get =&gt; _data[key];
+        set =&gt; _data[key] = value;
+    }
+}
+</code></pre>
+<p>The <code>IndexerProperty</code> method returns the name of an indexer property that can be accessed via an entity class.</p>
+<p>Indexer properties can be referenced in LINQ queries via the <code>EF.Property</code> static method as shown above or by using the CLR indexer property.</p>
+<h2><a href="#property-bag-entity-types" aria-hidden="true" class="anchor" id="property-bag-entity-types"></a><code>Property</code> bag entity types</h2>
+<p>Entity types that contain shadow properties are known as shadow entity types.</p>
+<pre><code class="language-csharp">internal class MyContext : DbContext
+{
+    public DbSet&lt;Dictionary&lt;string, object&gt;&gt; Blogs =&gt; Set&lt;Dictionary&lt;string, object&gt;&gt;(&quot;Blog&quot;);
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.SharedTypeEntity&lt;Dictionary&lt;string, object&gt;&gt;(
+            &quot;Blog&quot;, bb =&gt;
+            {
+                bb.Property&lt;int&gt;(&quot;BlogId&quot;);
+                bb.Property&lt;string&gt;(&quot;Url&quot;);
+                bb.Property&lt;DateTime&gt;(&quot;LastUpdated&quot;);
+            });
+    }
+}
+</code></pre>
+<p><code>Property</code> bag entity types can be used wherever a normal entity type is used, including as an owned entity type. However, they do have certain limitations:</p>
+<ul>
+<li>
+<p>They can't have shadow properties.</p>
+</li>
+<li>
+<p>Indexer navigations aren't supported</p>
+</li>
+<li>
+<p>Inheritance isn't supported</p>
+</li>
+<li>
+<p>Some relationship model-building API lack overloads for shared-type entity types</p>
+</li>
+<li>
+<p>Other types can't be marked as property bags</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/shadow-properties">Shadow and Indexer Properties</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

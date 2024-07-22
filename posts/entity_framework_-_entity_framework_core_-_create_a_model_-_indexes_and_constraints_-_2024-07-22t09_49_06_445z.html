@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Indexes and constraints | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='An index is a set of columns that can be used to retrieve data from a data store.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Indexes and constraints</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>12/18/2023</p>
+</li>
+<li>
+<p>10 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>An index is a set of columns that can be used to retrieve data from a data store.</p>
+<p>You can specify an index over a column as follows:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Index(nameof(Url))]
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasIndex(b =&gt; b.Url);
+}
+</code></pre>
+<blockquote>
+<p>Note
+By convention, an index is created in each property (or set of properties) that are used as a foreign key.</p>
+</blockquote>
+<h2><a href="#composite-index" aria-hidden="true" class="anchor" id="composite-index"></a>Composite index</h2>
+<p>An index can also span more than one column:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Index(nameof(FirstName), nameof(LastName))]
+public class Person
+{
+    public int PersonId { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Person&gt;()
+        .HasIndex(p =&gt; new { p.FirstName, p.LastName });
+}
+</code></pre>
+<p>See the performance docs for more information.</p>
+<h2><a href="#index-uniqueness" aria-hidden="true" class="anchor" id="index-uniqueness"></a>Index uniqueness</h2>
+<p>By default, indexes aren't unique: multiple rows are allowed to have the same value(s) for the index's column set. You can make an index unique as follows:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Index(nameof(Url), IsUnique = true)]
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasIndex(b =&gt; b.Url)
+        .IsUnique();
+}
+</code></pre>
+<p>Attempting to insert more than one entity with the same values for the index's column set will cause an exception to be thrown.</p>
+<h2><a href="#index-sort-order" aria-hidden="true" class="anchor" id="index-sort-order"></a>Index sort order</h2>
+<blockquote>
+<p>Note
+This feature is being introduced in EF Core 7.0.</p>
+</blockquote>
+<p>The sort order of an index's columns affects its performance.</p>
+<p>The index sort order is ascending by default. You can make all columns have descending order as follows:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Index(nameof(Url), nameof(Rating), AllDescending = true)]
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+    public int Rating { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasIndex(b =&gt; new { b.Url, b.Rating })
+        .IsDescending();
+}
+</code></pre>
+<p>You may also specify the sort order on a column-by-column basis as follows:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Index(nameof(Url), nameof(Rating), IsDescending = new[] { false, true })]
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+    public int Rating { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasIndex(b =&gt; new { b.Url, b.Rating })
+        .IsDescending(false, true);
+}
+</code></pre>
+<h2><a href="#index-naming-and-multiple-indexes" aria-hidden="true" class="anchor" id="index-naming-and-multiple-indexes"></a>Index naming and multiple indexes</h2>
+<p>By convention, indexes created in a relational database are named IX_<type name>_<property name>. For composite indexes, <property name> becomes an underscore separated list of property names.</p>
+<p>You can set the name of the index created in the database:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Index(nameof(Url), Name = &quot;Index_Url&quot;)]
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasIndex(b =&gt; b.Url)
+        .HasDatabaseName(&quot;Index_Url&quot;);
+}
+</code></pre>
+<p>Note that if you call <code>HasIndex</code> more than once on the same set of properties, that continues to configure a single index rather than create a new one:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;()
+    .HasIndex(b =&gt; new { b.FirstName, b.LastName })
+    .HasDatabaseName(&quot;IX_Names_Ascending&quot;);
+
+modelBuilder.Entity&lt;Blog&gt;()
+    .HasIndex(b =&gt; new { b.FirstName, b.LastName })
+    .HasDatabaseName(&quot;IX_Names_Descending&quot;)
+    .IsDescending();
+</code></pre>
+<p>Since the second <code>HasIndex</code> call overrides the first one, this creates only a single, descending index. This can be useful for further configuring an index that was created by convention.</p>
+<p>To create multiple indexes over the same set of properties, pass a name to the <code>HasIndex</code>, which will be used to identify the index in the EF model, and to distinguish it from other indexes on the same properties:</p>
+<pre><code class="language-c#">modelBuilder.Entity&lt;Blog&gt;()
+    .HasIndex(b =&gt; new { b.FirstName, b.LastName }, &quot;IX_Names_Ascending&quot;);
+
+modelBuilder.Entity&lt;Blog&gt;()
+    .HasIndex(b =&gt; new { b.FirstName, b.LastName }, &quot;IX_Names_Descending&quot;)
+    .IsDescending();
+</code></pre>
+<p>Note that this name is also used as a default for the database name, so explicitly calling <code>HasDatabaseName</code> isn't required.</p>
+<h2><a href="#index-filter" aria-hidden="true" class="anchor" id="index-filter"></a>Index filter</h2>
+<p>This article describes how to specify a filtered index in a SQL Server database.</p>
+<p>You can use the Fluent API to specify a filter on an index, provided as a SQL expression:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasIndex(b =&gt; b.Url)
+        .HasFilter(&quot;[Url] IS NOT NULL&quot;);
+}
+</code></pre>
+<p>When using the SQL Server provider EF adds an 'IS NOT NULL' filter for all nullable columns that are part of a unique index. To override this convention you can supply a <code>null</code> value.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasIndex(b =&gt; b.Url)
+        .IsUnique()
+        .HasFilter(null);
+}
+</code></pre>
+<h2><a href="#included-columns" aria-hidden="true" class="anchor" id="included-columns"></a>Included columns</h2>
+<p>In this article, I'm going to show you how to improve query performance in a relational database.</p>
+<p>In this article, I'm going to show you how to use the index key to query a table.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasIndex(p =&gt; p.Url)
+        .IncludeProperties(
+            p =&gt; new { p.Title, p.PublishedOn });
+}
+</code></pre>
+<h2><a href="#check-constraints" aria-hidden="true" class="anchor" id="check-constraints"></a>Check constraints</h2>
+<p>Check constraints allow you to restrict access to data in a table.</p>
+<p>You can use the Fluent API to specify a check constraint on a table, provided as a SQL expression:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .Entity&lt;Product&gt;()
+        .ToTable(b =&gt; b.HasCheckConstraint(&quot;CK_Prices&quot;, &quot;[Price] &gt; [DiscountedPrice]&quot;));
+}
+</code></pre>
+<p>Multiple check constraints can be defined on the same table, each with their own name.</p>
+<p>Note: some common check constraints can be configured via the community package EFCore.CheckConstraints.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/indexes">Indexes</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
