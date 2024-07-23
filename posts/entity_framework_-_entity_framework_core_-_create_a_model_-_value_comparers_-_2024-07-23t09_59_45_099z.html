@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Value comparers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core has a new feature called change tracking.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Value comparers</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>01/12/2023</p>
+</li>
+<li>
+<p>7 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p>Tip
+The code in this document can be found on GitHub as a runnable sample.</p>
+</blockquote>
+<h2><a href="#background" aria-hidden="true" class="anchor" id="background"></a>Background</h2>
+<p>EF Core has a new feature called change tracking.</p>
+<p>This article describes how to snapshot a property using the EF Core library.</p>
+<p>The following example shows how to use the built-in hash code comparison functionality in Django.</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;EntityType&gt;()
+    .Property(e =&gt; e.MyListProperty)
+    .HasConversion(
+        v =&gt; JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+        v =&gt; JsonSerializer.Deserialize&lt;List&lt;int&gt;&gt;(v, (JsonSerializerOptions)null),
+        new ValueComparer&lt;List&lt;int&gt;&gt;(
+            (c1, c2) =&gt; c1.SequenceEqual(c2),
+            c =&gt; c.Aggregate(0, (a, v) =&gt; HashCode.Combine(a, v.GetHashCode())),
+            c =&gt; c.ToList()));
+</code></pre>
+<p>See mutable classes below for further details.</p>
+<p>Note that value comparers are also used when determining whether two key values are the same when resolving relationships; this is explained below.</p>
+<h2><a href="#shallow-vs-deep-comparison" aria-hidden="true" class="anchor" id="shallow-vs-deep-comparison"></a>Shallow vs. deep comparison</h2>
+<p>For large, immutable value types such as <code>int</code>, EF Core's default logic works well: the value is copied as-is when snapshotted, and compared with the type's built-in equality comparison.</p>
+<p>Consider byte arrays, which can be arbitrarily large. These could be compared:</p>
+<ul>
+<li>
+<p>By reference, such that a difference is only detected if a new byte array is used</p>
+</li>
+<li>
+<p>By deep comparison, such that mutation of the bytes in the array is detected</p>
+</li>
+</ul>
+<p>There are two ways to perform a SaveChanges operation on a byte array: copying the current array to the new array, or comparing it to the existing array.</p>
+<p>reference equality would not work when byte arrays are used to represent binary keys, since it's very unlikely that an FK property is set to the same instance as a PK property to which it needs to be compared.</p>
+<p>Note that the chosen comparison and snapshotting logic must correspond to each other: deep comparison requires deep snapshotting to function correctly.</p>
+<h2><a href="#simple-immutable-classes" aria-hidden="true" class="anchor" id="simple-immutable-classes"></a>Simple immutable classes</h2>
+<p>Consider a property that uses a value converter to map a simple, immutable class.</p>
+<pre><code class="language-csharp">public sealed class ImmutableClass
+{
+    public ImmutableClass(int value)
+    {
+        Value = value;
+    }
+
+    public int Value { get; }
+
+    private bool Equals(ImmutableClass other)
+        =&gt; Value == other.Value;
+
+    public override bool Equals(object obj)
+        =&gt; ReferenceEquals(this, obj) || obj is ImmutableClass other &amp;&amp; Equals(other);
+
+    public override int GetHashCode()
+        =&gt; Value.GetHashCode();
+}
+</code></pre>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;MyEntityType&gt;()
+    .Property(e =&gt; e.MyProperty)
+    .HasConversion(
+        v =&gt; v.Value,
+        v =&gt; new ImmutableClass(v));
+</code></pre>
+<p>Properties of this type do not need special comparisons or snapshots because:</p>
+<ul>
+<li>
+<p>Equality is overridden so that different instances will compare correctly</p>
+</li>
+<li>
+<p>The type is immutable, so there is no chance of mutating a snapshot value</p>
+</li>
+</ul>
+<p>So in this case the default behavior of EF Core is fine as it is.</p>
+<h2><a href="#simple-immutable-structs" aria-hidden="true" class="anchor" id="simple-immutable-structs"></a>Simple immutable structs</h2>
+<p>The mapping for simple structs is also simple and requires no special comparers or snapshotting.</p>
+<pre><code class="language-csharp">public readonly struct ImmutableStruct
+{
+    public ImmutableStruct(int value)
+    {
+        Value = value;
+    }
+
+    public int Value { get; }
+}
+</code></pre>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;EntityType&gt;()
+    .Property(e =&gt; e.MyProperty)
+    .HasConversion(
+        v =&gt; v.Value,
+        v =&gt; new ImmutableStruct(v));
+</code></pre>
+<p>EF Core has built-in support for generating compiled, memberwise comparisons of struct properties.</p>
+<h2><a href="#mutable-classes" aria-hidden="true" class="anchor" id="mutable-classes"></a>Mutable classes</h2>
+<p>In this article, I will show you how to use a mutable type with properties that cannot be changed.</p>
+<pre><code class="language-csharp">public List&lt;int&gt; MyListProperty { get; set; }
+</code></pre>
+<p>The List<T> class:</p>
+<ul>
+<li>
+<p>Has reference equality; two lists containing the same values are treated as different.</p>
+</li>
+<li>
+<p>Is mutable; values in the list can be added and removed.</p>
+</li>
+</ul>
+<p>A typical value conversion on a list property might convert the list to and from JSON:</p>
+<ul>
+<li>
+<p>EF Core 5.0</p>
+</li>
+<li>
+<p>Older versions</p>
+</li>
+</ul>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;EntityType&gt;()
+    .Property(e =&gt; e.MyListProperty)
+    .HasConversion(
+        v =&gt; JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+        v =&gt; JsonSerializer.Deserialize&lt;List&lt;int&gt;&gt;(v, (JsonSerializerOptions)null),
+        new ValueComparer&lt;List&lt;int&gt;&gt;(
+            (c1, c2) =&gt; c1.SequenceEqual(c2),
+            c =&gt; c.Aggregate(0, (a, v) =&gt; HashCode.Combine(a, v.GetHashCode())),
+            c =&gt; c.ToList()));
+</code></pre>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;EntityType&gt;()
+    .Property(e =&gt; e.MyListProperty)
+    .HasConversion(
+        v =&gt; JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+        v =&gt; JsonSerializer.Deserialize&lt;List&lt;int&gt;&gt;(v, (JsonSerializerOptions)null));
+
+var valueComparer = new ValueComparer&lt;List&lt;int&gt;&gt;(
+    (c1, c2) =&gt; c1.SequenceEqual(c2),
+    c =&gt; c.Aggregate(0, (a, v) =&gt; HashCode.Combine(a, v.GetHashCode())),
+    c =&gt; c.ToList());
+
+modelBuilder
+    .Entity&lt;EntityType&gt;()
+    .Property(e =&gt; e.MyListProperty)
+    .Metadata
+    .SetValueComparer(valueComparer);
+</code></pre>
+<p>The ValueComparer<T> constructor accepts three expressions:</p>
+<ul>
+<li>
+<p>An expression for checking equality</p>
+</li>
+<li>
+<p>An expression for generating a hash code</p>
+</li>
+<li>
+<p>An expression to snapshot a value</p>
+</li>
+</ul>
+<p>In this case the comparison is done by checking if the sequences of numbers are the same.</p>
+<p>Likewise, the hash code is built from this same sequence. (Note that this is a hash code over mutable values and hence can cause problems. Be immutable instead if you can.)</p>
+<p>The snapshot is created by cloning the list with <code>ToList</code>. Again, this is only needed if the lists are going to be mutated. Be immutable instead if you can.</p>
+<blockquote>
+<p>Note
+Value converters and comparers are constructed using expressions rather than simple delegates. This is because EF Core inserts these expressions into a much more complex expression tree that is then compiled into an entity shaper delegate. Conceptually, this is similar to compiler inlining. For example, a simple conversion may just be a compiled in cast, rather than a call to another method to do the conversion.</p>
+</blockquote>
+<h2><a href="#key-comparers" aria-hidden="true" class="anchor" id="key-comparers"></a>Key comparers</h2>
+<p>This course teaches you how to create a comparer for a key property.</p>
+<p>Use SetKeyValueComparer in the rare cases where different semantics is required on the same property.</p>
+<blockquote>
+<p>Note
+SetStructuralValueComparer has been obsoleted. Use SetKeyValueComparer instead.</p>
+</blockquote>
+<h2><a href="#overriding-the-default-comparer" aria-hidden="true" class="anchor" id="overriding-the-default-comparer"></a>Overriding the default comparer</h2>
+<p>You can override the comparer used by EF Core by setting a different comparer on the property:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;EntityType&gt;()
+    .Property(e =&gt; e.MyBytes)
+    .Metadata
+    .SetValueComparer(
+        new ValueComparer&lt;byte[]&gt;(
+            (c1, c2) =&gt; c1.SequenceEqual(c2),
+            c =&gt; c.Aggregate(0, (a, v) =&gt; HashCode.Combine(a, v.GetHashCode())),
+            c =&gt; c.ToArray()));
+</code></pre>
+<p>EF Core will now compare byte sequences and will therefore detect byte array mutations.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/value-comparers">Value Comparers</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Inheritance | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='inheritance support for Entity Framework (EF) is available.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Inheritance</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>01/12/2023</p>
+</li>
+<li>
+<p>10 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>inheritance support for Entity Framework (EF) is available.</p>
+<h2><a href="#entity-type-hierarchy-mapping" aria-hidden="true" class="anchor" id="entity-type-hierarchy-mapping"></a>Entity type hierarchy mapping</h2>
+<p>This section describes how to specify the type of hierarchy CLR in your model.</p>
+<p>The following sample exposes a <code>DbSet</code> for <code>Blog</code> and its subclass <code>RssBlog</code>. If <code>Blog</code> has any other subclass, it will not be included in the model.</p>
+<pre><code class="language-csharp">internal class MyContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+    public DbSet&lt;RssBlog&gt; RssBlogs { get; set; }
+}
+
+public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+}
+
+public class RssBlog : Blog
+{
+    public string RssUrl { get; set; }
+}
+</code></pre>
+<blockquote>
+<p>Note
+Database columns are automatically made nullable as necessary when using TPH mapping. For example, the <code>RssUrl</code> column is nullable because regular <code>Blog</code> instances do not have that property.</p>
+</blockquote>
+<p>If you don't want to expose a <code>DbSet</code> for one or more entities in the hierarchy, you can also use the Fluent API to ensure they are included in the model.</p>
+<blockquote>
+<p>Tip
+If you don't rely on conventions, you can specify the base type explicitly using <code>HasBaseType</code>. You can also use .HasBaseType((Type)null) to remove an entity type from the hierarchy.</p>
+</blockquote>
+<h2><a href="#table-per-hierarchy-and-discriminator-configuration" aria-hidden="true" class="anchor" id="table-per-hierarchy-and-discriminator-configuration"></a>Table-per-hierarchy and discriminator configuration</h2>
+<p>EF maps the inheritance between rows in a table.</p>
+<p>The model above is mapped to the following database schema (note the implicitly created <code>Discriminator</code> column, which identifies which type of <code>Blog</code> is stored in each row).</p>
+<p>You can configure the name and type of the discriminator column and the values that are used to identify each type in the hierarchy:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasDiscriminator&lt;string&gt;(&quot;blog_type&quot;)
+        .HasValue&lt;Blog&gt;(&quot;blog_base&quot;)
+        .HasValue&lt;RssBlog&gt;(&quot;blog_rss&quot;);
+}
+</code></pre>
+<p>In the examples above, EF added the discriminator implicitly as a shadow property on the base entity of the hierarchy. This property can be configured like any other:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(&quot;Discriminator&quot;)
+        .HasMaxLength(200);
+}
+</code></pre>
+<p>Finally, the discriminator can also be mapped to a regular .NET property in your entity:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasDiscriminator(b =&gt; b.BlogType);
+
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(e =&gt; e.BlogType)
+        .HasMaxLength(200)
+        .HasColumnName(&quot;blog_type&quot;);
+        
+    modelBuilder.Entity&lt;RssBlog&gt;();
+}
+</code></pre>
+<p>In this article, I will show you how to mark the discriminator mapping in EF Core model as incomplete to indicate that we should query any type in the hierarchy.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .HasDiscriminator()
+        .IsComplete(false);
+}
+</code></pre>
+<h3><a href="#shared-columns" aria-hidden="true" class="anchor" id="shared-columns"></a>Shared columns</h3>
+<p>This example shows how to map two sibling entity types in the hierarchy to the same database column.</p>
+<pre><code class="language-csharp">public class MyContext : DbContext
+{
+    public DbSet&lt;BlogBase&gt; Blogs { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;Blog&gt;()
+            .Property(b =&gt; b.Url)
+            .HasColumnName(&quot;Url&quot;);
+
+        modelBuilder.Entity&lt;RssBlog&gt;()
+            .Property(b =&gt; b.Url)
+            .HasColumnName(&quot;Url&quot;);
+    }
+}
+
+public abstract class BlogBase
+{
+    public int BlogId { get; set; }
+}
+
+public class Blog : BlogBase
+{
+    public string Url { get; set; }
+}
+
+public class RssBlog : BlogBase
+{
+    public string Url { get; set; }
+}
+</code></pre>
+<blockquote>
+<p>Note
+Relational database providers, such as SQL Server, will not automatically use the discriminator predicate when querying shared columns when using a cast. The query <code>Url = (blog as</code>RssBlog<code>).Url</code> would also return the <code>Url</code> value for the sibling <code>Blog</code> rows. To restrict the query to <code>RssBlog</code> entities you need to manually add a filter on the discriminator, such as <code>Url = blog is</code>RssBlog<code>? (blog as</code>RssBlog<code>).Url : null</code>.</p>
+</blockquote>
+<h2><a href="#table-per-type-configuration" aria-hidden="true" class="anchor" id="table-per-type-configuration"></a>Table-per-type configuration</h2>
+<p>The TPT mapping pattern allows you to store properties that belong to a base type or derived type in a table that maps to that type.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().ToTable(&quot;Blogs&quot;);
+modelBuilder.Entity&lt;RssBlog&gt;().ToTable(&quot;RssBlogs&quot;);
+</code></pre>
+<blockquote>
+<p>Tip
+Instead of calling <code>ToTable</code> on each entity type you can call modelBuilder.Entity<Blog>().UseTptMappingStrategy() on each root entity type and the table names will be generated by EF.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+To configure different column names for the primary key columns in each table see Table-specific facet configuration.</p>
+</blockquote>
+<p>EF will create the following database schema for the model above.</p>
+<pre><code class="language-sql">CREATE TABLE [Blogs] (
+    [BlogId] int NOT NULL IDENTITY,
+    [Url] nvarchar(max) NULL,
+    CONSTRAINT [PK_Blogs] PRIMARY KEY ([BlogId])
+);
+
+CREATE TABLE [RssBlogs] (
+    [BlogId] int NOT NULL,
+    [RssUrl] nvarchar(max) NULL,
+    CONSTRAINT [PK_RssBlogs] PRIMARY KEY ([BlogId]),
+    CONSTRAINT [FK_RssBlogs_Blogs_BlogId] FOREIGN KEY ([BlogId]) REFERENCES [Blogs] ([BlogId]) ON DELETE NO ACTION
+);
+</code></pre>
+<blockquote>
+<p>Note
+If the primary key constraint is renamed the new name will be applied to all the tables mapped to the hierarchy, future EF versions will allow renaming the constraint only for a particular table when issue 19970 is fixed.</p>
+</blockquote>
+<p>If you are employing bulk configuration you can retrieve the column name for a specific table by calling GetColumnName(IProperty, StoreObjectIdentifier).</p>
+<pre><code class="language-csharp">foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+{
+    var tableIdentifier = StoreObjectIdentifier.Create(entityType, StoreObjectType.Table);
+
+    Console.WriteLine($&quot;{entityType.DisplayName()}\t\t{tableIdentifier}&quot;);
+    Console.WriteLine(&quot; Property\tColumn&quot;);
+
+    foreach (var property in entityType.GetProperties())
+    {
+        var columnName = property.GetColumnName(tableIdentifier.Value);
+        Console.WriteLine($&quot; {property.Name,-10}\t{columnName}&quot;);
+    }
+
+    Console.WriteLine();
+}
+</code></pre>
+<blockquote>
+<p>Warning
+In many cases, TPT shows inferior performance when compared to TPH. See the performance docs for more information.</p>
+</blockquote>
+<blockquote>
+<p>Caution
+Columns for a derived type are mapped to different tables, therefore composite FK constraints and indexes that use both the inherited and declared properties cannot be created in the database.</p>
+</blockquote>
+<h2><a href="#table-per-concrete-type-configuration" aria-hidden="true" class="anchor" id="table-per-concrete-type-configuration"></a>Table-per-concrete-type configuration</h2>
+<blockquote>
+<p>Note
+The table-per-concrete-type (TPC) feature was introduced in EF Core 7.0.</p>
+</blockquote>
+<p>This article describes the TPC mapping pattern for entity types.</p>
+<blockquote>
+<p>Tip
+The EF Team demonstrated and talked in depth about TPC mapping in an episode of the .NET Data Community Standup. As with all Community Standup episodes, you can watch the TPC episode now on YouTube.</p>
+</blockquote>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().UseTpcMappingStrategy()
+    .ToTable(&quot;Blogs&quot;);
+modelBuilder.Entity&lt;RssBlog&gt;()
+    .ToTable(&quot;RssBlogs&quot;);
+</code></pre>
+<blockquote>
+<p>Tip
+Instead of calling <code>ToTable</code> on each entity type just calling modelBuilder.Entity<Blog>().UseTpcMappingStrategy() on each root entity type will generate the table names by convention.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+To configure different column names for the primary key columns in each table see Table-specific facet configuration.</p>
+</blockquote>
+<p>EF will create the following database schema for the model above.</p>
+<pre><code class="language-sql">CREATE TABLE [Blogs] (
+    [BlogId] int NOT NULL DEFAULT (NEXT VALUE FOR [BlogSequence]),
+    [Url] nvarchar(max) NULL,
+    CONSTRAINT [PK_Blogs] PRIMARY KEY ([BlogId])
+);
+
+CREATE TABLE [RssBlogs] (
+    [BlogId] int NOT NULL DEFAULT (NEXT VALUE FOR [BlogSequence]),
+    [Url] nvarchar(max) NULL,
+    [RssUrl] nvarchar(max) NULL,
+    CONSTRAINT [PK_RssBlogs] PRIMARY KEY ([BlogId])
+);
+</code></pre>
+<h3><a href="#tpc-database-schema" aria-hidden="true" class="anchor" id="tpc-database-schema"></a>TPC database schema</h3>
+<p>The table-per-concrete-type (TPC) is a new approach to mapping database objects to concrete types.</p>
+<p>For example, consider mapping this hierarchy:</p>
+<pre><code class="language-csharp">public abstract class Animal
+{
+    protected Animal(string name)
+    {
+        Name = name;
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public abstract string Species { get; }
+
+    public Food? Food { get; set; }
+}
+
+public abstract class Pet : Animal
+{
+    protected Pet(string name)
+        : base(name)
+    {
+    }
+
+    public string? Vet { get; set; }
+
+    public ICollection&lt;Human&gt; Humans { get; } = new List&lt;Human&gt;();
+}
+
+public class FarmAnimal : Animal
+{
+    public FarmAnimal(string name, string species)
+        : base(name)
+    {
+        Species = species;
+    }
+
+    public override string Species { get; }
+
+    [Precision(18, 2)]
+    public decimal Value { get; set; }
+
+    public override string ToString()
+        =&gt; $&quot;Farm animal '{Name}' ({Species}/{Id}) worth {Value:C} eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+
+public class Cat : Pet
+{
+    public Cat(string name, string educationLevel)
+        : base(name)
+    {
+        EducationLevel = educationLevel;
+    }
+
+    public string EducationLevel { get; set; }
+    public override string Species =&gt; &quot;Felis catus&quot;;
+
+    public override string ToString()
+        =&gt; $&quot;Cat '{Name}' ({Species}/{Id}) with education '{EducationLevel}' eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+
+public class Dog : Pet
+{
+    public Dog(string name, string favoriteToy)
+        : base(name)
+    {
+        FavoriteToy = favoriteToy;
+    }
+
+    public string FavoriteToy { get; set; }
+    public override string Species =&gt; &quot;Canis familiaris&quot;;
+
+    public override string ToString()
+        =&gt; $&quot;Dog '{Name}' ({Species}/{Id}) with favorite toy '{FavoriteToy}' eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+
+public class Human : Animal
+{
+    public Human(string name)
+        : base(name)
+    {
+    }
+
+    public override string Species =&gt; &quot;Homo sapiens&quot;;
+
+    public Animal? FavoriteAnimal { get; set; }
+    public ICollection&lt;Pet&gt; Pets { get; } = new List&lt;Pet&gt;();
+
+    public override string ToString()
+        =&gt; $&quot;Human '{Name}' ({Species}/{Id}) with favorite animal '{FavoriteAnimal?.Name ?? &quot;&lt;Unknown&gt;&quot;}'&quot; +
+           $&quot; eats {Food?.ToString() ?? &quot;&lt;Unknown&gt;&quot;}&quot;;
+}
+</code></pre>
+<p>When using SQL Server, the tables created for this hierarchy are:</p>
+<pre><code class="language-sql">CREATE TABLE [Cats] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [Vet] nvarchar(max) NULL,
+    [EducationLevel] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Cats] PRIMARY KEY ([Id]));
+
+CREATE TABLE [Dogs] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [Vet] nvarchar(max) NULL,
+    [FavoriteToy] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Dogs] PRIMARY KEY ([Id]));
+
+CREATE TABLE [FarmAnimals] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [Value] decimal(18,2) NOT NULL,
+    [Species] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_FarmAnimals] PRIMARY KEY ([Id]));
+
+CREATE TABLE [Humans] (
+    [Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [Name] nvarchar(max) NOT NULL,
+    [FoodId] uniqueidentifier NULL,
+    [FavoriteAnimalId] int NULL,
+    CONSTRAINT [PK_Humans] PRIMARY KEY ([Id]));
+</code></pre>
+<p>Notice that:</p>
+<ul>
+<li>
+<p>There are no tables for the <code>Animal</code> or <code>Pet</code> types, since these are <code>abstract</code> in the object model. Remember that C# does not allow instances of <code>abstract</code> types, and there is therefore no situation where an <code>abstract</code> type instance will be saved to the database.</p>
+</li>
+<li>
+<p>The mapping of properties in base types is repeated for each concrete type. For example, every table has a <code>Name</code> column, and both Cats and Dogs have a <code>Vet</code> column.</p>
+</li>
+<li>
+<p>Saving some data into this database results in the following:</p>
+</li>
+</ul>
+<p>Cats table</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Id</th>
+<th style="text-align: left;">Name</th>
+<th style="text-align: left;">FoodId</th>
+<th style="text-align: left;">Vet</th>
+<th style="text-align: left;">EducationLevel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">Alice</td>
+<td style="text-align: left;">99ca3e98-b26d-4a0c-d4ae-08da7aca624f</td>
+<td style="text-align: left;">Pengelly</td>
+<td style="text-align: left;">MBA</td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Mac</td>
+<td style="text-align: left;">99ca3e98-b26d-4a0c-d4ae-08da7aca624f</td>
+<td style="text-align: left;">Pengelly</td>
+<td style="text-align: left;">Preschool</td>
+</tr>
+<tr>
+<td style="text-align: left;">8</td>
+<td style="text-align: left;">Baxter</td>
+<td style="text-align: left;">5dc5019e-6f72-454b-d4b0-08da7aca624f</td>
+<td style="text-align: left;">Bothell ```Pet``` Hospital</td>
+<td style="text-align: left;">BSc</td>
+</tr>
+</tbody></table>
+<p>Dogs table</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Id</th>
+<th style="text-align: left;">Name</th>
+<th style="text-align: left;">FoodId</th>
+<th style="text-align: left;">Vet</th>
+<th style="text-align: left;">FavoriteToy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">Toast</td>
+<td style="text-align: left;">011aaf6f-d588-4fad-d4ac-08da7aca624f</td>
+<td style="text-align: left;">Pengelly</td>
+<td style="text-align: left;">Mr. Squirrel</td>
+</tr>
+</tbody></table>
+<p>FarmAnimals table</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Id</th>
+<th style="text-align: left;">Name</th>
+<th style="text-align: left;">FoodId</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Species</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">Clyde</td>
+<td style="text-align: left;">1d495075-f527-4498-d4af-08da7aca624f</td>
+<td style="text-align: left;">100.00</td>
+<td style="text-align: left;">Equus africanus asinus</td>
+</tr>
+</tbody></table>
+<p>Humans table</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Id</th>
+<th style="text-align: left;">Name</th>
+<th style="text-align: left;">FoodId</th>
+<th style="text-align: left;">FavoriteAnimalId</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">Wendy</td>
+<td style="text-align: left;">5418fd81-7660-432f-d4b1-08da7aca624f</td>
+<td style="text-align: left;">2</td>
+</tr>
+<tr>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">Arthur</td>
+<td style="text-align: left;">59b495d4-0414-46bf-d4ad-08da7aca624f</td>
+<td style="text-align: left;">1</td>
+</tr>
+<tr>
+<td style="text-align: left;">9</td>
+<td style="text-align: left;">Katie</td>
+<td style="text-align: left;">null</td>
+<td style="text-align: left;">8</td>
+</tr>
+</tbody></table>
+<p>In this post we'll look at the characteristics of table mapping.</p>
+<h3><a href="#key-generation" aria-hidden="true" class="anchor" id="key-generation"></a>Key generation</h3>
+<p>In this paper we describe the inheritance mapping of key values between entities.</p>
+<p>The table hierarchy is mapped to a row in the table, and the keys for other tables are linked to this row using foreign key constraints.</p>
+<p>In this post I’m going to show you how to use the <code>Identity</code> column in EF Core to generate a unique key value for each entity in a hierarchy.</p>
+<p>Key values are used to define the relationships between tables in a database.</p>
+<pre><code class="language-sql">[Id] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence])
+</code></pre>
+<p><code>AnimalSequence</code> is a database sequence created by EF Core.</p>
+<p><code>Identity</code> columns can be used to control the relationship between tables in a TPC table.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Cat&gt;().ToTable(&quot;Cats&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(1, 4));
+modelBuilder.Entity&lt;Dog&gt;().ToTable(&quot;Dogs&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(2, 4));
+modelBuilder.Entity&lt;FarmAnimal&gt;().ToTable(&quot;FarmAnimals&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(3, 4));
+modelBuilder.Entity&lt;Human&gt;().ToTable(&quot;Humans&quot;, tb =&gt; tb.Property(e =&gt; e.Id).UseIdentityColumn(4, 4));
+</code></pre>
+<blockquote>
+<p>Important
+Using this strategy makes it harder to add derived types later as it requires the total number of types in the hierarchy to be known beforehand.</p>
+</blockquote>
+<p>integer key generation is not supported when using the TPC strategy.</p>
+<h3><a href="#foreign-key-constraints" aria-hidden="true" class="anchor" id="foreign-key-constraints"></a>Foreign key constraints</h3>
+<p>In this article, I'm going to show you how to use the TPC mapping strategy in a database.</p>
+<pre><code class="language-sql">CONSTRAINT [FK_Animals_Animals_FavoriteAnimalId] FOREIGN KEY ([FavoriteAnimalId]) REFERENCES [Animals] ([Id])
+</code></pre>
+<p>When using FK, the primary key for any given animal is stored in the table corresponding to the concrete type of that animal.</p>
+<p>EF Core will attempt to insert invalid data into the FK column.</p>
+<h2><a href="#summary-and-guidance" aria-hidden="true" class="anchor" id="summary-and-guidance"></a>Summary and guidance</h2>
+<p>In this article I'm going to show you how to use  and TPC in your code.</p>
+<p>That being said, TPC is also a good mapping strategy to use when your code will mostly query for entities of a single leaf type and your benchmarks show an improvement compared with TPH.</p>
+<p>Use TPT only if constrained to do so by external factors.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/inheritance">Inheritance</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
