@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Entity type constructors | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core has a constructor that can be defined with parameters.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Entity type constructors</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core has a constructor that can be defined with parameters.</p>
+<blockquote>
+<p>Note
+Currently, all constructor binding is by convention. Configuration of specific constructors to use is planned for a future release.</p>
+</blockquote>
+<h2><a href="#binding-to-mapped-properties" aria-hidden="true" class="anchor" id="binding-to-mapped-properties"></a>Binding to mapped properties</h2>
+<p>Consider a typical Blog/Post model:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; }
+    public string Author { get; set; }
+
+    public ICollection&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    public string Title { get; set; }
+    public string Content { get; set; }
+    public DateTime PostedOn { get; set; }
+
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>parameterless constructors and parameterized constructors are used by EF Core to create instances of mapped property types.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public Blog(int id, string name, string author)
+    {
+        Id = id;
+        Name = name;
+        Author = author;
+    }
+
+    public int Id { get; set; }
+
+    public string Name { get; set; }
+    public string Author { get; set; }
+
+    public ICollection&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    public Post(int id, string title, DateTime postedOn)
+    {
+        Id = id;
+        Title = title;
+        PostedOn = postedOn;
+    }
+
+    public int Id { get; set; }
+
+    public string Title { get; set; }
+    public string Content { get; set; }
+    public DateTime PostedOn { get; set; }
+
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>Some things to note:</p>
+<ul>
+<li>
+<p>Not all properties need to have constructor parameters. For example, the Post.Content property is not set by any constructor parameter, so EF Core will set it after calling the constructor in the normal way.</p>
+</li>
+<li>
+<p>The parameter types and names must match property types and names, except that properties can be Pascal-cased while the parameters are camel-cased.</p>
+</li>
+<li>
+<p>EF Core cannot set navigation properties (such as Blog or Posts above) using a constructor.</p>
+</li>
+<li>
+<p>The constructor can be public, private, or have any other accessibility. However, lazy-loading proxies require that the constructor is accessible from the inheriting proxy class. Usually this means making it either public or protected.</p>
+</li>
+</ul>
+<h3><a href="#read-only-properties" aria-hidden="true" class="anchor" id="read-only-properties"></a>Read-only properties</h3>
+<p>Once properties are being set via the constructor it can make sense to make some of them read-only. EF Core supports this, but there are some things to look out for:</p>
+<ul>
+<li>
+<p>Properties without setters are not mapped by convention. (Doing so tends to map properties that should not be mapped, such as computed properties.)</p>
+</li>
+<li>
+<p>Using automatically generated key values requires a key property that is read-write, since the key value needs to be set by the key generator when inserting new entities.</p>
+</li>
+</ul>
+<p>An easy way to avoid these things is to use private setters. For example:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public Blog(int id, string name, string author)
+    {
+        Id = id;
+        Name = name;
+        Author = author;
+    }
+
+    public int Id { get; private set; }
+
+    public string Name { get; private set; }
+    public string Author { get; private set; }
+
+    public ICollection&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    public Post(int id, string title, DateTime postedOn)
+    {
+        Id = id;
+        Title = title;
+        PostedOn = postedOn;
+    }
+
+    public int Id { get; private set; }
+
+    public string Title { get; private set; }
+    public string Content { get; set; }
+    public DateTime PostedOn { get; private set; }
+
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>EF Core sees a property with a private setter as read-write, which means that all properties are mapped as before and the key can still be store-generated.</p>
+<p>In our series of articles on <code>OnModelCreating</code>, we look at the use of private setters in <code>OnModelCreating</code>.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    private int _id;
+
+    public Blog(string name, string author)
+    {
+        Name = name;
+        Author = author;
+    }
+
+    public string Name { get; }
+    public string Author { get; }
+
+    public ICollection&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    private int _id;
+
+    public Post(string title, DateTime postedOn)
+    {
+        Title = title;
+        PostedOn = postedOn;
+    }
+
+    public string Title { get; }
+    public string Content { get; set; }
+    public DateTime PostedOn { get; }
+
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>And this configuration in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;(
+        b =&gt;
+        {
+            b.HasKey(&quot;_id&quot;);
+            b.Property(e =&gt; e.Author);
+            b.Property(e =&gt; e.Name);
+        });
+
+    modelBuilder.Entity&lt;Post&gt;(
+        b =&gt;
+        {
+            b.HasKey(&quot;_id&quot;);
+            b.Property(e =&gt; e.Title);
+            b.Property(e =&gt; e.PostedOn);
+        });
+}
+</code></pre>
+<p>Things to note:</p>
+<ul>
+<li>
+<p>The key &quot;property&quot; is now a field. It is not a <code>readonly</code> field so that store-generated keys can be used.</p>
+</li>
+<li>
+<p>The other properties are read-only properties set only in the constructor.</p>
+</li>
+<li>
+<p>If the primary key value is only ever set by EF or read from the database, then there is no need to include it in the constructor. This leaves the key &quot;property&quot; as a simple field and makes it clear that it should not be set explicitly when creating new blogs or posts.</p>
+</li>
+</ul>
+<blockquote>
+<p>Note
+This code will result in compiler warning '169' indicating that the field is never used. This can be ignored since in reality EF Core is using the field in an extralinguistic manner.</p>
+</blockquote>
+<h2><a href="#injecting-services" aria-hidden="true" class="anchor" id="injecting-services"></a>Injecting services</h2>
+<p>EF Core can also inject &quot;services&quot; into an entity type's constructor. For example, the following can be injected:</p>
+<ul>
+<li>
+<p><code>DbContext</code> - the current context instance, which can also be typed as your derived <code>DbContext</code> type</p>
+</li>
+<li>
+<p><code>ILazyLoader</code> - the lazy-loading service--see the lazy-loading documentation for more details</p>
+</li>
+<li>
+<p><code>Action&lt;object, string&gt;</code> - a lazy-loading delegate--see the lazy-loading documentation for more details</p>
+</li>
+<li>
+<p><code>IEntityType</code> - the EF Core metadata associated with this entity type</p>
+</li>
+</ul>
+<blockquote>
+<p>Note
+Currently, only services known by EF Core can be injected. Support for injecting application services is being considered for a future release.</p>
+</blockquote>
+<p>An injected <code>DbContext</code> can be used to access a database without loading it all.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public Blog()
+    {
+    }
+
+    private Blog(BloggingContext context)
+    {
+        Context = context;
+    }
+
+    private BloggingContext Context { get; set; }
+
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Author { get; set; }
+
+    public ICollection&lt;Post&gt; Posts { get; set; }
+
+    public int PostsCount
+        =&gt; Posts?.Count
+           ?? Context?.Set&lt;Post&gt;().Count(p =&gt; Id == EF.Property&lt;int?&gt;(p, &quot;BlogId&quot;))
+           ?? 0;
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+    public DateTime PostedOn { get; set; }
+
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>A few things to notice about this:</p>
+<ul>
+<li>
+<p>The constructor is private, since it is only ever called by EF Core, and there is another public constructor for general use.</p>
+</li>
+<li>
+<p>The code using the injected service (that is, the context) is defensive against it being <code>null</code> to handle cases where EF Core is not creating the instance.</p>
+</li>
+<li>
+<p>Because service is stored in a read/write property it will be reset when the entity is attached to a new context instance.</p>
+</li>
+</ul>
+<blockquote>
+<p>Warning
+Injecting the <code>DbContext</code> like this is often considered an anti-pattern since it couples your entity types directly to EF Core. Carefully consider all options before using service injection like this.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/constructors">Entity types with constructors</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

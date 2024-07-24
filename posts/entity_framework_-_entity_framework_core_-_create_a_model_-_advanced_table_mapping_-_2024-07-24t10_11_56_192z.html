@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Advanced table mapping | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core offers a lot of flexibility when it comes to mapping entity types to tables in a database. This becomes even more useful when you need to use a database that wasn't created by EF.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Advanced table mapping</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core offers a lot of flexibility when it comes to mapping entity types to tables in a database. This becomes even more useful when you need to use a database that wasn't created by EF.</p>
+<p>The below techniques are described in terms of tables, but the same result can be achieved when mapping to views as well.</p>
+<h2><a href="#table-splitting" aria-hidden="true" class="anchor" id="table-splitting"></a>Table splitting</h2>
+<p>EF Core allows to map two or more entities to a single row. This is called table splitting or table sharing.</p>
+<h3><a href="#configuration" aria-hidden="true" class="anchor" id="configuration"></a>Configuration</h3>
+<p>This article describes how to split entity types in a table.</p>
+<p>A common scenario for table splitting is using only a subset of the columns in the table for greater performance or encapsulation.</p>
+<p>In this example <code>Order</code> represents a subset of <code>DetailedOrder</code>.</p>
+<pre><code class="language-csharp">public class Order
+{
+    public int Id { get; set; }
+    public OrderStatus? Status { get; set; }
+    public DetailedOrder DetailedOrder { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class DetailedOrder
+{
+    public int Id { get; set; }
+    public OrderStatus? Status { get; set; }
+    public string BillingAddress { get; set; }
+    public string ShippingAddress { get; set; }
+    public byte[] Version { get; set; }
+}
+</code></pre>
+<p>In addition to the required configuration we call <code>Property(o =&gt; o.Status).HasColumnName(&quot;Status&quot;)</code> to map <code>DetailedOrder.Status</code> to the same column as <code>Order.Status</code>.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;DetailedOrder&gt;(
+    dob =&gt;
+    {
+        dob.ToTable(&quot;Orders&quot;);
+        dob.Property(o =&gt; o.Status).HasColumnName(&quot;Status&quot;);
+    });
+
+modelBuilder.Entity&lt;Order&gt;(
+    ob =&gt;
+    {
+        ob.ToTable(&quot;Orders&quot;);
+        ob.Property(o =&gt; o.Status).HasColumnName(&quot;Status&quot;);
+        ob.HasOne(o =&gt; o.DetailedOrder).WithOne()
+            .HasForeignKey&lt;DetailedOrder&gt;(o =&gt; o.Id);
+        ob.Navigation(o =&gt; o.DetailedOrder).IsRequired();
+    });
+</code></pre>
+<blockquote>
+<p>Tip
+See the full sample project for more context.</p>
+</blockquote>
+<h3><a href="#usage" aria-hidden="true" class="anchor" id="usage"></a>Usage</h3>
+<p>Saving and querying entities using table splitting is done in the same way as other entities:</p>
+<pre><code class="language-csharp">using (var context = new TableSplittingContext())
+{
+    context.Database.EnsureDeleted();
+    context.Database.EnsureCreated();
+
+    context.Add(
+        new Order
+        {
+            Status = OrderStatus.Pending,
+            DetailedOrder = new DetailedOrder
+            {
+                Status = OrderStatus.Pending,
+                ShippingAddress = &quot;221 B Baker St, London&quot;,
+                BillingAddress = &quot;11 Wall Street, New York&quot;
+            }
+        });
+
+    context.SaveChanges();
+}
+
+using (var context = new TableSplittingContext())
+{
+    var pendingCount = context.Orders.Count(o =&gt; o.Status == OrderStatus.Pending);
+    Console.WriteLine($&quot;Current number of pending orders: {pendingCount}&quot;);
+}
+
+using (var context = new TableSplittingContext())
+{
+    var order = context.DetailedOrders.First(o =&gt; o.Status == OrderStatus.Pending);
+    Console.WriteLine($&quot;First pending order will ship to: {order.ShippingAddress}&quot;);
+}
+</code></pre>
+<h3><a href="#optional-dependent-entity" aria-hidden="true" class="anchor" id="optional-dependent-entity"></a>Optional dependent entity</h3>
+<p>An instance of a dependent entity will be created if all of its properties are in the database.</p>
+<p>If an instance of a dependent entity type is created, it will be checked against the instance's dependents.</p>
+<h3><a href="#concurrency-tokens" aria-hidden="true" class="anchor" id="concurrency-tokens"></a>Concurrency tokens</h3>
+<p>To avoid exposing the concurrency token to the consuming code, it's possible the create one as a shadow property:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Order&gt;()
+    .Property&lt;byte[]&gt;(&quot;Version&quot;).IsRowVersion().HasColumnName(&quot;Version&quot;);
+
+modelBuilder.Entity&lt;DetailedOrder&gt;()
+    .Property(o =&gt; o.Version).IsRowVersion().HasColumnName(&quot;Version&quot;);
+</code></pre>
+<h3><a href="#inheritance" aria-hidden="true" class="anchor" id="inheritance"></a>Inheritance</h3>
+<p>It's recommended to read the dedicated page on inheritance before continuing with this section.</p>
+<p>The dependent types using table splitting can have an inheritance hierarchy, but there are some limitations:</p>
+<ul>
+<li>
+<p>The dependent entity type cannot use TPC mapping as the derived types wouldn't be able to map to the same table.</p>
+</li>
+<li>
+<p>The dependent entity type can use TPT mapping, but only the root entity type can use table splitting.</p>
+</li>
+<li>
+<p>If the principal entity type uses TPC, then only the entity types that don't have any descendants can use table splitting. Otherwise the dependent columns would need to be duplicated on the tables corresponding to the derived types, complicating all interactions.</p>
+</li>
+</ul>
+<h2><a href="#entity-splitting" aria-hidden="true" class="anchor" id="entity-splitting"></a>Entity splitting</h2>
+<p>EF Core allows to map an entity to rows in two or more tables. This is called entity splitting.</p>
+<h3><a href="#configuration-1" aria-hidden="true" class="anchor" id="configuration-1"></a>Configuration</h3>
+<p>For example, consider a database with three tables that hold customer data:</p>
+<ul>
+<li>
+<p>A <code>Customers</code> table for customer information</p>
+</li>
+<li>
+<p>A <code>PhoneNumbers</code> table for the customer's phone number</p>
+</li>
+<li>
+<p>An <code>Addresses</code> table for the customer's address</p>
+</li>
+</ul>
+<p>Here are definitions for these tables in SQL Server:</p>
+<pre><code class="language-sql">CREATE TABLE [Customers] (
+    [Id] int NOT NULL IDENTITY,
+    [Name] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Customers] PRIMARY KEY ([Id])
+);
+    
+CREATE TABLE [PhoneNumbers] (
+    [CustomerId] int NOT NULL,
+    [PhoneNumber] nvarchar(max) NULL,
+    CONSTRAINT [PK_PhoneNumbers] PRIMARY KEY ([CustomerId]),
+    CONSTRAINT [FK_PhoneNumbers_Customers_CustomerId] FOREIGN KEY ([CustomerId]) REFERENCES [Customers] ([Id]) ON DELETE CASCADE
+);
+
+CREATE TABLE [Addresses] (
+    [CustomerId] int NOT NULL,
+    [Street] nvarchar(max) NOT NULL,
+    [City] nvarchar(max) NOT NULL,
+    [PostCode] nvarchar(max) NULL,
+    [Country] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Addresses] PRIMARY KEY ([CustomerId]),
+    CONSTRAINT [FK_Addresses_Customers_CustomerId] FOREIGN KEY ([CustomerId]) REFERENCES [Customers] ([Id]) ON DELETE CASCADE
+);
+</code></pre>
+<p>For example, you might have three tables in your application - one for your customers, one for your suppliers, and one for your partners.</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public Customer(string name, string street, string city, string? postCode, string country)
+    {
+        Name = name;
+        Street = street;
+        City = city;
+        PostCode = postCode;
+        Country = country;
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string? PostCode { get; set; }
+    public string Country { get; set; }
+}
+</code></pre>
+<p>The following code splits the <code>Customer</code> entity type to the <code>Customers</code>, <code>PhoneNumbers</code>, and <code>Addresses</code> tables.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Customer&gt;(
+    entityBuilder =&gt;
+    {
+        entityBuilder
+            .ToTable(&quot;Customers&quot;)
+            .SplitToTable(
+                &quot;PhoneNumbers&quot;,
+                tableBuilder =&gt;
+                {
+                    tableBuilder.Property(customer =&gt; customer.Id).HasColumnName(&quot;CustomerId&quot;);
+                    tableBuilder.Property(customer =&gt; customer.PhoneNumber);
+                })
+            .SplitToTable(
+                &quot;Addresses&quot;,
+                tableBuilder =&gt;
+                {
+                    tableBuilder.Property(customer =&gt; customer.Id).HasColumnName(&quot;CustomerId&quot;);
+                    tableBuilder.Property(customer =&gt; customer.Street);
+                    tableBuilder.Property(customer =&gt; customer.City);
+                    tableBuilder.Property(customer =&gt; customer.PostCode);
+                    tableBuilder.Property(customer =&gt; customer.Country);
+                });
+    });
+</code></pre>
+<p>Notice also that, if necessary, different column names can be specified for each of the tables. To configure the column name for the main table see Table-specific facet configuration.</p>
+<h3><a href="#configuring-the-linking-foreign-key" aria-hidden="true" class="anchor" id="configuring-the-linking-foreign-key"></a>Configuring the linking foreign key</h3>
+<p>Fluent has an entity type that can be mapped to tables in the database.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Customer&gt;()
+    .HasOne&lt;Customer&gt;()
+    .WithOne()
+    .HasForeignKey&lt;Customer&gt;(a =&gt; a.Id)
+    .OnDelete(DeleteBehavior.Restrict);
+</code></pre>
+<h3><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h3>
+<ul>
+<li>
+<p>Entity splitting can't be used for entity types in hierarchies.</p>
+</li>
+<li>
+<p>For any row in the main table there must be a row in each of the split tables (the fragments are not optional).</p>
+</li>
+</ul>
+<h2><a href="#table-specific-facet-configuration" aria-hidden="true" class="anchor" id="table-specific-facet-configuration"></a>Table-specific facet configuration</h2>
+<p>In our series of articles on inheritance, we are going to look at how to map CLR properties to columns in a table.</p>
+<pre><code class="language-csharp">public abstract class Animal
+{
+    public int Id { get; set; }
+    public string Breed { get; set; } = null!;
+}
+
+public class Cat : Animal
+{
+    public string? EducationalLevel { get; set; }
+}
+
+public class Dog : Animal
+{
+    public string? FavoriteToy { get; set; }
+}
+</code></pre>
+<p>With the TPT inheritance mapping strategy, these types will be mapped to three tables. However, the primary key column in each table may have a different name. For example:</p>
+<pre><code class="language-sql">CREATE TABLE [Animals] (
+    [Id] int NOT NULL IDENTITY,
+    [Breed] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Animals] PRIMARY KEY ([Id])
+);
+
+CREATE TABLE [Cats] (
+    [CatId] int NOT NULL,
+    [EducationalLevel] nvarchar(max) NULL,
+    CONSTRAINT [PK_Cats] PRIMARY KEY ([CatId]),
+    CONSTRAINT [FK_Cats_Animals_CatId] FOREIGN KEY ([CatId]) REFERENCES [Animals] ([Id]) ON DELETE CASCADE
+);
+
+CREATE TABLE [Dogs] (
+    [DogId] int NOT NULL,
+    [FavoriteToy] nvarchar(max) NULL,
+    CONSTRAINT [PK_Dogs] PRIMARY KEY ([DogId]),
+    CONSTRAINT [FK_Dogs_Animals_DogId] FOREIGN KEY ([DogId]) REFERENCES [Animals] ([Id]) ON DELETE CASCADE
+);
+</code></pre>
+<p>EF7 allows this mapping to be configured using a nested table builder:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;().ToTable(&quot;Animals&quot;);
+
+modelBuilder.Entity&lt;Cat&gt;()
+    .ToTable(
+        &quot;Cats&quot;,
+        tableBuilder =&gt; tableBuilder.Property(cat =&gt; cat.Id).HasColumnName(&quot;CatId&quot;));
+
+modelBuilder.Entity&lt;Dog&gt;()
+    .ToTable(
+        &quot;Dogs&quot;,
+        tableBuilder =&gt; tableBuilder.Property(dog =&gt; dog.Id).HasColumnName(&quot;DogId&quot;));
+</code></pre>
+<p>With the TPC inheritance mapping, the <code>Breed</code> property can also be mapped to different column names in different tables. For example, consider the following TPC tables:</p>
+<pre><code class="language-sql">CREATE TABLE [Cats] (
+    [CatId] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [CatBreed] nvarchar(max) NOT NULL,
+    [EducationalLevel] nvarchar(max) NULL,
+    CONSTRAINT [PK_Cats] PRIMARY KEY ([CatId])
+);
+
+CREATE TABLE [Dogs] (
+    [DogId] int NOT NULL DEFAULT (NEXT VALUE FOR [AnimalSequence]),
+    [DogBreed] nvarchar(max) NOT NULL,
+    [FavoriteToy] nvarchar(max) NULL,
+    CONSTRAINT [PK_Dogs] PRIMARY KEY ([DogId])
+);
+</code></pre>
+<p>EF7 supports this table mapping:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Animal&gt;().UseTpcMappingStrategy();
+
+modelBuilder.Entity&lt;Cat&gt;()
+    .ToTable(
+        &quot;Cats&quot;,
+        builder =&gt;
+        {
+            builder.Property(cat =&gt; cat.Id).HasColumnName(&quot;CatId&quot;);
+            builder.Property(cat =&gt; cat.Breed).HasColumnName(&quot;CatBreed&quot;);
+        });
+
+modelBuilder.Entity&lt;Dog&gt;()
+    .ToTable(
+        &quot;Dogs&quot;,
+        builder =&gt;
+        {
+            builder.Property(dog =&gt; dog.Id).HasColumnName(&quot;DogId&quot;);
+            builder.Property(dog =&gt; dog.Breed).HasColumnName(&quot;DogBreed&quot;);
+        });
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/table-splitting">Advanced table mapping</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

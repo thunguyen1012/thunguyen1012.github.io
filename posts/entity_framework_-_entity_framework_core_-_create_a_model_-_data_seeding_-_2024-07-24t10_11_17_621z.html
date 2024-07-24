@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Data seeding | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Data seeding is the process of populating a database with an initial set of data.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Data seeding</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Data seeding is the process of populating a database with an initial set of data.</p>
+<p>There are several ways this can be accomplished in EF Core:</p>
+<ul>
+<li>
+<p>Model seed data</p>
+</li>
+<li>
+<p>Manual migration customization</p>
+</li>
+<li>
+<p>Custom initialization logic</p>
+</li>
+</ul>
+<h2><a href="#model-seed-data" aria-hidden="true" class="anchor" id="model-seed-data"></a>Model seed data</h2>
+<p>Seeding data can be imported into the EF Core database as part of the model configuration.</p>
+<blockquote>
+<p>Note
+Migrations only considers model changes when determining what operation should be performed to get the seed data into the desired state. Thus any changes to the data performed outside of migrations might be lost or cause an error.</p>
+</blockquote>
+<p>As an example, this will configure seed data for a <code>Blog</code> in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().HasData(new Blog { BlogId = 1, Url = &quot;http://sample.com&quot; });
+</code></pre>
+<p>To add entities that have a relationship the foreign key values need to be specified:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;().HasData(
+    new Post { BlogId = 1, PostId = 1, Title = &quot;First post&quot;, Content = &quot;Test 1&quot; });
+</code></pre>
+<p>If the entity type has any properties in shadow state an anonymous class can be used to provide the values:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;().HasData(
+    new { BlogId = 1, PostId = 2, Title = &quot;Second post&quot;, Content = &quot;Test 2&quot; });
+</code></pre>
+<p>Owned entity types can be seeded in a similar fashion:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;().OwnsOne(p =&gt; p.AuthorName).HasData(
+    new { PostId = 1, First = &quot;Andriy&quot;, Last = &quot;Svyryd&quot; },
+    new { PostId = 2, First = &quot;Diego&quot;, Last = &quot;Vega&quot; });
+</code></pre>
+<p>See the full sample project for more context.</p>
+<p>Once the data has been added to the model, migrations should be used to apply the changes.</p>
+<blockquote>
+<p>Tip
+If you need to apply migrations as part of an automated deployment you can create a SQL script that can be previewed before execution.</p>
+</blockquote>
+<p>You can create a new database containing the seed data, for example for a test database or when using the in-memory provider or any non-relational database.</p>
+<h3><a href="#limitations-of-model-seed-data" aria-hidden="true" class="anchor" id="limitations-of-model-seed-data"></a>Limitations of model seed data</h3>
+<p>This article describes how to generate seed data that is not already in the database.</p>
+<ul>
+<li>
+<p>The primary key value needs to be specified even if it's usually generated by the database. It will be used to detect data changes between migrations.</p>
+</li>
+<li>
+<p>Previously seeded data will be removed if the primary key is changed in any way.</p>
+</li>
+</ul>
+<p>Therefore this feature is most useful for static data that's not expected to change outside of migrations and does not depend on anything else in the database, for example ZIP codes.</p>
+<p>If your scenario includes any of the following it is recommended to use custom initialization logic described in the last section:</p>
+<ul>
+<li>
+<p>Temporary data for testing</p>
+</li>
+<li>
+<p>Data that depends on database state</p>
+</li>
+<li>
+<p>Data that is large (seeding data gets captured in migration snapshots, and large data can quickly lead to huge files and degraded performance).</p>
+</li>
+<li>
+<p>Data that needs key values to be generated by the database, including entities that use alternate keys as the identity</p>
+</li>
+<li>
+<p>Data that requires custom transformation (that is not handled by value conversions), such as some password hashing</p>
+</li>
+<li>
+<p>Data that requires calls to external API, such as ASP.NET Core Identity roles and users creation</p>
+</li>
+</ul>
+<h2><a href="#manual-migration-customization" aria-hidden="true" class="anchor" id="manual-migration-customization"></a>Manual migration customization</h2>
+<p>A migration is a process in which data is moved from one database to another.</p>
+<pre><code class="language-csharp">migrationBuilder.InsertData(
+    table: &quot;Blogs&quot;,
+    columns: new[] { &quot;Url&quot; },
+    values: new object[] { &quot;http://generated.com&quot; });
+</code></pre>
+<h2><a href="#custom-initialization-logic" aria-hidden="true" class="anchor" id="custom-initialization-logic"></a>Custom initialization logic</h2>
+<p>A straightforward and powerful way to perform data seeding is to use <code>DbContext.SaveChanges()</code> before the main application logic begins execution.</p>
+<pre><code class="language-csharp">using (var context = new DataSeedingContext())
+{
+    context.Database.EnsureCreated();
+
+    var testBlog = context.Blogs.FirstOrDefault(b =&gt; b.Url == &quot;http://test.com&quot;);
+    if (testBlog == null)
+    {
+        context.Blogs.Add(new Blog { Url = &quot;http://test.com&quot; });
+    }
+
+    context.SaveChanges();
+}
+</code></pre>
+<blockquote>
+<p>Warning
+The seeding code should not be part of the normal app execution as this can cause concurrency issues when multiple instances are running and would also require the app having permission to modify the database schema.</p>
+</blockquote>
+<p>Depending on the constraints of your deployment the initialization code can be executed in different ways:</p>
+<ul>
+<li>
+<p>Running the initialization app locally</p>
+</li>
+<li>
+<p>Deploying the initialization app with the main app, invoking the initialization routine and disabling or removing the initialization app.</p>
+</li>
+</ul>
+<p>This can usually be automated by using publish profiles.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/data-seeding">Data Seeding</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

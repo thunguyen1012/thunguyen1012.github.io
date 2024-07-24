@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Owned entity types | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core allows you to model entity types that can only ever appear on navigation properties of other entity types.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Owned entity types</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core allows you to model entity types that can only ever appear on navigation properties of other entity types.</p>
+<p>An owned entity is an entity that is owned by the owner.</p>
+<h2><a href="#configuring-types-as-owned" aria-hidden="true" class="anchor" id="configuring-types-as-owned"></a>Configuring types as owned</h2>
+<p>The Azure Cosmos DB provider configures all related entity types as owned by default.</p>
+<p>In this example, <code>StreetAddress</code> is a type with no identity property. It is used as a property of the <code>Order</code> type to specify the shipping address for a particular order.</p>
+<p>We can use the <code>OwnedAttribute</code> to treat it as an owned entity when referenced from another entity type:</p>
+<pre><code class="language-csharp">[Owned]
+public class StreetAddress
+{
+    public string Street { get; set; }
+    public string City { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class Order
+{
+    public int Id { get; set; }
+    public StreetAddress ShippingAddress { get; set; }
+}
+</code></pre>
+<p>It is also possible to use the <code>OwnsOne</code> method in <code>OnModelCreating</code> to specify that the <code>ShippingAddress</code> property is an Owned Entity of the <code>Order</code> entity type and to configure additional facets if needed.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Order&gt;().OwnsOne(p =&gt; p.ShippingAddress);
+</code></pre>
+<p>If the <code>ShippingAddress</code> property is private in the <code>Order</code> type, you can use the string version of the <code>OwnsOne</code> method:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Order&gt;().OwnsOne(typeof(StreetAddress), &quot;ShippingAddress&quot;);
+</code></pre>
+<p>The model above is mapped to the following database schema:</p>
+<p>See the full sample project for more context.</p>
+<blockquote>
+<p>Tip
+The owned entity type can be marked as required, see Required one-to-one dependents for more information.</p>
+</blockquote>
+<h2><a href="#implicit-keys" aria-hidden="true" class="anchor" id="implicit-keys"></a>Implicit keys</h2>
+<p>This example shows how to define a foreign key property for an owned type.</p>
+<p>An instance of a owned type is an object that is owned by another instance of the same type.</p>
+<h2><a href="#collections-of-owned-types" aria-hidden="true" class="anchor" id="collections-of-owned-types"></a>Collections of owned types</h2>
+<p>To configure a collection of owned types use <code>OwnsMany</code> in <code>OnModelCreating</code>.</p>
+<p>How do you define a foreign key for an owned type?</p>
+<p>The two most straightforward solutions to this are:</p>
+<ul>
+<li>
+<p>Defining a surrogate primary key on a new property independent of the foreign key that points to the owner. The contained values would need to be unique across all owners (e.g. if Parent {1} has Child {1}, then Parent {2} cannot have Child {1}), so the value doesn't have any inherent meaning. Since the foreign key is not part of the primary key its values can be changed, so you could move a child from one parent to another one, however this usually goes against aggregate semantics.</p>
+</li>
+<li>
+<p>Using the foreign key and an additional property as a composite key. The additional property value now only needs to be unique for a given parent (so if Parent {1} has Child {1,1} then Parent {2} can still have Child {2,1}). By making the foreign key part of the primary key the relationship between the owner and the owned entity becomes immutable and reflects aggregate semantics better. This is what EF Core does by default.</p>
+</li>
+</ul>
+<p>In this example we'll use the <code>Distributor</code> class.</p>
+<pre><code class="language-csharp">public class Distributor
+{
+    public int Id { get; set; }
+    public ICollection&lt;StreetAddress&gt; ShippingCenters { get; set; }
+}
+</code></pre>
+<p><code>ShippingCenters</code> uses a unique <code>int</code> value for the owned type referenced through the <code>ShippingCenters</code> navigation property.</p>
+<p>To configure a different primary key call <code>HasKey</code>.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Distributor&gt;().OwnsMany(
+    p =&gt; p.ShippingCenters, a =&gt;
+    {
+        a.WithOwner().HasForeignKey(&quot;OwnerId&quot;);
+        a.Property&lt;int&gt;(&quot;Id&quot;);
+        a.HasKey(&quot;Id&quot;);
+    });
+</code></pre>
+<p>The model above is mapped to the following database schema:</p>
+<h2><a href="#mapping-owned-types-with-table-splitting" aria-hidden="true" class="anchor" id="mapping-owned-types-with-table-splitting"></a>Mapping owned types with table splitting</h2>
+<p>In this article I will show you how to split a relational database table in two.</p>
+<p>The properties of the owned entity type will appear in the <code>'Orders'</code> table with the names <code>'ShippingAddress_Street'</code> and <code>'ShippingAddress_City'</code>.</p>
+<p>You can use the <code>HasColumnName</code> method to rename those columns.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Order&gt;().OwnsOne(
+    o =&gt; o.ShippingAddress,
+    sa =&gt;
+    {
+        sa.Property(p =&gt; p.Street).HasColumnName(&quot;ShipsToStreet&quot;);
+        sa.Property(p =&gt; p.City).HasColumnName(&quot;ShipsToCity&quot;);
+    });
+</code></pre>
+<blockquote>
+<p>Note
+Most of the normal entity type configuration methods like Ignore can be called in the same way.</p>
+</blockquote>
+<h2><a href="#sharing-the-same-net-type-among-multiple-owned-types" aria-hidden="true" class="anchor" id="sharing-the-same-net-type-among-multiple-owned-types"></a>Sharing the same .NET type among multiple owned types</h2>
+<p>An owned entity type can be of the same .NET type as another owned entity type, therefore the .NET type may not be enough to identify an owned type.</p>
+<p>In the .NET framework, owned entities are defined as entities that are owned by their owners.</p>
+<p>For example, in the following class <code>ShippingAddress</code> and <code>BillingAddress</code> are both of the same .NET type, <code>StreetAddress</code>.</p>
+<pre><code class="language-csharp">public class OrderDetails
+{
+    public DetailedOrder Order { get; set; }
+    public StreetAddress BillingAddress { get; set; }
+    public StreetAddress ShippingAddress { get; set; }
+}
+</code></pre>
+<p>An example of a tracked instance of an object can be found here.</p>
+<h2><a href="#nested-owned-types" aria-hidden="true" class="anchor" id="nested-owned-types"></a>Nested owned types</h2>
+<p>In this example <code>OrderDetails</code> owns <code>BillingAddress</code> and <code>ShippingAddress</code>, which are both <code>StreetAddress</code> types. Then <code>OrderDetails</code> is owned by the <code>DetailedOrder</code> type.</p>
+<pre><code class="language-csharp">public class DetailedOrder
+{
+    public int Id { get; set; }
+    public OrderDetails OrderDetails { get; set; }
+    public OrderStatus Status { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public enum OrderStatus
+{
+    Pending,
+    Shipped
+}
+</code></pre>
+<p>Each navigation to an owned type defines a separate entity type with completely independent configuration.</p>
+<p>An owned type is a nested type which can reference a regular entity which can be either the owner or a different entity as long as the owned entity is on the dependent side.</p>
+<pre><code class="language-csharp">public class OrderDetails
+{
+    public DetailedOrder Order { get; set; }
+    public StreetAddress BillingAddress { get; set; }
+    public StreetAddress ShippingAddress { get; set; }
+}
+</code></pre>
+<h2><a href="#configuring-owned-types" aria-hidden="true" class="anchor" id="configuring-owned-types"></a>Configuring owned types</h2>
+<p>It is possible to chain the <code>OwnsOne</code> method in a fluent call to configure this model:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;DetailedOrder&gt;().OwnsOne(
+    p =&gt; p.OrderDetails, od =&gt;
+    {
+        od.WithOwner(d =&gt; d.Order);
+        od.Navigation(d =&gt; d.Order).UsePropertyAccessMode(PropertyAccessMode.Property);
+        od.OwnsOne(c =&gt; c.BillingAddress);
+        od.OwnsOne(c =&gt; c.ShippingAddress);
+    });
+</code></pre>
+<p>To define a navigation to the owner entity type that's not part of the ownership relationship <code>WithOwner</code> should be called without arguments.</p>
+<p>It is also possible to achieve this result using <code>OwnedAttribute</code> on both <code>OrderDetails</code> and <code>StreetAddress</code>.</p>
+<p>In addition, notice the <code>Navigation</code> call. <code>Navigation</code> properties to owned types can be further configured as for non-owned navigation properties.</p>
+<p>The model above is mapped to the following database schema:</p>
+<h2><a href="#storing-owned-types-in-separate-tables" aria-hidden="true" class="anchor" id="storing-owned-types-in-separate-tables"></a>Storing owned types in separate tables</h2>
+<p>Unlike EF6 complex types, owned types can be stored in a separate table from the owner.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;DetailedOrder&gt;().OwnsOne(p =&gt; p.OrderDetails, od =&gt; { od.ToTable(&quot;OrderDetails&quot;); });
+</code></pre>
+<p>It is possible to map an entity type to an owned type.</p>
+<h2><a href="#querying-owned-types" aria-hidden="true" class="anchor" id="querying-owned-types"></a>Querying owned types</h2>
+<p>Two owned types are stored in the database.</p>
+<pre><code class="language-csharp">var order = context.DetailedOrders.First(o =&gt; o.Status == OrderStatus.Pending);
+Console.WriteLine($&quot;First pending order will ship to: {order.OrderDetails.ShippingAddress.City}&quot;);
+</code></pre>
+<h2><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h2>
+<p>Some of these limitations are fundamental to how owned entity types work, but some others are restrictions that we may be able to remove in future releases:</p>
+<h3><a href="#by-design-restrictions" aria-hidden="true" class="anchor" id="by-design-restrictions"></a>By-design restrictions</h3>
+<ul>
+<li>
+<p>You cannot create a <code>DbSet&lt;T&gt;</code> for an owned type.</p>
+</li>
+<li>
+<p>You cannot call <code>Entity&lt;T&gt;()</code> with an owned type on <code>ModelBuilder</code>.</p>
+</li>
+<li>
+<p>Instances of owned entity types cannot be shared by multiple owners (this is a well-known scenario for value objects that cannot be implemented using owned entity types).</p>
+</li>
+</ul>
+<h3><a href="#current-shortcomings" aria-hidden="true" class="anchor" id="current-shortcomings"></a>Current shortcomings</h3>
+<ul>
+<li>Owned entity types cannot have inheritance hierarchies</li>
+</ul>
+<h3><a href="#shortcomings-in-previous-versions" aria-hidden="true" class="anchor" id="shortcomings-in-previous-versions"></a>Shortcomings in previous versions</h3>
+<ul>
+<li>
+<p>In EF Core 2.x reference navigations to owned entity types cannot be null unless they are explicitly mapped to a separate table from the owner.</p>
+</li>
+<li>
+<p>In EF Core 3.x the columns for owned entity types mapped to the same table as the owner are always marked as nullable.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/owned-entities">Owned Entity Types</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
