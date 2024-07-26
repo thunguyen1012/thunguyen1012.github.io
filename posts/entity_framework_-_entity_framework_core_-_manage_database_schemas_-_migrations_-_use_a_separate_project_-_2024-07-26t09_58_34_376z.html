@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Use a separate project | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='DbContexts can be used to store migrations between projects.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Use a separate project</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>DbContexts can be used to store migrations between projects.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<h2><a href="#steps" aria-hidden="true" class="anchor" id="steps"></a>Steps</h2>
+<ul>
+<li>
+<p>Create a new class library.</p>
+</li>
+<li>
+<p>Add a reference to your <code>DbContext</code> project.</p>
+</li>
+<li>
+<p>Move the migrations and model snapshot files to the class library.</p>
+</li>
+</ul>
+<p>Tip
+If you have no existing migrations, generate one in the project containing the <code>DbContext</code> then move it.
+This is important because if the migrations project does not contain an existing migration, the Add-Migration command will be unable to find the <code>DbContext</code>.</p>
+<blockquote>
+<p>Tip
+If you have no existing migrations, generate one in the project containing the <code>DbContext</code> then move it.
+This is important because if the migrations project does not contain an existing migration, the Add-Migration command will be unable to find the <code>DbContext</code>.</p>
+</blockquote>
+<ul>
+<li>Configure the migrations assembly:
+services.AddDbContext<ApplicationDbContext>(
+options =&gt;
+options.UseSqlServer(
+Configuration.GetConnectionString(&quot;DefaultConnection&quot;),
+x =&gt; x.MigrationsAssembly(&quot;WebApplication1.Migrations&quot;)));</li>
+</ul>
+<pre><code class="language-csharp">services.AddDbContext&lt;ApplicationDbContext&gt;(
+    options =&gt;
+        options.UseSqlServer(
+            Configuration.GetConnectionString(&quot;DefaultConnection&quot;),
+            x =&gt; x.MigrationsAssembly(&quot;WebApplication1.Migrations&quot;)));
+</code></pre>
+<ul>
+<li>Add a reference to your migrations project from the startup project.</li>
+</ul>
+<ItemGroup>
+  <ProjectReference Include="..\WebApplication1.Migrations\WebApplication1.Migrations.csproj" />
+</ItemGroup>
+<p>If this causes a circular dependency, you can update the base output path of the migrations project instead:
+<PropertyGroup>
+<BaseOutputPath>..\WebApplication1\bin&lt;/BaseOutputPath&gt;
+</PropertyGroup></p>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;ProjectReference Include=&quot;..\WebApplication1.Migrations\WebApplication1.Migrations.csproj&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;BaseOutputPath&gt;..\WebApplication1\bin\&lt;/BaseOutputPath&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<p>If you did everything correctly, you should be able to add new migrations to the project.</p>
+<ul>
+<li>
+<p>.NET Core CLI</p>
+</li>
+<li>
+<p>Visual Studio</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef migrations add NewMigration --project WebApplication1.Migrations
+</code></pre>
+<pre><code class="language-powershell">Add-Migration NewMigration -Project WebApplication1.Migrations
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/projects">Using a Separate Migrations Project</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

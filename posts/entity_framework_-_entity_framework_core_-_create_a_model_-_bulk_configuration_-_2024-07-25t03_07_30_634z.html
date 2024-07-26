@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Bulk configuration | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='When an aspect needs to be configured in the same way across multiple entity types, the following techniques allow to reduce code duplication and consolidate the logic.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Bulk configuration</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>When an aspect needs to be configured in the same way across multiple entity types, the following techniques allow to reduce code duplication and consolidate the logic.</p>
+<p>See the full sample project containing the code snippets presented below.</p>
+<h2><a href="#bulk-configuration-in-onmodelcreating" aria-hidden="true" class="anchor" id="bulk-configuration-in-onmodelcreating"></a>Bulk configuration in <code>OnModelCreating</code></h2>
+<p>ModelBuilder exposes methods that allow you to iterate over objects in the model and apply common configuration to them.</p>
+<p>In the following example the model contains a custom value type <code>Currency</code>:</p>
+<pre><code class="language-csharp">public readonly struct Currency
+{
+    public Currency(decimal amount)
+        =&gt; Amount = amount;
+
+    public decimal Amount { get; }
+
+    public override string ToString()
+        =&gt; $&quot;${Amount}&quot;;
+}
+</code></pre>
+<p>This snippet of <code>OnModelCreating</code> adds all properties of the type <code>Currency</code> and configures a value converter to a supported type - <code>decimal</code>:</p>
+<pre><code class="language-csharp">foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+{
+    foreach (var propertyInfo in entityType.ClrType.GetProperties())
+    {
+        if (propertyInfo.PropertyType == typeof(Currency))
+        {
+            entityType.AddProperty(propertyInfo)
+                .SetValueConverter(typeof(CurrencyConverter));
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class CurrencyConverter : ValueConverter&lt;Currency, decimal&gt;
+{
+    public CurrencyConverter()
+        : base(
+            v =&gt; v.Amount,
+            v =&gt; new Currency(v))
+    {
+    }
+}
+</code></pre>
+<h3><a href="#drawbacks-of-the-metadata-api" aria-hidden="true" class="anchor" id="drawbacks-of-the-metadata-api"></a>Drawbacks of the <code>Metadata</code> API</h3>
+<ul>
+<li>
+<p>Unlike Fluent API, every modification to the model needs to be done explicitly. For example, if some of the <code>Currency</code> properties were configured as navigations by a convention then you need to first remove the navigation referencing the CLR property before adding an entity type property for it. #9117 will improve this.</p>
+</li>
+<li>
+<p>The conventions run after each change. If you remove a navigation discovered by a convention then the convention will run again and could add it back. To prevent this from happening you would need to either delay the conventions until after the property is added by calling <code>DelayConventions()</code> and later disposing the returned object or to mark the CLR property as ignored using AddIgnored.</p>
+</li>
+<li>
+<p>Entity types might be added after this iteration happens and the configuration won't be applied to them. This can usually be prevented by placing this code at the end of <code>OnModelCreating</code>, but if you have two interdependent sets of configurations there might not be an order that will allow them to be applied consistently.</p>
+</li>
+</ul>
+<h2><a href="#pre-convention-configuration" aria-hidden="true" class="anchor" id="pre-convention-configuration"></a>Pre-convention configuration</h2>
+<p>EF Core supports the mapping of CLR types to model types derived from DbContext.</p>
+<p>This example shows how configure all properties of type <code>Currency</code> to have a value converter:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder
+        .Properties&lt;Currency&gt;()
+        .HaveConversion&lt;CurrencyConverter&gt;();
+}
+</code></pre>
+<p>And this example shows how to configure some facets on all properties of type <code>string</code>:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .Properties&lt;string&gt;()
+    .AreUnicode(false)
+    .HaveMaxLength(1024);
+</code></pre>
+<blockquote>
+<p>Note
+The type specified in a call from <code>ConfigureConventions</code> can be a base type, an interface or a generic type definition. All matching configurations will be applied in order from the least specific:</p>
+</blockquote>
+<p>Interface
+Base type
+Generic type definition
+Non-nullable value type
+Exact type</p>
+<ul>
+<li>
+<p>Interface</p>
+</li>
+<li>
+<p>Base type</p>
+</li>
+<li>
+<p>Generic type definition</p>
+</li>
+<li>
+<p>Non-nullable value type</p>
+</li>
+<li>
+<p>Exact type</p>
+</li>
+</ul>
+<blockquote>
+<p>Important
+Pre-convention configuration is equivalent to explicit configuration that is applied as soon as a matching object is added to the model. It will override all conventions and Data Annotations. For example, with the above configuration all <code>string</code> foreign key properties will be created as non-unicode with <code>MaxLength</code> of 1024, even when this doesn't match the principal key.</p>
+</blockquote>
+<h3><a href="#ignoring-types" aria-hidden="true" class="anchor" id="ignoring-types"></a>Ignoring types</h3>
+<p>Pre-convention configuration also allows to ignore a type and prevent it from being discovered by conventions either as an entity type or as a property on an entity type:</p>
+<pre><code class="language-csharp">configurationBuilder
+    .IgnoreAny(typeof(IList&lt;&gt;));
+</code></pre>
+<h3><a href="#default-type-mapping" aria-hidden="true" class="anchor" id="default-type-mapping"></a>Default type mapping</h3>
+<p>In this article, I'll show you how to add or override a provider type mapping to EF.</p>
+<pre><code class="language-csharp">configurationBuilder
+    .DefaultTypeMapping&lt;Currency&gt;()
+    .HasConversion&lt;CurrencyConverter&gt;();
+</code></pre>
+<h3><a href="#limitations-of-pre-convention-configuration" aria-hidden="true" class="anchor" id="limitations-of-pre-convention-configuration"></a>Limitations of pre-convention configuration</h3>
+<ul>
+<li>
+<p>Many aspects cannot be configured with this approach. #6787 will expand this to more types.</p>
+</li>
+<li>
+<p>Currently the configuration is only determined by the CLR type. #20418 would allow custom predicates.</p>
+</li>
+<li>
+<p>This configuration is performed before a model is created. If there are any conflicts that arise when applying it, the exception stack trace will not contain the <code>ConfigureConventions</code> method, so it might be harder to find the cause.</p>
+</li>
+</ul>
+<h2><a href="#conventions" aria-hidden="true" class="anchor" id="conventions"></a>Conventions</h2>
+<blockquote>
+<p>Note
+Custom model building conventions were introduced in EF Core 7.0.</p>
+</blockquote>
+<p>EF Core model building conventions are classes that contain logic that is triggered based on changes being made to the model as it is being built.</p>
+<p>This paper describes how to use the pre-convention model configuration to easily specify common configuration for properties and types.</p>
+<h3><a href="#adding-a-new-convention" aria-hidden="true" class="anchor" id="adding-a-new-convention"></a>Adding a new convention</h3>
+<h4><a href="#example-constrain-length-of-discriminator-properties" aria-hidden="true" class="anchor" id="example-constrain-length-of-discriminator-properties"></a>Example: Constrain length of discriminator properties</h4>
+<p>Let's create a new convention that will constrain the maximum length of discriminator strings.</p>
+<p>EF Core model building conventions are triggered based on changes being made to the model as it is being built.</p>
+<p>In this talk, we will look at some of the interfaces that can be used to create and manage models.</p>
+<p>Let's make this a bit more concrete by making a first attempt at implementing the discriminator-length convention:</p>
+<pre><code class="language-csharp">public class DiscriminatorLengthConvention1 : IEntityTypeBaseTypeChangedConvention
+{
+    public void ProcessEntityTypeBaseTypeChanged(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionEntityType? newBaseType,
+        IConventionEntityType? oldBaseType,
+        IConventionContext&lt;IConventionEntityType&gt; context)
+    {
+        var discriminatorProperty = entityTypeBuilder.Metadata.FindDiscriminatorProperty();
+        if (discriminatorProperty != null
+            &amp;&amp; discriminatorProperty.ClrType == typeof(string))
+        {
+            discriminatorProperty.Builder.HasMaxLength(24);
+        }
+    }
+}
+</code></pre>
+<p>This convention implements <code>ITypeBaseChangedTypeConvention</code>, which means it will be triggered whenever the mapped inheritance hierarchy for an entity type is changed.</p>
+<p>This convention is then used by calling <code>Add</code> in <code>ConfigureConventions</code>:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Add(_ =&gt;  new DiscriminatorLengthConvention1());
+}
+</code></pre>
+<blockquote>
+<p>Note
+Rather than adding an instance of the convention directly, the <code>Add</code> method accepts a factory for creating instances of the convention. This allows the convention to use dependencies from the EF Core internal service provider. Since this convention has no dependencies, the service provider parameter is named <code>_</code>, indicating that it is never used.</p>
+</blockquote>
+<p>Building the model and looking at the <code>Post</code> entity type shows that this has worked - the discriminator property is now configured to with a maximum length of 24:</p>
+<pre><code class="language-text">Discriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(24)
+</code></pre>
+<p>But what happens if we now explicitly configure a different discriminator property? For example:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;()
+    .HasDiscriminator&lt;string&gt;(&quot;PostTypeDiscriminator&quot;)
+    .HasValue&lt;Post&gt;(&quot;Post&quot;)
+    .HasValue&lt;FeaturedPost&gt;(&quot;Featured&quot;);
+</code></pre>
+<p>Looking at the debug view of the model, we find that the discriminator length is no longer configured.</p>
+<pre><code class="language-text">PostTypeDiscriminator (no field, string) Shadow Required AfterSave:Throw
+</code></pre>
+<p>When we add a custom discriminator to our convention, it does not behave as expected.</p>
+<p>When we want to apply a configuration to a model, we often need to trigger other conventions to do so.</p>
+<pre><code class="language-csharp">public class DiscriminatorLengthConvention2 : IModelFinalizingConvention
+{
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var entityType in modelBuilder.Metadata.GetEntityTypes()
+                     .Where(entityType =&gt; entityType.BaseType == null))
+        {
+            var discriminatorProperty = entityType.FindDiscriminatorProperty();
+            if (discriminatorProperty != null
+                &amp;&amp; discriminatorProperty.ClrType == typeof(string))
+            {
+                discriminatorProperty.Builder.HasMaxLength(24);
+            }
+        }
+    }
+}
+</code></pre>
+<p>After building the model with this new convention, we find that the discriminator length is now configured correctly even though it has been customized:</p>
+<pre><code class="language-text">PostTypeDiscriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(24)
+</code></pre>
+<p>We can go one step further and configure the max length to be the length of the longest discriminator value:</p>
+<pre><code class="language-csharp">public class DiscriminatorLengthConvention3 : IModelFinalizingConvention
+{
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var entityType in modelBuilder.Metadata.GetEntityTypes()
+                     .Where(entityType =&gt; entityType.BaseType == null))
+        {
+            var discriminatorProperty = entityType.FindDiscriminatorProperty();
+            if (discriminatorProperty != null
+                &amp;&amp; discriminatorProperty.ClrType == typeof(string))
+            {
+                var maxDiscriminatorValueLength =
+                    entityType.GetDerivedTypesInclusive().Select(e =&gt; ((string)e.GetDiscriminatorValue()!).Length).Max();
+
+                discriminatorProperty.Builder.HasMaxLength(maxDiscriminatorValueLength);
+            }
+        }
+    }
+}
+</code></pre>
+<p>Now the discriminator column max length is 8, which is the length of &quot;Featured&quot;, the longest discriminator value in use.</p>
+<pre><code class="language-text">PostTypeDiscriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(8)
+</code></pre>
+<h4><a href="#example-default-length-for-all-string-properties" aria-hidden="true" class="anchor" id="example-default-length-for-all-string-properties"></a>Example: Default length for all <code>string</code> properties</h4>
+<p>Let's look at another example where a finalizing convention can be used - setting a default maximum length for any <code>string</code> property. The convention looks quite similar to the previous example:</p>
+<pre><code class="language-csharp">public class MaxStringLengthConvention : IModelFinalizingConvention
+{
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var property in modelBuilder.Metadata.GetEntityTypes()
+                     .SelectMany(
+                         entityType =&gt; entityType.GetDeclaredProperties()
+                             .Where(
+                                 property =&gt; property.ClrType == typeof(string))))
+        {
+            property.Builder.HasMaxLength(512);
+        }
+    }
+}
+</code></pre>
+<p>In this post I'm going to show you how to implement a convention in <code>Post</code>.</p>
+<pre><code class="language-text">EntityType: Post
+  Properties:
+    Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+    AuthorId (no field, int?) Shadow FK Index
+    BlogId (no field, int) Shadow Required FK Index
+    Content (string) Required MaxLength(512)
+    Discriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(512)
+    PublishedOn (DateTime) Required
+    Title (string) Required MaxLength(512)
+</code></pre>
+<blockquote>
+<p>Note
+The same can be accomplished by pre-convention configuration, but using a convention allows to further filter applicable properties and for Data Annotations to override the configuration.</p>
+</blockquote>
+<p>This example shows how to set the max length of a <code>string</code> to the max length of a discriminator property.</p>
+<h3><a href="#replacing-an-existing-convention" aria-hidden="true" class="anchor" id="replacing-an-existing-convention"></a>Replacing an existing convention</h3>
+<p>This example shows how to replace an existing convention with a new one.</p>
+<h4><a href="#example-opt-in-property-mapping" aria-hidden="true" class="anchor" id="example-opt-in-property-mapping"></a>Example: Opt-in property mapping</h4>
+<p>This article describes how to change the property discovery convention in EF Core.</p>
+<pre><code class="language-csharp">[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public sealed class PersistAttribute : Attribute
+{
+}
+</code></pre>
+<p>Here is the new convention:</p>
+<pre><code class="language-csharp">public class AttributeBasedPropertyDiscoveryConvention : PropertyDiscoveryConvention
+{
+    public AttributeBasedPropertyDiscoveryConvention(ProviderConventionSetBuilderDependencies dependencies)
+        : base(dependencies)
+    {
+    }
+
+    public override void ProcessEntityTypeAdded(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionContext&lt;IConventionEntityTypeBuilder&gt; context)
+        =&gt; Process(entityTypeBuilder);
+
+    public override void ProcessEntityTypeBaseTypeChanged(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionEntityType? newBaseType,
+        IConventionEntityType? oldBaseType,
+        IConventionContext&lt;IConventionEntityType&gt; context)
+    {
+        if ((newBaseType == null
+             || oldBaseType != null)
+            &amp;&amp; entityTypeBuilder.Metadata.BaseType == newBaseType)
+        {
+            Process(entityTypeBuilder);
+        }
+    }
+
+    private void Process(IConventionEntityTypeBuilder entityTypeBuilder)
+    {
+        foreach (var memberInfo in GetRuntimeMembers())
+        {
+            if (Attribute.IsDefined(memberInfo, typeof(PersistAttribute), inherit: true))
+            {
+                entityTypeBuilder.Property(memberInfo);
+            }
+            else if (memberInfo is PropertyInfo propertyInfo
+                     &amp;&amp; Dependencies.TypeMappingSource.FindMapping(propertyInfo) != null)
+            {
+                entityTypeBuilder.Ignore(propertyInfo.Name);
+            }
+        }
+
+        IEnumerable&lt;MemberInfo&gt; GetRuntimeMembers()
+        {
+            var clrType = entityTypeBuilder.Metadata.ClrType;
+
+            foreach (var property in clrType.GetRuntimeProperties()
+                         .Where(p =&gt; p.GetMethod != null &amp;&amp; !p.GetMethod.IsStatic))
+            {
+                yield return property;
+            }
+
+            foreach (var property in clrType.GetRuntimeFields())
+            {
+                yield return property;
+            }
+        }
+    }
+}
+</code></pre>
+<blockquote>
+<p>Tip
+When replacing a built-in convention, the new convention implementation should inherit from the existing convention class. Note that some conventions have relational or provider-specific implementations, in which case the new convention implementation should inherit from the most specific existing convention class for the database provider in use.</p>
+</blockquote>
+<p>The convention is then registered using the Replace method in <code>ConfigureConventions</code>:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Replace&lt;PropertyDiscoveryConvention&gt;(
+        serviceProvider =&gt; new AttributeBasedPropertyDiscoveryConvention(
+            serviceProvider.GetRequiredService&lt;ProviderConventionSetBuilderDependencies&gt;()));
+}
+</code></pre>
+<blockquote>
+<p>Tip
+This is a case where the existing convention has dependencies, represented by the <code>ProviderConventionSetBuilderDependencies</code> dependency object. These are obtained from the internal service provider using <code>GetRequiredService</code> and passed to the convention constructor.</p>
+</blockquote>
+<p>Notice that this convention allows fields to be mapped (in addition to properties) so long as they are marked with <code>[Persist]</code>. This means we can use private fields as hidden keys in the model.</p>
+<p>For example, consider the following entity types:</p>
+<pre><code class="language-csharp">public class LaundryBasket
+{
+    [Persist]
+    [Key]
+    private readonly int _id;
+
+    [Persist]
+    public int TenantId { get; init; }
+
+    public bool IsClean { get; set; }
+
+    public List&lt;Garment&gt; Garments { get; } = new();
+}
+
+public class Garment
+{
+    public Garment(string name, string color)
+    {
+        Name = name;
+        Color = color;
+    }
+
+    [Persist]
+    [Key]
+    private readonly int _id;
+
+    [Persist]
+    public int TenantId { get; init; }
+
+    [Persist]
+    public string Name { get; }
+
+    [Persist]
+    public string Color { get; }
+
+    public bool IsClean { get; set; }
+
+    public LaundryBasket? Basket { get; set; }
+}
+</code></pre>
+<p>The model built from these entity types is:</p>
+<pre><code class="language-text">Model:
+  EntityType: Garment
+    Properties:
+      _id (_id, int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      Basket_id (no field, int?) Shadow FK Index
+      Color (string) Required
+      Name (string) Required
+      TenantId (int) Required
+    Navigations:
+      Basket (LaundryBasket) ToPrincipal LaundryBasket Inverse: Garments
+    Keys:
+      _id PK
+    Foreign keys:
+      Garment {'Basket_id'} -&gt; LaundryBasket {'_id'} ToDependent: Garments ToPrincipal: Basket ClientSetNull
+    Indexes:
+      Basket_id
+  EntityType: LaundryBasket
+    Properties:
+      _id (_id, int) Required PK AfterSave:Throw ValueGenerated.OnAdd
+      TenantId (int) Required
+    Navigations:
+      Garments (List&lt;Garment&gt;) Collection ToDependent Garment Inverse: Basket
+    Keys:
+      _id PK
+</code></pre>
+<p>Normally, <code>IsClean</code> would have been mapped, but since it is not marked with <code>[Persist]</code>, it is now treated as an un-mapped property.</p>
+<blockquote>
+<p>Tip
+This convention could not be implemented as a model finalizing convention because there are existing model finalizing conventions that need to run after the property is mapped to further configure it.</p>
+</blockquote>
+<h3><a href="#conventions-implementation-considerations" aria-hidden="true" class="anchor" id="conventions-implementation-considerations"></a>Conventions implementation considerations</h3>
+<p>EF Core keeps track of how every piece of configuration was made. This is represented by the <code>ConfigurationSource</code> enum. The different kinds of configuration are:</p>
+<ul>
+<li>
+<p><code>Explicit</code>: The model element was explicitly configured in <code>OnModelCreating</code></p>
+</li>
+<li>
+<p><code>DataAnnotation</code>: The model element was configured using a mapping attribute (aka data annotation) on the CLR type</p>
+</li>
+<li>
+<p><code>Convention</code>: The model element was configured by a model building convention</p>
+</li>
+</ul>
+<p>Conventions should never override configuration marked as DataConvention or <code>Explicit</code>.</p>
+<pre><code class="language-csharp">property.Builder.HasMaxLength(512);
+</code></pre>
+<p>Calling <code>HasMaxLength</code> on the convention builder will only set the max length if it was not already configured by a mapping attribute or in <code>OnModelCreating</code>.</p>
+<p>Builder methods like this also have a second parameter: <code>fromDataAnnotation</code>. Set this to <code>true</code> if the convention is making the configuration on behalf of a mapping attribute. For example:</p>
+<pre><code class="language-csharp">property.Builder.HasMaxLength(512, fromDataAnnotation: true);
+</code></pre>
+<p>This sets the <code>ConfigurationSource</code> to <code>DataAnnotation</code>, which means that the value can now be overridden by explicit mapping on <code>OnModelCreating</code>, but not by non-mapping attribute conventions.</p>
+<p>If the current configuration can't be overridden then the method will return <code>null</code>, this needs to be accounted for if you need to perform further configuration:</p>
+<pre><code class="language-csharp">property.Builder.HasMaxLength(512)?.IsUnicode(false);
+</code></pre>
+<p>The maximum length of a facet can be set by calling CanSetCanLength.</p>
+<pre><code class="language-csharp">public class MaxStringLengthNonUnicodeConvention : IModelFinalizingConvention
+{
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var property in modelBuilder.Metadata.GetEntityTypes()
+                     .SelectMany(
+                         entityType =&gt; entityType.GetDeclaredProperties()
+                             .Where(
+                                 property =&gt; property.ClrType == typeof(string))))
+        {
+            var propertyBuilder = property.Builder;
+            if (propertyBuilder.CanSetMaxLength(512)
+                &amp;&amp; propertyBuilder.CanSetIsUnicode(false))
+            {
+                propertyBuilder.HasMaxLength(512)!.IsUnicode(false);
+            }
+        }
+    }
+}
+</code></pre>
+<p>Here we can be sure that the call to <code>HasMaxLength</code> will not return <code>null</code>. It is still recommended to use the builder instance returned from <code>HasMaxLength</code> as it might be different from <code>propertyBuilder</code>.</p>
+<blockquote>
+<p>Note
+Other conventions are not triggered immediately after a convention makes a change, they are delayed until all conventions have finished processing the current change.</p>
+</blockquote>
+<h3><a href="#iconventioncontext" aria-hidden="true" class="anchor" id="iconventioncontext"></a><code>IConventionContext</code></h3>
+<p>All convention methods also have an <code>IConventionContext&lt;TMetadata&gt;</code> parameter. It provides methods that could be useful in some specific cases.</p>
+<h4><a href="#example-notmappedattribute-convention" aria-hidden="true" class="anchor" id="example-notmappedattribute-convention"></a>Example: <code>NotMappedAttribute</code> convention</h4>
+<p>This convention looks for <code>NotMappedAttribute</code> on a type that is added to the model and tries to remove that type from the model.</p>
+<pre><code class="language-csharp">public virtual void ProcessEntityTypeAdded(
+    IConventionEntityTypeBuilder entityTypeBuilder,
+    IConventionContext&lt;IConventionEntityTypeBuilder&gt; context)
+{
+    var type = entityTypeBuilder.Metadata.ClrType;
+    if (!Attribute.IsDefined(type, typeof(NotMappedAttribute), inherit: true))
+    {
+        return;
+    }
+
+    if (entityTypeBuilder.ModelBuilder.Ignore(entityTypeBuilder.Metadata.Name, fromDataAnnotation: true) != null)
+    {
+        context.StopProcessing();
+    }
+}
+</code></pre>
+<h3><a href="#iconventionmodel" aria-hidden="true" class="anchor" id="iconventionmodel"></a><code>IConventionModel</code></h3>
+<p>The <code>IMutableModel</code> API exposes methods that allow you to iterate over and apply common configuration to the model.</p>
+<blockquote>
+<p>Caution
+It is advised to always perform configuration by calling methods on the builder exposed as the Builder property, because the builders check whether the given configuration would override something that was already specified using Fluent API or Data Annotations.</p>
+</blockquote>
+<h2><a href="#when-to-use-each-approach-for-bulk-configuration" aria-hidden="true" class="anchor" id="when-to-use-each-approach-for-bulk-configuration"></a>When to use each approach for bulk configuration</h2>
+<p>Use <code>Metadata</code> API when:</p>
+<ul>
+<li>
+<p>The configuration needs to be applied at a certain time and not react to later changes in the model.</p>
+</li>
+<li>
+<p>The model building speed is very important. <code>Metadata</code> API has fewer safety checks and thus can be slightly faster than other approaches, however using a Compiled model would yield even better startup times.</p>
+</li>
+</ul>
+<p>Use Pre-convention model configuration when:</p>
+<ul>
+<li>
+<p>The applicability condition is simple as it only depends on the type.</p>
+</li>
+<li>
+<p>The configuration needs to be applied at any point a property of the given type is added in the model and overrides Data Annotations and conventions</p>
+</li>
+</ul>
+<p>Use Finalizing Conventions when:</p>
+<ul>
+<li>
+<p>The applicability condition is complex.</p>
+</li>
+<li>
+<p>The configuration shouldn't override what is specified by Data Annotations.</p>
+</li>
+</ul>
+<p>Use Interactive Conventions when:</p>
+<ul>
+<li>
+<p>Multiple conventions depend on each other. Finalizing conventions run in the order they were added and therefore can't react to changes made by later finalizing conventions.</p>
+</li>
+<li>
+<p>The logic is shared between several contexts. Interactive conventions are safer than other approaches.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/bulk-configuration">Model bulk configuration</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

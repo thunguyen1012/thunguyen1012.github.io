@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Team environments | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In this article, I'll show you how to use Migrations in a team environment.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Team environments</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In this article, I'll show you how to use Migrations in a team environment.</p>
+<h2><a href="#merging" aria-hidden="true" class="anchor" id="merging"></a>Merging</h2>
+<p>In this article, I'm going to show you how to merge migrations from teammates.</p>
+<pre><code class="language-output">&lt;&lt;&lt;&lt;&lt;&lt;&lt; Mine
+b.Property&lt;bool&gt;(&quot;Deactivated&quot;);
+=======
+b.Property&lt;int&gt;(&quot;LoyaltyPoints&quot;);
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; Theirs
+</code></pre>
+<p>Since both of these properties need to exist in the final model, complete the merge by adding both properties. In many
+cases, your version control system may automatically merge such changes for you.</p>
+<pre><code class="language-csharp">b.Property&lt;bool&gt;(&quot;Deactivated&quot;);
+b.Property&lt;int&gt;(&quot;LoyaltyPoints&quot;);
+</code></pre>
+<p>In some cases, you may want to share your migration with a team member.</p>
+<h2><a href="#resolving-conflicts" aria-hidden="true" class="anchor" id="resolving-conflicts"></a>Resolving conflicts</h2>
+<p>Sometimes you encounter a true conflict when merging the model snapshot model. For example, you and your teammate may each have renamed the same property.</p>
+<pre><code class="language-output">&lt;&lt;&lt;&lt;&lt;&lt;&lt; Mine
+b.Property&lt;string&gt;(&quot;Username&quot;);
+=======
+b.Property&lt;string&gt;(&quot;Alias&quot;);
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; Theirs
+</code></pre>
+<p>If you encounter this kind of conflict, resolve it by re-creating your migration. Follow these steps:</p>
+<ul>
+<li>
+<p>Abort the merge and rollback to your working directory before the merge</p>
+</li>
+<li>
+<p>Remove your migration (but keep your model changes)</p>
+</li>
+<li>
+<p>Merge your teammate's changes into your working directory</p>
+</li>
+<li>
+<p>Re-add your migration</p>
+</li>
+</ul>
+<p>After doing this, the two migrations can be applied in the correct order. Their migration is applied first, renaming
+the column to Alias, thereafter your migration renames it to Username.</p>
+<p>Your migration can safely be shared with the rest of the team.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/teams">Migrations in Team Environments</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

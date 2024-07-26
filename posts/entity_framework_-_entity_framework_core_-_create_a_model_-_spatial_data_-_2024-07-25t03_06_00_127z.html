@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Create a model - Spatial data | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core supports querying spatial data types using the NetTopologySuite spatial library.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Create a model - Spatial data</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core supports querying spatial data types using the NetTopologySuite spatial library.</p>
+<h2><a href="#installing" aria-hidden="true" class="anchor" id="installing"></a>Installing</h2>
+<p>In order to use spatial data with EF Core, you need to install the appropriate supporting NuGet package. Which package you need to install depends on the provider you're using.</p>
+<table><thead>
+<tr>
+<th>EF Core Provider</th>
+<th>Spatial NuGet Package</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Microsoft.EntityFrameworkCore.SqlServer</td>
+<td><a href="https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite" data-linktype="external">Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Microsoft.EntityFrameworkCore.Sqlite</td>
+<td><a href="https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" data-linktype="external">Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Microsoft.EntityFrameworkCore.InMemory</td>
+<td><a href="https://www.nuget.org/packages/NetTopologySuite" data-linktype="external">NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Npgsql.EntityFrameworkCore.PostgreSQL</td>
+<td><a href="https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" data-linktype="external">Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Pomelo.EntityFrameworkCore.MySql</td>
+<td><a href="https://www.nuget.org/packages/Pomelo.EntityFrameworkCore.MySql.NetTopologySuite" data-linktype="external">Pomelo.EntityFrameworkCore.MySql.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Devart.Data.MySql.EFCore</td>
+<td><a href="https://www.nuget.org/packages/Devart.Data.MySql.EFCore.NetTopologySuite" data-linktype="external">Devart.Data.MySql.EFCore.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Devart.Data.Oracle.EFCore</td>
+<td><a href="https://www.nuget.org/packages/Devart.Data.Oracle.EFCore.NetTopologySuite" data-linktype="external">Devart.Data.Oracle.EFCore.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Devart.Data.PostgreSql.EFCore</td>
+<td><a href="https://www.nuget.org/packages/Devart.Data.PostgreSql.EFCore.NetTopologySuite" data-linktype="external">Devart.Data.PostgreSql.EFCore.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Devart.Data.SQLite.EFCore</td>
+<td><a href="https://www.nuget.org/packages/Devart.Data.SQLite.EFCore.NetTopologySuite" data-linktype="external">Devart.Data.SQLite.EFCore.NetTopologySuite</a></td>
+</tr>
+<tr>
+<td>Teradata.EntityFrameworkCore</td>
+<td><a href="https://www.nuget.org/packages/Teradata.EntityFrameworkCore.NetTopologySuite" data-linktype="external">Teradata.EntityFrameworkCore.NetTopologySuite</a></td>
+</tr>
+</tbody></table>
+<h2><a href="#nettopologysuite" aria-hidden="true" class="anchor" id="nettopologysuite"></a>NetTopologySuite</h2>
+<p>NetTopologySuite (NTS) is a spatial library for .NET. EF Core enables mapping to spatial data types in the database by using NTS types in your model.</p>
+<p>To enable mapping to spatial types via NTS, call the <code>UseNetTopologySuite</code> method on the provider's <code>DbContext</code> options builder. For example, with SQL Server you'd call it like this.</p>
+<pre><code class="language-csharp">options.UseSqlServer(
+    @&quot;Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=WideWorldImporters;ConnectRetryCount=0&quot;,
+    x =&gt; x.UseNetTopologySuite());
+</code></pre>
+<p>The NetTopology Suite (NTS) allows you to store and manipulate spatial data.</p>
+<pre><code>- Geometry
+
+  - Point
+
+  - LineString
+
+  - Polygon
+
+  - GeometryCollection
+
+    - MultiPoint
+
+    - MultiLineString
+
+    - MultiPolygon
+</code></pre>
+<blockquote>
+<p>Warning
+<code>CircularString</code>, <code>CompoundCurve</code>, and <code>CurePolygon</code> aren't supported by NTS.</p>
+</blockquote>
+<p>Using the base Geometry type allows any type of shape to be specified by the property.</p>
+<h2><a href="#longitude-and-latitude" aria-hidden="true" class="anchor" id="longitude-and-latitude"></a>Longitude and Latitude</h2>
+<p>The following table shows the coordinates of the North and South Poles using the National Geographic Satellite (NTS) service.</p>
+<h2><a href="#querying-data" aria-hidden="true" class="anchor" id="querying-data"></a>Querying Data</h2>
+<p>The following entity classes could be used to map to tables in the Wide World Importers sample database.</p>
+<pre><code class="language-csharp">[Table(&quot;Cities&quot;, Schema = &quot;Application&quot;)]
+public class City
+{
+    public int CityID { get; set; }
+
+    public string CityName { get; set; }
+
+    public Point Location { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">[Table(&quot;Countries&quot;, Schema = &quot;Application&quot;)]
+public class Country
+{
+    public int CountryID { get; set; }
+
+    public string CountryName { get; set; }
+
+    // Database includes both Polygon and MultiPolygon values
+    public Geometry Border { get; set; }
+}
+</code></pre>
+<p>All methods and properties available as database functions will be translated to SQL.</p>
+<pre><code class="language-csharp">// Find the nearest city
+var nearestCity = db.Cities
+    .OrderBy(c =&gt; c.Location.Distance(currentLocation))
+    .FirstOrDefault();
+</code></pre>
+<pre><code class="language-csharp">// Find the containing country
+var currentCountry = db.Countries
+    .FirstOrDefault(c =&gt; c.Border.Contains(currentLocation));
+</code></pre>
+<h2><a href="#reverse-engineering" aria-hidden="true" class="anchor" id="reverse-engineering"></a>Reverse engineering</h2>
+<p>Spatial packages for dotnet efcontext scaffold allow you to map the columns of a dbcontext scaffold to a Cartesian coordinate system.</p>
+<h2><a href="#srid-ignored-during-client-operations" aria-hidden="true" class="anchor" id="srid-ignored-during-client-operations"></a>SRID Ignored during client operations</h2>
+<p>The National Geographic Survey (NTS) uses a coordinate system based on the Cartesian coordinate system.</p>
+<blockquote>
+<p>Note
+Use the newer ProjNet NuGet package, not the older package called ProjNet4GeoAPI.</p>
+</blockquote>
+<p>If an operation is server-evaluated by EF Core via SQL, the result's unit will be determined by the database.</p>
+<p>Here is an example of using ProjNet to calculate the distance between two cities.</p>
+<pre><code class="language-csharp">public static class GeometryExtensions
+{
+    private static readonly CoordinateSystemServices _coordinateSystemServices
+        = new CoordinateSystemServices(
+            new Dictionary&lt;int, string&gt;
+            {
+                // Coordinate systems:
+
+                [4326] = GeographicCoordinateSystem.WGS84.WKT,
+
+                // This coordinate system covers the area of our data.
+                // Different data requires a different coordinate system.
+                [2855] =
+                    @&quot;
+                        PROJCS[&quot;&quot;NAD83(HARN) / Washington North&quot;&quot;,
+                            GEOGCS[&quot;&quot;NAD83(HARN)&quot;&quot;,
+                                DATUM[&quot;&quot;NAD83_High_Accuracy_Regional_Network&quot;&quot;,
+                                    SPHEROID[&quot;&quot;GRS 1980&quot;&quot;,6378137,298.257222101,
+                                        AUTHORITY[&quot;&quot;EPSG&quot;&quot;,&quot;&quot;7019&quot;&quot;]],
+                                    AUTHORITY[&quot;&quot;EPSG&quot;&quot;,&quot;&quot;6152&quot;&quot;]],
+                                PRIMEM[&quot;&quot;Greenwich&quot;&quot;,0,
+                                    AUTHORITY[&quot;&quot;EPSG&quot;&quot;,&quot;&quot;8901&quot;&quot;]],
+                                UNIT[&quot;&quot;degree&quot;&quot;,0.01745329251994328,
+                                    AUTHORITY[&quot;&quot;EPSG&quot;&quot;,&quot;&quot;9122&quot;&quot;]],
+                                AUTHORITY[&quot;&quot;EPSG&quot;&quot;,&quot;&quot;4152&quot;&quot;]],
+                            PROJECTION[&quot;&quot;Lambert_Conformal_Conic_2SP&quot;&quot;],
+                            PARAMETER[&quot;&quot;standard_parallel_1&quot;&quot;,48.73333333333333],
+                            PARAMETER[&quot;&quot;standard_parallel_2&quot;&quot;,47.5],
+                            PARAMETER[&quot;&quot;latitude_of_origin&quot;&quot;,47],
+                            PARAMETER[&quot;&quot;central_meridian&quot;&quot;,-120.8333333333333],
+                            PARAMETER[&quot;&quot;false_easting&quot;&quot;,500000],
+                            PARAMETER[&quot;&quot;false_northing&quot;&quot;,0],
+                            UNIT[&quot;&quot;metre&quot;&quot;,1,
+                                AUTHORITY[&quot;&quot;EPSG&quot;&quot;,&quot;&quot;9001&quot;&quot;]],
+                            AUTHORITY[&quot;&quot;EPSG&quot;&quot;,&quot;&quot;2855&quot;&quot;]]
+                    &quot;
+            });
+
+    public static Geometry ProjectTo(this Geometry geometry, int srid)
+    {
+        var transformation = _coordinateSystemServices.CreateTransformation(geometry.SRID, srid);
+
+        var result = geometry.Copy();
+        result.Apply(new MathTransformFilter(transformation.MathTransform));
+
+        return result;
+    }
+
+    private class MathTransformFilter : ICoordinateSequenceFilter
+    {
+        private readonly MathTransform _transform;
+
+        public MathTransformFilter(MathTransform transform)
+            =&gt; _transform = transform;
+
+        public bool Done =&gt; false;
+        public bool GeometryChanged =&gt; true;
+
+        public void Filter(CoordinateSequence seq, int i)
+        {
+            var x = seq.GetX(i);
+            var y = seq.GetY(i);
+            var z = seq.GetZ(i);
+            _transform.Transform(ref x, ref y, ref z);
+            seq.SetX(i, x);
+            seq.SetY(i, y);
+            seq.SetZ(i, z);
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">var seattle = new Point(-122.333056, 47.609722) { SRID = 4326 };
+var redmond = new Point(-122.123889, 47.669444) { SRID = 4326 };
+
+// In order to get the distance in meters, we need to project to an appropriate
+// coordinate system. In this case, we're using SRID 2855 since it covers the
+// geographic area of our data
+var distanceInDegrees = seattle.Distance(redmond);
+var distanceInMeters = seattle.ProjectTo(2855).Distance(redmond.ProjectTo(2855));
+</code></pre>
+<blockquote>
+<p>Note
+4326 refers to WGS 84, a standard used in GPS and other geographic systems.</p>
+</blockquote>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<h3><a href="#database-specific-information" aria-hidden="true" class="anchor" id="database-specific-information"></a>Database-specific information</h3>
+<p>Be sure to read your provider's documentation for additional information on working with spatial data.</p>
+<ul>
+<li>
+<p>Spatial Data in the SQL Server Provider</p>
+</li>
+<li>
+<p>Spatial Data in the SQLite Provider</p>
+</li>
+<li>
+<p>Spatial Data in the Npgsql Provider</p>
+</li>
+</ul>
+<h3><a href="#other-resources" aria-hidden="true" class="anchor" id="other-resources"></a>Other resources</h3>
+<ul>
+<li>
+<p>NetTopologySuite Docs</p>
+</li>
+<li>
+<p>.NET Data Community Standup session, focusing on spatial data and NetTopologySuite.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/spatial">Spatial Data</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

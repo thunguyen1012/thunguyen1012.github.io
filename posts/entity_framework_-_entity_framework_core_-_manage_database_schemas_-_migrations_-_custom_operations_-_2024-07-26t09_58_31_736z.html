@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Custom operations | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The MigrationBuilder API allows you to perform many different kinds of operations during a migration, but it's far from exhaustive.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Custom operations</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The MigrationBuilder API allows you to perform many different kinds of operations during a migration, but it's far from exhaustive.</p>
+<p>To illustrate, let's look at implementing an operation that creates a database user using each approach. In our migrations, we want to enable writing the following code:</p>
+<pre><code class="language-csharp">migrationBuilder.CreateUser(&quot;SQLUser1&quot;, &quot;Password&quot;);
+</code></pre>
+<h2><a href="#using-migrationbuildersql()" aria-hidden="true" class="anchor" id="using-migrationbuildersql()"></a>Using MigrationBuilder.Sql()</h2>
+<p>The easiest way to implement a custom operation is to define an extension method that calls <code>MigrationBuilder.Sql()</code>. Here is an example that generates the appropriate Transact-SQL.</p>
+<pre><code class="language-csharp">public static OperationBuilder&lt;SqlOperation&gt; CreateUser(
+    this MigrationBuilder migrationBuilder,
+    string name,
+    string password)
+    =&gt; migrationBuilder.Sql($&quot;CREATE USER {name} WITH PASSWORD '{password}';&quot;);
+</code></pre>
+<blockquote>
+<p>Tip
+Use the <code>EXEC</code> function when a statement must be the first or only one in a SQL batch. It might also be needed to work around parser errors in idempotent migration scripts that can occur when referenced columns don't currently exist on a table.</p>
+</blockquote>
+<p>If your migrations need to support multiple database providers, you can use the <code>MigrationBuilder.ActiveProvider</code> property. Here's an example supporting both Microsoft SQL Server and PostgreSQL.</p>
+<pre><code class="language-csharp">public static OperationBuilder&lt;SqlOperation&gt; CreateUser(
+    this MigrationBuilder migrationBuilder,
+    string name,
+    string password)
+{
+    switch (migrationBuilder.ActiveProvider)
+    {
+        case &quot;Npgsql.EntityFrameworkCore.PostgreSQL&quot;:
+            return migrationBuilder
+                .Sql($&quot;CREATE USER {name} WITH PASSWORD '{password}';&quot;);
+
+        case &quot;Microsoft.EntityFrameworkCore.SqlServer&quot;:
+            return migrationBuilder
+                .Sql($&quot;CREATE USER {name} WITH PASSWORD = '{password}';&quot;);
+    }
+
+    throw new Exception(&quot;Unexpected provider.&quot;);
+}
+</code></pre>
+<p>This approach only works if you know every provider where your custom operation will be applied.</p>
+<h2><a href="#using-a-migrationoperation" aria-hidden="true" class="anchor" id="using-a-migrationoperation"></a>Using a <code>MigrationOperation</code></h2>
+<p>A <code>MigrationOperation</code> is a custom operation that is used to migrate a database from one provider to another.</p>
+<pre><code class="language-csharp">public class CreateUserOperation : MigrationOperation
+{
+    public string Name { get; set; }
+    public string Password { get; set; }
+}
+</code></pre>
+<p>With this approach, the extension method just needs to add one of these operations to <code>MigrationBuilder.Operations</code>.</p>
+<pre><code class="language-csharp">public static OperationBuilder&lt;CreateUserOperation&gt; CreateUser(
+    this MigrationBuilder migrationBuilder,
+    string name,
+    string password)
+{
+    var operation = new CreateUserOperation { Name = name, Password = password };
+    migrationBuilder.Operations.Add(operation);
+
+    return new OperationBuilder&lt;CreateUserOperation&gt;(operation);
+}
+</code></pre>
+<p>The <code>IMigrationsSqlGenerator</code> service allows providers to migrate data from one SQL Server to another.</p>
+<pre><code class="language-csharp">public class MyMigrationsSqlGenerator : SqlServerMigrationsSqlGenerator
+{
+    public MyMigrationsSqlGenerator(
+        MigrationsSqlGeneratorDependencies dependencies,
+        ICommandBatchPreparer commandBatchPreparer)
+        : base(dependencies, commandBatchPreparer)
+    {
+    }
+
+    protected override void Generate(
+        MigrationOperation operation,
+        IModel model,
+        MigrationCommandListBuilder builder)
+    {
+        if (operation is CreateUserOperation createUserOperation)
+        {
+            Generate(createUserOperation, builder);
+        }
+        else
+        {
+            base.Generate(operation, model, builder);
+        }
+    }
+
+    private void Generate(
+        CreateUserOperation operation,
+        MigrationCommandListBuilder builder)
+    {
+        var sqlHelper = Dependencies.SqlGenerationHelper;
+        var stringMapping = Dependencies.TypeMappingSource.FindMapping(typeof(string));
+
+        builder
+            .Append(&quot;CREATE USER &quot;)
+            .Append(sqlHelper.DelimitIdentifier(operation.Name))
+            .Append(&quot; WITH PASSWORD = &quot;)
+            .Append(stringMapping.GenerateSqlLiteral(operation.Password))
+            .AppendLine(sqlHelper.StatementTerminator)
+            .EndCommand();
+    }
+}
+</code></pre>
+<p>Replace the default migrations sql generator service with the updated one.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder options)
+    =&gt; options
+        .UseSqlServer(_connectionString)
+        .ReplaceService&lt;IMigrationsSqlGenerator, MyMigrationsSqlGenerator&gt;();
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/operations">Custom Migrations Operations</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
