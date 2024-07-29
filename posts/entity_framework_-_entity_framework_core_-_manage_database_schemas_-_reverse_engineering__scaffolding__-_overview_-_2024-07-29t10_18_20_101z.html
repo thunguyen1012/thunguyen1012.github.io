@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Manage database schemas - Reverse engineering (scaffolding) - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In this article, we will learn how to perform reverse engineering using the EF Core Package Manager Console and the dotnet ef dbcontext command of the .NET Command-line Interface (CLI) tools.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Manage database schemas - Reverse engineering (scaffolding) - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In this article, we will learn how to perform reverse engineering using the EF Core Package Manager Console and the dotnet ef dbcontext command of the .NET Command-line Interface (CLI) tools.</p>
+<blockquote>
+<p>Note
+The scaffolding of a <code>DbContext</code> and entity types documented here is distinct from the scaffolding of controllers in ASP.NET Core using Visual Studio, which is not documented here.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+If you use Visual Studio, try out the EF Core Power Tools community extension. These tools provide a graphical tool which builds on top of the EF Core command line tools and offers additional workflow and customization options.</p>
+</blockquote>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<ul>
+<li>
+<p>Before scaffolding, you'll need to install either the PMC tools, which work on Visual Studio only, or the .NET CLI tools, which across all platforms supported by .NET.</p>
+</li>
+<li>
+<p>Install the NuGet package for <code>Microsoft.EntityFrameworkCore.Design</code> in the project you are scaffolding to.</p>
+</li>
+<li>
+<p>Install the NuGet package for the database provider that targets the database schema you want to scaffold from.</p>
+</li>
+</ul>
+<h2><a href="#required-arguments" aria-hidden="true" class="anchor" id="required-arguments"></a>Required arguments</h2>
+<p>Both the PMC and the .NET CLI commands have two required arguments: the connection string to the database, and the EF Core database provider to use.</p>
+<h3><a href="#connection-string" aria-hidden="true" class="anchor" id="connection-string"></a>Connection string</h3>
+<p>The first argument to the command is a connection string to the database. The tools will use this connection string to read the database schema.</p>
+<p>The following example shows how to quote and escape a connection string when writing a PowerShell command.</p>
+<p>In this article, we will be looking at how to scaffold data from a SQL Server database to a web application.</p>
+<ul>
+<li>
+<p>.NET Core CLI</p>
+</li>
+<li>
+<p>Visual Studio PMC</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold &quot;Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Chinook&quot; Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Chinook' Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<h4><a href="#user-secrets-for-connection-strings" aria-hidden="true" class="anchor" id="user-secrets-for-connection-strings"></a>User secrets for connection strings</h4>
+<p>You can use the connection string syntax to read the connection string from configuration.</p>
+<p>For example, consider an ASP.NET Core application with the following configuration file:</p>
+<pre><code class="language-json">{
+  &quot;ConnectionStrings&quot;: {
+    &quot;Chinook&quot;: &quot;Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Chinook&quot;
+  }
+}
+</code></pre>
+<p>This connection string in the config file can be used to scaffold from a database using:</p>
+<ul>
+<li>
+<p>.NET Core CLI</p>
+</li>
+<li>
+<p>Visual Studio PMC</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold &quot;Name=ConnectionStrings:Chinook&quot; Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext 'Name=ConnectionStrings:Chinook' Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<p>connection strings should be stored in a secure way, such as using Azure Key Vault or, when working locally, the Secret Manager tool, aka &quot;User Secrets&quot;.</p>
+<p>In this article I will show you how to create a new connection between your ASP.NET Core.NET project and a third-party application.</p>
+<pre><code class="language-dotnetcli">dotnet user-secrets init
+</code></pre>
+<p>This command sets up storage on your computer separate from your source code and adds a key for this storage to the project.</p>
+<p>Next, store the connection string in user secrets. For example:</p>
+<pre><code class="language-dotnetcli">dotnet user-secrets set ConnectionStrings:Chinook &quot;Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Chinook&quot;
+</code></pre>
+<p>Now the same command that previous used the named connection string from the config file will instead use the connection string stored in User Secrets. For example:</p>
+<ul>
+<li>
+<p>.NET Core CLI</p>
+</li>
+<li>
+<p>Visual Studio PMC</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold &quot;Name=ConnectionStrings:Chinook&quot; Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext 'Name=ConnectionStrings:Chinook' Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<h4><a href="#connection-strings-in-the-scaffolded-code" aria-hidden="true" class="anchor" id="connection-strings-in-the-scaffolded-code"></a>Connection strings in the scaffolded code</h4>
+<p>By default, the scaffolder will include the connection string in the scaffolded code, but with a warning. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
+    =&gt; optionsBuilder.UseSqlServer(&quot;Data Source=(LocalDb)\\MSSQLLocalDB;Database=AllTogetherNow&quot;);
+</code></pre>
+<p>In this example, the <code>DbContextListener</code> method is used to create a connection string between the generated code and the DbContextListener.</p>
+<blockquote>
+<p>Tip
+The <code>-NoOnConfiguring</code> (Visual Studio PMC) or <code>--no-onconfiguring</code> (.NET CLI) option can be passed to suppress creation of the <code>OnConfiguring</code> method containing the connection string.</p>
+</blockquote>
+<h3><a href="#provider-name" aria-hidden="true" class="anchor" id="provider-name"></a>Provider name</h3>
+<p>The first argument is the provider name.</p>
+<h2><a href="#command-line-options" aria-hidden="true" class="anchor" id="command-line-options"></a>Command line options</h2>
+<p>The scaffolding process can be controlled by various command line options.</p>
+<h3><a href="#specifying-tables-and-views" aria-hidden="true" class="anchor" id="specifying-tables-and-views"></a>Specifying tables and views</h3>
+<p>By default, all tables and views in the database schema are scaffolded into entity types. You can limit which tables and views are scaffolded by specifying schemas and tables.</p>
+<p>The -s (Visual Studio PMC) or -- (.NET CLI) argument specifies the schemas of tables and views for which entity types will be generated.</p>
+<p>This example shows how to include tables and views in a schema.</p>
+<p>For example, to scaffold only the <code>Artists</code> and <code>Albums</code> tables:</p>
+<ul>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>Visual Studio PMC</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold ... --table Artist --table Album
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext ... -Tables Artists, Albums
+</code></pre>
+<p>To scaffold all tables and views from the <code>Customer</code> and <code>Contractor</code> schemas:</p>
+<ul>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>Visual Studio PMC</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold ... --schema Customer --schema Contractor
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext ... -Schemas Customer, Contractor
+</code></pre>
+<p>For example, to scaffold the <code>Purchases</code> table from the <code>Customer</code> schema, and the <code>Accounts</code> and <code>Contracts</code> tables from the <code>Contractor</code> schema:</p>
+<ul>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>Visual Studio PMC</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold ... --table Customer.Purchases --table Contractor.Accounts --table Contractor.Contracts
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext ... -Tables Customer.Purchases, Contractor.Accounts, Contractor.Contracts
+</code></pre>
+<h3><a href="#preserving-database-names" aria-hidden="true" class="anchor" id="preserving-database-names"></a>Preserving database names</h3>
+<p>The following changes have been made to the .NET database naming conventions.</p>
+<p>For example, consider the following tables:</p>
+<pre><code class="language-sql">CREATE TABLE [BLOGS] (
+    [ID] int NOT NULL IDENTITY,
+    [Blog_Name] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_Blogs] PRIMARY KEY ([ID]));
+
+CREATE TABLE [posts] (
+    [id] int NOT NULL IDENTITY,
+    [postTitle] nvarchar(max) NOT NULL,
+    [post content] nvarchar(max) NOT NULL,
+    [1 PublishedON] datetime2 NOT NULL,
+    [2 DeletedON] datetime2 NULL,
+    [BlogID] int NOT NULL,
+    CONSTRAINT [PK_Posts] PRIMARY KEY ([id]),
+    CONSTRAINT [FK_Posts_Blogs_BlogId] FOREIGN KEY ([BlogID]) REFERENCES [Blogs] ([ID]) ON DELETE CASCADE);
+</code></pre>
+<p>By default, the following entity types will be scaffolded from these tables:</p>
+<pre><code class="language-csharp">public partial class Blog
+{
+    public int Id { get; set; }
+    public string BlogName { get; set; } = null!;
+    public virtual ICollection&lt;Post&gt; Posts { get; set; } = new List&lt;Post&gt;();
+}
+
+public partial class Post
+{
+    public int Id { get; set; }
+    public string PostTitle { get; set; } = null!;
+    public string PostContent { get; set; } = null!;
+    public DateTime _1PublishedOn { get; set; }
+    public DateTime? _2DeletedOn { get; set; }
+    public int BlogId { get; set; }
+    public virtual Blog Blog { get; set; } = null!;
+    public virtual ICollection&lt;Tag&gt; Tags { get; set; } = new List&lt;Tag&gt;();
+}
+</code></pre>
+<p>However, using <code>-UseDatabaseNames</code> or <code>--use-database-names</code> results in the following entity types:</p>
+<pre><code class="language-csharp">public partial class BLOG
+{
+    public int ID { get; set; }
+    public string Blog_Name { get; set; } = null!;
+    public virtual ICollection&lt;post&gt; posts { get; set; } = new List&lt;post&gt;();
+}
+
+public partial class post
+{
+    public int id { get; set; }
+    public string postTitle { get; set; } = null!;
+    public string post_content { get; set; } = null!;
+    public DateTime _1_PublishedON { get; set; }
+    public DateTime? _2_DeletedON { get; set; }
+    public int BlogID { get; set; }
+    public virtual BLOG Blog { get; set; } = null!;
+}
+</code></pre>
+<h3><a href="#use-mapping-attributes-aka-data-annotations)" aria-hidden="true" class="anchor" id="use-mapping-attributes-aka-data-annotations)"></a>Use mapping attributes (aka Data Annotations)</h3>
+<p>The following example shows how to create a new Entity type in <code>OnCreating</code> by default.</p>
+<p>For example, using the Fluent API will scaffold this:</p>
+<pre><code class="language-csharp">entity.Property(e =&gt; e.Title)
+    .IsRequired()
+    .HasMaxLength(160);
+</code></pre>
+<p>While using Data Annotations will scaffold this:</p>
+<pre><code class="language-csharp">[Required]
+[StringLength(160)]
+public string Title { get; set; }
+</code></pre>
+<blockquote>
+<p>Tip
+Some aspects of the model cannot be configured using mapping attributes. The scaffolder will still use the model building API to handle these cases.</p>
+</blockquote>
+<h3><a href="#dbcontext-name" aria-hidden="true" class="anchor" id="dbcontext-name"></a><code>DbContext</code> name</h3>
+<p>The scaffolded <code>DbContext</code> class name will be the name of the database suffixed with Context by default. To specify a different one, use <code>-Context</code> in PMC and <code>--context</code> in the .NET Core CLI.</p>
+<h3><a href="#target-directories-and-namespaces" aria-hidden="true" class="anchor" id="target-directories-and-namespaces"></a>Target directories and namespaces</h3>
+<p>The entity classes and a <code>DbContext</code> class are scaffolded into the project's root directory and use the project's default namespace.</p>
+<ul>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>Visual Studio PMC</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold ... --context-dir Data --output-dir Models
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold ... --namespace Your.Namespace --context-namespace Your.DbContext.Namespace
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext ... -ContextDir Data -OutputDir Models
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext ... -Namespace Your.Namespace -ContextNamespace Your.DbContext.Namespace
+</code></pre>
+<h2><a href="#the-scaffolded-code" aria-hidden="true" class="anchor" id="the-scaffolded-code"></a>The scaffolded code</h2>
+<p>The result of scaffolding from an existing database is:</p>
+<ul>
+<li>
+<p>A file containing a class that inherits from <code>DbContext</code></p>
+</li>
+<li>
+<p>A file for each entity type</p>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+Starting in EF7, you can also use T4 text templates to customize the generated code. See Custom Reverse Engineering Templates for more details.</p>
+</blockquote>
+<h3><a href="#c-nullable-reference-types" aria-hidden="true" class="anchor" id="c-nullable-reference-types"></a>C# Nullable reference types</h3>
+<p>The C# scaffolder allows you to scaffold code that is being written in C#.</p>
+<p>For example, the following <code>Tags</code> table contains both nullable non-nullable string columns:</p>
+<pre><code class="language-sql">CREATE TABLE [Tags] (
+  [Id] int NOT NULL IDENTITY,
+  [Name] nvarchar(max) NOT NULL,
+  [Description] nvarchar(max) NULL,
+  CONSTRAINT [PK_Tags] PRIMARY KEY ([Id]));
+</code></pre>
+<p>This results in corresponding nullable and non-nullable string properties in the generated class:</p>
+<pre><code class="language-csharp">public partial class Tag
+{
+    public Tag()
+    {
+        Posts = new HashSet&lt;Post&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+
+    public virtual ICollection&lt;Post&gt; Posts { get; set; }
+}
+</code></pre>
+<p>Similarly, the following <code>Posts</code> tables contains a required relationship to the <code>Blogs</code> table:</p>
+<pre><code class="language-sql">CREATE TABLE [Posts] (
+    [Id] int NOT NULL IDENTITY,
+    [Title] nvarchar(max) NOT NULL,
+    [Contents] nvarchar(max) NOT NULL,
+    [PostedOn] datetime2 NOT NULL,
+    [UpdatedOn] datetime2 NULL,
+    [BlogId] int NOT NULL,
+    CONSTRAINT [PK_Posts] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Posts_Blogs_BlogId] FOREIGN KEY ([BlogId]) REFERENCES [Blogs] ([Id]));
+</code></pre>
+<p>This results in the scaffolding of non-nullable (required) relationship between blogs:</p>
+<pre><code class="language-csharp">public partial class Blog
+{
+    public Blog()
+    {
+        Posts = new HashSet&lt;Post&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+
+    public virtual ICollection&lt;Post&gt; Posts { get; set; }
+}
+</code></pre>
+<p>And posts:</p>
+<pre><code class="language-csharp">public partial class Post
+{
+    public Post()
+    {
+        Tags = new HashSet&lt;Tag&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Title { get; set; } = null!;
+    public string Contents { get; set; } = null!;
+    public DateTime PostedOn { get; set; }
+    public DateTime? UpdatedOn { get; set; }
+    public int BlogId { get; set; }
+
+    public virtual Blog Blog { get; set; } = null!;
+
+    public virtual ICollection&lt;Tag&gt; Tags { get; set; }
+}
+</code></pre>
+<h3><a href="#many-to-many-relationships" aria-hidden="true" class="anchor" id="many-to-many-relationships"></a>Many-to-many relationships</h3>
+<p>In this tutorial, we'll show you how to create scaffolding between tables.</p>
+<pre><code class="language-sql">CREATE TABLE [Tags] (
+  [Id] int NOT NULL IDENTITY,
+  [Name] nvarchar(max) NOT NULL,
+  [Description] nvarchar(max) NULL,
+  CONSTRAINT [PK_Tags] PRIMARY KEY ([Id]));
+
+CREATE TABLE [Posts] (
+    [Id] int NOT NULL IDENTITY,
+    [Title] nvarchar(max) NOT NULL,
+    [Contents] nvarchar(max) NOT NULL,
+    [PostedOn] datetime2 NOT NULL,
+    [UpdatedOn] datetime2 NULL,
+    CONSTRAINT [PK_Posts] PRIMARY KEY ([Id]));
+
+CREATE TABLE [PostTag] (
+    [PostsId] int NOT NULL,
+    [TagsId] int NOT NULL,
+    CONSTRAINT [PK_PostTag] PRIMARY KEY ([PostsId], [TagsId]),
+    CONSTRAINT [FK_PostTag_Posts_TagsId] FOREIGN KEY ([TagsId]) REFERENCES [Tags] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_PostTag_Tags_PostsId] FOREIGN KEY ([PostsId]) REFERENCES [Posts] ([Id]) ON DELETE CASCADE);
+</code></pre>
+<p>When scaffolded, this results in a class for Post:</p>
+<pre><code class="language-csharp">public partial class Post
+{
+    public Post()
+    {
+        Tags = new HashSet&lt;Tag&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Title { get; set; } = null!;
+    public string Contents { get; set; } = null!;
+    public DateTime PostedOn { get; set; }
+    public DateTime? UpdatedOn { get; set; }
+    public int BlogId { get; set; }
+
+    public virtual Blog Blog { get; set; } = null!;
+
+    public virtual ICollection&lt;Tag&gt; Tags { get; set; }
+}
+</code></pre>
+<p>And a class for <code>Tag</code>:</p>
+<pre><code class="language-csharp">public partial class Tag
+{
+    public Tag()
+    {
+        Posts = new HashSet&lt;Post&gt;();
+    }
+
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+
+    public virtual ICollection&lt;Post&gt; Posts { get; set; }
+}
+</code></pre>
+<p>But no class for the <code>PostTag</code> table. Instead, configuration for a many-to-many relationship is scaffolded:</p>
+<pre><code class="language-csharp">entity.HasMany(d =&gt; d.Tags)
+    .WithMany(p =&gt; p.Posts)
+    .UsingEntity&lt;Dictionary&lt;string, object&gt;&gt;(
+        &quot;PostTag&quot;,
+        l =&gt; l.HasOne&lt;Tag&gt;().WithMany().HasForeignKey(&quot;PostsId&quot;),
+        r =&gt; r.HasOne&lt;Post&gt;().WithMany().HasForeignKey(&quot;TagsId&quot;),
+        j =&gt;
+            {
+                j.HasKey(&quot;PostsId&quot;, &quot;TagsId&quot;);
+                j.ToTable(&quot;PostTag&quot;);
+                j.HasIndex(new[] { &quot;TagsId&quot; }, &quot;IX_PostTag_TagsId&quot;);
+            });
+</code></pre>
+<h3><a href="#other-programming-languages" aria-hidden="true" class="anchor" id="other-programming-languages"></a>Other programming languages</h3>
+<p>The scaffolding system used in C# is not the same as the scaffolding system used in other languages.</p>
+<ul>
+<li>
+<p>EntityFrameworkCore.VisualBasic provides support for Visual Basic</p>
+</li>
+<li>
+<p>EFCore.FSharp provides support for F#</p>
+</li>
+</ul>
+<h3><a href="#customizing-the-code" aria-hidden="true" class="anchor" id="customizing-the-code"></a>Customizing the code</h3>
+<p>Starting with EF7, one of the best ways to customize the generated code is by customizing the T4 templates used to generate it.</p>
+<p>The code can also be changed after it is generated, but the best way to do this depends on whether you intend to re-run the scaffolding process when the database model changes.</p>
+<h4><a href="#scaffold-once-only" aria-hidden="true" class="anchor" id="scaffold-once-only"></a>Scaffold once only</h4>
+<p>In this course, we'll look at how to scaffold your code so that it can be used as a template for any other code in your project.</p>
+<p>Keeping the database and the EF model in sync can be done in one of two ways:</p>
+<ul>
+<li>
+<p>Switch to using EF Core database migrations, and use the entity types and EF model configuration as the source of truth, using migrations to drive the schema.</p>
+</li>
+<li>
+<p>Manually update the entity types and EF configuration when the database changes. For example, if a new column is added to a table, then add a property for the column to the mapped entity type, and add any necessary configuration using mapping attributes and/or code in <code>OnModelCreating</code>. This is relatively easy, with the only real challenge being a process to make sure that database changes are recorded or detected in some way so that the developer(s) responsible for the code can react.</p>
+</li>
+</ul>
+<h4><a href="#repeated-scaffolding" aria-hidden="true" class="anchor" id="repeated-scaffolding"></a>Repeated scaffolding</h4>
+<p>A scaffolder is a piece of software that is used to make changes to a database when the database changes.</p>
+<p>In this tutorial, I will show you how to scaffold your code using EF Core.</p>
+<ul>
+<li>
+<p>Both the <code>DbContext</code> class and the entity classes are generated as partial. This allows introducing additional members and code in a separate file which will not be overridden when scaffolding is run.</p>
+</li>
+<li>
+<p>The <code>DbContext</code> class contains a partial method called <code>OnModelCreatingPartial</code>. An implementation of this method can be added to the partial class for the <code>DbContext</code>. It will then be called after <code>OnModelCreating</code> is called.</p>
+</li>
+<li>
+<p>Model configuration made using the <code>ModelBuilder</code> APIs overrides any configuration done by conventions or mapping attributes, as well earlier configuration done on the model builder. This means that code in <code>OnModelCreatingPartial</code> can be used to override the configuration generated by the scaffolding process, without the need to remove that configuration.</p>
+</li>
+</ul>
+<p>In this article, I'm going to show you how to use the T4 scaffolding approach to generate code.</p>
+<h2><a href="#how-it-works" aria-hidden="true" class="anchor" id="how-it-works"></a>How it works</h2>
+<p>Reverse engineering starts by reading the database schema. It reads information about tables, columns, constraints, and indexes.</p>
+<p>Next, it uses the schema information to create an EF Core model. Tables are used to create entity types; columns are used to create properties; and foreign keys are used to create relationships.</p>
+<p>Finally, the model is used to generate code. The corresponding entity type classes, Fluent API, and data annotations are scaffolded in order to re-create the same model from your app.</p>
+<h2><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h2>
+<ul>
+<li>
+<p>Not everything about a model can be represented using a database schema. For example, information about inheritance hierarchies, owned types, and table splitting are not present in the database schema. Because of this, these constructs will never be scaffolded.</p>
+</li>
+<li>
+<p>In addition, some column types may not be supported by the EF Core provider. These columns won't be included in the model.</p>
+</li>
+<li>
+<p>You can define concurrency tokens in an EF Core model to prevent two users from updating the same entity at the same time. Some databases have a special type to represent this type of column (for example, rowversion in SQL Server) in which case we can reverse engineer this information; however, other concurrency tokens will not be scaffolded.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/scaffolding/">Scaffolding (Reverse Engineering)</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

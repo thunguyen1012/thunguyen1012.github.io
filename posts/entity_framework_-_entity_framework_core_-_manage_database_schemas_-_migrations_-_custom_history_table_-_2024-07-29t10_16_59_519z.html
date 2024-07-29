@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Custom history table | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='How do I keep track of which migrations have been applied to the database?'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Manage database schemas - Migrations - Custom history table</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>How do I keep track of which migrations have been applied to the database?</p>
+<blockquote>
+<p>Important
+If you customize the Migrations history table after applying migrations, you are responsible for updating the
+existing table in the database.</p>
+</blockquote>
+<h2><a href="#schema-and-table-name" aria-hidden="true" class="anchor" id="schema-and-table-name"></a>Schema and table name</h2>
+<p>You can change the schema and table name of a migration table using the <code>MigrationsHistoryTable</code> method in Onuring SQL Server (or ASP.NET Core).</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder options)
+    =&gt; options.UseSqlServer(
+        _connectionString,
+        x =&gt; x.MigrationsHistoryTable(&quot;__MyMigrationsHistory&quot;, &quot;mySchema&quot;));
+</code></pre>
+<h2><a href="#other-changes" aria-hidden="true" class="anchor" id="other-changes"></a>Other changes</h2>
+<p>To configure additional aspects of the table, override and replace the provider-specific
+<code>IHistoryRepository</code> service. Here is an example of changing the MigrationId column name to Id on SQL Server.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder options)
+    =&gt; options
+        .UseSqlServer(_connectionString)
+        .ReplaceService&lt;IHistoryRepository, MyHistoryRepository&gt;();
+</code></pre>
+<blockquote>
+<p>Warning
+<code>SqlServerHistoryRepository</code> is inside an internal namespace and may change in future releases.</p>
+</blockquote>
+<pre><code class="language-csharp">internal class MyHistoryRepository : SqlServerHistoryRepository
+{
+    public MyHistoryRepository(HistoryRepositoryDependencies dependencies)
+        : base(dependencies)
+    {
+    }
+
+    protected override void ConfigureTable(EntityTypeBuilder&lt;HistoryRow&gt; history)
+    {
+        base.ConfigureTable(history);
+
+        history.Property(h =&gt; h.MigrationId).HasColumnName(&quot;Id&quot;);
+    }
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/history-table">Custom Migrations History Table</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

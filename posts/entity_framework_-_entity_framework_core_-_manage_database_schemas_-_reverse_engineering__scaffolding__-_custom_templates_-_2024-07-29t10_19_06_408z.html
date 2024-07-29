@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Manage database schemas - Reverse engineering (scaffolding) - Custom templates | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article shows how to scaffold code using T4 text templates.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Manage database schemas - Reverse engineering (scaffolding) - Custom templates</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p>Note
+This feature was added in EF Core 7.</p>
+</blockquote>
+<p>This article shows how to scaffold code using T4 text templates.</p>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<p>This article assumes you're familiar with reverse engineering in EF Core. If not, please review that article before proceeding.</p>
+<h2><a href="#adding-the-default-templates" aria-hidden="true" class="anchor" id="adding-the-default-templates"></a>Adding the default templates</h2>
+<p>In this tutorial, we will walk you through the process of writing scaffolded code.</p>
+<p>Start by installing the EF Core template package for <code>dotnet new</code>:</p>
+<pre><code class="language-dotnetcli">dotnet new install Microsoft.EntityFrameworkCore.Templates
+</code></pre>
+<p>Now you can add the default templates to your project. Do this by running the following command from your project directory.</p>
+<pre><code class="language-dotnetcli">dotnet new ef-templates
+</code></pre>
+<p>This command adds the following files to your project.</p>
+<ul>
+<li>
+<p>CodeTemplates/</p>
+<ul>
+<li>
+<p>EFCore/</p>
+<ul>
+<li>
+<p><code>DbContext.t4</code></p>
+</li>
+<li>
+<p><code>EntityType.t4</code></p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>The <code>DbContext.t4</code> template is used to scaffold a DbContext class for the database, and the <code>EntityType.t4</code> template is used to scaffold entity type classes for each table and view in the database.</p>
+<blockquote>
+<p>Tip
+The .t4 extension is used (instead of .tt) to prevent Visual Studio from transforming the templates. The templates will be transformed by EF Core instead.</p>
+</blockquote>
+<h2><a href="#introduction-to-t4" aria-hidden="true" class="anchor" id="introduction-to-t4"></a>Introduction to T4</h2>
+<p>The following code shows how to use a T4 template to generate text using .NET.</p>
+<blockquote>
+<p>Important
+T4 text templates--especially ones that generate code--can be difficult to read without syntax highlighting. If necessary, search for an extension to your code editor that enables T4 syntax highlighting.</p>
+</blockquote>
+<pre><code class="language-T4">&lt;#@ template hostSpecific=&quot;true&quot; #&gt;
+&lt;#@ assembly name=&quot;Microsoft.EntityFrameworkCore.Design&quot; #&gt;
+&lt;#@ parameter name=&quot;NamespaceHint&quot; type=&quot;System.String&quot; #&gt;
+&lt;#@ import namespace=&quot;Microsoft.EntityFrameworkCore&quot; #&gt;
+&lt;#
+    if (!string.IsNullOrEmpty(NamespaceHint))
+    {
+#&gt;
+namespace &lt;#= NamespaceHint #&gt;;
+</code></pre>
+<p>The first few lines that begin with &lt;#@ are called directives. They affect how the template is transformed. The following table briefly describes each kind of directive used.</p>
+<table><thead>
+<tr>
+<th>Directive</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>template</code></td>
+<td>Specifies hostSpecific="true" which enables ```using``` the <code>Host</code> property inside the ```template``` to access EF Core services.</td>
+</tr>
+<tr>
+<td><code>assembly</code></td>
+<td>Adds ```assembly``` references required to compile the ```template```.</td>
+</tr>
+<tr>
+<td><code>parameter</code></td>
+<td>Declares parameters that will be passed in by EF Core when transforming the ```template```.</td>
+</tr>
+<tr>
+<td><code>import</code></td>
+<td>Like C# ```using``` directives, brings namespaces into scope for the ```template``` code.</td>
+</tr>
+</tbody></table>
+<p>The following sections of <code>DbContext.t4</code> are called directives.</p>
+<p>Anything outside of a control block will be copied directly to the template output.</p>
+<p>An expression control block begins with <code>&lt;#=</code>. The code inside of it will be evaluated and the result will be added to the template output. These are similar to C# interpolated string arguments.</p>
+<p>For a more detailed and complete explanation of the T4 syntax, see Writing a T4 Text Template.</p>
+<h2><a href="#customize-the-entity-types" aria-hidden="true" class="anchor" id="customize-the-entity-types"></a>Customize the entity types</h2>
+<p>Let's walk through what it's like to customize a template. By default, EF Core generates the following code for collection navigation properties.</p>
+<pre><code class="language-C#">public virtual ICollection&lt;Album&gt; Albums { get; } = new List&lt;Album&gt;();
+</code></pre>
+<p>In this article, I'm going to show you how to use <code>&lt;ListT&gt;</code> and <code>&lt;ObservableCollectionT&gt;</code> in your application.</p>
+<p>Open the <code>EntityType.t4</code> template and find where it generates <code>List&lt;T&gt;</code>. It looks like this:</p>
+<pre><code class="language-T4">if (navigation.IsCollection)
+    {
+#&gt;
+    public virtual ICollection&lt;&lt;#= targetType #&gt;&gt; &lt;#= navigation.Name #&gt; { get; } = new List&lt;&lt;#= targetType #&gt;&gt;();
+&lt;#
+    }
+</code></pre>
+<p>Replace List with ObservableCollection.</p>
+<pre><code class="language-T4">public virtual ICollection&lt;&lt;#= targetType #&gt;&gt; &lt;#= navigation.Name #&gt; { get; } = new ObservableCollection&lt;&lt;#= targetType #&gt;&gt;();
+</code></pre>
+<p>We also need to add a using directive to the scaffolded code. The usings are specified in a list near the top of the template. Add <code>System.Collections.ObjectModel</code> to the list.</p>
+<pre><code class="language-C#">var usings = new List&lt;string&gt;
+{
+    &quot;System&quot;,
+    &quot;System.Collections.Generic&quot;,
+    &quot;System.Collections.ObjectModel&quot;
+};
+</code></pre>
+<p>Test the changes by using the reverse engineering commands. The templates inside your project are used automatically by the commands.</p>
+<ul>
+<li>
+<p>.NET Core CLI</p>
+</li>
+<li>
+<p>Visual Studio</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext scaffold &quot;Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Chinook&quot; Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<pre><code class="language-powershell">Scaffold-DbContext 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Chinook' Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<p>If you did everything correctly, the collection navigation properties should now use <code>ObservableCollection&lt;T&gt;</code>.</p>
+<pre><code class="language-C#">public virtual ICollection&lt;Album&gt; Albums { get; } = new ObservableCollection&lt;Album&gt;();
+</code></pre>
+<h2><a href="#updating-templates" aria-hidden="true" class="anchor" id="updating-templates"></a>Updating templates</h2>
+<p>When you create a new project in EF Core, it creates a copy of the default templates for that project.</p>
+<p>The EF Core repository has been updated to version 8.0.0.</p>
+<pre><code class="language-console">git clone --no-checkout https://github.com/dotnet/efcore.git
+cd efcore
+git diff v7.0.0 v8.0.0 -- src/EFCore.Design/Scaffolding/Internal/CSharpDbContextGenerator.tt src/EFCore.Design/Scaffolding/Internal/CSharpEntityTypeGenerator.tt
+</code></pre>
+<p>You can review the changes made to Microsoft.FrameworkCore.Templates by visiting the Microsoft Developers website.</p>
+<p>Before adding the default templates to a new project, remember to update to the latest EF Core template package.</p>
+<pre><code class="language-dotnetcli">dotnet new update
+</code></pre>
+<h2><a href="#advanced-usage" aria-hidden="true" class="anchor" id="advanced-usage"></a>Advanced usage</h2>
+<h3><a href="#ignoring-the-input-model" aria-hidden="true" class="anchor" id="ignoring-the-input-model"></a>Ignoring the input model</h3>
+<p>You can use Migrations to map your app to a database.</p>
+<p>In this tutorial, we'll look at how to create a model of a database using the <code>dbContext.Database.CreateScript</code> method.</p>
+<h3><a href="#entity-configuration-classes" aria-hidden="true" class="anchor" id="entity-configuration-classes"></a>Entity configuration classes</h3>
+<p>The DbContext class is used to create models.</p>
+<p>Each entity type in the model has its own class.</p>
+<h3><a href="#scaffolding-other-types-of-files" aria-hidden="true" class="anchor" id="scaffolding-other-types-of-files"></a>Scaffolding other types of files</h3>
+<p>In this article, I'm going to show you how to use Reverse Engineering in EF Core.</p>
+<pre><code class="language-T4">&lt;#@ output extension=&quot;.md&quot; #&gt;
+&lt;#@ assembly name=&quot;Microsoft.EntityFrameworkCore&quot; #&gt;
+&lt;#@ assembly name=&quot;Microsoft.EntityFrameworkCore.Relational&quot; #&gt;
+&lt;#@ assembly name=&quot;Microsoft.EntityFrameworkCore.Design&quot; #&gt;
+&lt;#@ parameter name=&quot;Model&quot; type=&quot;Microsoft.EntityFrameworkCore.Metadata.IModel&quot; #&gt;
+&lt;#@ parameter name=&quot;Options&quot; type=&quot;Microsoft.EntityFrameworkCore.Scaffolding.ModelCodeGenerationOptions&quot; #&gt;
+&lt;#@ import namespace=&quot;System.Linq&quot; #&gt;
+&lt;#@ import namespace=&quot;Microsoft.EntityFrameworkCore&quot; #&gt;
+# &lt;#= Options.ContextName #&gt;
+
+```mermaid
+erDiagram
+&lt;#
+    foreach (var entityType in Model.GetEntityTypes().Where(e =&gt; !e.IsSimpleManyToManyJoinEntityType()))
+    {
+#&gt;
+    &lt;#= entityType.Name #&gt; {
+    }
+&lt;#
+        foreach (var foreignKey in entityType.GetForeignKeys())
+        {
+#&gt;
+    &lt;#= entityType.Name #&gt; &lt;#= foreignKey.IsUnique ? &quot;|&quot; : &quot;}&quot; #&gt;o--&lt;#= foreignKey.IsRequired ? &quot;|&quot; : &quot;o&quot; #&gt;| &lt;#= foreignKey.PrincipalEntityType.Name #&gt; : &quot;&lt;#= foreignKey.GetConstraintName() #&gt;&quot;
+&lt;#
+        }
+
+        foreach (var skipNavigation in entityType.GetSkipNavigations().Where(n =&gt; n.IsLeftNavigation()))
+        {
+#&gt;
+    &lt;#= entityType.Name #&gt; }o--o{ &lt;#= skipNavigation.TargetEntityType.Name #&gt; : &lt;#= skipNavigation.JoinEntityType.Name #&gt;
+&lt;#
+        }
+    }
+#&gt;
+</code></pre>
+<pre><code>
+Ref: [Custom Reverse Engineering Templates](https://learn.microsoft.com/en-us/ef/core/managing-schemas/scaffolding/templates)
+</code></pre>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
