@@ -179,6 +179,9 @@ table {
   width: 100%;
   border-radius: 3px;
   border: 1px solid #ddd;
+  max-width: 100%;
+  overflow: auto;
+  display: block;
 }
 
 table thead {
@@ -188,6 +191,7 @@ table thead {
 table thead th {
   padding: 8px;
   font-weight: bold;
+  color: #f9a825;
 }
 
 table td {
