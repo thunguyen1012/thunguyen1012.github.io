@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Load related data - Eager loading | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='You can use the Include method to specify related data to be included in query results.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Load related data - Eager loading</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#eager-loading" aria-hidden="true" class="anchor" id="eager-loading"></a>Eager loading</h2>
+<p>You can use the <code>Include</code> method to specify related data to be included in query results.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .ToList();
+}
+</code></pre>
+<blockquote>
+<p>Tip
+Entity Framework Core will automatically fix-up navigation properties to any other entities that were previously loaded into the context instance. So even if you don't explicitly include the data for a navigation property, the property may still be populated if some or all of the related entities were previously loaded.</p>
+</blockquote>
+<p>You can include related data from multiple relationships in a single query.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .Include(blog =&gt; blog.Owner)
+        .ToList();
+}
+</code></pre>
+<blockquote>
+<p>Caution
+Eager loading a collection navigation in a single query may cause performance issues. For more information, see Single vs. split queries.</p>
+</blockquote>
+<h2><a href="#including-multiple-levels" aria-hidden="true" class="anchor" id="including-multiple-levels"></a>Including multiple levels</h2>
+<p>This example shows how to create a relationship between a blog and the author of that blog.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .ThenInclude(post =&gt; post.Author)
+        .ToList();
+}
+</code></pre>
+<p>You can chain multiple calls to <code>ThenInclude</code> to continue including further levels of related data.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .ThenInclude(post =&gt; post.Author)
+        .ThenInclude(author =&gt; author.Photo)
+        .ToList();
+}
+</code></pre>
+<p>You can combine all of the calls to include related data from multiple levels and multiple roots in the same query.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .ThenInclude(post =&gt; post.Author)
+        .ThenInclude(author =&gt; author.Photo)
+        .Include(blog =&gt; blog.Owner)
+        .ThenInclude(owner =&gt; owner.Photo)
+        .ToList();
+}
+</code></pre>
+<p>In this article, I'm going to show you how to include multiple related entities for one of the entities that is being included.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .ThenInclude(post =&gt; post.Author)
+        .Include(blog =&gt; blog.Posts)
+        .ThenInclude(post =&gt; post.Tags)
+        .ToList();
+}
+</code></pre>
+<blockquote>
+<p>Tip
+You can also load multiple navigations using a single <code>Include</code> method. This is possible for navigation &quot;chains&quot; that are all references, or when they end with a single collection.</p>
+</blockquote>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Owner.AuthoredPosts)
+        .ThenInclude(post =&gt; post.Blog.Owner.Photo)
+        .ToList();
+}
+</code></pre>
+<h2><a href="#filtered-include" aria-hidden="true" class="anchor" id="filtered-include"></a>Filtered include</h2>
+<p>When applying <code>Include</code> to load related data, you can add certain enumerable operations to the included collection navigation, which allows for filtering and sorting of the results.</p>
+<p>Supported operations are: <code>Where</code>, <code>OrderBy</code>, <code>OrderByDescending</code>, <code>ThenBy</code>, <code>ThenByDescending</code>, <code>Skip</code>, and <code>Take</code>.</p>
+<p>Such operations should be applied on the collection navigation in the lambda passed to the <code>Include</code> method, <code>as</code> shown in example below:</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var filteredBlogs = context.Blogs
+        .Include(
+            blog =&gt; blog.Posts
+                .Where(post =&gt; post.BlogId == 1)
+                .OrderByDescending(post =&gt; post.Title)
+                .Take(5))
+        .ToList();
+}
+</code></pre>
+<p>Filter operations can be applied to a given collection navigation (blog.Posts).</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var filteredBlogs = context.Blogs
+        .Include(blog =&gt; blog.Posts.Where(post =&gt; post.BlogId == 1))
+        .ThenInclude(post =&gt; post.Author)
+        .Include(blog =&gt; blog.Posts)
+        .ThenInclude(post =&gt; post.Tags.OrderBy(postTag =&gt; postTag.TagId).Skip(3))
+        .ToList();
+}
+</code></pre>
+<p>Alternatively, identical operations can be applied for each navigation that is included multiple times:</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var filteredBlogs = context.Blogs
+        .Include(blog =&gt; blog.Posts.Where(post =&gt; post.BlogId == 1))
+        .ThenInclude(post =&gt; post.Author)
+        .Include(blog =&gt; blog.Posts.Where(post =&gt; post.BlogId == 1))
+        .ThenInclude(post =&gt; post.Tags.OrderBy(postTag =&gt; postTag.TagId).Skip(3))
+        .ToList();
+}
+</code></pre>
+<blockquote>
+<p>Caution
+In case of tracking queries, results of Filtered <code>Include</code> may be unexpected due to navigation fixup. All relevant entities that have been queried for previously and have been stored in the Change Tracker will be present in the results of Filtered <code>Include</code> query, even if they don't meet the requirements of the filter. Consider using <code>NoTracking</code> queries or re-create the DbContext when using Filtered <code>Include</code> in those situations.</p>
+</blockquote>
+<p>Example:</p>
+<pre><code class="language-csharp">var orders = context.Orders.Where(o =&gt; o.Id &gt; 1000).ToList();
+
+// customer entities will have references to all orders where Id &gt; 1000, rather than &gt; 5000
+var filtered = context.Customers.Include(c =&gt; c.Orders.Where(o =&gt; o.Id &gt; 5000)).ToList();
+</code></pre>
+<blockquote>
+<p>Note
+In case of tracking queries, the navigation on which filtered include was applied is considered to be loaded. This means that EF Core will not attempt to re-load its values using explicit loading or lazy loading, even though some elements could still be missing.</p>
+</blockquote>
+<h2><a href="#include-on-derived-types" aria-hidden="true" class="anchor" id="include-on-derived-types"></a><code>Include</code> on derived types</h2>
+<p>You can include related data from navigation defined only on a derived type using <code>Include</code> and <code>ThenInclude</code>.</p>
+<p>Given the following model:</p>
+<pre><code class="language-csharp">public class SchoolContext : DbContext
+{
+    public DbSet&lt;Person&gt; People { get; set; }
+    public DbSet&lt;School&gt; Schools { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;School&gt;().HasMany(s =&gt; s.Students).WithOne(s =&gt; s.School);
+    }
+}
+
+public class Person
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+
+public class Student : Person
+{
+    public School School { get; set; }
+}
+
+public class School
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public List&lt;Student&gt; Students { get; set; }
+}
+</code></pre>
+<p>Contents of <code>School</code> navigation of all People who are Students can be eagerly loaded using many patterns:</p>
+<ul>
+<li>Using cast</li>
+</ul>
+<pre><code class="language-csharp">context.People.Include(person =&gt; ((Student)person).School).ToList()
+</code></pre>
+<ul>
+<li>Using <code>as</code> operator</li>
+</ul>
+<pre><code class="language-csharp">context.People.Include(person =&gt; (person as Student).School).ToList()
+</code></pre>
+<ul>
+<li>Using overload of <code>Include</code> that takes parameter of type <code>string</code></li>
+</ul>
+<pre><code class="language-csharp">context.People.Include(&quot;School&quot;).ToList()
+</code></pre>
+<h2><a href="#model-configuration-for-auto-including-navigations" aria-hidden="true" class="anchor" id="model-configuration-for-auto-including-navigations"></a>Model configuration for auto-including navigations</h2>
+<p>In this article we will learn how to automatically include a navigation in a model in every query where the entity type is returned in the results.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Theme&gt;().Navigation(e =&gt; e.ColorScheme).AutoInclude();
+</code></pre>
+<p>After above configuration, running a query like below will load <code>ColorScheme</code> navigation for all the themes in the results.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var themes = context.Themes.ToList();
+}
+</code></pre>
+<p>Auto-include configuration is applied to all navigations configured as auto-included on derived type of the entity.</p>
+<p>You can use auto-include method in your query to load the related data through a navigation, which is configured at model level to be auto-included.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var themes = context.Themes.IgnoreAutoIncludes().ToList();
+}
+</code></pre>
+<blockquote>
+<p>Note
+Navigations to owned types are also configured as auto-included by convention and using <code>IgnoreAutoIncludes</code> API doesn't stop them from being included. They will still be included in query results.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/related-data/eager">Eager Loading of Related Data</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

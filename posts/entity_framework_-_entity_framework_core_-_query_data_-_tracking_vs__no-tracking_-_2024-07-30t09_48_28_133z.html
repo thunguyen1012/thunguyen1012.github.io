@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Tracking vs. no-tracking | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core now supports tracking of entities in its change tracker.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Tracking vs. no-tracking</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Entity Framework Core now supports tracking of entities in its change tracker.</p>
+<blockquote>
+<p>Note
+Keyless entity types are never tracked. Wherever this article mentions entity types, it refers to entity types which have a key defined.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<h2><a href="#tracking-queries" aria-hidden="true" class="anchor" id="tracking-queries"></a>Tracking queries</h2>
+<p>The following example shows how toggling between tracking queries and <code>SaveChanges</code>.</p>
+<pre><code class="language-csharp">var blog = context.Blogs.SingleOrDefault(b =&gt; b.BlogId == 1);
+blog.Rating = 5;
+context.SaveChanges();
+</code></pre>
+<p>EF Core searches for entities in the context of an entry in the database.</p>
+<h2><a href="#no-tracking-queries" aria-hidden="true" class="anchor" id="no-tracking-queries"></a>No-tracking queries</h2>
+<p>No-tracking queries give results based on what's in the database disregarding any local changes or added entities.</p>
+<pre><code class="language-csharp">var blogs = context.Blogs
+    .AsNoTracking()
+    .ToList();
+</code></pre>
+<p>The default tracking behavior can be changed at the context instance level:</p>
+<pre><code class="language-csharp">context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+
+var blogs = context.Blogs.ToList();
+</code></pre>
+<p>The next section explains when a no-tracking query might be less efficient than a tracking query.</p>
+<h2><a href="#identity-resolution" aria-hidden="true" class="anchor" id="identity-resolution"></a>Identity resolution</h2>
+<p>EF Core does no tracking of entities.</p>
+<ul>
+<li>
+<p>Don't use the change tracker and don't do identity resolution.</p>
+</li>
+<li>
+<p>Return a new instance of the entity even when the same entity is contained in the result multiple times.</p>
+</li>
+</ul>
+<p>In this post I'm going to show you how to combine tracking and no-tracking in a query.</p>
+<pre><code class="language-csharp">var blogs = context.Blogs
+    .AsNoTrackingWithIdentityResolution()
+    .ToList();
+</code></pre>
+<h2><a href="#configuring-the-default-tracking-behavior" aria-hidden="true" class="anchor" id="configuring-the-default-tracking-behavior"></a>Configuring the default tracking behavior</h2>
+<p>If you find yourself changing the tracking behavior for many queries, you may want to change the default instead:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder
+        .UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=EFQuerying.Tracking;Trusted_Connection=True;ConnectRetryCount=0&quot;)
+        .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+}
+</code></pre>
+<p>This makes all your queries no-tracking by default. You can still add AsTracking to make specific queries tracking.</p>
+<h2><a href="#tracking-and-custom-projections" aria-hidden="true" class="anchor" id="tracking-and-custom-projections"></a>Tracking and custom projections</h2>
+<p>If the result type of the query is an entity type, EF Core will track entity types contained in the result set.</p>
+<pre><code class="language-csharp">var blog = context.Blogs
+    .Select(
+        b =&gt;
+            new { Blog = b, PostCount = b.Posts.Count() });
+</code></pre>
+<p>If the result set contains entity types coming out from LINQ composition, EF Core will track them.</p>
+<pre><code class="language-csharp">var blog = context.Blogs
+    .Select(
+        b =&gt;
+            new { Blog = b, Post = b.Posts.OrderBy(p =&gt; p.Rating).LastOrDefault() });
+</code></pre>
+<p>If the result set contains any entity types, then tracking is done.</p>
+<pre><code class="language-csharp">var blog = context.Blogs
+    .Select(
+        b =&gt;
+            new { Id = b.BlogId, b.Url });
+</code></pre>
+<p>Here's how EF Core works.</p>
+<pre><code class="language-csharp">var blogs = context.Blogs
+    .OrderByDescending(blog =&gt; blog.Rating)
+    .Select(
+        blog =&gt; new { Id = blog.BlogId, Url = StandardizeUrl(blog) })
+    .ToList();
+</code></pre>
+<pre><code class="language-csharp">public static string StandardizeUrl(Blog blog)
+{
+    var url = blog.Url.ToLower();
+
+    if (!url.StartsWith(&quot;http://&quot;))
+    {
+        url = string.Concat(&quot;http://&quot;, url);
+    }
+
+    return url;
+}
+</code></pre>
+<p>EF Core doesn't track the keyless entity instances contained in the result. But EF Core tracks all the other instances of entity types with a key according to rules above.</p>
+<h2><a href="#previous-versions" aria-hidden="true" class="anchor" id="previous-versions"></a>Previous versions</h2>
+<p>Before version 3.0, EF Core had some differences in how tracking was done. Notable differences are as follows:</p>
+<ul>
+<li>
+<p>As explained in the Client vs Server Evaluation page, EF Core supported client evaluation in any part of the query before version 3.0. Client evaluation caused materialization of entities, which weren't part of the result. So EF Core analyzed the result to detect what to track. This design had certain differences as follows:</p>
+<ul>
+<li>Client evaluation in the projection, which caused materialization but didn't return the materialized entity instance wasn't tracked. The following example didn't track <code>blog</code> entities.
+var blogs = context.Blogs
+.OrderByDescending(blog =&gt; <code>blog</code>.Rating)
+.Select(
+<code>blog</code> =&gt; new { Id = <code>blog</code>.BlogId, Url = StandardizeUrl(blog) })
+.ToList();</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">var blogs = context.Blogs
+    .OrderByDescending(blog =&gt; blog.Rating)
+    .Select(
+        blog =&gt; new { Id = blog.BlogId, Url = StandardizeUrl(blog) })
+    .ToList();
+</code></pre>
+<ul>
+<li>EF Core didn't track the objects coming out of LINQ composition in certain cases. The following example didn't track <code>Post</code>.
+var <code>blog</code> = context.Blogs
+.Select(
+b =&gt;
+new { <code>Blog</code> = b, <code>Post</code> = b.Posts.OrderBy(p =&gt; p.Rating).LastOrDefault() });</li>
+</ul>
+<pre><code class="language-csharp">var blog = context.Blogs
+    .Select(
+        b =&gt;
+            new { Blog = b, Post = b.Posts.OrderBy(p =&gt; p.Rating).LastOrDefault() });
+</code></pre>
+<ul>
+<li>
+<p>Whenever query results contained keyless entity types, the whole query was made non-tracking. That means that entity types with keys, which are in the result weren't being tracked either.</p>
+</li>
+<li>
+<p>EF Core used to do identity resolution in no-tracking queries. It used weak references to keep track of entities that had already been returned. So if a result set contained the same entity multiples times, you would get the same instance for each occurrence. Though if a previous result with the same identity went out of scope and got garbage collected, EF Core returned a new instance.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/tracking">Tracking vs. No-Tracking Queries</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
