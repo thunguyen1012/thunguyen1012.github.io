@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Split queries | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This page shows an alternative way to load related entities in an EF query.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Split queries</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#performance-issues-with-single-queries" aria-hidden="true" class="anchor" id="performance-issues-with-single-queries"></a>Performance issues with single queries</h2>
+<p>This page shows an alternative way to load related entities in an EF query.</p>
+<h3><a href="#cartesian-explosion" aria-hidden="true" class="anchor" id="cartesian-explosion"></a>Cartesian explosion</h3>
+<p>Let's examine the following LINQ query and its translated SQL equivalent:</p>
+<pre><code class="language-c#">var blogs = ctx.Blogs
+    .Include(b =&gt; b.Posts)
+    .Include(b =&gt; b.Contributors)
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[Id], [b].[Name], [p].[Id], [p].[BlogId], [p].[Title], [c].[Id], [c].[BlogId], [c].[FirstName], [c].[LastName]
+FROM [Blogs] AS [b]
+LEFT JOIN [Posts] AS [p] ON [b].[Id] = [p].[BlogId]
+LEFT JOIN [Contributors] AS [c] ON [b].[Id] = [c].[BlogId]
+ORDER BY [b].[Id], [p].[Id]
+</code></pre>
+<p>In this article, I'm going to show you how to avoid this problem in a relational database application.</p>
+<p>Note that cartesian explosion does not occur when the two JOINs aren't at the same level:</p>
+<pre><code class="language-c#">var blogs = ctx.Blogs
+    .Include(b =&gt; b.Posts)
+    .ThenInclude(p =&gt; p.Comments)
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[Id], [b].[Name], [t].[Id], [t].[BlogId], [t].[Title], [t].[Id0], [t].[Content], [t].[PostId]
+FROM [Blogs] AS [b]
+LEFT JOIN [Posts] AS [p] ON [b].[Id] = [p].[BlogId]
+LEFT JOIN [Comment] AS [c] ON [p].[Id] = [c].[PostId]
+ORDER BY [b].[Id], [t].[Id]
+</code></pre>
+<p>The following query returns a list of all comments made on a post.</p>
+<h3><a href="#data-duplication" aria-hidden="true" class="anchor" id="data-duplication"></a>Data duplication</h3>
+<p>JOINs can create another type of performance issue. Let's examine the following query, which only loads a single collection navigation:</p>
+<pre><code class="language-c#">var blogs = ctx.Blogs
+    .Include(b =&gt; b.Posts)
+    .ToList();
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[Id], [b].[Name], [b].[HugeColumn], [p].[Id], [p].[BlogId], [p].[Title]
+FROM [Blogs] AS [b]
+LEFT JOIN [Posts] AS [p] ON [b].[Id] = [p].[BlogId]
+ORDER BY [b].[Id]
+</code></pre>
+<p>This query returns a list of all the posts on a particular blog.</p>
+<p>If you don't actually need the huge column, it's easy to simply not query for it:</p>
+<pre><code class="language-c#">var blogs = ctx.Blogs
+    .Select(b =&gt; new
+    {
+        b.Id,
+        b.Name,
+        b.Posts
+    })
+    .ToList();
+</code></pre>
+<p>This example shows how to project a blog to an anonymous type.</p>
+<p>In this article, I'm going to show you how to use JOINs in your tables.</p>
+<h2><a href="#split-queries" aria-hidden="true" class="anchor" id="split-queries"></a>Split queries</h2>
+<p>This article describes how to split a query into multiple SQL queries.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .AsSplitQuery()
+        .ToList();
+}
+</code></pre>
+<p>It will produce the following SQL:</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url]
+FROM [Blogs] AS [b]
+ORDER BY [b].[BlogId]
+
+SELECT [p].[PostId], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title], [b].[BlogId]
+FROM [Blogs] AS [b]
+INNER JOIN [Posts] AS [p] ON [b].[BlogId] = [p].[BlogId]
+ORDER BY [b].[BlogId]
+</code></pre>
+<blockquote>
+<p>Warning
+When using split queries with <code>Skip/Take</code>, pay special attention to making your query ordering fully unique; not doing so could cause incorrect data to be returned. For example, if results are ordered only by date, but there can be multiple results with the same date, then each one of the split queries could each get different results from the database. Ordering by both date and ID (or any other unique property or combination of properties) makes the ordering fully unique and avoids this problem. Note that relational databases do not apply any ordering by default, even on the primary key.</p>
+</blockquote>
+<blockquote>
+<p>Note
+One-to-one related entities are always loaded via JOINs in the same query, as it has no performance impact.</p>
+</blockquote>
+<h2><a href="#enabling-split-queries-globally" aria-hidden="true" class="anchor" id="enabling-split-queries-globally"></a>Enabling split queries globally</h2>
+<p>You can also configure split queries as the default for your application's context:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder
+        .UseSqlServer(
+            @&quot;Server=(localdb)\mssqllocaldb;Database=EFQuerying;Trusted_Connection=True;ConnectRetryCount=0&quot;,
+            o =&gt; o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+}
+</code></pre>
+<p>When split queries are configured as the default, it's still possible to configure specific queries to execute as single queries:</p>
+<pre><code class="language-csharp">using (var context = new SplitQueriesBloggingContext())
+{
+    var blogs = context.Blogs
+        .Include(blog =&gt; blog.Posts)
+        .AsSingleQuery()
+        .ToList();
+}
+</code></pre>
+<p>EF Core uses single query mode by default in the absence of any configuration. Since it may cause performance issues, EF Core generates a warning whenever following conditions are met:</p>
+<ul>
+<li>
+<p>EF Core detects that the query loads multiple collections.</p>
+</li>
+<li>
+<p>User hasn't configured query splitting mode globally.</p>
+</li>
+<li>
+<p>User hasn't used <code>AsSingleQuery</code>/AsSplitQuery operator on the query.</p>
+</li>
+</ul>
+<p>To turn off the warning, configure query splitting mode globally or at the query level to an appropriate value.</p>
+<h2><a href="#characteristics-of-split-queries" aria-hidden="true" class="anchor" id="characteristics-of-split-queries"></a>Characteristics of split queries</h2>
+<p>While split query avoids the performance issues associated with JOINs and cartesian explosion, it also has some drawbacks:</p>
+<ul>
+<li>
+<p>While most databases guarantee data consistency for single queries, no such guarantees exist for multiple queries. If the database is updated concurrently when executing your queries, resulting data may not be consistent. You can mitigate it by wrapping the queries in a serializable or snapshot transaction, although doing so may create performance issues of its own. For more information, see your database's documentation.</p>
+</li>
+<li>
+<p>Each query currently implies an additional network roundtrip to your database. Multiple network roundtrips can degrade performance, especially where latency to the database is high (for example, cloud services).</p>
+</li>
+<li>
+<p>While some databases allow consuming the results of multiple queries at the same time (SQL Server with MARS, Sqlite), most allow only a single query to be active at any given point. So all results from earlier queries must be buffered in your application's memory before executing later queries, which leads to increased memory requirements.</p>
+</li>
+<li>
+<p>When including reference navigations as well as collection navigations, each one of the split queries will include joins to the reference navigations. This can degrade performance, particularly if there are many reference navigations. Please upvote #29182 if this is something you'd like to see fixed.</p>
+</li>
+</ul>
+<p>In this article, we'll look at how to load related entities using a single or split query.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/single-split-queries">Single vs. Split Queries</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Complex query operators | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This page describes some of the complex operators supported by SqlServer.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Complex query operators</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This page describes some of the complex operators supported by SqlServer.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<h2><a href="#join" aria-hidden="true" class="anchor" id="join"></a>Join</h2>
+<p>EF Core has two join operators.</p>
+<pre><code class="language-csharp">var query = from photo in context.Set&lt;PersonPhoto&gt;()
+            join person in context.Set&lt;Person&gt;()
+                on photo.PersonPhotoId equals person.PhotoId
+            select new { person, photo };
+</code></pre>
+<pre><code class="language-sql">SELECT [p].[PersonId], [p].[Name], [p].[PhotoId], [p0].[PersonPhotoId], [p0].[Caption], [p0].[Photo]
+FROM [PersonPhoto] AS [p0]
+INNER JOIN [Person] AS [p] ON [p0].[PersonPhotoId] = [p].[PhotoId]
+</code></pre>
+<p>Further, if the key selectors are anonymous types, EF Core generates a join condition to compare equality component-wise.</p>
+<pre><code class="language-csharp">var query = from photo in context.Set&lt;PersonPhoto&gt;()
+            join person in context.Set&lt;Person&gt;()
+                on new { Id = (int?)photo.PersonPhotoId, photo.Caption }
+                equals new { Id = person.PhotoId, Caption = &quot;SN&quot; }
+            select new { person, photo };
+</code></pre>
+<pre><code class="language-sql">SELECT [p].[PersonId], [p].[Name], [p].[PhotoId], [p0].[PersonPhotoId], [p0].[Caption], [p0].[Photo]
+FROM [PersonPhoto] AS [p0]
+INNER JOIN [Person] AS [p] ON ([p0].[PersonPhotoId] = [p].[PhotoId] AND ([p0].[Caption] = N'SN'))
+</code></pre>
+<h2><a href="#groupjoin" aria-hidden="true" class="anchor" id="groupjoin"></a>GroupJoin</h2>
+<p>In this post I'm going to show you how to use the GroupJoin operator in EF Core.</p>
+<pre><code class="language-csharp">var query = from b in context.Set&lt;Blog&gt;()
+            join p in context.Set&lt;Post&gt;()
+                on b.BlogId equals p.BlogId into grouping
+            select new { b, grouping };
+</code></pre>
+<pre><code class="language-csharp">var query = from b in context.Set&lt;Blog&gt;()
+            join p in context.Set&lt;Post&gt;()
+                on b.BlogId equals p.BlogId into grouping
+            select new { b, Posts = grouping.Where(p =&gt; p.Content.Contains(&quot;EF&quot;)).ToList() };
+</code></pre>
+<h2><a href="#selectmany" aria-hidden="true" class="anchor" id="selectmany"></a>SelectMany</h2>
+<p>The SelectMany operator allows you to enumerate over a collection selector for each outer element and generate values from each source of data.</p>
+<h3><a href="#collection-selector-doesnt-reference-outer" aria-hidden="true" class="anchor" id="collection-selector-doesnt-reference-outer"></a>Collection selector doesn't reference outer</h3>
+<p>When the collection selector isn't referencing anything from the outer source, the result is a cartesian product of both data sources. It translates to <code>CROSS JOIN</code> in relational databases.</p>
+<pre><code class="language-csharp">var query = from b in context.Set&lt;Blog&gt;()
+            from p in context.Set&lt;Post&gt;()
+            select new { b, p };
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url], [p].[PostId], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title]
+FROM [Blogs] AS [b]
+CROSS JOIN [Posts] AS [p]
+</code></pre>
+<h3><a href="#collection-selector-references-outer-in-a-where-clause" aria-hidden="true" class="anchor" id="collection-selector-references-outer-in-a-where-clause"></a>Collection selector references outer in a where clause</h3>
+<p>EF Core translates the join condition of a collection selector into the join condition of a database join.</p>
+<pre><code class="language-csharp">var query = from b in context.Set&lt;Blog&gt;()
+            from p in context.Set&lt;Post&gt;().Where(p =&gt; b.BlogId == p.BlogId)
+            select new { b, p };
+
+var query2 = from b in context.Set&lt;Blog&gt;()
+             from p in context.Set&lt;Post&gt;().Where(p =&gt; b.BlogId == p.BlogId).DefaultIfEmpty()
+             select new { b, p };
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url], [p].[PostId], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title]
+FROM [Blogs] AS [b]
+INNER JOIN [Posts] AS [p] ON [b].[BlogId] = [p].[BlogId]
+
+SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url], [p].[PostId], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title]
+FROM [Blogs] AS [b]
+LEFT JOIN [Posts] AS [p] ON [b].[BlogId] = [p].[BlogId]
+</code></pre>
+<h3><a href="#collection-selector-references-outer-in-a-non-where-case" aria-hidden="true" class="anchor" id="collection-selector-references-outer-in-a-non-where-case"></a>Collection selector references outer in a non-where case</h3>
+<p>When we query a database to join an element, we query the collection selector for that element.</p>
+<pre><code class="language-csharp">var query = from b in context.Set&lt;Blog&gt;()
+            from p in context.Set&lt;Post&gt;().Select(p =&gt; b.Url + &quot;=&gt;&quot; + p.Title)
+            select new { b, p };
+
+var query2 = from b in context.Set&lt;Blog&gt;()
+             from p in context.Set&lt;Post&gt;().Select(p =&gt; b.Url + &quot;=&gt;&quot; + p.Title).DefaultIfEmpty()
+             select new { b, p };
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url], ([b].[Url] + N'=&gt;') + [p].[Title] AS [p]
+FROM [Blogs] AS [b]
+CROSS APPLY [Posts] AS [p]
+
+SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url], ([b].[Url] + N'=&gt;') + [p].[Title] AS [p]
+FROM [Blogs] AS [b]
+OUTER APPLY [Posts] AS [p]
+</code></pre>
+<h2><a href="#groupby" aria-hidden="true" class="anchor" id="groupby"></a>GroupBy</h2>
+<p>server GroupBy operators create a result of type <code>IGrouping&lt;TKey, TElement&gt;</code> where <code>TKey</code> and <code>TElement</code> could be any type.</p>
+<pre><code class="language-csharp">var query = from p in context.Set&lt;Post&gt;()
+            group p by p.AuthorId
+            into g
+            select new { g.Key, Count = g.Count() };
+</code></pre>
+<pre><code class="language-sql">SELECT [p].[AuthorId] AS [Key], COUNT(*) AS [Count]
+FROM [Posts] AS [p]
+GROUP BY [p].[AuthorId]
+</code></pre>
+<p>EF Core translates queries where an aggregate operator on a grouping appears in a GroupBy (or other ordering) operator.</p>
+<pre><code class="language-csharp">var query = from p in context.Set&lt;Post&gt;()
+            group p by p.AuthorId
+            into g
+            where g.Count() &gt; 0
+            orderby g.Key
+            select new { g.Key, Count = g.Count() };
+</code></pre>
+<pre><code class="language-sql">SELECT [p].[AuthorId] AS [Key], COUNT(*) AS [Count]
+FROM [Posts] AS [p]
+GROUP BY [p].[AuthorId]
+HAVING COUNT(*) &gt; 0
+ORDER BY [p].[AuthorId]
+</code></pre>
+<p>The aggregate operators EF Core supports are as follows</p>
+<table><thead>
+<tr>
+<th>.NET</th>
+<th>SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Average(x =&gt; x.Property)</td>
+<td>AVG(Property)</td>
+</tr>
+<tr>
+<td>Count()</td>
+<td>COUNT(*)</td>
+</tr>
+<tr>
+<td>LongCount()</td>
+<td>COUNT(*)</td>
+</tr>
+<tr>
+<td>Max(x =&gt; x.Property)</td>
+<td>MAX(Property)</td>
+</tr>
+<tr>
+<td>Min(x =&gt; x.Property)</td>
+<td>MIN(Property)</td>
+</tr>
+<tr>
+<td>Sum(x =&gt; x.Property)</td>
+<td>SUM(Property)</td>
+</tr>
+</tbody></table>
+<p>Additional aggregate operators may be supported. Check your provider docs for more function mappings.</p>
+<p>The following query uses the <code>IGrouping</code> operator to create groupings after the results are returned from the database.</p>
+<pre><code class="language-csharp">var query = context.Books.GroupBy(s =&gt; s.Price);
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[Price], [b].[Id], [b].[AuthorId]
+FROM [Books] AS [b]
+ORDER BY [b].[Price]
+</code></pre>
+<p>In this case, the GroupBy operator doesn't translate directly to a <code>GROUP BY</code> clause in the SQL, but instead, EF Core creates the groupings after the results are returned from the server.</p>
+<h2><a href="#left-join" aria-hidden="true" class="anchor" id="left-join"></a>Left Join</h2>
+<p>EF Core generates a Left Join between two data sources.</p>
+<pre><code class="language-csharp">var query = from b in context.Set&lt;Blog&gt;()
+            join p in context.Set&lt;Post&gt;()
+                on b.BlogId equals p.BlogId into grouping
+            from p in grouping.DefaultIfEmpty()
+            select new { b, p };
+</code></pre>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url], [p].[PostId], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title]
+FROM [Blogs] AS [b]
+LEFT JOIN [Posts] AS [p] ON [b].[BlogId] = [p].[BlogId]
+</code></pre>
+<p>This example shows how to group expressions using the GroupJoin operator.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/complex-query-operators">Complex Query Operators</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>

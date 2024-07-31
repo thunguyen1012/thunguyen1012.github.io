@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Load related data - Lazy loading | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The simplest way to use lazy-loading is by installing the Microsoft.EntityFrameworkCore.Proxies package and enabling it with a call to UseLazyLoadingProxies. For example:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Load related data - Lazy loading</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#lazy-loading-with-proxies" aria-hidden="true" class="anchor" id="lazy-loading-with-proxies"></a>Lazy loading with proxies</h2>
+<p>The simplest way to use lazy-loading is by installing the Microsoft.EntityFrameworkCore.Proxies package and enabling it with a call to <code>UseLazyLoadingProxies</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .UseLazyLoadingProxies()
+        .UseSqlServer(myConnectionString);
+</code></pre>
+<p>Or when using AddDbContext:</p>
+<pre><code class="language-csharp">.AddDbContext&lt;BloggingContext&gt;(
+    b =&gt; b.UseLazyLoadingProxies()
+          .UseSqlServer(myConnectionString));
+</code></pre>
+<p>If you want to enable lazy loading for any navigation property in an Entity Framework Entity Framework (EF) entity, you will need to subclass the class navigation.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public virtual ICollection&lt;Post&gt; Posts { get; set; }
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public virtual Blog Blog { get; set; }
+}
+</code></pre>
+<blockquote>
+<p>Warning
+Lazy loading can cause unneeded extra database roundtrips to occur (the so-called N+1 problem), and care should be taken to avoid this. See the performance section for more details.</p>
+</blockquote>
+<h2><a href="#lazy-loading-without-proxies" aria-hidden="true" class="anchor" id="lazy-loading-without-proxies"></a>Lazy loading without proxies</h2>
+<p>Lazy-loading without proxies work by injecting the <code>ILazyLoader</code> service into an entity, as described in Entity Type Constructors. For example:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    private ICollection&lt;Post&gt; _posts;
+
+    public Blog()
+    {
+    }
+
+    private Blog(ILazyLoader lazyLoader)
+    {
+        LazyLoader = lazyLoader;
+    }
+
+    private ILazyLoader LazyLoader { get; set; }
+
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public ICollection&lt;Post&gt; Posts
+    {
+        get =&gt; LazyLoader.Load(this, ref _posts);
+        set =&gt; _posts = value;
+    }
+}
+
+public class Post
+{
+    private Blog _blog;
+
+    public Post()
+    {
+    }
+
+    private Post(ILazyLoader lazyLoader)
+    {
+        LazyLoader = lazyLoader;
+    }
+
+    private ILazyLoader LazyLoader { get; set; }
+
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public Blog Blog
+    {
+        get =&gt; LazyLoader.Load(this, ref _blog);
+        set =&gt; _blog = value;
+    }
+}
+</code></pre>
+<p>A lazy-load method can be used to load entities into a context.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    private ICollection&lt;Post&gt; _posts;
+
+    public Blog()
+    {
+    }
+
+    private Blog(Action&lt;object, string&gt; lazyLoader)
+    {
+        LazyLoader = lazyLoader;
+    }
+
+    private Action&lt;object, string&gt; LazyLoader { get; set; }
+
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public ICollection&lt;Post&gt; Posts
+    {
+        get =&gt; LazyLoader.Load(this, ref _posts);
+        set =&gt; _posts = value;
+    }
+}
+
+public class Post
+{
+    private Blog _blog;
+
+    public Post()
+    {
+    }
+
+    private Post(Action&lt;object, string&gt; lazyLoader)
+    {
+        LazyLoader = lazyLoader;
+    }
+
+    private Action&lt;object, string&gt; LazyLoader { get; set; }
+
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public Blog Blog
+    {
+        get =&gt; LazyLoader.Load(this, ref _blog);
+        set =&gt; _blog = value;
+    }
+}
+</code></pre>
+<p>The code above uses a <code>Load</code> extension method to make using the delegate a bit cleaner:</p>
+<pre><code class="language-csharp">public static class PocoLoadingExtensions
+{
+    public static TRelated Load&lt;TRelated&gt;(
+        this Action&lt;object, string&gt; loader,
+        object entity,
+        ref TRelated navigationField,
+        [CallerMemberName] string navigationName = null)
+        where TRelated : class
+    {
+        loader?.Invoke(entity, navigationName);
+
+        return navigationField;
+    }
+}
+</code></pre>
+<blockquote>
+<p>Note
+The constructor parameter for the lazy-loading delegate must be called &quot;lazyLoader&quot;. Configuration to use a different name than this is planned for a future release.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/related-data/lazy">Lazy Loading of Related Data</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
+      </div>
+    </div>
+  </body>
+</html>
