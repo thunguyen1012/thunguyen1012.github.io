@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>React Hooks vs. Redux in 2024 | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In this article, we will look at state management in React.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>React Hooks vs. Redux in 2024</h1>
+        <blockquote>
+<p>TL;DR: This blog discusses how React Hooks and Redux differ in managing the state of React apps. React Hooks excels in simpler projects and component-level states, while Redux is better for complex, large-scale applications. Get insights into their core concepts and best practices for combining both approaches.</p>
+</blockquote>
+<h2><a href="#overview-of-react-hooks-and-redux" aria-hidden="true" class="anchor" id="overview-of-react-hooks-and-redux"></a>Overview of React Hooks and Redux</h2>
+<p>In this article, we will look at state management in React.</p>
+<p>Redux and React are two of the most popular libraries for building modern web applications.</p>
+<p>There are many different Hooks in React.</p>
+<p>This article explores the difference between React Hooks and Redux in 2024.</p>
+<h2><a href="#why-this-comparison-is-relevant-in-2024" aria-hidden="true" class="anchor" id="why-this-comparison-is-relevant-in-2024"></a>Why this comparison is relevant in 2024</h2>
+<p>The front-end ecosystem is ever-evolving. As React evolves, developers face choices about managing the state of their applications.</p>
+<p>Redux and React Hooks are two of the most popular programming languages for building web and mobile applications.</p>
+<h2><a href="#understanding-levels-of-state-management" aria-hidden="true" class="anchor" id="understanding-levels-of-state-management"></a>Understanding levels of state management</h2>
+<p>There are three types of state management in any modern web application:</p>
+<ul>
+<li>
+<p>Component-level: State used by only a single component. The <code>useState()</code> hook is typically used for this purpose.</p>
+</li>
+<li>
+<p>Module-level: State shared across multiple components within a module. The <code>useContext()</code> hook is ideal here, as it only binds the state to the module’s context. Combining it with <code>useState()</code> allows updating the state from any module part.</p>
+</li>
+<li>
+<p>Central-level: State shared among components throughout the application. In such cases, Redux is used for centralized state management.</p>
+</li>
+</ul>
+<p>In React, you can use the module-level state, the component-level state, and the component-level state.</p>
+<p>Let’s see an example of different React Hooks and Redux and then compare them.</p>
+<h2><a href="#what-are-react-hooks" aria-hidden="true" class="anchor" id="what-are-react-hooks"></a>What are React Hooks?</h2>
+<p>In this tutorial, we will learn how to create React Hooks.</p>
+<p>There are many built-in hooks available in React, and you can also create different custom hooks. However, we will explore the four hooks that are important for state management.</p>
+<h3><a href="#usestate)" aria-hidden="true" class="anchor" id="usestate)"></a><code>useState()</code></h3>
+<p>We define the useState Hook with a default value, and it returns an array of values, where the first value is the state, and the second value is a function to update the state.</p>
+<p>Variables cannot be used to store the values as they get overridden once the component re-renders. React provides the Hook to persist the state.</p>
+<pre><code class="language-javascript">import React, { useState } from &quot;react&quot;;
+const Counter = () =&gt; {
+  const [count, setCount] = useState(0);
+  return (
+    &lt;main&gt;
+      &lt;p&gt;You clicked {count} times&lt;/p&gt;
+      &lt;button onClick={() =&gt; setCount(count + 1)}&gt;Click me&lt;/button&gt;
+    &lt;/main&gt;
+  );
+}
+</code></pre>
+<p>Once the value of the <code>useState()</code> Hook changes, the component re-renders, and the value is rendered or displayed in the browser.</p>
+<h3><a href="#useeffect)" aria-hidden="true" class="anchor" id="useeffect)"></a><code>useEffect()</code></h3>
+<p>The <code>useEffect()</code> is a lifecycle Hook which is invoked at three different stages in a component:</p>
+<ul>
+<li>
+<p>When the component mounts.</p>
+</li>
+<li>
+<p>When anything in the dependency array changes.</p>
+</li>
+<li>
+<p>When the component is about to unmount.</p>
+</li>
+</ul>
+<p>This Hook is crucial, as it allows tracking the component lifecycle, such as making network calls to fetch data from a server when the component mounts.</p>
+<p>This record then can be stored using the <code>useState()</code> Hook.</p>
+<pre><code class="language-javascript">import React, { useState, useEffect } from &quot;react&quot;;
+
+function FetchData() {
+  const [data, setData] = useState(null);
+
+  useEffect(() =&gt; {
+	fetch(&quot;https://jsonplaceholder.typicode.com/todos&quot;)
+  	// convert the raw data to JSON
+  	.then((response) =&gt; response.json())
+  	// then set the data
+  	.then((data) =&gt; setData(data));
+  }, []); // Empty array means this effect runs once on mount
+
+  return (
+	&lt;div&gt;
+  	{data ? &lt;pre&gt;{JSON.stringify(data, null, 2)}&lt;/pre&gt; : &quot;Loading...&quot;}
+	&lt;/div&gt;
+  );
+}
+</code></pre>
+<h3><a href="#usecontext)" aria-hidden="true" class="anchor" id="usecontext)"></a><code>useContext()</code></h3>
+<p>The <code>useContext()</code> creates a boundary that provides all the components within the context that can access the state directly rather than having to be passed down in the component tree.</p>
+<p>This helps optimize and remove the middleman’s access, who does not even consume the props but rather just passes them down further.</p>
+<pre><code class="language-javascript">//FeatureFlag.js
+import React, { useState } from &quot;react&quot;;
+
+// Split test context
+export const SplitTestFlag = React.createContext({});
+
+// split text provider
+export const SplitTestFlagProvider = ({ children }) =&gt; {
+  const [features, setFeatures] = useState({
+	darkMode: true,
+	chatEnabled: false
+  });
+
+  return (
+	&lt;SplitTestFlag.Provider value={{ features, setFeatures }}&gt;
+  	  {children}
+	&lt;/SplitTestFlag.Provider&gt;
+  );
+};
+
+// Component to conditionally render feature
+const Feature = ({ feature, children, value }) =&gt; {
+  const { features } = React.useContext(SplitTestFlag);
+  return features[feature] === value ? children : null;
+};
+
+// Example
+const Example = () =&gt; {
+  const { features, setFeatures } = React.useContext(SplitTestFlag);
+  return (
+	&lt;&gt;
+  	&lt;Feature feature=&quot;darkMode&quot; value={true}&gt;
+    	  in Dark Mode
+  	&lt;/Feature&gt;
+  	&lt;Feature feature=&quot;chatEnabled&quot; value={true}&gt;
+    	  Chat
+  	&lt;/Feature&gt;
+  	&lt;button onClick={() =&gt; setFeatures({ ...features, chatEnabled: true })}&gt;
+    	  Enable Chat
+  	&lt;/button&gt;
+	&lt;/&gt;
+  );
+};
+
+export default function App() {
+  return (
+	&lt;SplitTestFlagProvider&gt;
+  	  &lt;Example /&gt;
+	&lt;/SplitTestFlagProvider&gt;
+  );
+}
+</code></pre>
+<h3><a href="#usereducer)" aria-hidden="true" class="anchor" id="usereducer)"></a><code>useReducer()</code></h3>
+<p>The useReducer is a library for managing nested objects in React.</p>
+<pre><code class="language-javascript">import React, { useReducer } from &quot;react&quot;;
+const initialState = { count: 0 };
+function reducer(state, action) {
+  switch (action.type) {
+	case &quot;increment_count&quot;:
+  	return { count: state.count + 1 };
+	case &quot;decrement_count&quot;:
+  	return { count: state.count - 1 };
+	default:
+  	throw new Error(&quot;Invalid action&quot;);
+  }
+}
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  return (
+	&lt;div&gt;
+  	&lt;p&gt;Count: {state.count}&lt;/p&gt;
+  	&lt;button onClick={() =&gt; dispatch({ type: &quot;increment_count&quot; })}&gt;+&lt;/button&gt;
+  	&lt;button onClick={() =&gt; dispatch({ type: &quot;decrement_count&quot; })}&gt;-&lt;/button&gt;
+	&lt;/div&gt;
+  );
+}
+
+export default function App() {
+  return &lt;Counter /&gt;;
+}
+</code></pre>
+<h3><a href="#advantages-of-using-hooks" aria-hidden="true" class="anchor" id="advantages-of-using-hooks"></a>Advantages of using Hooks</h3>
+<ul>
+<li>
+<p>Simplicity: Hooks simplifies state management by allowing stateful logic to be reused across components without changing the component hierarchy.</p>
+</li>
+<li>
+<p>Readability: Using Hooks with the functional components makes them more readable and concise than class components.</p>
+</li>
+<li>
+<p>Composition: Hooks promote the composition of stateful logic, making it easier to split and reuse logic across components.</p>
+</li>
+<li>
+<p>Performance: Functional components with Hooks can offer better performance due to reduced overhead.</p>
+</li>
+</ul>
+<h3><a href="#common-use-cases-for-hooks" aria-hidden="true" class="anchor" id="common-use-cases-for-hooks"></a>Common use cases for Hooks</h3>
+<ul>
+<li>
+<p>Managing local component state.</p>
+</li>
+<li>
+<p>Sharing stateful logic between components through custom hooks.</p>
+</li>
+<li>
+<p>Simplifying complex state logic with <code>useReducer()</code>.</p>
+</li>
+<li>
+<p>Handling network calls and side-effects like subscription and unsubscription.</p>
+</li>
+</ul>
+<h2><a href="#understanding-redux" aria-hidden="true" class="anchor" id="understanding-redux"></a>Understanding Redux</h2>
+<h3><a href="#what-is-redux" aria-hidden="true" class="anchor" id="what-is-redux"></a>What is Redux?</h3>
+<p>Redux is a declarative state container for managing JavaScript apps.</p>
+<p>Core Concepts: Actions, Reducers, Store</p>
+<h3><a href="#actions" aria-hidden="true" class="anchor" id="actions"></a>Actions</h3>
+<p>Actions describe what has happened. They are pure JavaScript functions that return a plain JavaScript object containing an identifier and the payload.</p>
+<p>Identifiers help trace what state has to be changed, and the payload is the value that needs to be set to that state, which can be processed further. Refer to the following code example.</p>
+<pre><code class="language-javascript">const increment = () =&gt; ({ type: 'INCREMENT', payload: null });
+const decrement = () =&gt; ({ type: 'DECREMENT', payload: null });
+</code></pre>
+<h3><a href="#reducers" aria-hidden="true" class="anchor" id="reducers"></a>Reducers</h3>
+<p>The BBC's Get Inspired programme looks at the role of the Reducer.</p>
+<p>A reducer is pure JavaScript with a switch case or if-else block to determine the actions and their course. Refer to the following code example.</p>
+<pre><code class="language-javascript">const initialState = { count: 0 };
+function counterReducer(state = initialState, action) {
+  switch (action.type) {
+	case &quot;INCREMENT&quot;:
+  	return { count: state.count + 1 };
+	case &quot;DECREMENT&quot;:
+  	return { count: state.count - 1 };
+	default:
+  	return state;
+  }
+}
+</code></pre>
+<h3><a href="#store" aria-hidden="true" class="anchor" id="store"></a>Store</h3>
+<p>This is the centralized data manager that stores the state. To better manage the state, we can define and manage one or more states in Redux.</p>
+<pre><code class="language-javascript">import { createStore } from 'redux';
+const store = createStore(counterReducer);
+</code></pre>
+<p>Multiple reducers can be combined. Refer to the following code example.</p>
+<pre><code class="language-javascript">import { combineReducers } from '@reduxjs/toolkit'
+import todos from './todos'
+import counter from './counter'
+
+export default combineReducers({
+  todos,
+  counter
+});
+</code></pre>
+<h3><a href="#advantages-of-using-redux" aria-hidden="true" class="anchor" id="advantages-of-using-redux"></a>Advantages of using Redux</h3>
+<ul>
+<li>
+<p>Predictability: Redux’s unidirectional data flow makes state changes predictable and easier to debug.</p>
+</li>
+<li>
+<p>Centralized State Management: Redux maintains a single source of truth, ensuring that the state is consistent across the application.</p>
+</li>
+<li>
+<p>Middleware: Redux supports middleware for handling side effects, such as asynchronous actions with redux-thunk or redux-saga.</p>
+</li>
+<li>
+<p>DevTools: Redux DevTools provide powerful tools for debugging and visualizing state changes.</p>
+</li>
+</ul>
+<h3><a href="#common-use-cases-for-redux" aria-hidden="true" class="anchor" id="common-use-cases-for-redux"></a>Common use cases for Redux</h3>
+<ul>
+<li>
+<p>Managing global state across large applications.</p>
+</li>
+<li>
+<p>Handling complex state logic and side effects.</p>
+</li>
+<li>
+<p>Ensuring predictability and consistency in state management.</p>
+</li>
+<li>
+<p>Debugging state changes with powerful tools like Redux DevTools.</p>
+</li>
+</ul>
+<h2><a href="#react-hooks-vs-redux:-comparative-analysis" aria-hidden="true" class="anchor" id="react-hooks-vs-redux:-comparative-analysis"></a>React Hooks vs. Redux: Comparative Analysis</h2>
+<h3><a href="#state-management" aria-hidden="true" class="anchor" id="state-management"></a>State management</h3>
+<p>React Hooks: Ideal for managing local component state and side effects. If state management complexity is relatively low in smaller apps, Hooks works well. Refer to the following code example.</p>
+<pre><code class="language-javascript">function Counter() {
+  const [count, setCount] = useState(0);
+  return (
+	&lt;div&gt;
+  	&lt;p&gt;You clicked {count} times&lt;/p&gt;
+  	&lt;button onClick={() =&gt; setCount(count + 1)}&gt;Click me&lt;/button&gt;
+	&lt;/div&gt;
+  );
+}
+</code></pre>
+<p>Redux: Best suited for large-scale applications where global state management, predictability, and robust debugging tools are essential. Refer to the following code example.</p>
+<pre><code class="language-javascript">import { createStore } from &quot;redux&quot;;
+const initialState = { count: 0 };
+function counterReducer(state = initialState, action) {
+  switch (action.type) {
+	case &quot;INCREMENT&quot;:
+  	return { count: state.count + 1 };
+	case &quot;DECREMENT&quot;:
+  	return { count: state.count - 1 };
+	default:
+  	return state;
+  }
+}
+const store = createStore(counterReducer);
+</code></pre>
+<h3><a href="#side-effects-handling" aria-hidden="true" class="anchor" id="side-effects-handling"></a>Side effects handling</h3>
+<p>React Hooks: Handles side effects using <code>useEffect()</code>.</p>
+<pre><code class="language-javascript">useEffect(() =&gt; {
+  // Perform side effects here
+  return () =&gt; {
+	// Cleanup if necessary
+  };
+}, [dependencies]);
+</code></pre>
+<p>Redux: Uses middleware like redux-thunk or redux-saga to manage side effects.</p>
+<pre><code class="language-javascript">const thunkMiddleware = (store) =&gt; (next) =&gt; (action) =&gt; {
+  if (typeof action === &quot;function&quot;) {
+	return action(store.dispatch, store.getState);
+  }
+  return next(action);
+};
+</code></pre>
+<h3><a href="#code-complexity-and-boilerplate" aria-hidden="true" class="anchor" id="code-complexity-and-boilerplate"></a>Code complexity and boilerplate</h3>
+<p>In this article, you will learn how to use React Hooks in a large application.</p>
+<pre><code class="language-javascript">const [state, setState] = useState(initialState);
+useEffect(() =&gt; {
+// Side effect logic
+}, []);
+</code></pre>
+<p>Redux: Introduces more boilerplate code due to actions, reducers, and the store setup. This can lead to verbose and complex code, especially in large applications. Refer to the following code example.</p>
+<pre><code class="language-javascript">const increment = () =&gt; ({ type: &quot;INCREMENT&quot; });
+const decrement = () =&gt; ({ type: &quot;DECREMENT&quot; });
+function counterReducer(state = initialState, action) {
+  switch (action.type) {
+	case &quot;INCREMENT&quot;:
+  	return { count: state.count + 1 };
+	case &quot;DECREMENT&quot;:
+  	return { count: state.count - 1 };
+	default:
+  	return state;
+  }
+}
+</code></pre>
+<h3><a href="#scalability" aria-hidden="true" class="anchor" id="scalability"></a>Scalability</h3>
+<p>React Hooks: Managing the state with Hooks in large applications can become challenging without proper organization and conventions. Custom Hooks can help, but they require careful design.</p>
+<pre><code class="language-javascript">function useCustomHook() {
+  const [state, setState] = useState(initialState);
+  // Custom hook logic
+  return [state, setState];
+}
+</code></pre>
+<p>Redux is an open-source distributed state management platform.</p>
+<pre><code class="language-javascript">const rootReducer = combineReducers({
+// Combine multiple reducers
+});
+
+const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
+</code></pre>
+<h3><a href="#performance" aria-hidden="true" class="anchor" id="performance"></a>Performance</h3>
+<p>React Hooks: Functional components with Hooks can offer better performance due to reduced overhead. Hooks also enable fine-grained control over when and how components re-render.</p>
+<pre><code class="language-javascript">const [state, setState] = useState(initialState);
+useEffect(() =&gt; {
+  // Side effect logic
+}, [dependencies]);
+</code></pre>
+<p>Redux and Middleware are two approaches to managing actions, reducers, and the store.</p>
+<pre><code class="language-javascript">const store = createStore(counterReducer, applyMiddleware(thunkMiddleware));
+</code></pre>
+<h2><a href="#when-to-use-react-hooks" aria-hidden="true" class="anchor" id="when-to-use-react-hooks"></a>When to use React Hooks</h2>
+<ul>
+<li>
+<p>Small to Medium-Sized Applications: React Hooks are ideal for applications where the state management requirements are relatively simple and localized.</p>
+</li>
+<li>
+<p>Team Experience with Functional Components: Teams familiar with functional components and the concept of Hooks will find it easier to implement state management using Hooks.</p>
+</li>
+<li>
+<p>Component-Level State: Managing state that is specific to individual components or closely related components.</p>
+</li>
+</ul>
+<pre><code class="language-javascript">function Toggle() {
+  const [isOn, setIsOn] = useState(false);
+  return &lt;button onClick={() =&gt; setIsOn(!isOn)}&gt;{isOn ? &quot;On&quot; : &quot;Off&quot;}&lt;/button&gt;;
+}
+</code></pre>
+<ul>
+<li>Rapid Development: When you need to develop features quickly without the overhead of setting up a complex state management system.</li>
+</ul>
+<h2><a href="#when-to-use-redux" aria-hidden="true" class="anchor" id="when-to-use-redux"></a>When to use Redux</h2>
+<ul>
+<li>
+<p>Large-Scale Applications: Redux is best suited for managing global states across large applications with many moving parts.</p>
+</li>
+<li>
+<p>Team Experience with Redux: Teams familiar with Redux’s concepts and patterns will benefit from its predictability and debugging tools.</p>
+</li>
+<li>
+<p>Complex State Logic: When the application requires complex state logic and side effect management that Redux middleware can handle effectively.</p>
+</li>
+</ul>
+<pre><code class="language-javascript">import { createStore, applyMiddleware } from &quot;redux&quot;;
+import thunk from &quot;redux-thunk&quot;;
+const initialState = { data: null };
+function dataReducer(state = initialState, action) {
+  switch (action.type) {
+	case &quot;SET_DATA&quot;:
+  	return { ...state, data: action.payload };
+	default:
+  	return state;
+  }
+}
+const store = createStore(dataReducer, applyMiddleware(thunk));
+</code></pre>
+<h2><a href="#integration-combining-react-hooks-and-redux" aria-hidden="true" class="anchor" id="integration-combining-react-hooks-and-redux"></a>Integration: Combining React Hooks and Redux</h2>
+<ul>
+<li>
+<p>Use React Hooks to manage local state and component-level side effects.</p>
+</li>
+<li>
+<p>Use Redux to manage global and complex state logic spanning multiple components.</p>
+</li>
+</ul>
+<p>Refer to the following code example.</p>
+<pre><code class="language-javascript">import React, { useState, useEffect } from &quot;react&quot;;
+import { useSelector, useDispatch } from &quot;react-redux&quot;;
+import { fetchData } from &quot;./actions&quot;;
+function DataComponent() {
+  const [localState, setLocalState] = useState(null);
+  const globalState = useSelector((state) =&gt; state.data);
+  const dispatch = useDispatch();
+  useEffect(() =&gt; {
+	dispatch(fetchData());
+  }, [dispatch]);
+  return (
+	&lt;div&gt;
+  	&lt;button onClick={() =&gt; setLocalState(&quot;Updated Local State&quot;)}&gt;
+    	Update Local State
+  	&lt;/button&gt;
+  	&lt;p&gt;Local State: {localState}&lt;/p&gt;
+  	&lt;p&gt;Global State: {JSON.stringify(globalState)}&lt;/p&gt;
+	&lt;/div&gt;
+  );
+}
+</code></pre>
+<h3><a href="#performance-considerations" aria-hidden="true" class="anchor" id="performance-considerations"></a>Performance considerations</h3>
+<ul>
+<li>
+<p>Ensure that state updates are optimized to avoid unnecessary re-renders.</p>
+</li>
+<li>
+<p>Use memoization techniques to optimize component performance.</p>
+</li>
+</ul>
+<h2><a href="#conclusion" aria-hidden="true" class="anchor" id="conclusion"></a>Conclusion</h2>
+<p>Redux and React Hooks will be phased out by the end of the decade.</p>
+<p>Redux and React Hooks are two of the most popular programming languages for building web and mobile applications.</p>
+<p>Ref: <a href="https://www.syncfusion.com/blogs/post/react-hooks-vs-redux">React Hooks vs. Redux in 2024</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/React.html'>React</a><a class='topic-tag' href='/tags/Redux.html'>Redux</a><a class='topic-tag' href='/tags/Hooks.html'>Hooks</a></div>
+      </div>
+    </div>
+  </body>
+</html>
