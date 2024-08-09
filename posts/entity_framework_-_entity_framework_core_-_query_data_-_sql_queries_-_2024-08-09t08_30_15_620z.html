@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - SQL queries | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core allows you to drop down to SQL queries when working with a relational database.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - SQL queries</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Entity Framework Core allows you to drop down to SQL queries when working with a relational database.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<h2><a href="#basic-sql-queries" aria-hidden="true" class="anchor" id="basic-sql-queries"></a>Basic SQL queries</h2>
+<p>You can use <code>FromSql</code> to begin a LINQ query based on a SQL query:</p>
+<pre><code class="language-csharp">var blogs = context.Blogs
+    .FromSql($&quot;SELECT * FROM dbo.Blogs&quot;)
+    .ToList();
+</code></pre>
+<blockquote>
+<p>Note
+<code>FromSql</code> was introduced in EF Core 7.0. When using older versions, use <code>FromSqlInterpolated</code> instead.</p>
+</blockquote>
+<p>SQL queries can be used to execute a stored procedure which returns entity data:</p>
+<pre><code class="language-csharp">var blogs = context.Blogs
+    .FromSql($&quot;EXECUTE dbo.GetMostPopularBlogs&quot;)
+    .ToList();
+</code></pre>
+<blockquote>
+<p>Note
+<code>FromSql</code> can only be used directly on a <code>DbSet</code>. It cannot be composed over an arbitrary LINQ query.</p>
+</blockquote>
+<h2><a href="#passing-parameters" aria-hidden="true" class="anchor" id="passing-parameters"></a>Passing parameters</h2>
+<blockquote>
+<p>Warning
+Pay close attention to parameterization when using SQL queries
+When introducing any user-provided values into a SQL query, care must be taken to avoid SQL injection attacks. SQL injection occurs when a program integrates a user-provided string value into a SQL query, and the user-provided value is crafted to terminate the string and perform another malicious SQL operation. To learn more about SQL injection, see this page.
+The <code>FromSql</code> and <code>FromSqlInterpolated</code> methods are safe against SQL injection, and always integrate parameter data as a separate SQL parameter. However, the <code>FromSqlRaw</code> method can be vulnerable to SQL injection attacks, if improperly used. See below for more details.</p>
+</blockquote>
+<p>The following example passes a single parameter to a stored procedure by including a parameter placeholder in the SQL query string and providing an additional argument:</p>
+<pre><code class="language-csharp">var user = &quot;johndoe&quot;;
+
+var blogs = context.Blogs
+    .FromSql($&quot;EXECUTE dbo.GetMostPopularBlogsForUser {user}&quot;)
+    .ToList();
+</code></pre>
+<p><code>FromSql</code> sends the value of a parameter to the database in the form of a string.</p>
+<p>When executing stored procedures, it can be useful to use named parameters in the SQL query string, especially when the stored procedure has optional parameters:</p>
+<pre><code class="language-csharp">var user = new SqlParameter(&quot;user&quot;, &quot;johndoe&quot;);
+
+var blogs = context.Blogs
+    .FromSql($&quot;EXECUTE dbo.GetMostPopularBlogsForUser @filterByUser={user}&quot;)
+    .ToList();
+</code></pre>
+<p>The <code>DbParameter</code> class allows you to send a parameter to a database.</p>
+<pre><code class="language-csharp">var user = new SqlParameter(&quot;user&quot;, &quot;johndoe&quot;);
+
+var blogs = context.Blogs
+    .FromSql($&quot;EXECUTE dbo.GetMostPopularBlogsForUser {user}&quot;)
+    .ToList();
+</code></pre>
+<blockquote>
+<p>Note
+The parameters you pass must exactly match the stored procedure definition. Pay special attention to the ordering of the parameters, taking care to not miss or misplace any of them - or consider using named parameter notation. Also, make sure the parameter types correspond, and that their facets (size, precision, scale) are set as needed.</p>
+</blockquote>
+<h3><a href="#dynamic-sql-and-parameters" aria-hidden="true" class="anchor" id="dynamic-sql-and-parameters"></a>Dynamic SQL and parameters</h3>
+<p>In this article, I'll show you how to use FromSql to query a database.</p>
+<pre><code class="language-c#">var propertyName = &quot;User&quot;;
+var propertyValue = &quot;johndoe&quot;;
+
+var blogs = context.Blogs
+    .FromSql($&quot;SELECT * FROM [Blogs] WHERE {propertyName} = {propertyValue}&quot;)
+    .ToList();
+</code></pre>
+<p>This code doesn't work, since databases do not allow parameterizing column names (or any other part of the schema).</p>
+<p>In this article, I'm going to show you how to dynamically construct a query that accepts a column name from a user.</p>
+<p>If you want to dynamically construct your SQL, you'll have to use <code>FromSqlRaw</code>, which allows interpolating variable data directly into the SQL string: If you want to dynamically construct your SQL, you'll have to use <code>FromSqlRaw</code>, which allows interpolating variable data directly into</p>
+<pre><code class="language-csharp">var columnName = &quot;Url&quot;;
+var columnValue = new SqlParameter(&quot;columnValue&quot;, &quot;http://SomeURL&quot;);
+
+var blogs = context.Blogs
+    .FromSqlRaw($&quot;SELECT * FROM [Blogs] WHERE {columnName} = @columnValue&quot;, columnValue)
+    .ToList();
+</code></pre>
+<p>This code shows how to insert a column name directly into a SQL query, using C# string interpolation.</p>
+<p>On the other hand, the column value is sent via a <code>DbParameter</code>, and is therefore safe in the face of SQL injection.</p>
+<blockquote>
+<p>Warning
+Be very careful when using FromSqlRaw, and always make sure values are either from a safe origin, or are properly sanitized. SQL injection attacks can have disasterous consequences for your application.</p>
+</blockquote>
+<h2><a href="#composing-with-linq" aria-hidden="true" class="anchor" id="composing-with-linq"></a>Composing with LINQ</h2>
+<p>You can use EF Core to write SQL queries to your database.</p>
+<pre><code class="language-csharp">var searchTerm = &quot;Lorem ipsum&quot;;
+
+var blogs = context.Blogs
+    .FromSql($&quot;SELECT * FROM dbo.SearchBlogs({searchTerm})&quot;)
+    .Where(b =&gt; b.Rating &gt; 3)
+    .OrderByDescending(b =&gt; b.Rating)
+    .ToList();
+</code></pre>
+<p>The above query generates the following SQL:</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url]
+FROM (
+    SELECT * FROM dbo.SearchBlogs(@p0)
+) AS [b]
+WHERE [b].[Rating] &gt; 3
+ORDER BY [b].[Rating] DESC
+</code></pre>
+<h3><a href="#including-related-data" aria-hidden="true" class="anchor" id="including-related-data"></a>Including related data</h3>
+<p>The <code>Include</code> operator can be used to load related data, just like with any other LINQ query:</p>
+<pre><code class="language-csharp">var searchTerm = &quot;Lorem ipsum&quot;;
+
+var blogs = context.Blogs
+    .FromSql($&quot;SELECT * FROM dbo.SearchBlogs({searchTerm})&quot;)
+    .Include(b =&gt; b.Posts)
+    .ToList();
+</code></pre>
+<p>EF Core's composable SQL query feature allows you to query the database using any SQL query language.</p>
+<ul>
+<li>
+<p>A trailing semicolon</p>
+</li>
+<li>
+<p>On SQL Server, a trailing query-level hint (for example, <code>OPTION (HASH JOIN)</code>)</p>
+</li>
+<li>
+<p>On SQL Server, an <code>ORDER BY</code> clause that isn't used with <code>OFFSET 0</code> OR <code>TOP 100 PERCENT</code> in the <code>SELECT</code> clause</p>
+</li>
+</ul>
+<p>EF Core tries to compose over a stored procedure call.</p>
+<h2><a href="#change-tracking" aria-hidden="true" class="anchor" id="change-tracking"></a>Change Tracking</h2>
+<p>The <code>FromSql</code> or <code>FromSqlRaw</code> query syntax is very similar to the <code>FromSql</code> or <code>FromSqlRaw</code> query syntax in EF Core.</p>
+<p>The following example uses a SQL query that selects from a Table-Valued Function (TVF), then disables change tracking with the call to <code>AsNoTracking</code>:</p>
+<pre><code class="language-csharp">var searchTerm = &quot;Lorem ipsum&quot;;
+
+var blogs = context.Blogs
+    .FromSql($&quot;SELECT * FROM dbo.SearchBlogs({searchTerm})&quot;)
+    .AsNoTracking()
+    .ToList();
+</code></pre>
+<h2><a href="#querying-scalar-non-entity)-types" aria-hidden="true" class="anchor" id="querying-scalar-non-entity)-types"></a>Querying scalar (non-entity) types</h2>
+<blockquote>
+<p>Note
+This feature was introduced in EF Core 7.0.</p>
+</blockquote>
+<p>Sql is an extension of the <code>FromSql</code> query language.</p>
+<pre><code class="language-csharp">var ids = context.Database
+    .SqlQuery&lt;int&gt;($&quot;SELECT [BlogId] FROM [Blogs]&quot;)
+    .ToList();
+</code></pre>
+<p>In this article, I'm going to show you how to add operators to your SQL query.</p>
+<pre><code class="language-csharp">var overAverageIds = context.Database
+    .SqlQuery&lt;int&gt;($&quot;SELECT [BlogId] AS [Value] FROM [Blogs]&quot;)
+    .Where(id =&gt; id &gt; context.Blogs.Average(b =&gt; b.BlogId))
+    .ToList();
+</code></pre>
+<p><code>FromSql</code> can be used with any type supported by your database provider.</p>
+<p><code>SqlQueryRaw</code> allows for dynamic construction of SQL queries, just like <code>FromSqlRaw</code> does for entity types.</p>
+<h2><a href="#executing-non-querying-sql" aria-hidden="true" class="anchor" id="executing-non-querying-sql"></a>Executing non-querying SQL</h2>
+<p>In this article we are going to look at how to execute SQL which does not return any data.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var rowsModified = context.Database.ExecuteSql($&quot;UPDATE [Blogs] SET [Url] = NULL&quot;);
+}
+</code></pre>
+<p><code>ExecuteSqlRaw</code> is a subclass of <code>FromSqlRaw</code>.</p>
+<blockquote>
+<p>Note
+Prior to EF Core 7.0, it was sometimes necessary to use the <code>ExecuteSql</code> APIs to perform a &quot;bulk update&quot; on the database, as above; this is considerably more efficient than querying for all matching rows and then using <code>SaveChanges</code> to modify them. EF Core 7.0 introduced <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>, which made it possible to express efficient bulk update operations via LINQ. It's recommended to use those APIs whenever possible, instead of <code>ExecuteSql</code>.</p>
+</blockquote>
+<h2><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h2>
+<p>There are a few limitations to be aware of when returning entity types from SQL queries:</p>
+<ul>
+<li>
+<p>The SQL query must return data for all properties of the entity type.</p>
+</li>
+<li>
+<p>The column names in the result set must match the column names that properties are mapped to. Note that this behavior is different from EF6; EF6 ignored property-to-column mapping for SQL queries, and result set column names had to match those property names.</p>
+</li>
+<li>
+<p>The SQL query can't contain related data. However, in many cases you can compose on top of the query using the <code>Include</code> operator to return related data (see Including related data).</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/sql-queries">SQL Queries</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Pagination | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Pagination refers to retrieving results in pages, rather than all at once; this is typically done for large resultsets, where a user interface is shown that allows the user to navigate to the next or previous page of the results.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Pagination</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Pagination refers to retrieving results in pages, rather than all at once; this is typically done for large resultsets, where a user interface is shown that allows the user to navigate to the next or previous page of the results.</p>
+<blockquote>
+<p>Warning
+Regardless of the pagination method used, always make sure that your ordering is fully unique. For example, if results are ordered only by date, but there can be multiple results with the same date, then results could be skipped when paginating as they're ordered differently across two paginating queries. Ordering by both date and ID (or any other unique property or combination of properties) makes the ordering fully unique and avoids this problem. Note that relational databases do not apply any ordering by default, even on the primary key.</p>
+</blockquote>
+<h2><a href="#offset-pagination" aria-hidden="true" class="anchor" id="offset-pagination"></a>Offset pagination</h2>
+<p>A common way to implement pagination with databases is to use the <code>Skip</code> and <code>Take</code> (OFFSET and <code>LIMIT</code> in SQL). Given a page size of 10 results, the third page can be fetched with EF Core as follows:</p>
+<pre><code class="language-csharp">var position = 20;
+var nextPage = context.Posts
+    .OrderBy(b =&gt; b.PostId)
+    .Skip(position)
+    .Take(10)
+    .ToList();
+</code></pre>
+<p>Unfortunately, while this technique is very intuitive, it also has some severe shortcomings:</p>
+<ul>
+<li>
+<p>The database must still process the first 20 entries, even if they aren't returned to the application; this creates possibly significant computation load that increases with the number of rows being skipped.</p>
+</li>
+<li>
+<p>If any updates occur concurrently, your pagination may end up skipping certain entries or showing them twice. For example, if an entry is removed as the user is moving from page 2 to 3, the whole resultset &quot;shifts up&quot;, and one entry would be skipped.</p>
+</li>
+</ul>
+<h2><a href="#keyset-pagination" aria-hidden="true" class="anchor" id="keyset-pagination"></a>Keyset pagination</h2>
+<p>In this article I'm going to show you how to use the <code>WHERE</code> clause to skip rows in a query.</p>
+<pre><code class="language-csharp">var lastId = 55;
+var nextPage = context.Posts
+    .OrderBy(b =&gt; b.PostId)
+    .Where(b =&gt; b.PostId &gt; lastId)
+    .Take(10)
+    .ToList();
+</code></pre>
+<p>Assuming an index is defined on <code>PostId</code>, this query is very efficient, and also isn't sensitive to any concurrent changes happening in lower Id values.</p>
+<p>Keyset and Random Access are two implementations of the same class.</p>
+<h3><a href="#multiple-pagination-keys" aria-hidden="true" class="anchor" id="multiple-pagination-keys"></a>Multiple pagination keys</h3>
+<p>When using keyset pagination, it's frequently necessary to order by more than one property. For example, the following query paginates by date and ID:</p>
+<pre><code class="language-csharp">var lastDate = new DateTime(2020, 1, 1);
+var lastId = 55;
+var nextPage = context.Posts
+    .OrderBy(b =&gt; b.Date)
+    .ThenBy(b =&gt; b.PostId)
+    .Where(b =&gt; b.Date &gt; lastDate || (b.Date == lastDate &amp;&amp; b.PostId &gt; lastId))
+    .Take(10)
+    .ToList();
+</code></pre>
+<p>This ensures that the next page picks off exactly where the previous one ended. As more ordering keys are added, additional clauses can be added.</p>
+<blockquote>
+<p>Note
+Most SQL databases support a simpler and more efficient version of the above, using row values: <code>WHERE (Date, Id) &gt; (@lastDate, @lastId)</code>. EF Core does not currently support expressing this in LINQ queries, this is tracked by #26822.</p>
+</blockquote>
+<h2><a href="#indexes" aria-hidden="true" class="anchor" id="indexes"></a>Indexes</h2>
+<p>An index is a set of parameters that can be used to define a query.</p>
+<p>For more information, see the documentation page on indexes.</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>To learn more about the shortcomings of offset-based pagination and about keyset pagination, see this post.</p>
+</li>
+<li>
+<p>.NET Data Community Standup session where we discuss pagination and demo all the above concepts.</p>
+</li>
+<li>
+<p>A technical deep dive presentation comparing offset and keyset pagination. While the content deals with the PostgreSQL database, the general information is valid for other relational databases as well.</p>
+</li>
+<li>
+<p>For extensions on top of EF Core which simplify keyset pagination, see MR.EntityFrameworkCore.KeysetPagination and MR.AspNetCore.Pagination.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/pagination">Pagination</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

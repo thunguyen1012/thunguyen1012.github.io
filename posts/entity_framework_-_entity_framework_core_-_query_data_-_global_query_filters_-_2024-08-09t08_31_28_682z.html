@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Global query filters | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core is a set of global query filters and query predicates.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Global query filters</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core is a set of global query filters and query predicates.</p>
+<ul>
+<li>
+<p>Soft delete - An Entity Type defines an <code>IsDeleted</code> property.</p>
+</li>
+<li>
+<p>Multi-tenancy - An Entity Type defines a <code>TenantId</code> property.</p>
+</li>
+</ul>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>The following example shows how to use Global Query Filters to implement multi-tenancy and soft-delete query behaviors in a simple blogging model.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<blockquote>
+<p>Note
+Multi-tenancy is used here as a simple example. There is also an article with comprehensive guidance for multi-tenancy in EF Core applications.</p>
+</blockquote>
+<p>First, define the entities:</p>
+<pre><code class="language-csharp">public class Blog
+{
+#pragma warning disable IDE0051, CS0169 // Remove unused private members
+    private string _tenantId;
+#pragma warning restore IDE0051, CS0169 // Remove unused private members
+
+    public int BlogId { get; set; }
+    public string Name { get; set; }
+    public string Url { get; set; }
+
+    public List&lt;Post&gt; Posts { get; set; }
+}
+
+public class Post
+{
+    public int PostId { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+    public bool IsDeleted { get; set; }
+
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>In this example, we are going to define two properties on the <code>Blog</code> entity type and one property on the <code>Post</code> entity type.</p>
+<p>Next, configure the query filters in <code>OnModelCreating</code> using the <code>HasQueryFilter</code> API.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().HasQueryFilter(b =&gt; EF.Property&lt;string&gt;(b, &quot;_tenantId&quot;) == _tenantId);
+modelBuilder.Entity&lt;Post&gt;().HasQueryFilter(p =&gt; !p.IsDeleted);
+</code></pre>
+<p>The predicate expressions passed to the <code>HasQueryFilter</code> calls will now automatically be applied to any LINQ queries for those types.</p>
+<blockquote>
+<p>Tip
+Note the use of a DbContext instance level field: <code>_tenantId</code> used to set the current tenant. Model-level filters will use the value from the correct context instance (that is, the instance that is executing the query).</p>
+</blockquote>
+<blockquote>
+<p>Note
+It is currently not possible to define multiple query filters on the same entity - only the last one will be applied. However, you can define a single filter with multiple conditions using the logical <code>AND</code> operator (&amp;&amp; in C#).</p>
+</blockquote>
+<h2><a href="#use-of-navigations" aria-hidden="true" class="anchor" id="use-of-navigations"></a>Use of navigations</h2>
+<p>You can use navigations in defining global query filters.</p>
+<p>To illustrate this configure query filters in <code>OnModelCreating</code> in the following way:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().HasMany(b =&gt; b.Posts).WithOne(p =&gt; p.Blog);
+modelBuilder.Entity&lt;Blog&gt;().HasQueryFilter(b =&gt; b.Posts.Count &gt; 0);
+modelBuilder.Entity&lt;Post&gt;().HasQueryFilter(p =&gt; p.Title.Contains(&quot;fish&quot;));
+</code></pre>
+<p>Next, query for all <code>Blog</code> entities:</p>
+<pre><code class="language-csharp">var filteredBlogs = db.Blogs.ToList();
+</code></pre>
+<p>This query produces the following SQL, which applies query filters defined for both <code>Blog</code> and <code>Post</code> entities:</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[Name], [b].[Url]
+FROM [Blogs] AS [b]
+WHERE (
+    SELECT COUNT(*)
+    FROM [Posts] AS [p]
+    WHERE ([p].[Title] LIKE N'%fish%') AND ([b].[BlogId] = [p].[BlogId])) &gt; 0
+</code></pre>
+<blockquote>
+<p>Note
+Currently EF Core does not detect cycles in global query filter definitions, so you should be careful when defining them. If specified incorrectly, cycles could lead to infinite loops during query translation.</p>
+</blockquote>
+<h2><a href="#accessing-entity-with-query-filter-using-required-navigation" aria-hidden="true" class="anchor" id="accessing-entity-with-query-filter-using-required-navigation"></a>Accessing entity with query filter using required navigation</h2>
+<blockquote>
+<p>Caution
+Using required navigation to access entity which has global query filter defined may lead to unexpected results.</p>
+</blockquote>
+<p>You may get fewer elements than expected in result if the related entity is filtered out by the query filter.</p>
+<p>To illustrate the problem, we can use the <code>Blog</code> and <code>Post</code> entities specified above and the following <code>OnModelCreating</code> method:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().HasMany(b =&gt; b.Posts).WithOne(p =&gt; p.Blog).IsRequired();
+modelBuilder.Entity&lt;Blog&gt;().HasQueryFilter(b =&gt; b.Url.Contains(&quot;fish&quot;));
+</code></pre>
+<p>The model can be seeded with the following data:</p>
+<pre><code class="language-csharp">db.Blogs.Add(
+    new Blog
+    {
+        Url = &quot;http://sample.com/blogs/fish&quot;,
+        Posts = new List&lt;Post&gt;
+        {
+            new Post { Title = &quot;Fish care 101&quot; },
+            new Post { Title = &quot;Caring for tropical fish&quot; },
+            new Post { Title = &quot;Types of ornamental fish&quot; }
+        }
+    });
+
+db.Blogs.Add(
+    new Blog
+    {
+        Url = &quot;http://sample.com/blogs/cats&quot;,
+        Posts = new List&lt;Post&gt;
+        {
+            new Post { Title = &quot;Cat care 101&quot; },
+            new Post { Title = &quot;Caring for tropical cats&quot; },
+            new Post { Title = &quot;Types of ornamental cats&quot; }
+        }
+    });
+</code></pre>
+<p>The problem can be observed when executing two queries:</p>
+<pre><code class="language-csharp">var allPosts = db.Posts.ToList();
+var allPostsWithBlogsIncluded = db.Posts.Include(p =&gt; p.Blog).ToList();
+</code></pre>
+<p>In this article, I will show you how to query a single <code>Blog</code> entity using EF Core.</p>
+<pre><code class="language-sql">SELECT [p].[PostId], [p].[BlogId], [p].[Content], [p].[IsDeleted], [p].[Title], [t].[BlogId], [t].[Name], [t].[Url]
+FROM [Posts] AS [p]
+INNER JOIN (
+    SELECT [b].[BlogId], [b].[Name], [b].[Url]
+    FROM [Blogs] AS [b]
+    WHERE [b].[Url] LIKE N'%fish%'
+) AS [t] ON [p].[BlogId] = [t].[BlogId]
+</code></pre>
+<p>Use of the <code>INNER JOIN</code> filters out all Posts whose related Blogs have been removed by a global query filter.</p>
+<p>It can be addressed by using optional navigation instead of required.
+This way the first query stays the same as before, however the second query will now generate <code>LEFT JOIN</code> and return 6 results.</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().HasMany(b =&gt; b.Posts).WithOne(p =&gt; p.Blog).IsRequired(false);
+modelBuilder.Entity&lt;Blog&gt;().HasQueryFilter(b =&gt; b.Url.Contains(&quot;fish&quot;));
+</code></pre>
+<p>Is it possible to query both <code>Blog</code> and <code>Post</code> entities at the same time?</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;().HasMany(b =&gt; b.Posts).WithOne(p =&gt; p.Blog).IsRequired();
+modelBuilder.Entity&lt;Blog&gt;().HasQueryFilter(b =&gt; b.Url.Contains(&quot;fish&quot;));
+modelBuilder.Entity&lt;Post&gt;().HasQueryFilter(p =&gt; p.Blog.Url.Contains(&quot;fish&quot;));
+</code></pre>
+<h2><a href="#disabling-filters" aria-hidden="true" class="anchor" id="disabling-filters"></a>Disabling Filters</h2>
+<p>Filters may be disabled for individual LINQ queries by using the IgnoreQueryFilters operator.</p>
+<pre><code class="language-csharp">blogs = db.Blogs
+    .Include(b =&gt; b.Posts)
+    .IgnoreQueryFilters()
+    .ToList();
+</code></pre>
+<h2><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h2>
+<p>Global query filters have the following limitations:</p>
+<ul>
+<li>Filters can only be defined for the root Entity Type of an inheritance hierarchy.</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/filters">Global Query Filters</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

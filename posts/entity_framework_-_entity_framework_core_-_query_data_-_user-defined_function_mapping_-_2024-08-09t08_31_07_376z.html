@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - User-defined function mapping | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article describes how to use EF Core in a SQL query.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - User-defined function mapping</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article describes how to use EF Core in a SQL query.</p>
+<h2><a href="#mapping-a-method-to-a-sql-function" aria-hidden="true" class="anchor" id="mapping-a-method-to-a-sql-function"></a>Mapping a method to a SQL function</h2>
+<p>To illustrate how user-defined function mapping works, let's define the following entities:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+    public int? Rating { get; set; }
+
+    public List&lt;Post&gt; Posts { get; set; }
+}
+
+public class Post
+{
+    public int PostId { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+    public int Rating { get; set; }
+    public int BlogId { get; set; }
+
+    public Blog Blog { get; set; }
+    public List&lt;Comment&gt; Comments { get; set; }
+}
+
+public class Comment
+{
+    public int CommentId { get; set; }
+    public string Text { get; set; }
+    public int Likes { get; set; }
+    public int PostId { get; set; }
+
+    public Post Post { get; set; }
+}
+</code></pre>
+<p>And the following model configuration:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;()
+    .HasMany(b =&gt; b.Posts)
+    .WithOne(p =&gt; p.Blog);
+
+modelBuilder.Entity&lt;Post&gt;()
+    .HasMany(p =&gt; p.Comments)
+    .WithOne(c =&gt; c.Post);
+</code></pre>
+<p>Blog can have many posts and each post can have many comments.</p>
+<p>Next, create the user-defined function <code>CommentedPostCountForBlog</code>, which returns the count of posts with at least one comment for a given blog, based on the blog <code>Id</code>:</p>
+<pre><code class="language-sql">CREATE FUNCTION dbo.CommentedPostCountForBlog(@id int)
+RETURNS int
+AS
+BEGIN
+    RETURN (SELECT COUNT(*)
+        FROM [Posts] AS [p]
+        WHERE ([p].[BlogId] = @id) AND ((
+            SELECT COUNT(*)
+            FROM [Comments] AS [c]
+            WHERE [p].[PostId] = [c].[PostId]) &gt; 0));
+END
+</code></pre>
+<p>To use this function in EF Core, we define the following CLR method, which we map to the user-defined function:</p>
+<pre><code class="language-csharp">public int ActivePostCountForBlog(int blogId)
+    =&gt; throw new NotSupportedException();
+</code></pre>
+<p>The CLR method will be invoked client-side, unless EF Core can't translate its arguments.</p>
+<blockquote>
+<p>Note
+In the example, the method is defined on <code>DbContext</code>, but it can also be defined as a static method inside other classes.</p>
+</blockquote>
+<p>This function definition can now be associated with user-defined function in the model configuration:</p>
+<pre><code class="language-csharp">modelBuilder.HasDbFunction(typeof(BloggingContext).GetMethod(nameof(ActivePostCountForBlog), new[] { typeof(int) }))
+    .HasName(&quot;CommentedPostCountForBlog&quot;);
+</code></pre>
+<p>This example shows how to map CLR function to a user-defined function with the same name.</p>
+<p>Now, executing the following query:</p>
+<pre><code class="language-csharp">var query1 = from b in context.Blogs
+             where context.ActivePostCountForBlog(b.BlogId) &gt; 1
+             select b;
+</code></pre>
+<p>Will produce this SQL:</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[Rating], [b].[Url]
+FROM [Blogs] AS [b]
+WHERE [dbo].[CommentedPostCountForBlog]([b].[BlogId]) &gt; 1
+</code></pre>
+<h2><a href="#mapping-a-method-to-a-custom-sql" aria-hidden="true" class="anchor" id="mapping-a-method-to-a-custom-sql"></a>Mapping a method to a custom SQL</h2>
+<p>EF Core also allows for user-defined functions that get converted to a specific SQL. The SQL expression is provided using <code>HasTranslation</code> method during user-defined function configuration.</p>
+<p>In the example below, we'll create a function that computes percentage difference between two integers.</p>
+<p>The CLR method is as follows:</p>
+<pre><code class="language-csharp">public double PercentageDifference(double first, int second)
+    =&gt; throw new NotSupportedException();
+</code></pre>
+<p>The function definition is as follows:</p>
+<pre><code class="language-csharp">// 100 * ABS(first - second) / ((first + second) / 2)
+modelBuilder.HasDbFunction(
+        typeof(BloggingContext).GetMethod(nameof(PercentageDifference), new[] { typeof(double), typeof(int) }))
+    .HasTranslation(
+        args =&gt;
+            new SqlBinaryExpression(
+                ExpressionType.Multiply,
+                new SqlConstantExpression(
+                    Expression.Constant(100),
+                    new IntTypeMapping(&quot;int&quot;, DbType.Int32)),
+                new SqlBinaryExpression(
+                    ExpressionType.Divide,
+                    new SqlFunctionExpression(
+                        &quot;ABS&quot;,
+                        new SqlExpression[]
+                        {
+                            new SqlBinaryExpression(
+                                ExpressionType.Subtract,
+                                args.First(),
+                                args.Skip(1).First(),
+                                args.First().Type,
+                                args.First().TypeMapping)
+                        },
+                        nullable: true,
+                        argumentsPropagateNullability: new[] { true, true },
+                        type: args.First().Type,
+                        typeMapping: args.First().TypeMapping),
+                    new SqlBinaryExpression(
+                        ExpressionType.Divide,
+                        new SqlBinaryExpression(
+                            ExpressionType.Add,
+                            args.First(),
+                            args.Skip(1).First(),
+                            args.First().Type,
+                            args.First().TypeMapping),
+                        new SqlConstantExpression(
+                            Expression.Constant(2),
+                            new IntTypeMapping(&quot;int&quot;, DbType.Int32)),
+                        args.First().Type,
+                        args.First().TypeMapping),
+                    args.First().Type,
+                    args.First().TypeMapping),
+                args.First().Type,
+                args.First().TypeMapping));
+</code></pre>
+<p>In this article, we will define a function that can be used in a query.</p>
+<pre><code class="language-csharp">var query2 = from p in context.Posts
+             select context.PercentageDifference(p.BlogId, 3);
+</code></pre>
+<p>Produces the following SQL:</p>
+<pre><code class="language-sql">SELECT 100 * (ABS(CAST([p].[BlogId] AS float) - 3) / ((CAST([p].[BlogId] AS float) + 3) / 2))
+FROM [Posts] AS [p]
+</code></pre>
+<h2><a href="#configuring-nullability-of-user-defined-function-based-on-its-arguments" aria-hidden="true" class="anchor" id="configuring-nullability-of-user-defined-function-based-on-its-arguments"></a>Configuring nullability of user-defined function based on its arguments</h2>
+<p>EFCore provides a way to increase the performance of functions that only return <code>null</code> when one or more of their arguments are <code>null</code>.</p>
+<p>To illustrate this, define user function <code>ConcatStrings</code>:</p>
+<pre><code class="language-sql">CREATE FUNCTION [dbo].[ConcatStrings] (@prm1 nvarchar(max), @prm2 nvarchar(max))
+RETURNS nvarchar(max)
+AS
+BEGIN
+    RETURN @prm1 + @prm2;
+END
+</code></pre>
+<p>and two CLR methods that map to it:</p>
+<pre><code class="language-csharp">public string ConcatStrings(string prm1, string prm2)
+    =&gt; throw new InvalidOperationException();
+
+public string ConcatStringsOptimized(string prm1, string prm2)
+    =&gt; throw new InvalidOperationException();
+</code></pre>
+<p>The model configuration (inside <code>OnModelCreating</code> method) is as follows:</p>
+<pre><code class="language-csharp">modelBuilder
+    .HasDbFunction(typeof(BloggingContext).GetMethod(nameof(ConcatStrings), new[] { typeof(string), typeof(string) }))
+    .HasName(&quot;ConcatStrings&quot;);
+
+modelBuilder.HasDbFunction(
+    typeof(BloggingContext).GetMethod(nameof(ConcatStringsOptimized), new[] { typeof(string), typeof(string) }),
+    b =&gt;
+    {
+        b.HasName(&quot;ConcatStrings&quot;);
+        b.HasParameter(&quot;prm1&quot;).PropagatesNullability();
+        b.HasParameter(&quot;prm2&quot;).PropagatesNullability();
+    });
+</code></pre>
+<p>This package contains two functions that can be used to specify the state of a <code>null</code> parameter.</p>
+<p>When issuing the following queries:</p>
+<pre><code class="language-csharp">var query3 = context.Blogs.Where(e =&gt; context.ConcatStrings(e.Url, e.Rating.ToString()) != &quot;https://mytravelblog.com/4&quot;);
+var query4 = context.Blogs.Where(
+    e =&gt; context.ConcatStringsOptimized(e.Url, e.Rating.ToString()) != &quot;https://mytravelblog.com/4&quot;);
+</code></pre>
+<p>We get this SQL:</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[Rating], [b].[Url]
+FROM [Blogs] AS [b]
+WHERE ([dbo].[ConcatStrings]([b].[Url], CONVERT(VARCHAR(11), [b].[Rating])) &lt;&gt; N'Lorem ipsum...') OR [dbo].[ConcatStrings]([b].[Url], CONVERT(VARCHAR(11), [b].[Rating])) IS NULL
+
+SELECT [b].[BlogId], [b].[Rating], [b].[Url]
+FROM [Blogs] AS [b]
+WHERE ([dbo].[ConcatStrings]([b].[Url], CONVERT(VARCHAR(11), [b].[Rating])) &lt;&gt; N'Lorem ipsum...') OR ([b].[Url] IS NULL OR [b].[Rating] IS NULL)
+</code></pre>
+<p>The second query doesn't need to re-evaluate the function itself to test its nullability.</p>
+<blockquote>
+<p>Note
+This optimization should only be used if the function can only return <code>null</code> when it's parameters are <code>null</code>.</p>
+</blockquote>
+<h2><a href="#mapping-a-queryable-function-to-a-table-valued-function" aria-hidden="true" class="anchor" id="mapping-a-queryable-function-to-a-table-valued-function"></a>Mapping a queryable function to a table-valued function</h2>
+<p>The Entity Framework Core (EF Core) supports mapping to a table-valued CLR function using a user-defined CLR returning an Iable of the entity types.</p>
+<p>As an example, we'll use a table-valued function that returns all posts having at least one comment that meets a given &quot;Like&quot; threshold:</p>
+<pre><code class="language-sql">CREATE FUNCTION dbo.PostsWithPopularComments(@likeThreshold int)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT [p].[PostId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title]
+    FROM [Posts] AS [p]
+    WHERE (
+        SELECT COUNT(*)
+        FROM [Comments] AS [c]
+        WHERE ([p].[PostId] = [c].[PostId]) AND ([c].[Likes] &gt;= @likeThreshold)) &gt; 0
+)
+</code></pre>
+<p>The CLR method signature is as follows:</p>
+<pre><code class="language-csharp">public IQueryable&lt;Post&gt; PostsWithPopularComments(int likeThreshold)
+    =&gt; FromExpression(() =&gt; PostsWithPopularComments(likeThreshold));
+</code></pre>
+<blockquote>
+<p>Tip
+The <code>FromExpression</code> call in the CLR function body allows for the function to be used instead of a regular DbSet.</p>
+</blockquote>
+<p>And below is the mapping:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Post&gt;().ToTable(&quot;Posts&quot;);
+modelBuilder.HasDbFunction(typeof(BloggingContext).GetMethod(nameof(PostsWithPopularComments), new[] { typeof(int) }));
+</code></pre>
+<blockquote>
+<p>Note
+A queryable function must be mapped to a table-valued function and can't make use of <code>HasTranslation</code>.</p>
+</blockquote>
+<p>When the function is mapped, the following query:</p>
+<pre><code class="language-csharp">var likeThreshold = 3;
+var query5 = from p in context.PostsWithPopularComments(likeThreshold)
+             orderby p.Rating
+             select p;
+</code></pre>
+<p>Produces:</p>
+<pre><code class="language-sql">SELECT [p].[PostId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title]
+FROM [dbo].[PostsWithPopularComments](@likeThreshold) AS [p]
+ORDER BY [p].[Rating]
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/user-defined-function-mapping">User-defined function mapping</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
