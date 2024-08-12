@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - How queries work | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core allows you to write queries based on your derived context entity classes.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - How queries work</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Entity Framework Core allows you to write queries based on your derived context entity classes.</p>
+<blockquote>
+<p>Note
+This article is out of date and some parts of it needs to be updated to account for changes happened in design of query pipeline. If you have any doubts about any behavior mentioned here, please ask a question.</p>
+</blockquote>
+<h2><a href="#the-life-of-a-query" aria-hidden="true" class="anchor" id="the-life-of-a-query"></a>The life of a query</h2>
+<p>The following description is a high-level overview of the process each query goes through.</p>
+<ul>
+<li>The LINQ query is processed by Entity Framework Core to build a representation that is ready to be processed by the database provider</li>
+</ul>
+<p>The result is cached so that this processing does not need to be done every time the query is executed</p>
+<ul>
+<li>
+<p>The result is cached so that this processing does not need to be done every time the query is executed</p>
+</li>
+<li>
+<p>The result is passed to the database provider</p>
+</li>
+</ul>
+<p>The database provider identifies which parts of the query can be evaluated in the database
+These parts of the query are translated to database-specific query language (for example, SQL for a relational database)
+A query is sent to the database and the result set returned (results are values from the database, not entity instances)</p>
+<ul>
+<li>
+<p>The database provider identifies which parts of the query can be evaluated in the database</p>
+</li>
+<li>
+<p>These parts of the query are translated to database-specific query language (for example, SQL for a relational database)</p>
+</li>
+<li>
+<p>A query is sent to the database and the result set returned (results are values from the database, not entity instances)</p>
+</li>
+<li>
+<p>For each item in the result set</p>
+</li>
+</ul>
+<p>If the query is a tracking query, EF checks if the data represents an entity already in the change tracker for the context instance</p>
+<p>If so, the existing entity is returned
+If not, a new entity is created, change tracking is set up, and the new entity is returned</p>
+<p>If the query is a no-tracking query, then a new entity is always created and returned</p>
+<ul>
+<li>
+<p>If the query is a tracking query, EF checks if the data represents an entity already in the change tracker for the context instance</p>
+<ul>
+<li>
+<p>If so, the existing entity is returned</p>
+</li>
+<li>
+<p>If not, a new entity is created, change tracking is set up, and the new entity is returned</p>
+</li>
+</ul>
+</li>
+<li>
+<p>If the query is a no-tracking query, then a new entity is always created and returned</p>
+</li>
+</ul>
+<h2><a href="#when-queries-are-executed" aria-hidden="true" class="anchor" id="when-queries-are-executed"></a>When queries are executed</h2>
+<p>When you call LINQ operators, you're simply building up an in-memory representation of the query. The query is only sent to the database when the results are consumed.</p>
+<p>The most common operations that result in the query being sent to the database are:</p>
+<ul>
+<li>
+<p>Iterating the results in a for loop</p>
+</li>
+<li>
+<p>Using an operator such as <code>ToList</code>, <code>ToArray</code>, <code>Single</code>, <code>Count</code>, or the equivalent async overloads</p>
+</li>
+</ul>
+<blockquote>
+<p>Warning
+Always validate user input: While EF Core protects against SQL injection attacks by using parameters and escaping literals in queries, it does not validate inputs. Appropriate validation, per the application's requirements, should be performed before values from un-trusted sources are used in LINQ queries, assigned to entity properties, or passed to other EF Core APIs. This includes any user input used to dynamically construct queries. Even when using LINQ, if you are accepting user input to build expressions, you need to make sure that only intended expressions can be constructed.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/how-query-works">How Queries Work</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

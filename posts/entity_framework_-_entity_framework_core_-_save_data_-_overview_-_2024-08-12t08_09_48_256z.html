@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core supports two fundamental approaches for saving data to the database.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Entity Framework Core supports two fundamental approaches for saving data to the database.</p>
+<h2><a href="#approach-1-change-tracking-and-savechanges" aria-hidden="true" class="anchor" id="approach-1-change-tracking-and-savechanges"></a>Approach 1: change tracking and <code>SaveChanges</code></h2>
+<p>In this article, I'm going to show you how to set up an EF database.</p>
+<pre><code class="language-c#">using (var context = new BloggingContext())
+{
+    var blog = context.Blogs.Single(b =&gt; b.Url == &quot;http://example.com&quot;);
+    blog.Url = &quot;http://example.com/blog&quot;;
+    context.SaveChanges();
+}
+</code></pre>
+<p>The code above performs the following steps:</p>
+<ul>
+<li>
+<p>It uses a regular LINQ query to load an entity from the database (see Query data). EF's queries are tracking by default, meaning that EF tracks the loaded entities in its internal change tracker.</p>
+</li>
+<li>
+<p>The loaded entity instance is manipulated as usual, by assigning a .NET property. EF isn't involved in this step.</p>
+</li>
+<li>
+<p>Finally, <code>DbContext.SaveChanges()</code> is called. At this point, EF automatically detects any changes by comparing the entities with a snapshot from the moment they were loaded. Any detected changes are persisted to the database; when using a relational database, this typically involves sending e.g. a SQL <code>UPDATE</code> to update the relevant rows.</p>
+</li>
+</ul>
+<p>The following example shows how to update an existing database using EF.</p>
+<p><code>SaveChanges</code>() offers the following advantages:</p>
+<ul>
+<li>
+<p>You don't need to write code to track which entities and properties changed - EF does this automatically for you, and only updates those properties in the database, improving performance. Imagine if your loaded entities are bound to a UI component, allowing users to change any property they wish; EF takes away the burden of figuring out which entities and properties were actually changed.</p>
+</li>
+<li>
+<p>Saving changes to the database can sometimes be complicated! For example, if you want to add a Blog and some Posts for that blog, you may need to fetch the database-generated key for the inserted Blog before you can insert the Posts (since they need to refer to the Blog). EF does all this for you, taking away the complexity.</p>
+</li>
+<li>
+<p>EF can detect concurrency issues, such as when a database row has been modified by someone else between your query and <code>SaveChanges()</code>. More details are available in Concurrency conflicts.</p>
+</li>
+<li>
+<p>On databases which support it, <code>SaveChanges()</code> automatically wraps multiple changes in a transaction, ensuring your data stays consistent if a failure occurs. More details are available in Transactions.</p>
+</li>
+<li>
+<p><code>SaveChanges()</code> also batches together multiple changes in many cases, significantly reducing the number of database roundtrips and greatly improving performance. More details are available in Efficient updating.</p>
+</li>
+</ul>
+<p>For more information and code samples on basic <code>SaveChanges()</code> usage, see Basic <code>SaveChanges</code>. For more information on EF's change tracking, see the Change tracking overview.</p>
+<h2><a href="#approach-2-executeupdate-and-executedelete("bulk-update")" aria-hidden="true" class="anchor" id="approach-2-executeupdate-and-executedelete("bulk-update")"></a>Approach 2: <code>ExecuteUpdate</code> and <code>ExecuteDelete(&quot;bulk update&quot;)</code></h2>
+<blockquote>
+<p>Note
+This feature was introduced in EF Core 7.0.</p>
+</blockquote>
+<p>While change tracking and <code>SaveChanges()</code> are a powerful way to save changes, they do have certain disadvantages.</p>
+<p><code>SaveChanges</code> allows you to modify or delete entities in a database.</p>
+<p>To support this &quot;bulk update&quot; scenario, you can use <code>ExecuteDelete</code> as follows:</p>
+<pre><code class="language-c#">context.Blogs.Where(b =&gt; b.Rating &lt; 3).ExecuteDelete();
+</code></pre>
+<p>This allows you to express a SQL <code>DELETE</code> statement via regular LINQ operators - similar to a regular LINQ query - causing the following SQL to be executed against the database:</p>
+<pre><code class="language-sql">DELETE FROM [b]
+FROM [Blogs] AS [b]
+WHERE [b].[Rating] &lt; 3
+</code></pre>
+<p>This executes very efficiently in the database, without loading any data from the database or involving EF's change tracker. Similarly, <code>ExecuteUpdate</code> allows you to express a SQL <code>UPDATE</code> statement.</p>
+<p>In this article, I'm going to show you how to change entities using the <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> APIs.</p>
+<p><code>ExecuteUpdate</code> and <code>ExecuteDelete</code> allow you to avoid the overhead of change tracking and the overhead of <code>SaveChanges</code>.</p>
+<p>However, note that <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> also have certain limitations:</p>
+<ul>
+<li>
+<p>These methods execute immediately, and currently cannot be batched with other operations. On the other hand, <code>SaveChanges()</code>, can batch multiple operations together.</p>
+</li>
+<li>
+<p>Since change tracking isn't involved, it's your responsibility to know exactly which entities and properties need to be changed. This may mean more manual, low-level code tracking what needs to change and what doesn't.</p>
+</li>
+<li>
+<p>In addition, since change tracking isn't involved, these methods do not automatically apply Concurrency Control when persisting changes. However, you can still explicitly add a <code>Where</code> clause to implement concurrency control yourself.</p>
+</li>
+<li>
+<p>Only updating and deleting is currently supported; insertion must be done via <code>DbSet&lt;TEntity&gt;.Add</code> and <code>SaveChanges()</code>.</p>
+</li>
+</ul>
+<p>For more information and code samples, see <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>.</p>
+<h2><a href="#summary" aria-hidden="true" class="anchor" id="summary"></a>Summary</h2>
+<p>Following are a few guidelines for when to use which approach. Note that these aren't absolute rules, but provide a useful rules of thumb:</p>
+<ul>
+<li>
+<p>If you don't know in advance which changes will take place, use <code>SaveChanges</code>; it will automatically detect which changes need to be applied. Example scenarios:</p>
+<ul>
+<li>&quot;I want to load a Blog from the database and display a form allowing the user to change it&quot;</li>
+</ul>
+</li>
+<li>
+<p>If you need to manipulate a graph of objects (i.e. multiple interconnected objects), use <code>SaveChanges</code>; it will figure out the proper ordering of the changes and how to link everything together.</p>
+<ul>
+<li>&quot;I want to update a blog, changing some of its posts and deleting others&quot;</li>
+</ul>
+</li>
+<li>
+<p>If you wish to change a potentially large number of entities based on some criterion, use <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>. Example scenarios:</p>
+<ul>
+<li>
+<p>&quot;I want to give all employees a raise&quot;</p>
+</li>
+<li>
+<p>&quot;I want to delete all blogs whose name starts with X&quot;</p>
+</li>
+</ul>
+</li>
+<li>
+<p>If you already know exactly which entities you wish to modify and how you wish to change them, use <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>. Example scenarios:</p>
+<ul>
+<li>
+<p>&quot;I want to delete the blog whose name is 'Foo'&quot;</p>
+</li>
+<li>
+<p>&quot;I want to change the name of the blog with Id 5 to 'Bar'&quot;</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/">Saving Data</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

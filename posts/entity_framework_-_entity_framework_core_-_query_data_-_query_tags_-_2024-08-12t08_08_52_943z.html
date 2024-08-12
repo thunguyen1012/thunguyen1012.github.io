@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Query tags | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Query tags help correlate LINQ queries in code with generated SQL queries captured in logs.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Query tags</h1>
+        <hr />
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Query tags help correlate LINQ queries in code with generated SQL queries captured in logs.
+You annotate a LINQ query using the new <code>TagWith()</code> method:</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<pre><code class="language-csharp">var myLocation = new Point(1, 2);
+var nearestPeople = (from f in context.People.TagWith(&quot;This is my spatial query!&quot;)
+                     orderby f.Location.Distance(myLocation) descending
+                     select f).Take(5).ToList();
+</code></pre>
+<p>This LINQ query is translated to the following SQL statement:</p>
+<pre><code class="language-sql">-- This is my spatial query!
+
+SELECT TOP(@__p_1) [p].[Id], [p].[Location]
+FROM [People] AS [p]
+ORDER BY [p].[Location].STDistance(@__myLocation_0) DESC
+</code></pre>
+<p>It's possible to call TagWith() many times on the same query.
+Query tags are cumulative.
+For example, given the following methods:</p>
+<pre><code class="language-csharp">private static IQueryable&lt;Person&gt; GetNearestPeople(SpatialContext context, Point myLocation)
+    =&gt; from f in context.People.TagWith(&quot;GetNearestPeople&quot;)
+       orderby f.Location.Distance(myLocation) descending
+       select f;
+
+private static IQueryable&lt;T&gt; Limit&lt;T&gt;(IQueryable&lt;T&gt; source, int limit) =&gt; source.TagWith(&quot;Limit&quot;).Take(limit);
+</code></pre>
+<p>The following query:</p>
+<pre><code class="language-csharp">var results = Limit(GetNearestPeople(context, new Point(1, 2)), 25).ToList();
+</code></pre>
+<p>Translates to:</p>
+<pre><code class="language-sql">-- GetNearestPeople
+
+-- Limit
+
+SELECT TOP(@__p_1) [p].[Id], [p].[Location]
+FROM [People] AS [p]
+ORDER BY [p].[Location].STDistance(@__myLocation_0) DESC
+</code></pre>
+<p>It's also possible to use multi-line strings as query tags.
+For example:</p>
+<pre><code class="language-csharp">var results = Limit(GetNearestPeople(context, new Point(1, 2)), 25).TagWith(
+                @&quot;This is a multi-line
+string&quot;).ToList();
+</code></pre>
+<p>Produces the following SQL:</p>
+<pre><code class="language-sql">-- GetNearestPeople
+
+-- Limit
+
+-- This is a multi-line
+-- string
+
+SELECT TOP(@__p_1) [p].[Id], [p].[Location]
+FROM [People] AS [p]
+ORDER BY [p].[Location].STDistance(@__myLocation_0) DESC
+</code></pre>
+<h2><a href="#known-limitations" aria-hidden="true" class="anchor" id="known-limitations"></a>Known limitations</h2>
+<p>Query tags aren't parameterizable: EF Core always treats query tags in the query as string literals that are included in the generated SQL.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/tags">Query tags</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

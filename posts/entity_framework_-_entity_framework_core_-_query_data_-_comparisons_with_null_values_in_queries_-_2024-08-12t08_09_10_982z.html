@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Query data - Comparisons with null values in queries | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core tries to compensate for the difference between C# and SQL when translating queries to SQL.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Query data - Comparisons with null values in queries</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#introduction" aria-hidden="true" class="anchor" id="introduction"></a>Introduction</h2>
+<p>EF Core tries to compensate for the difference between C# and SQL when translating queries to SQL.</p>
+<pre><code class="language-csharp">public class NullSemanticsEntity
+{
+    public int Id { get; set; }
+    public int Int { get; set; }
+    public int? NullableInt { get; set; }
+    public string String1 { get; set; }
+    public string String2 { get; set; }
+}
+</code></pre>
+<p>and issue several queries:</p>
+<pre><code class="language-csharp">var query1 = context.Entities.Where(e =&gt; e.Id == e.Int);
+var query2 = context.Entities.Where(e =&gt; e.Id == e.NullableInt);
+var query3 = context.Entities.Where(e =&gt; e.Id != e.NullableInt);
+var query4 = context.Entities.Where(e =&gt; e.String1 == e.String2);
+var query5 = context.Entities.Where(e =&gt; e.String1 != e.String2);
+</code></pre>
+<p>In this post I'm going to show you how to query two columns, <code>NullableInt</code> and <code>Id</code>.</p>
+<pre><code class="language-sql">SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE [e].[Id] = [e].[Int]
+
+SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE [e].[Id] = [e].[NullableInt]
+</code></pre>
+<p>The third query introduces a <code>null</code> check.</p>
+<pre><code class="language-sql">SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE ([e].[Id] &lt;&gt; [e].[NullableInt]) OR [e].[NullableInt] IS NULL
+</code></pre>
+<p>Queries four and five show the pattern when both columns are nullable. It's worth noting that the <code>&lt;&gt;</code> operation produces more complicated (and potentially slower) query than the <code>==</code> operation.</p>
+<pre><code class="language-sql">SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE ([e].[String1] = [e].[String2]) OR ([e].[String1] IS NULL AND [e].[String2] IS NULL)
+
+SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE (([e].[String1] &lt;&gt; [e].[String2]) OR ([e].[String1] IS NULL OR [e].[String2] IS NULL)) AND ([e].[String1] IS NOT NULL OR [e].[String2] IS NOT NULL)
+</code></pre>
+<h2><a href="#treatment-of-nullable-values-in-functions" aria-hidden="true" class="anchor" id="treatment-of-nullable-values-in-functions"></a>Treatment of nullable values in functions</h2>
+<p>The following example shows how to use <code>null</code> arguments in SQL to produce more efficient queries.</p>
+<pre><code class="language-csharp">var query = context.Entities.Where(e =&gt; e.String1.Substring(0, e.String2.Length) == null);
+</code></pre>
+<p>The generated SQL is as follows (we don't need to evaluate the <code>SUBSTRING</code> function since it will be only <code>null</code> when either of the arguments to it is <code>null</code>.):</p>
+<pre><code class="language-sql">SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE [e].[String1] IS NULL OR [e].[String2] IS NULL
+</code></pre>
+<p>The optimization can also be used for user-defined functions. See user defined function mapping page for more details.</p>
+<h2><a href="#writing-performant-queries" aria-hidden="true" class="anchor" id="writing-performant-queries"></a>Writing performant queries</h2>
+<ul>
+<li>
+<p>Comparing non-nullable columns is simpler and faster than comparing nullable columns. Consider marking columns as non-nullable whenever possible.</p>
+</li>
+<li>
+<p>Checking for equality (<code>==</code>) is simpler and faster than checking for non-equality (<code>!=</code>), because query doesn't need to distinguish between <code>null</code> and <code>false</code> result. Use equality comparison whenever possible. However, simply negating <code>==</code> comparison is effectively the same as <code>!=</code>, so it doesn't result in performance improvement.</p>
+</li>
+<li>
+<p>In some cases, it is possible to simplify a complex comparison by filtering out <code>null</code> values from a column explicitly - for example when no <code>null</code> values are present or these values are not relevant in the result. Consider the following example:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var query1 = context.Entities.Where(e =&gt; e.String1 != e.String2 || e.String1.Length == e.String2.Length);
+var query2 = context.Entities.Where(
+    e =&gt; e.String1 != null &amp;&amp; e.String2 != null &amp;&amp; (e.String1 != e.String2 || e.String1.Length == e.String2.Length));
+</code></pre>
+<p>These queries produce the following SQL:</p>
+<pre><code class="language-sql">SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE ((([e].[String1] &lt;&gt; [e].[String2]) OR ([e].[String1] IS NULL OR [e].[String2] IS NULL)) AND ([e].[String1] IS NOT NULL OR [e].[String2] IS NOT NULL)) OR ((CAST(LEN([e].[String1]) AS int) = CAST(LEN([e].[String2]) AS int)) OR ([e].[String1] IS NULL AND [e].[String2] IS NULL))
+
+SELECT [e].[Id], [e].[Int], [e].[NullableInt], [e].[String1], [e].[String2]
+FROM [Entities] AS [e]
+WHERE ([e].[String1] IS NOT NULL AND [e].[String2] IS NOT NULL) AND (([e].[String1] &lt;&gt; [e].[String2]) OR (CAST(LEN([e].[String1]) AS int) = CAST(LEN([e].[String2]) AS int)))
+</code></pre>
+<p>In the second query, <code>null</code> results are filtered out from <code>String1</code> column explicitly. EF Core can safely treat the <code>String1</code> column as non-nullable during comparison, resulting in a simpler query.</p>
+<h2><a href="#using-relational-null-semantics" aria-hidden="true" class="anchor" id="using-relational-null-semantics"></a>Using relational <code>null</code> semantics</h2>
+<p>There is an issue with the <code>null</code> comparison compensation inside the options builder inside Onuring method.</p>
+<pre><code class="language-csharp">new SqlServerDbContextOptionsBuilder(optionsBuilder).UseRelationalNulls();
+</code></pre>
+<blockquote>
+<p>Warning
+When using relational <code>null</code> semantics, your LINQ queries no longer have the same meaning as they do in C#, and may yield different results than expected. Exercise caution when using this mode.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/null-comparisons">Query <code>null</code> semantics</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

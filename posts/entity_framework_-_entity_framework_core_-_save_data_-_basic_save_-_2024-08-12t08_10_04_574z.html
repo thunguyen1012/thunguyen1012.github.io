@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - Basic save | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='DbContext.SaveChanges is a method for saving changes to the database with EF.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - Basic save</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p><code>DbContext.SaveChanges</code> is a method for saving changes to the database with EF.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<h2><a href="#adding-data" aria-hidden="true" class="anchor" id="adding-data"></a>Adding Data</h2>
+<p>Use the <code>DbSet&lt;TEntity&gt;.Add</code> method to add new instances of your entity classes. The data will be inserted into the database when you call <code>DbContext.SaveChanges()</code>:</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blog = new Blog { Url = &quot;http://example.com&quot; };
+    context.Blogs.Add(blog);
+    context.SaveChanges();
+}
+</code></pre>
+<blockquote>
+<p>Tip
+The <code>Add</code>, <code>Attach</code>, and <code>Update</code> methods all work on the full graph of entities passed to them, as described in the Related Data section. Alternately, the <code>EntityEntry.State</code> property can be used to set the state of just a single entity. For example, <code>context.Entry(blog).State = EntityState.Modified</code>.</p>
+</blockquote>
+<h2><a href="#updating-data" aria-hidden="true" class="anchor" id="updating-data"></a>Updating Data</h2>
+<p>The Entity Framework (EF) automatically detects changes made to an existing entity that is tracked by the context.</p>
+<p>Simply modify the values assigned to properties and then call <code>SaveChanges</code>:</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blog = context.Blogs.Single(b =&gt; b.Url == &quot;http://example.com&quot;);
+    blog.Url = &quot;http://example.com/blog&quot;;
+    context.SaveChanges();
+}
+</code></pre>
+<h2><a href="#deleting-data" aria-hidden="true" class="anchor" id="deleting-data"></a>Deleting Data</h2>
+<p>Use the <code>DbSet&lt;TEntity&gt;.Remove</code> method to delete instances of your entity classes:</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blog = context.Blogs.Single(b =&gt; b.Url == &quot;http://example.com/blog&quot;);
+    context.Blogs.Remove(blog);
+    context.SaveChanges();
+}
+</code></pre>
+<p><code>SaveChanges</code> returns the name of an entity that has been saved to the database.</p>
+<h2><a href="#multiple-operations-in-a-single-savechanges" aria-hidden="true" class="anchor" id="multiple-operations-in-a-single-savechanges"></a>Multiple Operations in a single <code>SaveChanges</code></h2>
+<p>You can combine multiple <code>Add/Update/Remove</code> operations into a single call to <code>SaveChanges</code>:</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    // seeding database
+    context.Blogs.Add(new Blog { Url = &quot;http://example.com/blog&quot; });
+    context.Blogs.Add(new Blog { Url = &quot;http://example.com/another_blog&quot; });
+    context.SaveChanges();
+}
+
+using (var context = new BloggingContext())
+{
+    // add
+    context.Blogs.Add(new Blog { Url = &quot;http://example.com/blog_one&quot; });
+    context.Blogs.Add(new Blog { Url = &quot;http://example.com/blog_two&quot; });
+
+    // update
+    var firstBlog = context.Blogs.First();
+    firstBlog.Url = &quot;&quot;;
+
+    // remove
+    var lastBlog = context.Blogs.OrderBy(e =&gt; e.BlogId).Last();
+    context.Blogs.Remove(lastBlog);
+
+    context.SaveChanges();
+}
+</code></pre>
+<blockquote>
+<p>Note
+For most database providers, <code>SaveChanges</code> is transactional. This means all the operations either succeed or fail and the operations are never be left partially applied.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/basic">Basic <code>SaveChanges</code></a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
