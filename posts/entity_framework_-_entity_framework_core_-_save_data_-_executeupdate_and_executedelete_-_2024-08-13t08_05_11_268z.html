@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - ExecuteUpdate and ExecuteDelete | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Two techniques can be used to save data to the database without using EF's traditional change tracking and SaveChanges method.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - ExecuteUpdate and ExecuteDelete</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p>Note
+This feature was introduced in EF Core 7.0.</p>
+</blockquote>
+<p>Two techniques can be used to save data to the database without using EF's traditional change tracking and <code>SaveChanges</code> method.</p>
+<h2><a href="#executedelete" aria-hidden="true" class="anchor" id="executedelete"></a><code>ExecuteDelete</code></h2>
+<p>Let's assume that you need to delete all Blogs with a rating below a certain threshold. The traditional <code>SaveChanges()</code> approach requires you to do the following:</p>
+<pre><code class="language-c#">foreach (var blog in context.Blogs.Where(b =&gt; b.Rating &lt; 3))
+{
+    context.Blogs.Remove(blog);
+}
+
+context.SaveChanges();
+</code></pre>
+<p>We use a tracker to find all the blogs that match our filter and then apply changes to them.</p>
+<p>Here is the same task performed via the <code>ExecuteDelete</code> API:</p>
+<pre><code class="language-c#">context.Blogs.Where(b =&gt; b.Rating &lt; 3).ExecuteDelete();
+</code></pre>
+<p>This uses the familiar LINQ operators to determine which Blogs should be affected - just as if we were querying them - and then tells EF to execute a SQL <code>DELETE</code> against the database:</p>
+<pre><code class="language-sql">DELETE FROM [b]
+FROM [Blogs] AS [b]
+WHERE [b].[Rating] &lt; 3
+</code></pre>
+<p>In this post I'm going to show you how to delete a bunch of Wordpress blogs.</p>
+<h2><a href="#executeupdate" aria-hidden="true" class="anchor" id="executeupdate"></a><code>ExecuteUpdate</code></h2>
+<p>Rather than deleting these Blogs, what if we wanted to change a property to indicate that they should be hidden instead? <code>ExecuteUpdate</code> provides a similar way to express a SQL <code>UPDATE</code> statement:</p>
+<pre><code class="language-c#">context.Blogs
+    .Where(b =&gt; b.Rating &lt; 3)
+    .ExecuteUpdate(setters =&gt; setters.SetProperty(b =&gt; b.IsVisible, false));
+</code></pre>
+<p>In this article we are going to use <code>ExecuteUpdate</code> to change the value of a property in one of our blogs.</p>
+<pre><code class="language-sql">UPDATE [b]
+SET [b].[IsVisible] = CAST(0 AS bit)
+FROM [Blogs] AS [b]
+WHERE [b].[Rating] &lt; 3
+</code></pre>
+<h3><a href="#updating-multiple-properties" aria-hidden="true" class="anchor" id="updating-multiple-properties"></a>Updating multiple properties</h3>
+<p><code>ExecuteUpdate</code> allows updating multiple properties in a single invocation. For example, to both set <code>IsVisible</code> to <code>false</code> and to set <code>Rating</code> to zero, simply chain additional <code>SetProperty</code> calls together:</p>
+<pre><code class="language-c#">context.Blogs
+    .Where(b =&gt; b.Rating &lt; 3)
+    .ExecuteUpdate(setters =&gt; setters
+        .SetProperty(b =&gt; b.IsVisible, false)
+        .SetProperty(b =&gt; b.Rating, 0));
+</code></pre>
+<p>This executes the following SQL:</p>
+<pre><code class="language-sql">UPDATE [b]
+SET [b].[Rating] = 0,
+    [b].[IsVisible] = CAST(0 AS bit)
+FROM [Blogs] AS [b]
+WHERE [b].[Rating] &lt; 3
+</code></pre>
+<h3><a href="#referencing-the-existing-property-value" aria-hidden="true" class="anchor" id="referencing-the-existing-property-value"></a>Referencing the existing property value</h3>
+<p><code>ExecuteUpdate</code> allows you to update a property's constant value.</p>
+<pre><code class="language-c#">context.Blogs
+    .Where(b =&gt; b.Rating &lt; 3)
+    .ExecuteUpdate(setters =&gt; setters.SetProperty(b =&gt; b.Rating, b =&gt; b.Rating + 1));
+</code></pre>
+<p>This example shows how to update a Blog using the <code>SetProperty</code> function.</p>
+<pre><code class="language-sql">UPDATE [b]
+SET [b].[Rating] = [b].[Rating] + 1
+FROM [Blogs] AS [b]
+WHERE [b].[Rating] &lt; 3
+</code></pre>
+<h3><a href="#navigations-and-related-entities" aria-hidden="true" class="anchor" id="navigations-and-related-entities"></a>Navigations and related entities</h3>
+<p><code>ExecuteUpdate</code> is an add-on for <code>SetProperty</code> that allows you to update the ratings of all the properties in the <code>SetProperty</code> database.</p>
+<pre><code class="language-c#">context.Blogs.ExecuteUpdate(
+    setters =&gt; setters.SetProperty(b =&gt; b.Rating, b =&gt; b.Posts.Average(p =&gt; p.Rating)));
+</code></pre>
+<p>However, EF does allow performing this operation by first using <code>Select</code> to calculate the average rating and project it to an anonymous type, and then using <code>ExecuteUpdate</code> over that:</p>
+<pre><code class="language-c#">context.Blogs
+    .Select(b =&gt; new { Blog = b, NewRating = b.Posts.Average(p =&gt; p.Rating) })
+    .ExecuteUpdate(setters =&gt; setters.SetProperty(b =&gt; b.Blog.Rating, b =&gt; b.NewRating));
+</code></pre>
+<p>This executes the following SQL:</p>
+<pre><code class="language-sql">UPDATE [b]
+SET [b].[Rating] = CAST((
+    SELECT AVG(CAST([p].[Rating] AS float))
+    FROM [Post] AS [p]
+    WHERE [b].[Id] = [p].[BlogId]) AS int)
+FROM [Blogs] AS [b]
+</code></pre>
+<h2><a href="#change-tracking" aria-hidden="true" class="anchor" id="change-tracking"></a>Change tracking</h2>
+<p>This example shows how to use <code>SaveChanges</code> to apply changes to a database.</p>
+<p>The functions <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> are very similar to the functions <code>SaveChanges</code> and <code>SaveChanges</code>.</p>
+<p>Consider the following code:</p>
+<pre><code class="language-c#">// 1. Query the blog with the name `SomeBlog`. Since EF queries are tracking by default, the Blog is now tracked by EF's change tracker.
+var blog = context.Blogs.Single(b =&gt; b.Name == &quot;SomeBlog&quot;);
+
+// 2. Increase the rating of all blogs in the database by one. This executes immediately.
+context.Blogs.ExecuteUpdate(setters =&gt; setters.SetProperty(b =&gt; b.Rating, b =&gt; b.Rating + 1));
+
+// 3. Increase the rating of `SomeBlog` by two. This modifies the .NET `Rating` property and is not yet persisted to the database.
+blog.Rating += 2;
+
+// 4. Persist tracked changes to the database.
+context.SaveChanges();
+</code></pre>
+<p>In this post, I'm going to show you how to change the rating of a .NET instance of a blog.</p>
+<p>As a result, it is usually a good idea to avoid mixing both tracked <code>SaveChanges</code> modifications and untracked modifications via <code>ExecuteUpdate</code>/ExecuteDelete.</p>
+<h2><a href="#transactions" aria-hidden="true" class="anchor" id="transactions"></a>Transactions</h2>
+<p>Continuing on the above, it's important to understand that <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> do not implicitly start a transaction they're invoked. Consider the following code:</p>
+<pre><code class="language-c#">context.Blogs.ExecuteUpdate(/* some update */);
+context.Blogs.ExecuteUpdate(/* another update */);
+
+var blog = context.Blogs.Single(b =&gt; b.Name == &quot;SomeBlog&quot;);
+blog.Rating += 2;
+context.SaveChanges();
+</code></pre>
+<p>To wrap multiple operations in a single transaction, explicitly start a transaction with DatabaseFacade:</p>
+<pre><code class="language-c#">using (var transaction = context.Database.BeginTransaction())
+{
+    context.Blogs.ExecuteUpdate(/* some update */);
+    context.Blogs.ExecuteUpdate(/* another update */);
+
+    ...
+}
+</code></pre>
+<p>For more information about transaction handling, see Using Transactions.</p>
+<h2><a href="#concurrency-control-and-rows-affected" aria-hidden="true" class="anchor" id="concurrency-control-and-rows-affected"></a>Concurrency control and rows affected</h2>
+<p><code>SaveChanges</code> provides automatic Concurrency Control, using a concurrency token to ensure that a row wasn't changed between the moment you loaded it and the moment you save changes to it.</p>
+<p>However, both these methods do return the number of rows that were affected by the operation; this can come particularly handy for implementing concurrency control yourself:</p>
+<pre><code class="language-c#">// (load the ID and concurrency token for a Blog in the database)
+
+var numUpdated = context.Blogs
+    .Where(b =&gt; b.Id == id &amp;&amp; b.ConcurrencyToken == concurrencyToken)
+    .ExecuteUpdate(/* ... */);
+if (numUpdated == 0)
+{
+    throw new Exception(&quot;Update failed!&quot;);
+}
+</code></pre>
+<p>This code shows how to apply an update to a specific Blog, and only if its concurrency token has a specific value (e.g. the one we saw when querying the Blog from the database).</p>
+<h2><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h2>
+<ul>
+<li>
+<p>Only updating and deleting is currently supported; insertion must be done via DbSet<TEntity>.Add and <code>SaveChanges()</code>.</p>
+</li>
+<li>
+<p>While the SQL <code>UPDATE</code> and <code>DELETE</code> statements allow retrieving original column values for the rows affected, this isn't currently supported by <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>.</p>
+</li>
+<li>
+<p>Multiple invocations of these methods cannot be batched. Each invocation performs its own roundtrip to the database.</p>
+</li>
+<li>
+<p>Databases typically allow only a single table to be modified with <code>UPDATE</code> or <code>DELETE</code>.</p>
+</li>
+<li>
+<p>These methods currently only work with relational database providers.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>.NET Data Access Community Standup session where we discuss <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>.</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/execute-insert-update-delete">ExecuteUpdate and <code>ExecuteDelete</code></a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

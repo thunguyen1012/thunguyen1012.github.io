@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - Related data | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In addition to isolated entities, you can also make use of the relationships defined in your model.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - Related data</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In addition to isolated entities, you can also make use of the relationships defined in your model.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<h2><a href="#adding-a-graph-of-new-entities" aria-hidden="true" class="anchor" id="adding-a-graph-of-new-entities"></a>Adding a graph of new entities</h2>
+<p>If you create several new related entities, adding one of them to the context will cause the others to be added too.</p>
+<p>In the following example, the <code>blog</code> and three related posts are all inserted into the database. The posts are found and added, because they are reachable via the <code>Blog.Posts</code> navigation property.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blog = new Blog
+    {
+        Url = &quot;http://blogs.msdn.com/dotnet&quot;,
+        Posts = new List&lt;Post&gt;
+        {
+            new Post { Title = &quot;Intro to C#&quot; },
+            new Post { Title = &quot;Intro to VB.NET&quot; },
+            new Post { Title = &quot;Intro to F#&quot; }
+        }
+    };
+
+    context.Blogs.Add(blog);
+    context.SaveChanges();
+}
+</code></pre>
+<blockquote>
+<p>Tip
+Use the <code>EntityEntry.State</code> property to set the state of just a single entity. For example, <code>context.Entry(blog).State = EntityState.Modified</code>.</p>
+</blockquote>
+<h2><a href="#adding-a-related-entity" aria-hidden="true" class="anchor" id="adding-a-related-entity"></a>Adding a related entity</h2>
+<p>If you reference a new entity from the navigation property of an entity that is already tracked by the context, the entity will be discovered and inserted into the database.</p>
+<p>In the following example, the <code>post</code> entity is inserted because it is added to the <code>Posts</code> property of the <code>blog</code> entity which was fetched from the database.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blog = context.Blogs.Include(b =&gt; b.Posts).First();
+    var post = new Post { Title = &quot;Intro to EF Core&quot; };
+
+    blog.Posts.Add(post);
+    context.SaveChanges();
+}
+</code></pre>
+<h2><a href="#changing-relationships" aria-hidden="true" class="anchor" id="changing-relationships"></a>Changing relationships</h2>
+<p>If you change the navigation property of an entity, the corresponding changes will be made to the foreign key column in the database.</p>
+<p>You can create a new <code>blog</code> entity and insert it into the database of the existing <code>post</code> entity.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blog = new Blog { Url = &quot;http://blogs.msdn.com/visualstudio&quot; };
+    var post = context.Posts.First();
+
+    post.Blog = blog;
+    context.SaveChanges();
+}
+</code></pre>
+<h2><a href="#removing-relationships" aria-hidden="true" class="anchor" id="removing-relationships"></a>Removing relationships</h2>
+<p>You can remove a relationship by setting a reference navigation to <code>null</code>, or removing the related entity from a collection navigation.</p>
+<p>Removing a relationship can have side effects on the dependent entity, according to the cascade delete behavior configured in the relationship.</p>
+<p>The child/dependent entity will be deleted from the database.</p>
+<p>See Required and Optional Relationships to learn about how the requiredness of relationships can be configured.</p>
+<p>See Cascade Delete for more details on how cascade delete behaviors work, how they can be configured explicitly and  how they are selected by convention.</p>
+<p>In the following example, a cascade delete is configured on the relationship between <code>Blog</code> and <code>Post</code>, so the <code>post</code> entity is deleted from the database.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var blog = context.Blogs.Include(b =&gt; b.Posts).First();
+    var post = blog.Posts.First();
+
+    blog.Posts.Remove(post);
+    context.SaveChanges();
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/related-data">Saving Related Data</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

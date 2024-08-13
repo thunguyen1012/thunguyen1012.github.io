@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - Transactions | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A transaction is a type of database operation.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - Transactions</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A transaction is a type of database operation.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<h2><a href="#default-transaction-behavior" aria-hidden="true" class="anchor" id="default-transaction-behavior"></a>Default transaction behavior</h2>
+<p><code>SaveChanges</code> checks if the database provider supports transactions.</p>
+<p>For most applications, this default behavior is sufficient. You should only manually control transactions if your application requirements deem it necessary.</p>
+<h2><a href="#controlling-transactions" aria-hidden="true" class="anchor" id="controlling-transactions"></a>Controlling transactions</h2>
+<p>You can use the <code>DbContext.Database</code> API to begin, commit, and rollback transactions. The following example shows two <code>SaveChanges</code> operations and a LINQ query being executed in a single transaction:</p>
+<pre><code class="language-csharp">using var context = new BloggingContext();
+using var transaction = context.Database.BeginTransaction();
+
+try
+{
+    context.Blogs.Add(new Blog { Url = &quot;http://blogs.msdn.com/dotnet&quot; });
+    context.SaveChanges();
+
+    context.Blogs.Add(new Blog { Url = &quot;http://blogs.msdn.com/visualstudio&quot; });
+    context.SaveChanges();
+
+    var blogs = context.Blogs
+        .OrderBy(b =&gt; b.Url)
+        .ToList();
+
+    // Commit transaction if all commands succeed, transaction will auto-rollback
+    // when disposed if either commands fails
+    transaction.Commit();
+}
+catch (Exception)
+{
+    // TODO: Handle failure
+}
+</code></pre>
+<p>While all relational database providers support transactions, other providers types may throw or no-op when transaction APIs are called.</p>
+<blockquote>
+<p>Note
+Manually controlling transactions in this way is incompatible with implicitly invoked retrying execution strategies. See Connection Resiliency for more information.</p>
+</blockquote>
+<h2><a href="#savepoints" aria-hidden="true" class="anchor" id="savepoints"></a>Savepoints</h2>
+<p><code>SaveChanges</code> is a library that allows you to automatically roll back a database transaction if it encounters an error.</p>
+<blockquote>
+<p>Warning
+Savepoints are incompatible with SQL Server's Multiple Active Result Sets (MARS). Savepoints will not be created by EF when MARS is enabled on the connection, even if MARS is not actively in use. If an error occurs during <code>SaveChanges</code>, the transaction may be left in an unknown state.</p>
+</blockquote>
+<p>It's also possible to manually manage savepoints, just as it is with transactions. The following example creates a savepoint within a transaction, and rolls back to it on failure:</p>
+<pre><code class="language-csharp">using var context = new BloggingContext();
+using var transaction = context.Database.BeginTransaction();
+
+try
+{
+    context.Blogs.Add(new Blog { Url = &quot;https://devblogs.microsoft.com/dotnet/&quot; });
+    context.SaveChanges();
+
+    transaction.CreateSavepoint(&quot;BeforeMoreBlogs&quot;);
+
+    context.Blogs.Add(new Blog { Url = &quot;https://devblogs.microsoft.com/visualstudio/&quot; });
+    context.Blogs.Add(new Blog { Url = &quot;https://devblogs.microsoft.com/aspnet/&quot; });
+    context.SaveChanges();
+
+    transaction.Commit();
+}
+catch (Exception)
+{
+    // If a failure occurred, we rollback to the savepoint and can continue the transaction
+    transaction.RollbackToSavepoint(&quot;BeforeMoreBlogs&quot;);
+
+    // TODO: Handle failure, possibly retry inserting blogs
+}
+</code></pre>
+<h2><a href="#cross-context-transaction" aria-hidden="true" class="anchor" id="cross-context-transaction"></a>Cross-context transaction</h2>
+<p>You can share a transaction between two instances of the same application.</p>
+<p>To share a transaction, the contexts must share both a <code>DbConnection</code> and a <code>DbTransaction</code>.</p>
+<h3><a href="#allow-connection-to-be-externally-provided" aria-hidden="true" class="anchor" id="allow-connection-to-be-externally-provided"></a>Allow connection to be externally provided</h3>
+<p>Sharing a <code>DbConnection</code> requires the ability to pass a connection into a context when constructing it.</p>
+<p>The <code>DbConnection</code> method is used to provide an external connection to the DbContext.</p>
+<blockquote>
+<p>Tip
+<code>DbContextOptionsBuilder</code> is the API you used in <code>DbContext.OnConfiguring</code> to configure the context, you are now going to use it externally to create <code>DbContextOptions</code>.</p>
+</blockquote>
+<pre><code class="language-csharp">public class BloggingContext : DbContext
+{
+    public BloggingContext(DbContextOptions&lt;BloggingContext&gt; options)
+        : base(options)
+    {
+    }
+
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+}
+</code></pre>
+<p>An alternative is to keep using <code>DbContext.OnConfiguring</code>, but accept a <code>DbConnection</code> that is saved and then used in <code>DbContext.OnConfiguring</code>.</p>
+<pre><code class="language-csharp">public class BloggingContext : DbContext
+{
+    private DbConnection _connection;
+
+    public BloggingContext(DbConnection connection)
+    {
+      _connection = connection;
+    }
+
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseSqlServer(_connection);
+    }
+}
+</code></pre>
+<h3><a href="#share-connection-and-transaction" aria-hidden="true" class="anchor" id="share-connection-and-transaction"></a>Share connection and transaction</h3>
+<p>You can now create multiple context instances that share the same connection. Then use the <code>DbContext.Database.UseTransaction(DbTransaction)</code> API to enlist both contexts in the same transaction.</p>
+<pre><code class="language-csharp">using var connection = new SqlConnection(connectionString);
+var options = new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+    .UseSqlServer(connection)
+    .Options;
+
+using var context1 = new BloggingContext(options);
+using var transaction = context1.Database.BeginTransaction();
+try
+{
+    context1.Blogs.Add(new Blog { Url = &quot;http://blogs.msdn.com/dotnet&quot; });
+    context1.SaveChanges();
+
+    using (var context2 = new BloggingContext(options))
+    {
+        context2.Database.UseTransaction(transaction.GetDbTransaction());
+
+        var blogs = context2.Blogs
+            .OrderBy(b =&gt; b.Url)
+            .ToList();
+
+        context2.Blogs.Add(new Blog { Url = &quot;http://dot.net&quot; });
+        context2.SaveChanges();
+    }
+
+    // Commit transaction if all commands succeed, transaction will auto-rollback
+    // when disposed if either commands fails
+    transaction.Commit();
+}
+catch (Exception)
+{
+    // TODO: Handle failure
+}
+</code></pre>
+<h2><a href="#using-external-dbtransactions-relational-databases-only)" aria-hidden="true" class="anchor" id="using-external-dbtransactions-relational-databases-only)"></a>Using external DbTransactions (relational databases only)</h2>
+<p>If you are using multiple data access technologies to access a relational database, you may want to share a transaction between operations performed by these different technologies.</p>
+<p>The following example, shows how to perform an ADO.NET SqlClient operation and an Entity Framework Core operation in the same transaction.</p>
+<pre><code class="language-csharp">using var connection = new SqlConnection(connectionString);
+connection.Open();
+
+using var transaction = connection.BeginTransaction();
+try
+{
+    // Run raw ADO.NET command in the transaction
+    var command = connection.CreateCommand();
+    command.Transaction = transaction;
+    command.CommandText = &quot;DELETE FROM dbo.Blogs&quot;;
+    command.ExecuteNonQuery();
+
+    // Run an EF Core command in the transaction
+    var options = new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+        .UseSqlServer(connection)
+        .Options;
+
+    using (var context = new BloggingContext(options))
+    {
+        context.Database.UseTransaction(transaction);
+        context.Blogs.Add(new Blog { Url = &quot;http://blogs.msdn.com/dotnet&quot; });
+        context.SaveChanges();
+    }
+
+    // Commit transaction if all commands succeed, transaction will auto-rollback
+    // when disposed if either commands fails
+    transaction.Commit();
+}
+catch (Exception)
+{
+    // TODO: Handle failure
+}
+</code></pre>
+<h2><a href="#using-systemtransactions" aria-hidden="true" class="anchor" id="using-systemtransactions"></a>Using System.Transactions</h2>
+<p>It is possible to use ambient transactions if you need to coordinate across a larger scope.</p>
+<pre><code class="language-csharp">using (var scope = new TransactionScope(
+           TransactionScopeOption.Required,
+           new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }))
+{
+    using var connection = new SqlConnection(connectionString);
+    connection.Open();
+
+    try
+    {
+        // Run raw ADO.NET command in the transaction
+        var command = connection.CreateCommand();
+        command.CommandText = &quot;DELETE FROM dbo.Blogs&quot;;
+        command.ExecuteNonQuery();
+
+        // Run an EF Core command in the transaction
+        var options = new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+            .UseSqlServer(connection)
+            .Options;
+
+        using (var context = new BloggingContext(options))
+        {
+            context.Blogs.Add(new Blog { Url = &quot;http://blogs.msdn.com/dotnet&quot; });
+            context.SaveChanges();
+        }
+
+        // Commit transaction if all commands succeed, transaction will auto-rollback
+        // when disposed if either commands fails
+        scope.Complete();
+    }
+    catch (Exception)
+    {
+        // TODO: Handle failure
+    }
+}
+</code></pre>
+<p>It is also possible to enlist in an explicit transaction.</p>
+<pre><code class="language-csharp">using (var transaction = new CommittableTransaction(
+           new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }))
+{
+    var connection = new SqlConnection(connectionString);
+
+    try
+    {
+        var options = new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+            .UseSqlServer(connection)
+            .Options;
+
+        using (var context = new BloggingContext(options))
+        {
+            context.Database.OpenConnection();
+            context.Database.EnlistTransaction(transaction);
+
+            // Run raw ADO.NET command in the transaction
+            var command = connection.CreateCommand();
+            command.CommandText = &quot;DELETE FROM dbo.Blogs&quot;;
+            command.ExecuteNonQuery();
+
+            // Run an EF Core command in the transaction
+            context.Blogs.Add(new Blog { Url = &quot;http://blogs.msdn.com/dotnet&quot; });
+            context.SaveChanges();
+            context.Database.CloseConnection();
+        }
+
+        // Commit transaction if all commands succeed, transaction will auto-rollback
+        // when disposed if either commands fails
+        transaction.Commit();
+    }
+    catch (Exception)
+    {
+        // TODO: Handle failure
+    }
+}
+</code></pre>
+<blockquote>
+<p>Note
+If you're using async APIs, be sure to specify <code>TransactionScopeAsyncFlowOption.Enabled</code> in the <code>TransactionScope</code> constructor to ensure that the ambient transaction flows across async calls.</p>
+</blockquote>
+<p>For more information on <code>TransactionScope</code> and ambient transactions, see this documentation.</p>
+<h3><a href="#limitations-of-systemtransactions" aria-hidden="true" class="anchor" id="limitations-of-systemtransactions"></a>Limitations of System.Transactions</h3>
+<ul>
+<li>EF Core relies on database providers to implement support for <code>System.Transactions</code>. If a provider does not implement support for <code>System.Transactions</code>, it is possible that calls to these APIs will be completely ignored. SqlClient supports it.</li>
+</ul>
+<p>Important
+It is recommended that you test that the API behaves correctly with your provider before you rely on it for managing transactions. You are encouraged to contact the maintainer of the database provider if it does not.</p>
+<blockquote>
+<p>Important
+It is recommended that you test that the API behaves correctly with your provider before you rely on it for managing transactions. You are encouraged to contact the maintainer of the database provider if it does not.</p>
+</blockquote>
+<ul>
+<li>
+<p>Distributed transaction support in System.Transactions was added to .NET 7.0 for Windows only. Any attempt to use distributed transactions on older .NET versions or on non-Windows platforms will fail.</p>
+</li>
+<li>
+<p><code>TransactionScope</code> does not support async commit/rollback; that means that disposing it synchronously blocks the executing thread until the operation is complete.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/transactions">Using Transactions</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

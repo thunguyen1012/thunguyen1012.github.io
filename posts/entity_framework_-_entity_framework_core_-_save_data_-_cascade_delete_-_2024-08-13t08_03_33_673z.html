@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - Cascade delete | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core (EF Core) represents relationships using foreign keys.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - Cascade delete</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Entity Framework Core (EF Core) represents relationships using foreign keys.</p>
+<p>If the parent entity is deleted, then the foreign key values of the dependents/children will no longer match the primary or alternate key of any parent entity.</p>
+<p>There are two options to avoid this referential constraint violation:</p>
+<ul>
+<li>
+<p>Set the FK values to null</p>
+</li>
+<li>
+<p>Also delete the dependent/child entities</p>
+</li>
+</ul>
+<p>The first option is only valid for optional relationships where the foreign key property (and the database column to which it is mapped) must be nullable.</p>
+<p>The second option is valid for any kind of relationship and is known as &quot;cascade delete&quot;.</p>
+<blockquote>
+<p>Tip
+This document describes cascade deletes (and deleting orphans) from the perspective of updating the database. It makes heavy use of concepts introduced in Change Tracking in EF Core and Changing Foreign Keys and Navigations. Make sure to fully understand these concepts before tackling the material here.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<h2><a href="#when-cascading-behaviors-happen" aria-hidden="true" class="anchor" id="when-cascading-behaviors-happen"></a>When cascading behaviors happen</h2>
+<p>Cascading deletes are used when a dependent/child entity can no longer be associated with its current principal/parent.</p>
+<h3><a href="#deleting-a-principalparent" aria-hidden="true" class="anchor" id="deleting-a-principalparent"></a>Deleting a principal/parent</h3>
+<p>The value of <code>Blog</code> in a relationship with <code>Post</code> is a foreign key property, the value of <code>Blog</code> in a relationship with <code>Post</code> is a foreign key property, the value of <code>Blog</code> in a relationship with <code>Post</code> is a foreign key property, the value of <code>Blog</code> in a relationship with <code>Post</code> is a foreign key property, the value</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public int BlogId { get; set; }
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>A relationship between the <code>Post.BlogId</code> foreign key property and the <code>Post.BlogId</code> foreign key property.</p>
+<p>When deleting a blog, all posts are cascade deleted. For example:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.OrderBy(e =&gt; e.Name).Include(e =&gt; e.Posts).First();
+
+context.Remove(blog);
+
+context.SaveChanges();
+</code></pre>
+<p>SaveChanges generates the following SQL, using SQL Server as an example:</p>
+<pre><code class="language-sql">-- Executed DbCommand (1ms) [Parameters=[@p0='1'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Posts]
+WHERE [Id] = @p0;
+SELECT @@ROWCOUNT;
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='2'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Posts]
+WHERE [Id] = @p0;
+SELECT @@ROWCOUNT;
+
+-- Executed DbCommand (2ms) [Parameters=[@p1='1'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Blogs]
+WHERE [Id] = @p1;
+SELECT @@ROWCOUNT;
+</code></pre>
+<h3><a href="#severing-a-relationship" aria-hidden="true" class="anchor" id="severing-a-relationship"></a>Severing a relationship</h3>
+<p>Rather than deleting the blog, we could instead sever the relationship between each post and its blog. This can be done by setting the reference navigation <code>Post.Blog</code> to null for each post:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.OrderBy(e =&gt; e.Name).Include(e =&gt; e.Posts).First();
+
+foreach (var post in blog.Posts)
+{
+    post.Blog = null;
+}
+
+context.SaveChanges();
+</code></pre>
+<p>The relationship can also be severed by removing each post from the <code>Blog.Posts</code> collection navigation:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.OrderBy(e =&gt; e.Name).Include(e =&gt; e.Posts).First();
+
+blog.Posts.Clear();
+
+context.SaveChanges();
+</code></pre>
+<p>In either case the result is the same: the blog is not deleted, but the posts that are no longer associated with any blog are deleted:</p>
+<pre><code class="language-sql">-- Executed DbCommand (1ms) [Parameters=[@p0='1'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Posts]
+WHERE [Id] = @p0;
+SELECT @@ROWCOUNT;
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='2'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Posts]
+WHERE [Id] = @p0;
+SELECT @@ROWCOUNT;
+</code></pre>
+<p>Deleting entities that are no longer associated with any principal/dependent is known as &quot;deleting orphans&quot;.</p>
+<blockquote>
+<p>Tip
+Cascade delete and deleting orphans are closely related. Both result in deleting dependent/child entities when the relationship to their required principal/parent is severed. For cascade delete, this severing happens because the principal/parent is itself deleted. For orphans, the principal/parent entity still exists, but is no longer related to the dependent/child entities.</p>
+</blockquote>
+<h2><a href="#where-cascading-behaviors-happen" aria-hidden="true" class="anchor" id="where-cascading-behaviors-happen"></a>Where cascading behaviors happen</h2>
+<p>Cascading behaviors can be applied to:</p>
+<ul>
+<li>
+<p>Entities tracked by the current DbContext</p>
+</li>
+<li>
+<p>Entities in the database that have not been loaded into the context</p>
+</li>
+</ul>
+<h3><a href="#cascade-delete-of-tracked-entities" aria-hidden="true" class="anchor" id="cascade-delete-of-tracked-entities"></a><code>Cascade</code> delete of tracked entities</h3>
+<p>EF Core always applies configured cascading behaviors to tracked entities.</p>
+<blockquote>
+<p>Tip
+The exact timing of when cascading behaviors happen to tracked entities can be controlled using <code>ChangeTracker.CascadeDeleteTiming</code> and <code>ChangeTracker.DeleteOrphansTiming</code>. See Changing Foreign Keys and Navigations for more information.</p>
+</blockquote>
+<h3><a href="#cascade-delete-in-the-database" aria-hidden="true" class="anchor" id="cascade-delete-in-the-database"></a><code>Cascade</code> delete in the database</h3>
+<p>When migrating to a new database system, you may need to create a new table for each post in the database.</p>
+<pre><code class="language-sql">CREATE TABLE [Posts] (
+    [Id] int NOT NULL IDENTITY,
+    [Title] nvarchar(max) NULL,
+    [Content] nvarchar(max) NULL,
+    [BlogId] int NOT NULL,
+    CONSTRAINT [PK_Posts] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Posts_Blogs_BlogId] FOREIGN KEY ([BlogId]) REFERENCES [Blogs] ([Id]) ON DELETE CASCADE
+);
+</code></pre>
+<p>Notice that the foreign key constraint defining the relationship between blogs and posts is configured with <code>ON DELETE CASCADE</code>.</p>
+<p>The following example shows how to delete a blog without first loading posts.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.OrderBy(e =&gt; e.Name).First();
+
+context.Remove(blog);
+
+context.SaveChanges();
+</code></pre>
+<p>Notice that there is no <code>Include</code> for posts, so they are not loaded. SaveChanges in this case will delete just the blog, since that's the only entity being tracked:</p>
+<pre><code class="language-sql">-- Executed DbCommand (6ms) [Parameters=[@p0='1'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Blogs]
+WHERE [Id] = @p0;
+SELECT @@ROWCOUNT;
+</code></pre>
+<p>If a post is deleted from a database, the post will be deleted from the database as well.</p>
+<blockquote>
+<p>Note
+Databases don't typically have any way to automatically delete orphans. This is because while EF Core represents relationships using navigations as well of foreign keys, databases have only foreign keys and no navigations. This means that it is usually not possible to sever a relationship without loading both sides into the DbContext.</p>
+</blockquote>
+<blockquote>
+<p>Note
+The EF Core in-memory database does not currently support cascade deletes in the database.</p>
+</blockquote>
+<blockquote>
+<p>Warning
+Do not configure cascade delete in the database when soft-deleting entities. This may cause entities to be accidentally really deleted instead of soft-deleted.</p>
+</blockquote>
+<h3><a href="#database-cascade-limitations" aria-hidden="true" class="anchor" id="database-cascade-limitations"></a>Database cascade limitations</h3>
+<p>Some databases, most notably SQL Server, have limitations on the cascade behaviors that form cycles. For example, consider the following model:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+
+    public int OwnerId { get; set; }
+    public Person Owner { get; set; }
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public int BlogId { get; set; }
+    public Blog Blog { get; set; }
+
+    public int AuthorId { get; set; }
+    public Person Author { get; set; }
+}
+
+public class Person
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+
+    public Blog OwnedBlog { get; set; }
+}
+</code></pre>
+<p>This model has three relationships, all required and therefore configured to cascade delete by convention:</p>
+<ul>
+<li>
+<p>Deleting a blog will cascade delete all the related posts</p>
+</li>
+<li>
+<p>Deleting the author of posts will cause the authored posts to be cascade deleted</p>
+</li>
+<li>
+<p>Deleting the owner of a blog will cause the blog to be cascade deleted</p>
+</li>
+</ul>
+<p>This is all reasonable (if a bit draconian in blog management policies!) but attempting to create a SQL Server database with these cascades configured results in the following exception:</p>
+<p>There are two ways to handle this situation:</p>
+<ul>
+<li>
+<p>Change one or more of the relationships to not cascade delete.</p>
+</li>
+<li>
+<p>Configure the database without one or more of these cascade deletes, then ensure all dependent entities are loaded so that EF Core can perform the cascading behavior.</p>
+</li>
+</ul>
+<p>Taking the first approach with our example, we could make the post-blog relationship optional by giving it a nullable foreign key property:</p>
+<pre><code class="language-csharp">public int? BlogId { get; set; }
+</code></pre>
+<p>This example shows how to delete a blog post from a database.</p>
+<p>Taking the second approach instead, we can keep the blog-owner relationship required and configured for cascade delete, but make this configuration only apply to tracked entities, not the database:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Owner)
+        .WithOne(e =&gt; e.OwnedBlog)
+        .OnDelete(DeleteBehavior.ClientCascade);
+}
+</code></pre>
+<p>Now what happens if we load both a person and the blog they own, then delete the person?</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var owner = context.People.Single(e =&gt; e.Name == &quot;ajcvickers&quot;);
+var blog = context.Blogs.Single(e =&gt; e.Owner == owner);
+
+context.Remove(owner);
+
+context.SaveChanges();
+</code></pre>
+<p>EF Core will cascade the delete of the owner so that the blog is also deleted:</p>
+<pre><code class="language-sql">-- Executed DbCommand (8ms) [Parameters=[@p0='1'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Blogs]
+WHERE [Id] = @p0;
+SELECT @@ROWCOUNT;
+
+-- Executed DbCommand (2ms) [Parameters=[@p1='1'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [People]
+WHERE [Id] = @p1;
+SELECT @@ROWCOUNT;
+</code></pre>
+<p>However, if the blog is not loaded when the owner is deleted:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var owner = context.People.Single(e =&gt; e.Name == &quot;ajcvickers&quot;);
+
+context.Remove(owner);
+
+context.SaveChanges();
+</code></pre>
+<p>Then an exception will be thrown due to violation of the foreign key constraint in the database:</p>
+<h2><a href="#cascading-nulls" aria-hidden="true" class="anchor" id="cascading-nulls"></a>Cascading nulls</h2>
+<p>All relationships have a foreign key property mapped to a nullable database column.</p>
+<p>Let's look again at the examples from When cascading behaviors happen, but this time with an optional relationship represented by a nullable <code>Post.BlogId</code> foreign key property:</p>
+<pre><code class="language-csharp">public int? BlogId { get; set; }
+</code></pre>
+<p>This foreign key property will be set to null for each post when its related blog is deleted. For example, this code, which is the same as before:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.OrderBy(e =&gt; e.Name).Include(e =&gt; e.Posts).First();
+
+context.Remove(blog);
+
+context.SaveChanges();
+</code></pre>
+<p>Will now result in the following database updates when <code>SaveChanges</code> is called:</p>
+<pre><code class="language-sql">-- Executed DbCommand (2ms) [Parameters=[@p1='1', @p0=NULL (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+UPDATE [Posts] SET [BlogId] = @p0
+WHERE [Id] = @p1;
+SELECT @@ROWCOUNT;
+
+-- Executed DbCommand (0ms) [Parameters=[@p1='2', @p0=NULL (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+UPDATE [Posts] SET [BlogId] = @p0
+WHERE [Id] = @p1;
+SELECT @@ROWCOUNT;
+
+-- Executed DbCommand (1ms) [Parameters=[@p2='1'], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+DELETE FROM [Blogs]
+WHERE [Id] = @p2;
+SELECT @@ROWCOUNT;
+</code></pre>
+<p>Likewise, if the relationship is severed using either of the examples from above:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.OrderBy(e =&gt; e.Name).Include(e =&gt; e.Posts).First();
+
+foreach (var post in blog.Posts)
+{
+    post.Blog = null;
+}
+
+context.SaveChanges();
+</code></pre>
+<p>Or:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.OrderBy(e =&gt; e.Name).Include(e =&gt; e.Posts).First();
+
+blog.Posts.Clear();
+
+context.SaveChanges();
+</code></pre>
+<p>Then the posts are updated with null foreign key values when SaveChanges is called:</p>
+<pre><code class="language-sql">-- Executed DbCommand (2ms) [Parameters=[@p1='1', @p0=NULL (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+UPDATE [Posts] SET [BlogId] = @p0
+WHERE [Id] = @p1;
+SELECT @@ROWCOUNT;
+
+-- Executed DbCommand (0ms) [Parameters=[@p1='2', @p0=NULL (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SET NOCOUNT ON;
+UPDATE [Posts] SET [BlogId] = @p0
+WHERE [Id] = @p1;
+SELECT @@ROWCOUNT;
+</code></pre>
+<p>See Changing Foreign Keys and Navigations for more information on how EF Core manages foreign keys and navigations as their values are changed.</p>
+<blockquote>
+<p>Note
+The fixup of relationships like this has been the default behavior of Entity Framework since the first version in 2008. Prior to EF Core it didn't have a name and was not possible to change. It is now known as <code>ClientSetNull</code> as described in the next section.</p>
+</blockquote>
+<p>cascading nulls can be configured to cascade nulls like this when a principal or parent in an optional relationship is deleted.</p>
+<h2><a href="#configuring-cascading-behaviors" aria-hidden="true" class="anchor" id="configuring-cascading-behaviors"></a>Configuring cascading behaviors</h2>
+<blockquote>
+<p>Tip
+Be sure to read sections above before coming here. The configuration options will likely not make sense if the preceding material is not understood.</p>
+</blockquote>
+<p><code>Cascade</code> behaviors are configured per relationship using the <code>OnDelete</code> method in OnModelCreating. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .Entity&lt;Blog&gt;()
+        .HasOne(e =&gt; e.Owner)
+        .WithOne(e =&gt; e.OwnedBlog)
+        .OnDelete(DeleteBehavior.ClientCascade);
+}
+</code></pre>
+<p>See Relationships for more information on configuring relationships between entity types.</p>
+<p>This example shows how to use an enum to create a cascade of entities.</p>
+<h3><a href="#impact-on-database-schema" aria-hidden="true" class="anchor" id="impact-on-database-schema"></a>Impact on database schema</h3>
+<p>The following table shows the result of each <code>OnDelete</code> value on the foreign key constraint created by EF Core migrations or EnsureCreated.</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">DeleteBehavior</th>
+<th>Impact on database schema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Cascade</td>
+<td>ON DELETE CASCADE</td>
+</tr>
+<tr>
+<td style="text-align: left;">Restrict</td>
+<td>ON DELETE RESTRICT</td>
+</tr>
+<tr>
+<td style="text-align: left;">NoAction</td>
+<td>database default</td>
+</tr>
+<tr>
+<td style="text-align: left;">SetNull</td>
+<td>ON DELETE SET NULL</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientSetNull</td>
+<td>database default</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientCascade</td>
+<td>database default</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientNoAction</td>
+<td>database default</td>
+</tr>
+</tbody></table>
+<p>There is a difference between ONRICT and ONNO.</p>
+<p>SQL Server doesn't support <code>ON DELETE RESTRICT</code>, so <code>ON DELETE NO ACTION</code> is used instead.</p>
+<p>The only values that will cause cascading behaviors on the database are <code>Cascade</code> and <code>SetNull</code>. All other values will configure the database to not cascade any changes.</p>
+<h3><a href="#impact-on-savechanges-behavior" aria-hidden="true" class="anchor" id="impact-on-savechanges-behavior"></a>Impact on SaveChanges behavior</h3>
+<p>What happens when the principal or parent of a dependent/child entity dies?</p>
+<ul>
+<li>
+<p>Optional (nullable FK) and required (non-nullable FK) relationships</p>
+</li>
+<li>
+<p>When dependents/children are loaded and tracked by the DbContext and when they exist only in the database</p>
+</li>
+</ul>
+<h4><a href="#required-relationship-with-dependentschildren-loaded" aria-hidden="true" class="anchor" id="required-relationship-with-dependentschildren-loaded"></a>Required relationship with dependents/children loaded</h4>
+<table><thead>
+<tr>
+<th style="text-align: left;">DeleteBehavior</th>
+<th>On deleting principal/parent</th>
+<th>On severing from principal/parent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Cascade</td>
+<td>Dependents deleted by EF Core</td>
+<td>Dependents deleted by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">Restrict</td>
+<td><code>InvalidOperationException</code></td>
+<td><code>InvalidOperationException</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">NoAction</td>
+<td><code>InvalidOperationException</code></td>
+<td><code>InvalidOperationException</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">SetNull</td>
+<td><code>SqlException</code> on creating database</td>
+<td><code>SqlException</code> on creating database</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientSetNull</td>
+<td><code>InvalidOperationException</code></td>
+<td><code>InvalidOperationException</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientCascade</td>
+<td>Dependents deleted by EF Core</td>
+<td>Dependents deleted by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientNoAction</td>
+<td><code>DbUpdateException</code></td>
+<td><code>InvalidOperationException</code></td>
+</tr>
+</tbody></table>
+<p>Notes:</p>
+<ul>
+<li>
+<p>The default for required relationships like this is <code>Cascade</code>.</p>
+</li>
+<li>
+<p>Using anything other than cascade delete for required relationships will result in an exception when <code>SaveChanges</code> is called.</p>
+<ul>
+<li>
+<p>Typically, this is an <code>InvalidOperationException</code> from EF Core since the invalid state is detected in the loaded children/dependents.</p>
+</li>
+<li>
+<p><code>ClientNoAction</code> forces EF Core to not check fixup dependents before sending them to the database, so in this case the database throws an exception, which is then wrapped in a <code>DbUpdateException</code> by <code>SaveChanges</code>.</p>
+</li>
+<li>
+<p><code>SetNull</code> is rejected when creating the database since the foreign key column is not nullable.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Since dependents/children are loaded, they are always deleted by EF Core, and never left for the database to delete.</p>
+</li>
+</ul>
+<h4><a href="#required-relationship-with-dependentschildren-not-loaded" aria-hidden="true" class="anchor" id="required-relationship-with-dependentschildren-not-loaded"></a>Required relationship with dependents/children not loaded</h4>
+<table><thead>
+<tr>
+<th style="text-align: left;">DeleteBehavior</th>
+<th>On deleting principal/parent</th>
+<th>On severing from principal/parent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Cascade</td>
+<td>Dependents deleted by database</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">Restrict</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">NoAction</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">SetNull</td>
+<td><code>SqlException</code> on creating database</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientSetNull</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientCascade</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientNoAction</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+</tbody></table>
+<p>Notes:</p>
+<ul>
+<li>
+<p>Severing a relationship is not valid here since the dependents/children are not loaded.</p>
+</li>
+<li>
+<p>The default for required relationships like this is <code>Cascade</code>.</p>
+</li>
+<li>
+<p>Using anything other than cascade delete for required relationships will result in an exception when SaveChanges is called.</p>
+<ul>
+<li>
+<p>Typically, this is a <code>DbUpdateException</code> because the dependents/children are not loaded, and hence the invalid state can only be detected by the database. SaveChanges then wraps the database exception in a <code>DbUpdateException</code>.</p>
+</li>
+<li>
+<p><code>SetNull</code> is rejected when creating the database since the foreign key column is not nullable.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4><a href="#optional-relationship-with-dependentschildren-loaded" aria-hidden="true" class="anchor" id="optional-relationship-with-dependentschildren-loaded"></a>Optional relationship with dependents/children loaded</h4>
+<table><thead>
+<tr>
+<th style="text-align: left;">DeleteBehavior</th>
+<th>On deleting principal/parent</th>
+<th>On severing from principal/parent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Cascade</td>
+<td>Dependents deleted by EF Core</td>
+<td>Dependents deleted by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">Restrict</td>
+<td>Dependent FKs set to null by EF Core</td>
+<td>Dependent FKs set to null by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">NoAction</td>
+<td>Dependent FKs set to null by EF Core</td>
+<td>Dependent FKs set to null by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">SetNull</td>
+<td>Dependent FKs set to null by EF Core</td>
+<td>Dependent FKs set to null by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientSetNull</td>
+<td>Dependent FKs set to null by EF Core</td>
+<td>Dependent FKs set to null by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientCascade</td>
+<td>Dependents deleted by EF Core</td>
+<td>Dependents deleted by EF Core</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientNoAction</td>
+<td><code>DbUpdateException</code></td>
+<td>Dependent FKs set to null by EF Core</td>
+</tr>
+</tbody></table>
+<p>Notes:</p>
+<ul>
+<li>
+<p>The default for optional relationships like this is <code>ClientSetNull</code>.</p>
+</li>
+<li>
+<p>Dependents/children are never deleted unless <code>Cascade</code> or <code>ClientCascade</code> are configured.</p>
+</li>
+<li>
+<p>All other values cause the dependent FKs to be set to null by EF Core...</p>
+<ul>
+<li>...except <code>ClientNoAction</code> which tells EF Core not to touch the foreign keys of dependents/children when the principal/parent is deleted. The database therefore throws an exception, which is wrapped as a <code>DbUpdateException</code> by SaveChanges.</li>
+</ul>
+</li>
+</ul>
+<h4><a href="#optional-relationship-with-dependentschildren-not-loaded" aria-hidden="true" class="anchor" id="optional-relationship-with-dependentschildren-not-loaded"></a>Optional relationship with dependents/children not loaded</h4>
+<table><thead>
+<tr>
+<th style="text-align: left;">DeleteBehavior</th>
+<th>On deleting principal/parent</th>
+<th>On severing from principal/parent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Cascade</td>
+<td>Dependents deleted by database</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">Restrict</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">NoAction</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">SetNull</td>
+<td>Dependent FKs set to null by database</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientSetNull</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientCascade</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td style="text-align: left;">ClientNoAction</td>
+<td><code>DbUpdateException</code></td>
+<td>N/A</td>
+</tr>
+</tbody></table>
+<p>Notes:</p>
+<ul>
+<li>
+<p>Severing a relationship is not valid here since the dependents/children are not loaded.</p>
+</li>
+<li>
+<p>The default for optional relationships like this is <code>ClientSetNull</code>.</p>
+</li>
+<li>
+<p>Dependents/children must be loaded to avoid a database exception unless the database has been configured to cascade either deletes or nulls.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/cascade-delete">Cascade Delete</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

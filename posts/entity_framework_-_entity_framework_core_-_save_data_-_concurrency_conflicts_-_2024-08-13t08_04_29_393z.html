@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - Concurrency conflicts | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This page discusses mechanisms for ensuring that your data stays consistent in the face of such concurrent changes.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - Concurrency conflicts</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<p>This page discusses mechanisms for ensuring that your data stays consistent in the face of such concurrent changes.</p>
+<h2><a href="#optimistic-concurrency" aria-hidden="true" class="anchor" id="optimistic-concurrency"></a>Optimistic concurrency</h2>
+<p>We present a new approach for dealing with concurrency problems in relational databases.</p>
+<p>optimistic concurrency is a key feature of EF Core.</p>
+<p>To understand how this works, let's assume we're on SQL Server, and define a typical <code>Person</code> entity type with a special <code>Version</code> property:</p>
+<pre><code class="language-csharp">public class Person
+{
+    public int PersonId { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+
+    [Timestamp]
+    public byte[] Version { get; set; }
+}
+</code></pre>
+<p>In this article, I'm going to show you how to update a row in a database.</p>
+<pre><code class="language-csharp">var person = context.People.Single(b =&gt; b.FirstName == &quot;John&quot;);
+person.FirstName = &quot;Paul&quot;;
+context.SaveChanges();
+</code></pre>
+<ul>
+<li>
+<p>In the first step, a <code>Person</code> is loaded from the database; this includes the concurrency token, which is now tracked as usual by EF along with the rest of the properties.</p>
+</li>
+<li>
+<p>The <code>Person</code> instance is then modified in some way - we change the <code>FirstName</code> property.</p>
+</li>
+<li>
+<p>We then instruct EF Core to persist the modification. Since a concurrency token is configured, EF Core sends the following SQL to the database:</p>
+</li>
+</ul>
+<pre><code class="language-sql">UPDATE [People] SET [FirstName] = @p0
+WHERE [PersonId] = @p1 AND [Version] = @p2;
+</code></pre>
+<p>EF Core has added a condition to the <code>PersonId</code> in the WHERE clause to make it easier to query the row if the <code>Version</code> column hasn't changed since the moment we queried it.</p>
+<p>EF Core's <code>DbUpdateConcurrencyException</code> throws when there is a concurrent update to a row in the database.</p>
+<p>EF throws <code>DbUpdateConcurrencyException</code> when attempting to update a row that has been concurrently modified.</p>
+<h2><a href="#native-database-generated-concurrency-tokens" aria-hidden="true" class="anchor" id="native-database-generated-concurrency-tokens"></a>Native database-generated concurrency tokens</h2>
+<p>In this article, I'm going to show you how to use concurrency tokens to protect SQL Server data.</p>
+<ul>
+<li>Data Annotations</li>
+</ul>
+<pre><code class="language-c#">public class Person
+{
+    public int PersonId { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+
+    [Timestamp]
+    public byte[] Version { get; set; }
+}
+</code></pre>
+<ul>
+<li>Fluent API</li>
+</ul>
+<pre><code class="language-c#">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Person&gt;()
+        .Property(p =&gt; p.Version)
+        .IsRowVersion();
+}
+</code></pre>
+<p>This article shows how to set up an automatically-updating concurrency token for a row in a database.</p>
+<h2><a href="#application-managed-concurrency-tokens" aria-hidden="true" class="anchor" id="application-managed-concurrency-tokens"></a>Application-managed concurrency tokens</h2>
+<p>An application-managed concurrency token allows you to control which changes to a database trigger a conflict.</p>
+<p>The following configures a GUID property to be a concurrency token:</p>
+<ul>
+<li>Data Annotations</li>
+</ul>
+<pre><code class="language-c#">public class Person
+{
+    public int PersonId { get; set; }
+    public string FirstName { get; set; }
+
+    [ConcurrencyCheck]
+    public Guid Version { get; set; }
+}
+</code></pre>
+<ul>
+<li>Fluent API</li>
+</ul>
+<pre><code class="language-c#">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Person&gt;()
+        .Property(p =&gt; p.Version)
+        .IsConcurrencyToken();
+}
+</code></pre>
+<p>Since this property isn't database-generated, you must assign it in application whenever persisting changes:</p>
+<pre><code class="language-c#">var person = context.People.Single(b =&gt; b.FirstName == &quot;John&quot;);
+person.FirstName = &quot;Paul&quot;;
+person.Version = Guid.NewGuid();
+context.SaveChanges();
+</code></pre>
+<p>The concurrency token is a value that is assigned to every change to a GUID.</p>
+<h2><a href="#resolving-concurrency-conflicts" aria-hidden="true" class="anchor" id="resolving-concurrency-conflicts"></a>Resolving concurrency conflicts</h2>
+<p>optimistic concurrency is defined in the DbUpdateConcurrency class.</p>
+<p>If your application has an update that fails, what should you do?</p>
+<p>concurrency is a problem when two values in a database are updated at the same time.</p>
+<p>There are three sets of values available to help resolve a concurrency conflict:</p>
+<ul>
+<li>
+<p>Current values are the values that the application was attempting to write to the database.</p>
+</li>
+<li>
+<p>Original values are the values that were originally retrieved from the database, before any edits were made.</p>
+</li>
+<li>
+<p>Database values are the values currently stored in the database.</p>
+</li>
+</ul>
+<p>The general approach to handle a concurrency conflicts is:</p>
+<ul>
+<li>
+<p>Catch <code>DbUpdateConcurrencyException</code> during <code>SaveChanges</code>.</p>
+</li>
+<li>
+<p>Use <code>DbUpdateConcurrencyException.Entries</code> to prepare a new set of changes for the affected entities.</p>
+</li>
+<li>
+<p>Refresh the original values of the concurrency token to reflect the current values in the database.</p>
+</li>
+<li>
+<p>Retry the process until no conflicts occur.</p>
+</li>
+</ul>
+<p>In this article we are going to look at how you can use tokens to control the behaviour of an application.</p>
+<pre><code class="language-csharp">using var context = new PersonContext();
+// Fetch a person from database and change phone number
+var person = context.People.Single(p =&gt; p.PersonId == 1);
+person.PhoneNumber = &quot;555-555-5555&quot;;
+
+// Change the person's name in the database to simulate a concurrency conflict
+context.Database.ExecuteSqlRaw(
+    &quot;UPDATE dbo.People SET FirstName = 'Jane' WHERE PersonId = 1&quot;);
+
+var saved = false;
+while (!saved)
+{
+    try
+    {
+        // Attempt to save changes to the database
+        context.SaveChanges();
+        saved = true;
+    }
+    catch (DbUpdateConcurrencyException ex)
+    {
+        foreach (var entry in ex.Entries)
+        {
+            if (entry.Entity is Person)
+            {
+                var proposedValues = entry.CurrentValues;
+                var databaseValues = entry.GetDatabaseValues();
+
+                foreach (var property in proposedValues.Properties)
+                {
+                    var proposedValue = proposedValues[property];
+                    var databaseValue = databaseValues[property];
+
+                    // TODO: decide which value should be written to database
+                    // proposedValues[property] = &lt;value to be saved&gt;;
+                }
+
+                // Refresh original values to bypass next concurrency check
+                entry.OriginalValues.SetValues(databaseValues);
+            }
+            else
+            {
+                throw new NotSupportedException(
+                    &quot;Don't know how to handle concurrency conflicts for &quot;
+                    + entry.Metadata.Name);
+            }
+        }
+    }
+}
+</code></pre>
+<h2><a href="#using-isolation-levels-for-concurrency-control" aria-hidden="true" class="anchor" id="using-isolation-levels-for-concurrency-control"></a>Using isolation levels for concurrency control</h2>
+<p>Optimistic concurrency via concurrency tokens isn't the only way to ensure that data stays consistent in the face of concurrent changes.</p>
+<p>Consistency is one of the most important considerations when implementing a database.</p>
+<ul>
+<li>
+<p>When the row is queried, your transaction takes a shared lock on it. Any external transaction attempting to update the row will block until your transaction completes. This is a form of pessimistic locking, and is implemented by the SQL Server &quot;repeatable read&quot; isolation level.</p>
+</li>
+<li>
+<p>Rather than locking, the database allows the external transaction to update the row, but when your own transaction attempts to do the update, a &quot;serialization&quot; error will be raised, indicating that a concurrency conflict occurred. This is a form of optimistic locking - not unlike EF's concurrency token feature - and is implemented by the SQL Server snapshot isolation level, as well as by the PostgreSQL repeatable reads isolation level.</p>
+</li>
+</ul>
+<p>Note that the &quot;serializable&quot; isolation level provides the same guarantees as repeatable read (and adds additional ones), so it functions in the same way with respect to the above.</p>
+<p>concurrency is one of the biggest challenges facing modern web developers.</p>
+<p>There are a couple of things to keep in mind when implementing isolation levels in SQL Server.</p>
+<p>In this article, I'm going to show you how to query an object in order to display its details to a user.</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<p>See Conflict detection in EF Core for an ASP.NET Core sample with conflict detection.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/concurrency">Handling Concurrency Conflicts</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
