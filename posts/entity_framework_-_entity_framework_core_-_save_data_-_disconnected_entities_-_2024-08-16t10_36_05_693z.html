@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Save data - Disconnected entities | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Save changes to entities in a database.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Save data - Disconnected entities</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Save changes to entities in a database.</p>
+<p>When entities are queried using a context instance, they are queried and saved using the same instance.</p>
+<blockquote>
+<p>Tip
+You can view this article's sample on GitHub.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+EF Core can only track one instance of any entity with a given primary key value. The best way to avoid this being an issue is to use a short-lived context for each unit-of-work such that the context starts empty, has entities attached to it, saves those entities, and then the context is disposed and discarded.</p>
+</blockquote>
+<h2><a href="#identifying-new-entities" aria-hidden="true" class="anchor" id="identifying-new-entities"></a>Identifying new entities</h2>
+<h3><a href="#client-identifies-new-entities" aria-hidden="true" class="anchor" id="client-identifies-new-entities"></a>Client identifies new entities</h3>
+<p>There are a number of ways to deal with requests to insert or update entities.</p>
+<p>The remainder of this section covers the cases where it is necessary to determine in some other way whether to insert or update.</p>
+<h3><a href="#with-auto-generated-keys" aria-hidden="true" class="anchor" id="with-auto-generated-keys"></a>With auto-generated keys</h3>
+<p>An automatically generated key can be used to determine whether an entity needs to be inserted or updated.</p>
+<p>It is easy to check for an unset key when the entity type is known:</p>
+<pre><code class="language-csharp">public static bool IsItNew(Blog blog)
+    =&gt; blog.BlogId == 0;
+</code></pre>
+<p>However, EF also has a built-in way to do this for any entity type and key type:</p>
+<pre><code class="language-csharp">public static bool IsItNew(DbContext context, object entity)
+    =&gt; !context.Entry(entity).IsKeySet;
+</code></pre>
+<blockquote>
+<p>Tip
+Keys are set as soon as entities are tracked by the context, even if the entity is in the Added state. This helps when traversing a graph of entities and deciding what to do with each, such as when using the TrackGraph API. The key value should only be used in the way shown here before any call is made to track the entity.</p>
+</blockquote>
+<h3><a href="#with-other-keys" aria-hidden="true" class="anchor" id="with-other-keys"></a>With other keys</h3>
+<p>Some other mechanism is needed to identify new entities when key values are not generated automatically. There are two general approaches to this:</p>
+<ul>
+<li>
+<p>Query for the entity</p>
+</li>
+<li>
+<p>Pass a flag from the client</p>
+</li>
+</ul>
+<p>To query for the entity, just use the Find method:</p>
+<pre><code class="language-csharp">public static bool IsItNew(BloggingContext context, Blog blog)
+    =&gt; context.Blogs.Find(blog.BlogId) == null;
+</code></pre>
+<p>This document shows the code for passing a flag from a client to a controller.</p>
+<h2><a href="#saving-single-entities" aria-hidden="true" class="anchor" id="saving-single-entities"></a>Saving single entities</h2>
+<p>If it is known whether or not an insert or update is needed, then either Add or Update can be used appropriately:</p>
+<pre><code class="language-csharp">public static void Insert(DbContext context, object entity)
+{
+    context.Add(entity);
+    context.SaveChanges();
+}
+
+public static void Update(DbContext context, object entity)
+{
+    context.Update(entity);
+    context.SaveChanges();
+}
+</code></pre>
+<p>However, if the entity uses auto-generated key values, then the Update method can be used for both cases:</p>
+<pre><code class="language-csharp">public static void InsertOrUpdate(DbContext context, object entity)
+{
+    context.Update(entity);
+    context.SaveChanges();
+}
+</code></pre>
+<p>If the entity is not using auto-generated keys, then the application must decide whether the entity should be inserted or updated: For example:</p>
+<pre><code class="language-csharp">public static void InsertOrUpdate(BloggingContext context, Blog blog)
+{
+    var existingBlog = context.Blogs.Find(blog.BlogId);
+    if (existingBlog == null)
+    {
+        context.Add(blog);
+    }
+    else
+    {
+        context.Entry(existingBlog).CurrentValues.SetValues(blog);
+    }
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>The steps here are:</p>
+<ul>
+<li>
+<p>If Find returns null, then the database doesn't already contain the blog with this ID, so we call Add mark it for insertion.</p>
+</li>
+<li>
+<p>If Find returns an entity, then it exists in the database and the context is now tracking the existing entity</p>
+<ul>
+<li>
+<p>We then use SetValues to set the values for all properties on this entity to those that came from the client.</p>
+</li>
+<li>
+<p>The SetValues call will mark the entity to be updated as needed.</p>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+SetValues will only mark as modified the properties that have different values to those in the tracked entity. This means that when the update is sent, only those columns that have actually changed will be updated. (And if nothing has changed, then no update will be sent at all.)</p>
+</blockquote>
+<h2><a href="#working-with-graphs" aria-hidden="true" class="anchor" id="working-with-graphs"></a>Working with graphs</h2>
+<h3><a href="#identity-resolution" aria-hidden="true" class="anchor" id="identity-resolution"></a>Identity resolution</h3>
+<p>When working with graphs the graph should ideally be created such as this invariant is maintained, and the context should be used for only one unit-of-work.</p>
+<h3><a href="#all-newall-existing-entities" aria-hidden="true" class="anchor" id="all-newall-existing-entities"></a>All new/all existing entities</h3>
+<p>A graph is a representation of a single entity, such as a collection of blog posts.</p>
+<pre><code class="language-csharp">var blog = new Blog
+{
+    Url = &quot;http://sample.com&quot;, Posts = new List&lt;Post&gt; { new Post { Title = &quot;Post 1&quot; }, new Post { Title = &quot;Post 2&quot; }, }
+};
+</code></pre>
+<p>can be inserted like this:</p>
+<pre><code class="language-csharp">public static void InsertGraph(DbContext context, object rootEntity)
+{
+    context.Add(rootEntity);
+    context.SaveChanges();
+}
+</code></pre>
+<p>The call to Add will mark the blog and all the posts to be inserted.</p>
+<p>Likewise, if all the entities in a graph need to be updated, then Update can be used:</p>
+<pre><code class="language-csharp">public static void UpdateGraph(DbContext context, object rootEntity)
+{
+    context.Update(rootEntity);
+    context.SaveChanges();
+}
+</code></pre>
+<p>The blog and all its posts will be marked to be updated.</p>
+<h3><a href="#mix-of-new-and-existing-entities" aria-hidden="true" class="anchor" id="mix-of-new-and-existing-entities"></a>Mix of new and existing entities</h3>
+<p>With auto-generated keys, Update can again be used for both inserts and updates, even if the graph contains a mix of entities that require inserting and those that require updating:</p>
+<pre><code class="language-csharp">public static void InsertOrUpdateGraph(DbContext context, object rootEntity)
+{
+    context.Update(rootEntity);
+    context.SaveChanges();
+}
+</code></pre>
+<p>Update will mark any entity in the graph, blog or post, for insertion if it does not have a key value set, while all other entities are marked for update.</p>
+<p>As before, when not using auto-generated keys, a query and some processing can be used:</p>
+<pre><code class="language-csharp">public static void InsertOrUpdateGraph(BloggingContext context, Blog blog)
+{
+    var existingBlog = context.Blogs
+        .Include(b =&gt; b.Posts)
+        .FirstOrDefault(b =&gt; b.BlogId == blog.BlogId);
+
+    if (existingBlog == null)
+    {
+        context.Add(blog);
+    }
+    else
+    {
+        context.Entry(existingBlog).CurrentValues.SetValues(blog);
+        foreach (var post in blog.Posts)
+        {
+            var existingPost = existingBlog.Posts
+                .FirstOrDefault(p =&gt; p.PostId == post.PostId);
+
+            if (existingPost == null)
+            {
+                existingBlog.Posts.Add(post);
+            }
+            else
+            {
+                context.Entry(existingPost).CurrentValues.SetValues(post);
+            }
+        }
+    }
+
+    context.SaveChanges();
+}
+</code></pre>
+<h2><a href="#handling-deletes" aria-hidden="true" class="anchor" id="handling-deletes"></a>Handling deletes</h2>
+<p>Delete is the process of deleting an entity from a query.</p>
+<p>For true deletes, a common pattern is to use an extension of the query pattern to perform what is essentially a graph diff. For example:</p>
+<pre><code class="language-csharp">public static void InsertUpdateOrDeleteGraph(BloggingContext context, Blog blog)
+{
+    var existingBlog = context.Blogs
+        .Include(b =&gt; b.Posts)
+        .FirstOrDefault(b =&gt; b.BlogId == blog.BlogId);
+
+    if (existingBlog == null)
+    {
+        context.Add(blog);
+    }
+    else
+    {
+        context.Entry(existingBlog).CurrentValues.SetValues(blog);
+        foreach (var post in blog.Posts)
+        {
+            var existingPost = existingBlog.Posts
+                .FirstOrDefault(p =&gt; p.PostId == post.PostId);
+
+            if (existingPost == null)
+            {
+                existingBlog.Posts.Add(post);
+            }
+            else
+            {
+                context.Entry(existingPost).CurrentValues.SetValues(post);
+            }
+        }
+
+        foreach (var post in existingBlog.Posts)
+        {
+            if (!blog.Posts.Any(p =&gt; p.PostId == post.PostId))
+            {
+                context.Remove(post);
+            }
+        }
+    }
+
+    context.SaveChanges();
+}
+</code></pre>
+<h2><a href="#trackgraph" aria-hidden="true" class="anchor" id="trackgraph"></a><code>TrackGraph</code></h2>
+<p><code>TrackGraph</code> is a graph-traversal approach to managing entities.</p>
+<pre><code class="language-csharp">public static void SaveAnnotatedGraph(DbContext context, object rootEntity)
+{
+    context.ChangeTracker.TrackGraph(
+        rootEntity,
+        n =&gt;
+        {
+            var entity = (EntityBase)n.Entry.Entity;
+            n.Entry.State = entity.IsNew
+                ? EntityState.Added
+                : entity.IsChanged
+                    ? EntityState.Modified
+                    : entity.IsDeleted
+                        ? EntityState.Deleted
+                        : EntityState.Unchanged;
+        });
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>The flags are only shown as part of the entity for simplicity of the example. Typically the flags would be part of a DTO or some other state included in the request.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/disconnected-entities">Disconnected entities</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

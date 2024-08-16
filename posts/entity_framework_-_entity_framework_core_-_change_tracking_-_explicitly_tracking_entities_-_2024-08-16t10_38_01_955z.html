@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Change tracking - Explicitly tracking entities | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Each DbContext instance tracks changes made to entities. These tracked entities in turn drive the changes to the database when SaveChanges is called.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Change tracking - Explicitly tracking entities</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Each <code>DbContext</code> instance tracks changes made to entities. These tracked entities in turn drive the changes to the database when <code>SaveChanges</code> is called.</p>
+<p><code>DbContext</code> change tracking works best when the same DbContext instance is used to query for entities and update them by calling <code>SaveChanges</code>.</p>
+<blockquote>
+<p>Tip
+This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+For simplicity, this document uses and references synchronous methods such as <code>SaveChanges</code> rather than their async equivalents such as <code>SaveChangesAsync</code>. Calling and awaiting the async method can be substituted unless otherwise noted.</p>
+</blockquote>
+<h2><a href="#introduction" aria-hidden="true" class="anchor" id="introduction"></a>Introduction</h2>
+<p>Entities can be explicitly &quot;attached&quot; to a DbContext such that the context then tracks those entities. This is primarily useful when:</p>
+<ul>
+<li>
+<p>Creating new entities that will be inserted into the database.</p>
+</li>
+<li>
+<p>Re-attaching disconnected entities that were previously queried by a different DbContext instance.</p>
+</li>
+</ul>
+<p>The first of these will be needed by most applications, and is primarily handled by the DbContext.Add methods.</p>
+<p><code>DbContexts</code> are defined in two ways: the first is needed by applications that track entities or their relationships while the entities are being tracked, and the second is only needed by applications that change entities or their relationships while the entities are not being tracked.</p>
+<p>The <code>DbContext.Attach</code> method has been deprecated.</p>
+<blockquote>
+<p>Tip
+Attaching entities to the same DbContext instance that they were queried from should not normally be needed. Do not routinely perform a no-tracking query and then attach the returned entities to the same context. This will be slower than using a tracking query, and may also result in issues such as missing shadow property values, making it harder to get right.</p>
+</blockquote>
+<h3><a href="#generated-versus-explicit-key-values" aria-hidden="true" class="anchor" id="generated-versus-explicit-key-values"></a>Generated versus explicit key values</h3>
+<p>Key properties can be used to track changes to an entity in a database.</p>
+<p>Two models are used in the following sections. The first is configured to not use generated key values:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public int Id { get; set; }
+
+    public string Name { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public int Id { get; set; }
+
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public int? BlogId { get; set; }
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>The following examples show how to generate key values using the Python programming language.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public int? BlogId { get; set; }
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>Notice that the key properties in this model need no additional configuration here since using generated key values is the default for simple integer keys.</p>
+<h2><a href="#inserting-new-entities" aria-hidden="true" class="anchor" id="inserting-new-entities"></a>Inserting new entities</h2>
+<h3><a href="#explicit-key-values" aria-hidden="true" class="anchor" id="explicit-key-values"></a>Explicit key values</h3>
+<p>An entity can be put in the <code>Added</code> state by calling <code>DbContext.AddRange</code>, <code>DbContext.AddAsync</code>, or the equivalent methods on <code>DbSet&lt;T&gt;</code>.</p>
+<blockquote>
+<p>Tip
+These methods all work in the same way in the context of change tracking. See Additional Change Tracking Features for more information.</p>
+</blockquote>
+<p>For example, to start tracking a new blog:</p>
+<pre><code class="language-csharp">context.Add(
+    new Blog { Id = 1, Name = &quot;.NET Blog&quot;, });
+</code></pre>
+<p>Inspecting the change tracker debug view following this call shows that the context is tracking the new entity in the <code>Added</code> state:</p>
+<pre><code class="language-output">Blog {Id: 1} Added
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: []
+</code></pre>
+<p>The <code>Add</code> method adds a new entity to a list of existing entities.</p>
+<pre><code class="language-csharp">context.Add(
+    new Blog
+    {
+        Id = 1,
+        Name = &quot;.NET Blog&quot;,
+        Posts =
+        {
+            new Post
+            {
+                Id = 1,
+                Title = &quot;Announcing the Release of EF Core 5.0&quot;,
+                Content = &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;
+            },
+            new Post
+            {
+                Id = 2,
+                Title = &quot;Announcing F# 5&quot;,
+                Content = &quot;F# 5 is the latest version of F#, the functional programming language...&quot;
+            }
+        }
+    });
+</code></pre>
+<p>The context is now tracking all these entities as <code>Added</code>:</p>
+<pre><code class="language-output">Blog {Id: 1} Added
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Added
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Added
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>In this article we are going to look at how to set explicit values for key properties.</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p0='1' (DbType = String), @p1='.NET Blog' (Size = 9)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Blogs&quot; (&quot;Id&quot;, &quot;Name&quot;)
+VALUES (@p0, @p1);
+
+-- Executed DbCommand (0ms) [Parameters=[@p2='1' (DbType = String), @p3='1' (DbType = String), @p4='Announcing the release of EF Core 5.0, a full featured cross-platform...' (Size = 72), @p5='Announcing the Release of EF Core 5.0' (Size = 37)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Posts&quot; (&quot;Id&quot;, &quot;BlogId&quot;, &quot;Content&quot;, &quot;Title&quot;)
+VALUES (@p2, @p3, @p4, @p5);
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='2' (DbType = String), @p1='1' (DbType = String), @p2='F# 5 is the latest version of F#, the functional programming language...' (Size = 72), @p3='Announcing F# 5' (Size = 15)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Posts&quot; (&quot;Id&quot;, &quot;BlogId&quot;, &quot;Content&quot;, &quot;Title&quot;)
+VALUES (@p0, @p1, @p2, @p3);
+</code></pre>
+<p>All of these entities are tracked in the <code>Unchanged</code> state after <code>SaveChanges</code> completes, since these entities now exist in the database:</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<h3><a href="#generated-key-values" aria-hidden="true" class="anchor" id="generated-key-values"></a>Generated key values</h3>
+<p>In this article, I'll show you how to use the generated key property to insert blog posts.</p>
+<pre><code class="language-csharp">context.Add(
+    new Blog
+    {
+        Name = &quot;.NET Blog&quot;,
+        Posts =
+        {
+            new Post
+            {
+                Title = &quot;Announcing the Release of EF Core 5.0&quot;,
+                Content = &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;
+            },
+            new Post
+            {
+                Title = &quot;Announcing F# 5&quot;,
+                Content = &quot;F# 5 is the latest version of F#, the functional programming language...&quot;
+            }
+        }
+    });
+</code></pre>
+<p>As with explicit key values, the context is now tracking all these entities as <code>Added</code>:</p>
+<pre><code class="language-output">Blog {Id: -2147482644} Added
+  Id: -2147482644 PK Temporary
+  Name: '.NET Blog'
+  Posts: [{Id: -2147482637}, {Id: -2147482636}]
+Post {Id: -2147482637} Added
+  Id: -2147482637 PK Temporary
+  BlogId: -2147482644 FK Temporary
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: -2147482644}
+Post {Id: -2147482636} Added
+  Id: -2147482636 PK Temporary
+  BlogId: -2147482644 FK Temporary
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: -2147482644}
+</code></pre>
+<p>The following example shows how to generate temporary key values for an entity.</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p0='.NET Blog' (Size = 9)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Blogs&quot; (&quot;Name&quot;)
+VALUES (@p0);
+SELECT &quot;Id&quot;
+FROM &quot;Blogs&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+
+-- Executed DbCommand (0ms) [Parameters=[@p1='1' (DbType = String), @p2='Announcing the release of EF Core 5.0, a full featured cross-platform...' (Size = 72), @p3='Announcing the Release of EF Core 5.0' (Size = 37)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Posts&quot; (&quot;BlogId&quot;, &quot;Content&quot;, &quot;Title&quot;)
+VALUES (@p1, @p2, @p3);
+SELECT &quot;Id&quot;
+FROM &quot;Posts&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='1' (DbType = String), @p1='F# 5 is the latest version of F#, the functional programming language...' (Size = 72), @p2='Announcing F# 5' (Size = 15)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Posts&quot; (&quot;BlogId&quot;, &quot;Content&quot;, &quot;Title&quot;)
+VALUES (@p0, @p1, @p2);
+SELECT &quot;Id&quot;
+FROM &quot;Posts&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+</code></pre>
+<p>After <code>SaveChanges</code> completes, all of the entities have been updated with their real key values and are tracked in the <code>Unchanged</code> state since they now match the state in the database:</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>This is exactly the same end-state as the previous example that used explicit key values.</p>
+<blockquote>
+<p>Tip
+An explicit key value can still be set even when using generated key values. EF Core will then attempt to insert using this key value. Some database configurations, including SQL Server with Identity columns, do not support such inserts and will throw (see these docs for a workaround).</p>
+</blockquote>
+<h2><a href="#attaching-existing-entities" aria-hidden="true" class="anchor" id="attaching-existing-entities"></a>Attaching existing entities</h2>
+<h3><a href="#explicit-key-values-1" aria-hidden="true" class="anchor" id="explicit-key-values-1"></a>Explicit key values</h3>
+<p><code>DbContext.AttachRange</code> is a wrapper around the <code>DbSet&lt;T&gt;</code> method.</p>
+<pre><code class="language-csharp">context.Attach(
+    new Blog { Id = 1, Name = &quot;.NET Blog&quot;, });
+</code></pre>
+<blockquote>
+<p>Note
+The examples here are creating entities explicitly with new for simplicity. Normally the entity instances will have come from another source, such as being deserialized from a client, or being created from data in an HTTP Post.</p>
+</blockquote>
+<p>Inspecting the change tracker debug view following this call shows that the entity is tracked in the <code>Unchanged</code> state:</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: []
+</code></pre>
+<p>Just like <code>Add</code>, <code>Attach</code> actually sets an entire graph of connected entities to the <code>Unchanged</code> state. For example, to attach an existing blog and associated existing posts:</p>
+<pre><code class="language-csharp">context.Attach(
+    new Blog
+    {
+        Id = 1,
+        Name = &quot;.NET Blog&quot;,
+        Posts =
+        {
+            new Post
+            {
+                Id = 1,
+                Title = &quot;Announcing the Release of EF Core 5.0&quot;,
+                Content = &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;
+            },
+            new Post
+            {
+                Id = 2,
+                Title = &quot;Announcing F# 5&quot;,
+                Content = &quot;F# 5 is the latest version of F#, the functional programming language...&quot;
+            }
+        }
+    });
+</code></pre>
+<p>The context is now tracking all these entities as <code>Unchanged</code>:</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>Calling <code>SaveChanges</code> at this point will have no effect. All the entities are marked as <code>Unchanged</code>, so there is nothing to update in the database.</p>
+<h3><a href="#generated-key-values-1" aria-hidden="true" class="anchor" id="generated-key-values-1"></a>Generated key values</h3>
+<p>In this post, I'm going to show you how to use the change tracker to automatically detect new entities and put them in the <code>Added</code> state.</p>
+<pre><code class="language-csharp">context.Attach(
+    new Blog
+    {
+        Id = 1,
+        Name = &quot;.NET Blog&quot;,
+        Posts =
+        {
+            new Post
+            {
+                Id = 1,
+                Title = &quot;Announcing the Release of EF Core 5.0&quot;,
+                Content = &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;
+            },
+            new Post
+            {
+                Id = 2,
+                Title = &quot;Announcing F# 5&quot;,
+                Content = &quot;F# 5 is the latest version of F#, the functional programming language...&quot;
+            },
+            new Post
+            {
+                Title = &quot;Announcing .NET 5.0&quot;,
+                Content = &quot;.NET 5.0 includes many enhancements, including single file applications, more...&quot;
+            },
+        }
+    });
+</code></pre>
+<p>This example shows how to add a new blog to an existing database.</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}, {Id: -2147482636}]
+Post {Id: -2147482636} Added
+  Id: -2147482636 PK Temporary
+  BlogId: 1 FK
+  Content: '.NET 5.0 includes many enhancements, including single file a...'
+  Title: 'Announcing .NET 5.0'
+  Blog: {Id: 1}
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+</code></pre>
+<p>Calling <code>SaveChanges</code> at this point does nothing with the <code>Unchanged</code> entities, but inserts the new entity into the database. For example, when using SQLite:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p0='1' (DbType = String), @p1='.NET 5.0 includes many enhancements, including single file applications, more...' (Size = 80), @p2='Announcing .NET 5.0' (Size = 19)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Posts&quot; (&quot;BlogId&quot;, &quot;Content&quot;, &quot;Title&quot;)
+VALUES (@p0, @p1, @p2);
+SELECT &quot;Id&quot;
+FROM &quot;Posts&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+</code></pre>
+<p>In this post I'm going to show you how to use generated key values in EF Core to create new entities in a disconnected graph.</p>
+<h2><a href="#updating-existing-entities" aria-hidden="true" class="anchor" id="updating-existing-entities"></a>Updating existing entities</h2>
+<h3><a href="#explicit-key-values-2" aria-hidden="true" class="anchor" id="explicit-key-values-2"></a>Explicit key values</h3>
+<p><code>Attach</code> methods on <code>DbContext.UpdateRange</code> and <code>DbSet&lt;T&gt;</code> behave exactly as the <code>Attach</code> methods described above, except that entities are put into the <code>Modified</code> state.</p>
+<pre><code class="language-csharp">context.Update(
+    new Blog { Id = 1, Name = &quot;.NET Blog&quot;, });
+</code></pre>
+<p>Inspecting the change tracker debug view following this call shows that the context is tracking this entity in the <code>Modified</code> state:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  Name: '.NET Blog' Modified
+  Posts: []
+</code></pre>
+<p>Just like with <code>Add</code> and <code>Attach</code>, <code>Update</code> actually marks an entire graph of related entities as <code>Modified</code>. For example, to attach an existing blog and associated existing posts as <code>Modified</code>:</p>
+<pre><code class="language-csharp">context.Update(
+    new Blog
+    {
+        Id = 1,
+        Name = &quot;.NET Blog&quot;,
+        Posts =
+        {
+            new Post
+            {
+                Id = 1,
+                Title = &quot;Announcing the Release of EF Core 5.0&quot;,
+                Content = &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;
+            },
+            new Post
+            {
+                Id = 2,
+                Title = &quot;Announcing F# 5&quot;,
+                Content = &quot;F# 5 is the latest version of F#, the functional programming language...&quot;
+            }
+        }
+    });
+</code></pre>
+<p>The context is now tracking all these entities as <code>Modified</code>:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  Name: '.NET Blog' Modified
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Modified
+  Id: 1 PK
+  BlogId: 1 FK Modified Originally &lt;null&gt;
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...' Modified
+  Title: 'Announcing the Release of EF Core 5.0' Modified
+  Blog: {Id: 1}
+Post {Id: 2} Modified
+  Id: 2 PK
+  BlogId: 1 FK Modified Originally &lt;null&gt;
+  Content: 'F# 5 is the latest version of F#, the functional programming...' Modified
+  Title: 'Announcing F# 5' Modified
+  Blog: {Id: 1}
+</code></pre>
+<p>Calling <code>SaveChanges</code> at this point will cause updates to be sent to the database for all these entities. For example, when using SQLite:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p1='1' (DbType = String), @p0='.NET Blog' (Size = 9)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Blogs&quot; SET &quot;Name&quot; = @p0
+WHERE &quot;Id&quot; = @p1;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p3='1' (DbType = String), @p0='1' (DbType = String), @p1='Announcing the release of EF Core 5.0, a full featured cross-platform...' (Size = 72), @p2='Announcing the Release of EF Core 5.0' (Size = 37)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Posts&quot; SET &quot;BlogId&quot; = @p0, &quot;Content&quot; = @p1, &quot;Title&quot; = @p2
+WHERE &quot;Id&quot; = @p3;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p3='2' (DbType = String), @p0='1' (DbType = String), @p1='F# 5 is the latest version of F#, the functional programming language...' (Size = 72), @p2='Announcing F# 5' (Size = 15)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Posts&quot; SET &quot;BlogId&quot; = @p0, &quot;Content&quot; = @p1, &quot;Title&quot; = @p2
+WHERE &quot;Id&quot; = @p3;
+SELECT changes();
+</code></pre>
+<h3><a href="#generated-key-values-2" aria-hidden="true" class="anchor" id="generated-key-values-2"></a>Generated key values</h3>
+<p>DbContext <code>Update</code> returns a key value indicating whether an entity has been added to the database.</p>
+<pre><code class="language-csharp">context.Update(
+    new Blog
+    {
+        Id = 1,
+        Name = &quot;.NET Blog&quot;,
+        Posts =
+        {
+            new Post
+            {
+                Id = 1,
+                Title = &quot;Announcing the Release of EF Core 5.0&quot;,
+                Content = &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;
+            },
+            new Post
+            {
+                Id = 2,
+                Title = &quot;Announcing F# 5&quot;,
+                Content = &quot;F# 5 is the latest version of F#, the functional programming language...&quot;
+            },
+            new Post
+            {
+                Title = &quot;Announcing .NET 5.0&quot;,
+                Content = &quot;.NET 5.0 includes many enhancements, including single file applications, more...&quot;
+            },
+        }
+    });
+</code></pre>
+<p>As with the <code>Attach</code> example, the post with no key value is detected as new and set to the <code>Added</code> state. The other entities are marked as <code>Modified</code>:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  Name: '.NET Blog' Modified
+  Posts: [{Id: 1}, {Id: 2}, {Id: -2147482633}]
+Post {Id: -2147482633} Added
+  Id: -2147482633 PK Temporary
+  BlogId: 1 FK
+  Content: '.NET 5.0 includes many enhancements, including single file a...'
+  Title: 'Announcing .NET 5.0'
+  Blog: {Id: 1}
+Post {Id: 1} Modified
+  Id: 1 PK
+  BlogId: 1 FK Modified Originally &lt;null&gt;
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...' Modified
+  Title: 'Announcing the Release of EF Core 5.0' Modified
+  Blog: {Id: 1}
+Post {Id: 2} Modified
+  Id: 2 PK
+  BlogId: 1 FK Modified Originally &lt;null&gt;
+  Content: 'F# 5 is the latest version of F#, the functional programming...' Modified
+  Title: 'Announcing F# 5' Modified
+  Blog: {Id: 1}
+</code></pre>
+<p>Calling <code>SaveChanges</code> at this point will cause updates to be sent to the database for all the existing entities, while the new entity is inserted. For example, when using SQLite:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p1='1' (DbType = String), @p0='.NET Blog' (Size = 9)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Blogs&quot; SET &quot;Name&quot; = @p0
+WHERE &quot;Id&quot; = @p1;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p3='1' (DbType = String), @p0='1' (DbType = String), @p1='Announcing the release of EF Core 5.0, a full featured cross-platform...' (Size = 72), @p2='Announcing the Release of EF Core 5.0' (Size = 37)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Posts&quot; SET &quot;BlogId&quot; = @p0, &quot;Content&quot; = @p1, &quot;Title&quot; = @p2
+WHERE &quot;Id&quot; = @p3;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p3='2' (DbType = String), @p0='1' (DbType = String), @p1='F# 5 is the latest version of F#, the functional programming language...' (Size = 72), @p2='Announcing F# 5' (Size = 15)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Posts&quot; SET &quot;BlogId&quot; = @p0, &quot;Content&quot; = @p1, &quot;Title&quot; = @p2
+WHERE &quot;Id&quot; = @p3;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='1' (DbType = String), @p1='.NET 5.0 includes many enhancements, including single file applications, more...' (Size = 80), @p2='Announcing .NET 5.0' (Size = 19)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Posts&quot; (&quot;BlogId&quot;, &quot;Content&quot;, &quot;Title&quot;)
+VALUES (@p0, @p1, @p2);
+SELECT &quot;Id&quot;
+FROM &quot;Posts&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+</code></pre>
+<p>In this article, I'm going to show you how to generate updates and inserts from a disconnected graph.</p>
+<h2><a href="#deleting-existing-entities" aria-hidden="true" class="anchor" id="deleting-existing-entities"></a>Deleting existing entities</h2>
+<p>The DbContext method returns a list of entities that can be deleted by <code>SaveChanges</code>.</p>
+<pre><code class="language-csharp">context.Remove(
+    new Post { Id = 2 });
+</code></pre>
+<p>Inspecting the change tracker debug view following this call shows that the context is tracking the entity in the <code>Deleted</code> state:</p>
+<pre><code class="language-output">Post {Id: 2} Deleted
+  Id: 2 PK
+  BlogId: &lt;null&gt; FK
+  Content: &lt;null&gt;
+  Title: &lt;null&gt;
+  Blog: &lt;null&gt;
+</code></pre>
+<p>This entity will be deleted when <code>SaveChanges</code> is called. For example, when using SQLite:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p0='2' (DbType = String)], CommandType='Text', CommandTimeout='30']
+DELETE FROM &quot;Posts&quot;
+WHERE &quot;Id&quot; = @p0;
+SELECT changes();
+</code></pre>
+<p>After <code>SaveChanges</code> completes, the deleted entity is detached from the DbContext since it no longer exists in the database. The debug view is therefore empty because no entities are being tracked.</p>
+<h2><a href="#deleting-dependentchild-entities" aria-hidden="true" class="anchor" id="deleting-dependentchild-entities"></a>Deleting dependent/child entities</h2>
+<p>Deleting dependent/child entities from a graph is more straightforward than deleting principal/parent entities. See the next section and Changing Foreign Keys and Navigations for more information.</p>
+<p>Call <code>Remove</code> on an entity that should be deleted.</p>
+<ul>
+<li>
+<p>Running a query for the entities</p>
+</li>
+<li>
+<p>Using the <code>Attach</code> or <code>Update</code> methods on a graph of disconnected entities, as described in the preceding sections.</p>
+</li>
+</ul>
+<p>For example, the code in the previous section is more likely to obtain a post from a client and then do something like this:</p>
+<pre><code class="language-csharp">context.Attach(post);
+context.Remove(post);
+</code></pre>
+<p>This behaves exactly the same way as the previous example, since calling <code>Remove</code> on an un-tracked entity causes it to first be attached and then marked as <code>Deleted</code>.</p>
+<p>In more realistic examples, a graph of entities is first attached, and then some of those entities are marked as deleted. For example:</p>
+<pre><code class="language-csharp">// Attach a blog and associated posts
+context.Attach(blog);
+
+// Mark one post as Deleted
+context.Remove(blog.Posts[1]);
+</code></pre>
+<p>All entities are marked as <code>Unchanged</code>, except the one on which <code>Remove</code> was called:</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Deleted
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>This entity will be deleted when <code>SaveChanges</code> is called. For example, when using SQLite:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p0='2' (DbType = String)], CommandType='Text', CommandTimeout='30']
+DELETE FROM &quot;Posts&quot;
+WHERE &quot;Id&quot; = @p0;
+SELECT changes();
+</code></pre>
+<p>After <code>SaveChanges</code> completes, the deleted entity is detached from the DbContext since it no longer exists in the database. Other entities remain in the <code>Unchanged</code> state:</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+</code></pre>
+<h2><a href="#deleting-principalparent-entities" aria-hidden="true" class="anchor" id="deleting-principalparent-entities"></a>Deleting principal/parent entities</h2>
+<p>A relationship is a type of entity that connects two entity types.</p>
+<p>In this article we are going to look at how to delete entities in a one-to-many relationship.</p>
+<p>This invalid model state can be handled in two ways:</p>
+<ul>
+<li>
+<p>Setting FK values to null. This indicates that the dependents/children are no longer related to any principal/parent. This is the default for optional relationships where the foreign key must be nullable. Setting the FK to null is not valid for required relationships, where the foreign key is typically non-nullable.</p>
+</li>
+<li>
+<p>Deleting the dependents/children. This is the default for required relationships, and is also valid for optional relationships.</p>
+</li>
+</ul>
+<p>See Changing Foreign Keys and Navigations for detailed information on change tracking and relationships.</p>
+<h3><a href="#optional-relationships" aria-hidden="true" class="anchor" id="optional-relationships"></a>Optional relationships</h3>
+<p>In this article we are going to look at the relationship between the <code>Post.BlogId</code> foreign key property and the <code>BlogId</code> foreign key property.</p>
+<pre><code class="language-csharp">// Attach a blog and associated posts
+context.Attach(blog);
+
+// Mark the blog as deleted
+context.Remove(blog);
+</code></pre>
+<p>Inspecting the change tracker debug view following the call to <code>Remove</code> shows that, as expected, the blog is now marked as <code>Deleted</code>:</p>
+<pre><code class="language-output">Blog {Id: 1} Deleted
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Modified
+  Id: 1 PK
+  BlogId: &lt;null&gt; FK Modified Originally 1
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: &lt;null&gt;
+Post {Id: 2} Modified
+  Id: 2 PK
+  BlogId: &lt;null&gt; FK Modified Originally 1
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: &lt;null&gt;
+</code></pre>
+<p>It's been a while since I've done anything like this, but I've found a way to delete all the related posts in one go.</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p1='1' (DbType = String), @p0=NULL], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Posts&quot; SET &quot;BlogId&quot; = @p0
+WHERE &quot;Id&quot; = @p1;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p1='2' (DbType = String), @p0=NULL], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Posts&quot; SET &quot;BlogId&quot; = @p0
+WHERE &quot;Id&quot; = @p1;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p2='1' (DbType = String)], CommandType='Text', CommandTimeout='30']
+DELETE FROM &quot;Blogs&quot;
+WHERE &quot;Id&quot; = @p2;
+SELECT changes();
+</code></pre>
+<p><code>SaveChanges</code> deletes an entity from the DbContext.</p>
+<pre><code class="language-output">Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: &lt;null&gt; FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: &lt;null&gt;
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: &lt;null&gt; FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: &lt;null&gt;
+</code></pre>
+<h3><a href="#required-relationships" aria-hidden="true" class="anchor" id="required-relationships"></a>Required relationships</h3>
+<p>If the <code>Post.BlogId</code> foreign key property is non-nullable, then the relationship between blogs and posts becomes &quot;required&quot;.</p>
+<pre><code class="language-csharp">// Attach a blog and associated posts
+context.Attach(blog);
+
+// Mark the blog as deleted
+context.Remove(blog);
+</code></pre>
+<p>Inspecting the change tracker debug view following the call to <code>Remove</code> shows that, as expected, the blog is again marked as <code>Deleted</code>:</p>
+<pre><code class="language-output">Blog {Id: 1} Deleted
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}]
+Post {Id: 1} Deleted
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Deleted
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>More interestingly in this case is that all related posts have also been marked as <code>Deleted</code>. Calling <code>SaveChanges</code> causes the blog and all related posts to be deleted from the database:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p0='1' (DbType = String)], CommandType='Text', CommandTimeout='30']
+DELETE FROM &quot;Posts&quot;
+WHERE &quot;Id&quot; = @p0;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='2' (DbType = String)], CommandType='Text', CommandTimeout='30']
+DELETE FROM &quot;Posts&quot;
+WHERE &quot;Id&quot; = @p0;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p1='1' (DbType = String)], CommandType='Text', CommandTimeout='30']
+DELETE FROM &quot;Blogs&quot;
+WHERE &quot;Id&quot; = @p1;
+</code></pre>
+<p>After <code>SaveChanges</code> completes, all the deleted entities are detached from the DbContext since they no longer exist in the database. Output from the debug view is therefore empty.</p>
+<blockquote>
+<p>Note
+This document only scratches the surface on working with relationships in EF Core. See Relationships for more information on modeling relationships, and Changing Foreign Keys and Navigations for more information on updating/deleting dependent/child entities when calling <code>SaveChanges</code>.</p>
+</blockquote>
+<h2><a href="#custom-tracking-with-trackgraph" aria-hidden="true" class="anchor" id="custom-tracking-with-trackgraph"></a>Custom tracking with <code>TrackGraph</code></h2>
+<p><code>ChangeTracker.TrackGraph</code> allows you to track entities in a graph.</p>
+<p>In this article, I'm going to show you how to extend some of the rules in EF Core to make it easier to track entities with generated key values.</p>
+<pre><code class="language-csharp">blog.Posts.Add(
+    new Post
+    {
+        Title = &quot;Announcing .NET 5.0&quot;,
+        Content = &quot;.NET 5.0 includes many enhancements, including single file applications, more...&quot;
+    }
+);
+
+var toDelete = blog.Posts.Single(e =&gt; e.Title == &quot;Announcing F# 5&quot;);
+toDelete.Id = -toDelete.Id;
+</code></pre>
+<p>This disconnected graph can then be tracked using <code>TrackGraph</code>:</p>
+<pre><code class="language-csharp">public static void UpdateBlog(Blog blog)
+{
+    using var context = new BlogsContext();
+
+    context.ChangeTracker.TrackGraph(
+        blog, node =&gt;
+        {
+            var propertyEntry = node.Entry.Property(&quot;Id&quot;);
+            var keyValue = (int)propertyEntry.CurrentValue;
+
+            if (keyValue == 0)
+            {
+                node.Entry.State = EntityState.Added;
+            }
+            else if (keyValue &lt; 0)
+            {
+                propertyEntry.CurrentValue = -keyValue;
+                node.Entry.State = EntityState.Deleted;
+            }
+            else
+            {
+                node.Entry.State = EntityState.Modified;
+            }
+
+            Console.WriteLine($&quot;Tracking {node.Entry.Metadata.DisplayName()} with key value {keyValue} as {node.Entry.State}&quot;);
+        });
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>This example shows how to track entities by key value.</p>
+<p>The output from running this code is:</p>
+<pre><code class="language-output">Tracking Blog with key value 1 as Modified
+Tracking Post with key value 1 as Modified
+Tracking Post with key value -2 as Deleted
+Tracking Post with key value 0 as Added
+</code></pre>
+<blockquote>
+<p>Note
+For simplicity, this code assumes each entity has an integer primary key property called <code>Id</code>. This could be codified into an abstract base class or interface. Alternately, the primary key property or properties could be obtained from the IEntityType metadata such that this code would work with any type of entity.</p>
+</blockquote>
+<p>In this post, I'm going to show you how to overload TrackGraph with EF Core.</p>
+<p>The graph traversal overload, <code>Change.TrackGraphTState&gt;(Object, TState, FuncEntryGraphNodeTState&gt;,Boolean)</code> has a callback that returns a bool.</p>
+<p>The advanced overload also allows state to be supplied to TrackGraph and this state is then passed to each callback.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/explicit-tracking">Explicitly Tracking Entities</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

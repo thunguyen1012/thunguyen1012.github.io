@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Change tracking - Accessing tracked entities | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='There are four main APIs for accessing entities tracked by a DbContext:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Change tracking - Accessing tracked entities</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>There are four main APIs for accessing entities tracked by a DbContext:</p>
+<ul>
+<li>
+<p><code>DbContext.Entry</code> returns an <code>EntityEntry&lt;TEntity&gt;</code> instance for a given entity instance.</p>
+</li>
+<li>
+<p><code>ChangeTracker.Entries</code> returns <code>EntityEntry&lt;TEntity&gt;</code> instances for all tracked entities, or for all tracked entities of a given type.</p>
+</li>
+<li>
+<p><code>DbContext.Find</code>, <code>DbContext.FindAsync</code>, <code>DbSet&lt;TEntity&gt;.Find</code>, and <code>DbSet&lt;TEntity&gt;.FindAsync</code> find a single entity by primary key, first looking in tracked entities, and then querying the database if needed.</p>
+</li>
+<li>
+<p><code>DbSet&lt;TEntity&gt;.Local</code> returns actual entities (not EntityEntry instances) for entities of the entity type represented by the DbSet.</p>
+</li>
+</ul>
+<p>Each of these is described in more detail in the sections below.</p>
+<blockquote>
+<p>Tip
+This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<h2><a href="#using-dbcontextentry-and-entityentry-instances" aria-hidden="true" class="anchor" id="using-dbcontextentry-and-entityentry-instances"></a>Using <code>DbContext.Entry</code> and <code>EntityEntry</code> instances</h2>
+<p>For each tracked entity, Entity Framework Core (EF Core) keeps track of:</p>
+<ul>
+<li>
+<p>The overall state of the entity. This is one of <code>Unchanged</code>, <code>Modified</code>, <code>Added</code>, or <code>Deleted</code>; see Change Tracking in EF Core for more information.</p>
+</li>
+<li>
+<p>The relationships between tracked entities. For example, the blog to which a post belongs.</p>
+</li>
+<li>
+<p>The &quot;current values&quot; of properties.</p>
+</li>
+<li>
+<p>The &quot;original values&quot; of properties, when this information is available. Original values are the property values that existed when entity was queried from the database.</p>
+</li>
+<li>
+<p>Which property values have been modified since they were queried.</p>
+</li>
+<li>
+<p>Other information about property values, such as whether or not the value is temporary.</p>
+</li>
+</ul>
+<p>Passing an entity instance to <code>DbContext.Entry</code> results in an <code>EntityEntry&lt;TEntity&gt;</code> providing access to this information for the given entity. For example:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.Single(e =&gt; e.Id == 1);
+var entityEntry = context.Entry(blog);
+</code></pre>
+<p>The following sections show how to use an EntityEntry to access and manipulate entity state, as well as the state of the entity's properties and navigations.</p>
+<h3><a href="#working-with-the-entity" aria-hidden="true" class="anchor" id="working-with-the-entity"></a>Working with the entity</h3>
+<p>The most common use of <code>EntityEntry&lt;TEntity&gt;</code> is to access the current <code>EntityState</code> of an entity. For example:</p>
+<pre><code class="language-csharp">var currentState = context.Entry(blog).State;
+if (currentState == EntityState.Unchanged)
+{
+    context.Entry(blog).State = EntityState.Modified;
+}
+</code></pre>
+<p>The <code>EntityEntry</code> method can be used to start tracking entities.</p>
+<pre><code class="language-csharp">var newBlog = new Blog();
+Debug.Assert(context.Entry(newBlog).State == EntityState.Detached);
+
+context.Entry(newBlog).State = EntityState.Added;
+Debug.Assert(context.Entry(newBlog).State == EntityState.Added);
+</code></pre>
+<blockquote>
+<p>Tip
+Unlike in EF6, setting the state of an individual entity will not cause all connected entities to be tracked. This makes setting the state this way a lower-level operation than calling <code>Add</code>, <code>Attach</code>, or <code>Update</code>, which operate on an entire graph of entities.</p>
+</blockquote>
+<p>The following table summarizes ways to use an EntityEntry to work with an entire entity:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">EntityEntry member</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry.state#microsoft-entityframeworkcore-changetracking-entityentry-state" class="no-loc" data-linktype="absolute-path">EntityEntry.State</a></td>
+<td>Gets and sets the <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.entitystate" class="no-loc" data-linktype="absolute-path">EntityState</a> of the entity.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry.entity#microsoft-entityframeworkcore-changetracking-entityentry-entity" class="no-loc" data-linktype="absolute-path">EntityEntry.Entity</a></td>
+<td>Gets the entity instance.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry.context#microsoft-entityframeworkcore-changetracking-entityentry-context" class="no-loc" data-linktype="absolute-path">EntityEntry.Context</a></td>
+<td>The <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext" class="no-loc" data-linktype="absolute-path">DbContext</a> that is tracking this entity.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry.metadata#microsoft-entityframeworkcore-changetracking-entityentry-metadata" class="no-loc" data-linktype="absolute-path">EntityEntry.Metadata</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.metadata.ientitytype" class="no-loc" data-linktype="absolute-path">IEntityType</a> metadata for the type of entity.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry.iskeyset#microsoft-entityframeworkcore-changetracking-entityentry-iskeyset" class="no-loc" data-linktype="absolute-path">EntityEntry.IsKeySet</a></td>
+<td>Whether or not the entity has had its key value set.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry.reload#microsoft-entityframeworkcore-changetracking-entityentry-reload" class="no-loc" data-linktype="absolute-path">EntityEntry.Reload()</a></td>
+<td>Overwrites property values with values read from the database.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry.detectchanges#microsoft-entityframeworkcore-changetracking-entityentry-detectchanges" class="no-loc" data-linktype="absolute-path">EntityEntry.DetectChanges()</a></td>
+<td>Forces detection of changes for this entity only; see <a href="change-detection" data-linktype="relative-path">Change Detection and Notifications</a>.</td>
+</tr>
+</tbody></table>
+<h3><a href="#working-with-a-single-property" aria-hidden="true" class="anchor" id="working-with-a-single-property"></a>Working with a single property</h3>
+<p>Several overloads of <code>EntityEntry&lt;TEntity&gt;.Property</code> allow access to information about an individual property of an entity. For example, using a strongly-typed, fluent-like API:</p>
+<pre><code class="language-csharp">PropertyEntry&lt;Blog, string&gt; propertyEntry = context.Entry(blog).Property(e =&gt; e.Name);
+</code></pre>
+<p>The property name can instead be passed as a string. For example:</p>
+<pre><code class="language-csharp">PropertyEntry&lt;Blog, string&gt; propertyEntry = context.Entry(blog).Property&lt;string&gt;(&quot;Name&quot;);
+</code></pre>
+<p>The returned <code>PropertyEntry&lt;TEntity,TProperty&gt;</code> can then be used to access information about the property. For example, it can be used to get and set the current value of the property on this entity:</p>
+<pre><code class="language-csharp">string currentValue = context.Entry(blog).Property(e =&gt; e.Name).CurrentValue;
+context.Entry(blog).Property(e =&gt; e.Name).CurrentValue = &quot;1unicorn2&quot;;
+</code></pre>
+<p>The following examples show how to obtain entity and property values using the Property method.</p>
+<pre><code class="language-csharp">PropertyEntry propertyEntry = context.Entry(blog).Property(&quot;Name&quot;);
+</code></pre>
+<p>This allows access to property information for any property regardless of its type, at the expense of boxing value types. For example:</p>
+<pre><code class="language-csharp">object blog = context.Blogs.Single(e =&gt; e.Id == 1);
+
+object currentValue = context.Entry(blog).Property(&quot;Name&quot;).CurrentValue;
+context.Entry(blog).Property(&quot;Name&quot;).CurrentValue = &quot;1unicorn2&quot;;
+</code></pre>
+<p>The following table summarizes property information exposed by PropertyEntry:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">PropertyEntry member</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.propertyentry-2.currentvalue#microsoft-entityframeworkcore-changetracking-propertyentry-2-currentvalue" class="no-loc" data-linktype="absolute-path">PropertyEntry&lt;TEntity,TProperty&gt;.CurrentValue</a></td>
+<td>Gets and sets the current value of the property.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.propertyentry-2.originalvalue#microsoft-entityframeworkcore-changetracking-propertyentry-2-originalvalue" class="no-loc" data-linktype="absolute-path">PropertyEntry&lt;TEntity,TProperty&gt;.OriginalValue</a></td>
+<td>Gets and sets the original value of the property, if available.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.propertyentry-2.entityentry#microsoft-entityframeworkcore-changetracking-propertyentry-2-entityentry" class="no-loc" data-linktype="absolute-path">PropertyEntry&lt;TEntity,TProperty&gt;.EntityEntry</a></td>
+<td>A back reference to the <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.entityentry-1" class="no-loc" data-linktype="absolute-path">EntityEntry&lt;TEntity&gt;</a> for the entity.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.propertyentry.metadata#microsoft-entityframeworkcore-changetracking-propertyentry-metadata" class="no-loc" data-linktype="absolute-path">PropertyEntry.Metadata</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.metadata.iproperty" class="no-loc" data-linktype="absolute-path">IProperty</a> metadata for the property.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.propertyentry.ismodified#microsoft-entityframeworkcore-changetracking-propertyentry-ismodified" class="no-loc" data-linktype="absolute-path">PropertyEntry.IsModified</a></td>
+<td>Indicates whether this property is marked as modified, and allows this state to be changed.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.propertyentry.istemporary#microsoft-entityframeworkcore-changetracking-propertyentry-istemporary" class="no-loc" data-linktype="absolute-path">PropertyEntry.IsTemporary</a></td>
+<td>Indicates whether this property is marked as <a href="miscellaneous#temporary-values#temporary-values" data-linktype="relative-path">temporary</a>, and allows this state to be changed.</td>
+</tr>
+</tbody></table>
+<p>Notes:</p>
+<ul>
+<li>
+<p>The original value of a property is the value that the property had when the entity was queried from the database. However, original values are not available if the entity was disconnected and then explicitly attached to another DbContext, for example with <code>Attach</code> or <code>Update</code>. In this case, the original value returned will be the same as the current value.</p>
+</li>
+<li>
+<p><code>SaveChanges</code> will only update properties marked as modified. Set IsModified to true to force EF Core to update a given property value, or set it to false to prevent EF Core from updating the property value.</p>
+</li>
+<li>
+<p>Temporary values are typically generated by EF Core value generators. Setting the current value of a property will replace the temporary value with the given value and mark the property as not temporary. Set IsTemporary to true to force a value to be temporary even after it has been explicitly set.</p>
+</li>
+</ul>
+<h3><a href="#working-with-a-single-navigation" aria-hidden="true" class="anchor" id="working-with-a-single-navigation"></a>Working with a single navigation</h3>
+<p>Several overloads of <code>EntityEntry&lt;TEntity&gt;.Reference</code>, <code>EntityEntry&lt;TEntity&gt;.Collection</code>, and <code>EntityEntry.Navigation</code> allow access to information about an individual navigation.</p>
+<p>Reference navigations point to the &quot;one&quot; sides of one-to-many relationships, and both sides of one-to-one relationships.</p>
+<pre><code class="language-csharp">ReferenceEntry&lt;Post, Blog&gt; referenceEntry1 = context.Entry(post).Reference(e =&gt; e.Blog);
+ReferenceEntry&lt;Post, Blog&gt; referenceEntry2 = context.Entry(post).Reference&lt;Blog&gt;(&quot;Blog&quot;);
+ReferenceEntry referenceEntry3 = context.Entry(post).Reference(&quot;Blog&quot;);
+</code></pre>
+<p>Navigations can be collections of related entities when used for the &quot;many&quot; sides of one-to-many relationships.</p>
+<pre><code class="language-csharp">CollectionEntry&lt;Blog, Post&gt; collectionEntry1 = context.Entry(blog).Collection(e =&gt; e.Posts);
+CollectionEntry&lt;Blog, Post&gt; collectionEntry2 = context.Entry(blog).Collection&lt;Post&gt;(&quot;Posts&quot;);
+CollectionEntry collectionEntry3 = context.Entry(blog).Collection(&quot;Posts&quot;);
+</code></pre>
+<p>navigations can be accessed using the <code>EntityEntry.Navigation</code> method.</p>
+<pre><code class="language-csharp">NavigationEntry navigationEntry = context.Entry(blog).Navigation(&quot;Posts&quot;);
+</code></pre>
+<p>The following table summarizes ways to use <code>ReferenceEntry&lt;TEntity,TProperty&gt;</code>, <code>CollectionEntry&lt;TEntity,TRelatedEntity&gt;</code>, and NavigationEntry:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">NavigationEntry member</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.memberentry.currentvalue#microsoft-entityframeworkcore-changetracking-memberentry-currentvalue" class="no-loc" data-linktype="absolute-path">MemberEntry.CurrentValue</a></td>
+<td>Gets and sets the current value of the navigation. This is the entire collection for collection navigations.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.navigationentry.metadata#microsoft-entityframeworkcore-changetracking-navigationentry-metadata" class="no-loc" data-linktype="absolute-path">NavigationEntry.Metadata</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.metadata.inavigationbase" class="no-loc" data-linktype="absolute-path">INavigationBase</a> metadata for the navigation.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.navigationentry.isloaded#microsoft-entityframeworkcore-changetracking-navigationentry-isloaded" class="no-loc" data-linktype="absolute-path">NavigationEntry.IsLoaded</a></td>
+<td>Gets or sets a value indicating whether the related entity or collection has been fully loaded from the database.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.navigationentry.load#microsoft-entityframeworkcore-changetracking-navigationentry-load" class="no-loc" data-linktype="absolute-path">NavigationEntry.Load()</a></td>
+<td>Loads the related entity or collection from the database; see <a href="../querying/related-data/explicit" data-linktype="relative-path">Explicit Loading of Related Data</a>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.navigationentry.query#microsoft-entityframeworkcore-changetracking-navigationentry-query" class="no-loc" data-linktype="absolute-path">NavigationEntry.Query()</a></td>
+<td>The query EF Core would use to load this navigation as an <code>IQueryable</code> that can be further composed; see <a href="../querying/related-data/explicit" data-linktype="relative-path">Explicit Loading of Related Data</a>.</td>
+</tr>
+</tbody></table>
+<h3><a href="#working-with-all-properties-of-an-entity" aria-hidden="true" class="anchor" id="working-with-all-properties-of-an-entity"></a>Working with all properties of an entity</h3>
+<p><code>EntityEntry.Properties</code> returns an <code>IEnumerable&lt;T&gt;</code> of <code>PropertyEntry</code> for every property of the entity.</p>
+<pre><code class="language-csharp">foreach (var propertyEntry in context.Entry(blog).Properties)
+{
+    if (propertyEntry.Metadata.ClrType == typeof(DateTime))
+    {
+        propertyEntry.CurrentValue = DateTime.Now;
+    }
+}
+</code></pre>
+<p><code>EntityEntry</code> contains several methods to get and set property values in a database.</p>
+<pre><code class="language-csharp">var currentValues = context.Entry(blog).CurrentValues;
+var originalValues = context.Entry(blog).OriginalValues;
+var databaseValues = context.Entry(blog).GetDatabaseValues();
+</code></pre>
+<p><code>PropertyValues</code> objects can be used to manipulate entities.</p>
+<h4><a href="#setting-current-or-original-values-from-an-entity-or-dto" aria-hidden="true" class="anchor" id="setting-current-or-original-values-from-an-entity-or-dto"></a>Setting current or original values from an entity or DTO</h4>
+<p>An entity is a property of an object.</p>
+<pre><code class="language-csharp">public class BlogDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+</code></pre>
+<p>This can be used to set the current values of a tracked entity using <code>PropertyValues.SetValues</code>:</p>
+<pre><code class="language-csharp">var blogDto = new BlogDto { Id = 1, Name = &quot;1unicorn2&quot; };
+
+context.Entry(blog).CurrentValues.SetValues(blogDto);
+</code></pre>
+<p>An instance of the DTO <code>BlogDto</code> is used to set the current values of a tracked entity.</p>
+<p>Note that properties will only be marked as modified if the value set differs from the current value.</p>
+<h4><a href="#setting-current-or-original-values-from-a-dictionary" aria-hidden="true" class="anchor" id="setting-current-or-original-values-from-a-dictionary"></a>Setting current or original values from a dictionary</h4>
+<p>The previous example set values from an entity or DTO instance. The same behavior is available when property values are stored as name/value pairs in a dictionary. For example:</p>
+<pre><code class="language-csharp">var blogDictionary = new Dictionary&lt;string, object&gt; { [&quot;Id&quot;] = 1, [&quot;Name&quot;] = &quot;1unicorn2&quot; };
+
+context.Entry(blog).CurrentValues.SetValues(blogDictionary);
+</code></pre>
+<h4><a href="#setting-current-or-original-values-from-the-database" aria-hidden="true" class="anchor" id="setting-current-or-original-values-from-the-database"></a>Setting current or original values from the database</h4>
+<p>The <code>GetDatabaseValues</code> class can be used to update the values of entities in a database.</p>
+<pre><code class="language-csharp">var databaseValues = context.Entry(blog).GetDatabaseValues();
+context.Entry(blog).CurrentValues.SetValues(databaseValues);
+context.Entry(blog).OriginalValues.SetValues(databaseValues);
+</code></pre>
+<h4><a href="#creating-a-cloned-object-containing-current-original,-or-database-values" aria-hidden="true" class="anchor" id="creating-a-cloned-object-containing-current-original,-or-database-values"></a>Creating a cloned object containing current, original, or database values</h4>
+<p>The <code>PropertyValues</code> object returned from <code>CurrentValues</code>, <code>OriginalValues</code>, or <code>GetDatabaseValues</code> can be used to create a clone of the entity using <code>PropertyValues.ToObject()</code>. For example:</p>
+<pre><code class="language-csharp">var clonedBlog = context.Entry(blog).GetDatabaseValues().ToObject();
+</code></pre>
+<p>Note that <code>ToObject</code> returns a new instance that is not tracked by the <code>DbContext</code>. The returned object also does not have any relationships set to other entities.</p>
+<p>An object can be cloned from another object.</p>
+<h3><a href="#working-with-all-navigations-of-an-entity" aria-hidden="true" class="anchor" id="working-with-all-navigations-of-an-entity"></a>Working with all navigations of an entity</h3>
+<p><code>EntityEntry.Navigation</code> returns an <code>IEnumerable&lt;T&gt;</code> of <code>NavigationEntry</code> for every navigation of the entity.</p>
+<pre><code class="language-csharp">foreach (var navigationEntry in context.Entry(blog).Navigations)
+{
+    navigationEntry.Load();
+}
+</code></pre>
+<h3><a href="#working-with-all-members-of-an-entity" aria-hidden="true" class="anchor" id="working-with-all-members-of-an-entity"></a>Working with all members of an entity</h3>
+<p><code>EntityEntry.Member</code> and <code>EntityEntry.Member</code> are provided for this purpose.</p>
+<pre><code class="language-csharp">foreach (var memberEntry in context.Entry(blog).Members)
+{
+    Console.WriteLine(
+        $&quot;Member {memberEntry.Metadata.Name} is of type {memberEntry.Metadata.ClrType.ShortDisplayName()} and has value {memberEntry.CurrentValue}&quot;);
+}
+</code></pre>
+<p>Running this code on a blog from the sample generates the following output:</p>
+<pre><code class="language-output">Member Id is of type int and has value 1
+Member Name is of type string and has value .NET Blog
+Member Posts is of type IList&lt;Post&gt; and has value System.Collections.Generic.List`1[Post]
+</code></pre>
+<blockquote>
+<p>Tip
+The change tracker debug view shows information like this. The debug view for the entire change tracker is generated from the individual <code>EntityEntry.DebugView</code> of each tracked entity.</p>
+</blockquote>
+<h2><a href="#find-and-findasync" aria-hidden="true" class="anchor" id="find-and-findasync"></a><code>Find</code> and <code>FindAsync</code></h2>
+<p><code>DbContext.Find</code>, <code>DbContext.FindAsync</code>, <code>DbSet&lt;T&gt;</code>, and <code>DbSet&lt;T&gt;</code> are designed for efficient lookup of a single entity when its primary key is known.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+Console.WriteLine(&quot;First call to Find...&quot;);
+var blog1 = context.Blogs.Find(1);
+
+Console.WriteLine($&quot;...found blog {blog1.Name}&quot;);
+
+Console.WriteLine();
+Console.WriteLine(&quot;Second call to Find...&quot;);
+var blog2 = context.Blogs.Find(1);
+Debug.Assert(blog1 == blog2);
+
+Console.WriteLine(&quot;...returned the same instance without executing a query.&quot;);
+</code></pre>
+<p>The output from this code (including EF Core logging) when using SQLite is:</p>
+<pre><code class="language-output">First call to Find...
+info: 12/29/2020 07:45:53.682 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (1ms) [Parameters=[@__p_0='1' (DbType = String)], CommandType='Text', CommandTimeout='30']
+      SELECT &quot;b&quot;.&quot;Id&quot;, &quot;b&quot;.&quot;Name&quot;
+      FROM &quot;Blogs&quot; AS &quot;b&quot;
+      WHERE &quot;b&quot;.&quot;Id&quot; = @__p_0
+      LIMIT 1
+...found blog .NET Blog
+
+Second call to Find...
+...returned the same instance without executing a query.
+</code></pre>
+<p>In this example, we are trying to find an entity in a database.</p>
+<p>Find returns null if an entity with the given key is not tracked locally and does not exist in the database.</p>
+<h3><a href="#composite-keys" aria-hidden="true" class="anchor" id="composite-keys"></a>Composite keys</h3>
+<p>Find can also be used with composite keys. For example, consider an <code>OrderLine</code> entity with a composite key consisting of the order ID and the product ID:</p>
+<pre><code class="language-csharp">public class OrderLine
+{
+    public int OrderId { get; set; }
+    public int ProductId { get; set; }
+
+    //...
+}
+</code></pre>
+<p>The composite key must be configured in <code>DbContext.OnModelCreating</code> to define the key parts and their order. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .Entity&lt;OrderLine&gt;()
+        .HasKey(e =&gt; new { e.OrderId, e.ProductId });
+}
+</code></pre>
+<p>Notice that <code>OrderId</code> is the first part of the key and <code>ProductId</code> is the second part of the key. This order must be used when passing key values to Find. For example:</p>
+<pre><code class="language-csharp">var orderline = context.OrderLines.Find(orderId, productId);
+</code></pre>
+<h2><a href="#using-changetrackerentries-to-access-all-tracked-entities" aria-hidden="true" class="anchor" id="using-changetrackerentries-to-access-all-tracked-entities"></a>Using <code>ChangeTracker.Entries</code> to access all tracked entities</h2>
+<p>So far we have accessed only a single <code>EntityEntry</code> at a time. <code>ChangeTracker.Entries()</code> returns an <code>EntityEntry</code> for every entity currently tracked by the <code>DbContext</code>. For example:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+var blogs = context.Blogs.Include(e =&gt; e.Posts).ToList();
+
+foreach (var entityEntry in context.ChangeTracker.Entries())
+{
+    Console.WriteLine($&quot;Found {entityEntry.Metadata.Name} entity with ID {entityEntry.Property(&quot;Id&quot;).CurrentValue}&quot;);
+}
+</code></pre>
+<p>This code generates the following output:</p>
+<pre><code class="language-output">Found Blog entity with ID 1
+Found Post entity with ID 1
+Found Post entity with ID 2
+</code></pre>
+<p>Notice that entries for both blogs and posts are returned. The results can instead be filtered to a specific entity type using the <code>ChangeTracker.Entries&lt;TEntity&gt;()</code> generic overload:</p>
+<pre><code class="language-csharp">foreach (var entityEntry in context.ChangeTracker.Entries&lt;Post&gt;())
+{
+    Console.WriteLine(
+        $&quot;Found {entityEntry.Metadata.Name} entity with ID {entityEntry.Property(e =&gt; e.Id).CurrentValue}&quot;);
+}
+</code></pre>
+<p>The output from this code shows that only posts are returned:</p>
+<pre><code class="language-output">Found Post entity with ID 1
+Found Post entity with ID 2
+</code></pre>
+<p>Also, using the generic overload returns generic <code>EntityEntry&lt;TEntity&gt;</code> instances. This is what allows that fluent-like access to the <code>Id</code> property in this example.</p>
+<p>The following example shows how to implement filtering in a model.</p>
+<pre><code class="language-csharp">public interface IEntityWithKey
+{
+    int Id { get; set; }
+}
+</code></pre>
+<p>Then this interface can be used to work with the key of any tracked entity in a strongly-typed manner. For example:</p>
+<pre><code class="language-csharp">foreach (var entityEntry in context.ChangeTracker.Entries&lt;IEntityWithKey&gt;())
+{
+    Console.WriteLine(
+        $&quot;Found {entityEntry.Metadata.Name} entity with ID {entityEntry.Property(e =&gt; e.Id).CurrentValue}&quot;);
+}
+</code></pre>
+<h2><a href="#using-dbsetlocal-to-query-tracked-entities" aria-hidden="true" class="anchor" id="using-dbsetlocal-to-query-tracked-entities"></a>Using <code>DbSet.Local</code> to query tracked entities</h2>
+<p>EF Core queries are always executed on the database, and only return entities that have been saved to the database.</p>
+<p><code>DbContext</code> methods can be used to load entities into the context and then work with them.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+context.Blogs.Include(e =&gt; e.Posts).Load();
+
+foreach (var blog in context.Blogs.Local)
+{
+    Console.WriteLine($&quot;Blog: {blog.Name}&quot;);
+}
+
+foreach (var post in context.Posts.Local)
+{
+    Console.WriteLine($&quot;Post: {post.Title}&quot;);
+}
+</code></pre>
+<p>Notice that, unlike <code>ChangeTracker.Entries()</code>, <code>DbSet.Local</code> returns entity instances directly. An <code>EntityEntry</code> can, of course, always be obtained for the returned entity by calling <code>DbContext.Entry</code>.</p>
+<h3><a href="#the-local-view" aria-hidden="true" class="anchor" id="the-local-view"></a>The local view</h3>
+<p><code>DbSet&lt;TEntity&gt;.Local</code> returns a view of locally tracked entities that reflects the current <code>EntityState</code> of those entities. Specifically, this means that:</p>
+<ul>
+<li>
+<p><code>Added</code> entities are included. Note that this is not the case for normal EF Core queries, since <code>Added</code> entities do not yet exist in the database and so are therefore never returned by a database query.</p>
+</li>
+<li>
+<p><code>Deleted</code> entities are excluded. Note that this is again not the case for normal EF Core queries, since <code>Deleted</code> entities still exist in the database and so are returned by database queries.</p>
+</li>
+</ul>
+<p><code>DbSet.Local</code> is view over the data that reflects the current conceptual state of the entity graph, with <code>Added</code> entities included and deleted entities excluded.</p>
+<p>This is typically the ideal view for data binding, since it presents to the user the data as they understand it based on the changes made by the application.</p>
+<p>The following code demonstrates this by marking one post as <code>Deleted</code> and then adding a new post, marking it as <code>Added</code>:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var posts = context.Posts.Include(e =&gt; e.Blog).ToList();
+
+Console.WriteLine(&quot;Local view after loading posts:&quot;);
+
+foreach (var post in context.Posts.Local)
+{
+    Console.WriteLine($&quot;  Post: {post.Title}&quot;);
+}
+
+context.Remove(posts[1]);
+
+context.Add(
+    new Post
+    {
+        Title = &quot;What’s next for System.Text.Json?&quot;,
+        Content = &quot;.NET 5.0 was released recently and has come with many...&quot;,
+        Blog = posts[0].Blog
+    });
+
+Console.WriteLine(&quot;Local view after adding and deleting posts:&quot;);
+
+foreach (var post in context.Posts.Local)
+{
+    Console.WriteLine($&quot;  Post: {post.Title}&quot;);
+}
+</code></pre>
+<p>The output from this code is:</p>
+<pre><code class="language-output">Local view after loading posts:
+  Post: Announcing the Release of EF Core 5.0
+  Post: Announcing F# 5
+  Post: Announcing .NET 5.0
+Local view after adding and deleting posts:
+  Post: What’s next for System.Text.Json?
+  Post: Announcing the Release of EF Core 5.0
+  Post: Announcing .NET 5.0
+</code></pre>
+<p>Notice that the deleted post is removed from the local view, and the added post is included.</p>
+<h3><a href="#using-local-to-add-and-remove-entities" aria-hidden="true" class="anchor" id="using-local-to-add-and-remove-entities"></a>Using Local to add and remove entities</h3>
+<p><code>DbSet&lt;T&gt;.Local</code> returns an instance of <code>DbSet&lt;T&gt;</code>.</p>
+<p>The local view's notifications are hooked into DbContext change tracking such that the local view stays in sync with the <code>DbContext</code>. Specifically:</p>
+<ul>
+<li>
+<p>Adding a new entity to <code>DbSet.Local</code> causes it to be tracked by the <code>DbContext</code>, typically in the <code>Added</code> state. (If the entity already has a generated key value, then it is tracked as <code>Unchanged</code> instead.)</p>
+</li>
+<li>
+<p>Removing an entity from <code>DbSet.Local</code> causes it to be marked as <code>Deleted</code>.</p>
+</li>
+<li>
+<p>An entity that becomes tracked by the DbContext will automatically appear in the <code>DbSet.Local</code> collection. For example, executing a query to bring in more entities automatically causes the local view to be updated.</p>
+</li>
+<li>
+<p>An entity that is marked as <code>Deleted</code> will be removed from the local collection automatically.</p>
+</li>
+</ul>
+<p>In this post I'm going to show you how to create a local view of a tracked entity.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var posts = context.Posts.Include(e =&gt; e.Blog).ToList();
+
+Console.WriteLine(&quot;Local view after loading posts:&quot;);
+
+foreach (var post in context.Posts.Local)
+{
+    Console.WriteLine($&quot;  Post: {post.Title}&quot;);
+}
+
+context.Posts.Local.Remove(posts[1]);
+
+context.Posts.Local.Add(
+    new Post
+    {
+        Title = &quot;What’s next for System.Text.Json?&quot;,
+        Content = &quot;.NET 5.0 was released recently and has come with many...&quot;,
+        Blog = posts[0].Blog
+    });
+
+Console.WriteLine(&quot;Local view after adding and deleting posts:&quot;);
+
+foreach (var post in context.Posts.Local)
+{
+    Console.WriteLine($&quot;  Post: {post.Title}&quot;);
+}
+</code></pre>
+<p>The output remains unchanged from the previous example because changes made to the local view are synced with the DbContext.</p>
+<h3><a href="#using-the-local-view-for-windows-forms-or-wpf-data-binding" aria-hidden="true" class="anchor" id="using-the-local-view-for-windows-forms-or-wpf-data-binding"></a>Using the local view for Windows Forms or WPF data binding</h3>
+<p>This example shows how to create a local view of a notification collection.</p>
+<ul>
+<li>
+<p><code>LocalView&lt;TEntity&gt;.ToObservableCollection()</code> returns an <code>ObservableCollection&lt;T&gt;</code> for WPF data binding.</p>
+</li>
+<li>
+<p><code>LocalView&lt;TEntity&gt;.ToBindingList()</code> returns a <code>BindingList&lt;T&gt;</code> for Windows Forms data binding.</p>
+</li>
+</ul>
+<p>For example:</p>
+<pre><code class="language-csharp">ObservableCollection&lt;Post&gt; observableCollection = context.Posts.Local.ToObservableCollection();
+BindingList&lt;Post&gt; bindingList = context.Posts.Local.ToBindingList();
+</code></pre>
+<p>See Get Started with WPF for more information on WPF data binding with EF Core, and Get Started with Windows Forms for more information on Windows Forms data binding with EF Core.</p>
+<blockquote>
+<p>Tip
+The local view for a given DbSet instance is created lazily when first accessed and then cached. <code>LocalView</code> creation itself is fast and it does not use significant memory. However, it does call <code>DetectChanges</code>, which can be slow for large numbers of entities. The collections created by <code>ToObservableCollection</code> and <code>ToBindingList</code> are also created lazily and then cached. Both of these methods create new collections, which can be slow and use a lot of memory when thousands of entities are involved.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/entity-entries">Accessing Tracked Entities</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

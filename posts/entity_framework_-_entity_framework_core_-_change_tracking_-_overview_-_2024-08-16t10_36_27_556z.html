@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Change tracking - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Each DbContext instance tracks changes made to entities. These tracked entities in turn drive the changes to the database when SaveChanges is called.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Change tracking - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Each DbContext instance tracks changes made to entities. These tracked entities in turn drive the changes to the database when SaveChanges is called.</p>
+<p>This document presents an overview of Entity Framework Core (EF Core) change tracking and how it relates to queries and updates.</p>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+For simplicity, this document uses and references synchronous methods such as SaveChanges rather than their async equivalents such as SaveChangesAsync. Calling and awaiting the async method can be substituted unless otherwise noted.</p>
+</blockquote>
+<h2><a href="#how-to-track-entities" aria-hidden="true" class="anchor" id="how-to-track-entities"></a>How to track entities</h2>
+<p>Entity instances become tracked when they are:</p>
+<ul>
+<li>
+<p>Returned from a query executed against the database</p>
+</li>
+<li>
+<p>Explicitly attached to the DbContext by <code>Add</code>, <code>Attach</code>, <code>Update</code>, or similar methods</p>
+</li>
+<li>
+<p>Detected as new entities connected to existing tracked entities</p>
+</li>
+</ul>
+<p>Entity instances are no longer tracked when:</p>
+<ul>
+<li>
+<p>The DbContext is disposed</p>
+</li>
+<li>
+<p>The change tracker is cleared</p>
+</li>
+<li>
+<p>The entities are explicitly detached</p>
+</li>
+</ul>
+<p>The lifetime of a DbContext should be:</p>
+<ul>
+<li>
+<p>Create the DbContext instance</p>
+</li>
+<li>
+<p>Track some entities</p>
+</li>
+<li>
+<p>Make some changes to the entities</p>
+</li>
+<li>
+<p>Call SaveChanges to update the database</p>
+</li>
+<li>
+<p>Dispose the DbContext instance</p>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+It is not necessary to clear the change tracker or explicitly detach entity instances when taking this approach. However, if you do need to detach entities, then calling <code>ChangeTracker.Clear</code> is more efficient than detaching entities one-by-one.</p>
+</blockquote>
+<h2><a href="#entity-states" aria-hidden="true" class="anchor" id="entity-states"></a>Entity states</h2>
+<p>Every entity is associated with a given EntityState:</p>
+<ul>
+<li>
+<p><code>Detached</code> entities are not being tracked by the DbContext.</p>
+</li>
+<li>
+<p><code>Added</code> entities are new and have not yet been inserted into the database. This means they will be inserted when SaveChanges is called.</p>
+</li>
+<li>
+<p><code>Unchanged</code> entities have not been changed since they were queried from the database. All entities returned from queries are initially in this state.</p>
+</li>
+<li>
+<p><code>Modified</code> entities have been changed since they were queried from the database. This means they will be updated when SaveChanges is called.</p>
+</li>
+<li>
+<p><code>Deleted</code> entities exist in the database, but are marked to be deleted when SaveChanges is called.</p>
+</li>
+</ul>
+<p>EF Core tracks changes at the property level.</p>
+<p>The following table summarizes the different states:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Entity state</th>
+<th>Tracked by DbContext</th>
+<th>Exists in database</th>
+<th>Properties modified</th>
+<th>Action on SaveChanges</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>Detached</code></td>
+<td>No</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Added</code></td>
+<td>Yes</td>
+<td>No</td>
+<td>-</td>
+<td>Insert</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Unchanged</code></td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>-</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Modified</code></td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Update</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Deleted</code></td>
+<td>Yes</td>
+<td>Yes</td>
+<td>-</td>
+<td>Delete</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Note
+This text uses relational database terms for clarity. NoSQL databases typically support similar operations but possibly with different names. Consult your database provider documentation for more information.</p>
+</blockquote>
+<h2><a href="#tracking-from-queries" aria-hidden="true" class="anchor" id="tracking-from-queries"></a>Tracking from queries</h2>
+<p>EF Core change tracking works best when the same DbContext instance is used to query for entities and update them by calling SaveChanges.</p>
+<p>This approach has several advantages over explicitly tracking entity instances:</p>
+<ul>
+<li>
+<p>It is simple. Entity states rarely need to be manipulated explicitly--EF Core takes care of state changes.</p>
+</li>
+<li>
+<p>Updates are limited to only those values that have actually changed.</p>
+</li>
+<li>
+<p>The values of shadow properties are preserved and used as needed. This is especially relevant when foreign keys are stored in shadow state.</p>
+</li>
+<li>
+<p>The original values of properties are preserved automatically and used for efficient updates.</p>
+</li>
+</ul>
+<h2><a href="#simple-query-and-update" aria-hidden="true" class="anchor" id="simple-query-and-update"></a>Simple query and update</h2>
+<p>For example, consider a simple blog/posts model:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public int? BlogId { get; set; }
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>We can use this model to query for blogs and posts and then make some updates to the database:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.Include(e =&gt; e.Posts).First(e =&gt; e.Name == &quot;.NET Blog&quot;);
+
+blog.Name = &quot;.NET Blog (Updated!)&quot;;
+
+foreach (var post in blog.Posts.Where(e =&gt; !e.Title.Contains(&quot;5.0&quot;)))
+{
+    post.Title = post.Title.Replace(&quot;5&quot;, &quot;5.0&quot;);
+}
+
+context.SaveChanges();
+</code></pre>
+<p>Calling SaveChanges results in the following database updates, using SQLite as an example database:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p1='1' (DbType = String), @p0='.NET Blog (Updated!)' (Size = 20)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Blogs&quot; SET &quot;Name&quot; = @p0
+WHERE &quot;Id&quot; = @p1;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p1='2' (DbType = String), @p0='Announcing F# 5.0' (Size = 17)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Posts&quot; SET &quot;Title&quot; = @p0
+WHERE &quot;Id&quot; = @p1;
+SELECT changes();
+</code></pre>
+<p>In this post I'm going to show you how to use the change tracker debug view to see which entities are being tracked and what their states are.</p>
+<pre><code class="language-csharp">context.ChangeTracker.DetectChanges();
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<p>Generates the following output:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  Name: '.NET Blog (Updated!)' Modified Originally '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}, {Id: 3}]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Modified
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5.0' Modified Originally 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>Notice specifically:</p>
+<ul>
+<li>
+<p>The <code>Blog.Name</code> property is marked as modified (<code>Name: '.NET Blog (Updated!)' Modified Originally '.NET Blog'</code>), and this results in the blog being in the <code>Modified</code> state.</p>
+</li>
+<li>
+<p>The <code>Post.Title</code> property of post 2 is marked as modified (<code>Title: 'Announcing F# 5.0' Modified Originally 'Announcing F# 5'</code>), and this results in this post being in the <code>Modified</code> state.</p>
+</li>
+<li>
+<p>The other property values of post 2 have not changed and are therefore not marked as modified. This is why these values are not included in the database update.</p>
+</li>
+<li>
+<p>The other post was not modified in any way. This is why it is still in the <code>Unchanged</code> state and is not included in the database update.</p>
+</li>
+</ul>
+<h2><a href="#query-then-insert-update,-and-delete" aria-hidden="true" class="anchor" id="query-then-insert-update,-and-delete"></a>Query then insert, update, and delete</h2>
+<p>Updates like those in the previous example can be combined with inserts and deletes in the same unit-of-work. For example:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = context.Blogs.Include(e =&gt; e.Posts).First(e =&gt; e.Name == &quot;.NET Blog&quot;);
+
+// Modify property values
+blog.Name = &quot;.NET Blog (Updated!)&quot;;
+
+// Insert a new Post
+blog.Posts.Add(
+    new Post
+    {
+        Title = &quot;What’s next for System.Text.Json?&quot;, Content = &quot;.NET 5.0 was released recently and has come with many...&quot;
+    });
+
+// Mark an existing Post as Deleted
+var postToDelete = blog.Posts.Single(e =&gt; e.Title == &quot;Announcing F# 5&quot;);
+context.Remove(postToDelete);
+
+context.ChangeTracker.DetectChanges();
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+
+context.SaveChanges();
+</code></pre>
+<p>In this example:</p>
+<ul>
+<li>
+<p>A blog and related posts are queried from the database and tracked</p>
+</li>
+<li>
+<p>The <code>Blog.Name</code> property is changed</p>
+</li>
+<li>
+<p>A new post is added to the collection of existing posts for the blog</p>
+</li>
+<li>
+<p>An existing post is marked for deletion by calling <code>DbContext.Remove</code></p>
+</li>
+</ul>
+<p>Looking again at the change tracker debug view before calling SaveChanges shows how EF Core is tracking these changes:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  Name: '.NET Blog (Updated!)' Modified Originally '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}, {Id: 3}, {Id: -2147482638}]
+Post {Id: -2147482638} Added
+  Id: -2147482638 PK Temporary
+  BlogId: 1 FK
+  Content: '.NET 5.0 was released recently and has come with many...'
+  Title: 'What's next for System.Text.Json?'
+  Blog: {Id: 1}
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Deleted
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>Notice that:</p>
+<ul>
+<li>
+<p>The blog is marked as <code>Modified</code>. This will generate a database update.</p>
+</li>
+<li>
+<p>Post 2 is marked as <code>Deleted</code>. This will generate a database delete.</p>
+</li>
+<li>
+<p>A new post with a temporary ID is associated with blog 1 and is marked as <code>Added</code>. This will generate a database insert.</p>
+</li>
+</ul>
+<p>This results in the following database commands (using SQLite) when <code>SaveChanges</code> is called:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p1='1' (DbType = String), @p0='.NET Blog (Updated!)' (Size = 20)], CommandType='Text', CommandTimeout='30']
+UPDATE &quot;Blogs&quot; SET &quot;Name&quot; = @p0
+WHERE &quot;Id&quot; = @p1;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='2' (DbType = String)], CommandType='Text', CommandTimeout='30']
+DELETE FROM &quot;Posts&quot;
+WHERE &quot;Id&quot; = @p0;
+SELECT changes();
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='1' (DbType = String), @p1='.NET 5.0 was released recently and has come with many...' (Size = 56), @p2='What's next for System.Text.Json?' (Size = 33)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;Posts&quot; (&quot;BlogId&quot;, &quot;Content&quot;, &quot;Title&quot;)
+VALUES (@p0, @p1, @p2);
+SELECT &quot;Id&quot;
+FROM &quot;Posts&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+</code></pre>
+<p>For more information on how to add or remove entities, see Adding or Removing Entity.</p>
+<blockquote>
+<p>Tip
+Call <code>ChangeTracker.HasChanges()</code> to determine whether any changes have been made that will cause <code>SaveChanges</code> to make updates to the database. If <code>HasChanges</code> return false, then <code>SaveChanges</code> will be a no-op.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/">Change Tracking in EF Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
