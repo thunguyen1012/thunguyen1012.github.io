@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Change tracking - Additional change tracking features | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This document covers miscellaneous features and scenarios involving change tracking.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Change tracking - Additional change tracking features</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This document covers miscellaneous features and scenarios involving change tracking.</p>
+<blockquote>
+<p>Tip
+This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<h2><a href="#add-versus-addasync" aria-hidden="true" class="anchor" id="add-versus-addasync"></a><code>Add</code> versus <code>AddAsync</code></h2>
+<p>Entity Framework Core (EF Core) provides async methods whenever using that method may result in a database interaction.</p>
+<p>EF Core ships with two methods for adding entities to the database.</p>
+<p>Other similar methods like <code>Update</code>, <code>Attach</code>, and <code>Remove</code> do not have async overloads because they never generate new key values, and hence never need to access the database.</p>
+<h2><a href="#addrange-updaterange,-attachrange,-and-removerange" aria-hidden="true" class="anchor" id="addrange-updaterange,-attachrange,-and-removerange"></a><code>AddRange</code>, <code>UpdateRange</code>, <code>AttachRange</code>, and <code>RemoveRange</code></h2>
+<p><code>DbSet&lt;T&gt;</code> and <code>DbContext</code> provide alternate versions of <code>Add</code>, <code>Update</code>, <code>Attach</code>, and <code>Remove</code> that accept multiple instances in a single call.</p>
+<p>This paper describes the use of methods &quot;range&quot; and &quot;non-range&quot;.</p>
+<blockquote>
+<p>Note
+This is different from EF6, where <code>AddRange</code> and <code>Add</code> both automatically called <code>DetectChanges</code>, but calling <code>Add</code> multiple times caused <code>DetectChanges</code> to be called multiple times instead of once. This made <code>AddRange</code> more efficient in EF6. In EF Core, neither of these methods automatically call <code>DetectChanges</code>.</p>
+</blockquote>
+<h2><a href="#dbcontext-versus-dbset-methods" aria-hidden="true" class="anchor" id="dbcontext-versus-dbset-methods"></a><code>DbContext</code> versus <code>DbSet</code> methods</h2>
+<p><code>DbSet&lt;T&gt;</code> and <code>DbContext</code> are both methods of the Entity Framework DbSet.</p>
+<p>When using EF Core model types, methods like <code>Add</code>, <code>Update</code>, <code>Attach</code>, and <code>Remove</code> must first be created for the EF Core model type that is being used. Methods like <code>Add</code>, <code>Update</code>, <code>Attach</code>, and <code>Remove</code> can then be used on the DbSet without any ambiguity as to which EF Core model type is</p>
+<p>A shared-type entity type is used by default for the join entities in many-to-many relationships.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .SharedTypeEntity&lt;Dictionary&lt;string, int&gt;&gt;(
+            &quot;PostTag&quot;,
+            b =&gt;
+            {
+                b.IndexerProperty&lt;int&gt;(&quot;TagId&quot;);
+                b.IndexerProperty&lt;int&gt;(&quot;PostId&quot;);
+            });
+
+    modelBuilder.Entity&lt;Post&gt;()
+        .HasMany(p =&gt; p.Tags)
+        .WithMany(p =&gt; p.Posts)
+        .UsingEntity&lt;Dictionary&lt;string, int&gt;&gt;(
+            &quot;PostTag&quot;,
+            j =&gt; j.HasOne&lt;Tag&gt;().WithMany(),
+            j =&gt; j.HasOne&lt;Post&gt;().WithMany());
+}
+</code></pre>
+<p>This code shows how to associate two entities by tracking a new join entity instance.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var post = context.Posts.Single(e =&gt; e.Id == 3);
+var tag = context.Tags.Single(e =&gt; e.Id == 1);
+
+var joinEntitySet = context.Set&lt;Dictionary&lt;string, int&gt;&gt;(&quot;PostTag&quot;);
+var joinEntity = new Dictionary&lt;string, int&gt; { [&quot;PostId&quot;] = post.Id, [&quot;TagId&quot;] = tag.Id };
+joinEntitySet.Add(joinEntity);
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+
+context.SaveChanges();
+</code></pre>
+<p>Notice that <code>DbContext.Set&lt;TEntity&gt;(String)</code> is used to create a DbSet for the <code>PostTag</code> entity type. This DbSet can then be used to call <code>Add</code> with the new join entity instance.</p>
+<blockquote>
+<p>Important
+The CLR type used for join entity types by convention may change in future releases to improve performance. Do not depend on any specific join entity type unless it has been explicitly configured as is done for <code>Dictionary&lt;string, int&gt;</code> in the code above.</p>
+</blockquote>
+<h2><a href="#property-versus-field-access" aria-hidden="true" class="anchor" id="property-versus-field-access"></a><code>Property</code> versus field access</h2>
+<p>Access to entity properties using the backing field of the property by default.</p>
+<p>This article describes how to change the <code>PropertyAccessMode</code> in EF Core to prevent notifications when setting a property.</p>
+<ul>
+<li>
+<p>All entity types in the model using <code>ModelBuilder.UsePropertyAccessMode</code></p>
+</li>
+<li>
+<p>All properties and navigations of a specific entity type using <code>EntityTypeBuilder&lt;TEntity&gt;.UsePropertyAccessMode</code></p>
+</li>
+<li>
+<p>A specific property using <code>PropertyBuilder.UsePropertyAccessMode</code></p>
+</li>
+<li>
+<p>A specific navigation using <code>NavigationBuilder.UsePropertyAccessMode</code></p>
+</li>
+</ul>
+<p><code>Property</code> access modes <code>Field</code> and <code>PreferField</code> will cause EF Core to access the property value through its backing field.</p>
+<p>EF Core will throw an exception if it cannot access the value through the field or property getter/setter.</p>
+<p>EF Core will use the preferred access mode if it is possible to access a property through its getter or setter.</p>
+<p>The following two examples show how to configure EF Core to use backing fields only when creating entity instances.</p>
+<p>The different property access modes are summarized in the following table:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">PropertyAccessMode</th>
+<th>Preference</th>
+<th>Preference creating entities</th>
+<th>Fallback</th>
+<th>Fallback creating entities</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>Field</code></td>
+<td>Field</td>
+<td>Field</td>
+<td>Throws</td>
+<td>Throws</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Property</code></td>
+<td>Property</td>
+<td>Property</td>
+<td>Throws</td>
+<td>Throws</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PreferField</code></td>
+<td>Field</td>
+<td>Field</td>
+<td>Property</td>
+<td>Property</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PreferProperty</code></td>
+<td>Property</td>
+<td>Property</td>
+<td>Field</td>
+<td>Field</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>FieldDuringConstruction</code></td>
+<td>Property</td>
+<td>Field</td>
+<td>Field</td>
+<td>Throws</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PreferFieldDuringConstruction</code></td>
+<td>Property</td>
+<td>Field</td>
+<td>Field</td>
+<td>Property</td>
+</tr>
+</tbody></table>
+<h2><a href="#temporary-values" aria-hidden="true" class="anchor" id="temporary-values"></a>Temporary values</h2>
+<p>EF Core creates temporary key values when tracking new entities that will have real key values generated by the database when SaveChanges are called.</p>
+<h3><a href="#accessing-temporary-values" aria-hidden="true" class="anchor" id="accessing-temporary-values"></a>Accessing temporary values</h3>
+<p>Temporary values are stored in the change tracker and not set onto entity instances directly. Temporary values are stored in the change tracker and not set onto entity instances directly.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blog = new Blog { Name = &quot;.NET Blog&quot; };
+
+context.Add(blog);
+
+Console.WriteLine($&quot;Blog.Id set on entity is {blog.Id}&quot;);
+Console.WriteLine($&quot;Blog.Id tracked by EF is {context.Entry(blog).Property(e =&gt; e.Id).CurrentValue}&quot;);
+</code></pre>
+<p>The output from this code is:</p>
+<pre><code class="language-output">Blog.Id set on entity is 0
+Blog.Id tracked by EF is -2147482643
+</code></pre>
+<p><code>PropertyEntry.IsTemporary</code> can be used to check for temporary values.</p>
+<h3><a href="#manipulating-temporary-values" aria-hidden="true" class="anchor" id="manipulating-temporary-values"></a>Manipulating temporary values</h3>
+<p>The following code shows how to associate a graph of new entities by foreign key, while still allowing real key values to be generated when SaveChanges is called.</p>
+<pre><code class="language-csharp">var blogs = new List&lt;Blog&gt; { new Blog { Id = -1, Name = &quot;.NET Blog&quot; }, new Blog { Id = -2, Name = &quot;Visual Studio Blog&quot; } };
+
+var posts = new List&lt;Post&gt;
+{
+    new Post
+    {
+        Id = -1,
+        BlogId = -1,
+        Title = &quot;Announcing the Release of EF Core 5.0&quot;,
+        Content = &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;
+    },
+    new Post
+    {
+        Id = -2,
+        BlogId = -2,
+        Title = &quot;Disassembly improvements for optimized managed debugging&quot;,
+        Content = &quot;If you are focused on squeezing out the last bits of performance for your .NET service or...&quot;
+    }
+};
+
+using var context = new BlogsContext();
+
+foreach (var blog in blogs)
+{
+    context.Add(blog).Property(e =&gt; e.Id).IsTemporary = true;
+}
+
+foreach (var post in posts)
+{
+    context.Add(post).Property(e =&gt; e.Id).IsTemporary = true;
+}
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+
+context.SaveChanges();
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<p>Notice that:</p>
+<ul>
+<li>
+<p>Negative numbers are used as temporary key values; this is not required, but is a common convention to prevent key clashes.</p>
+</li>
+<li>
+<p>The <code>Post.BlogId</code> FK property is assigned the same negative value as the PK of the associated blog.</p>
+</li>
+<li>
+<p>The PK values are marked as temporary by setting IsTemporary after each entity is tracked. This is necessary because any key value supplied by the application is assumed to be a real key value.</p>
+</li>
+</ul>
+<p>Looking at the change tracker debug view before calling SaveChanges shows that the PK values are marked as temporary and posts are associated with the correct blogs, including fixup of navigations:</p>
+<pre><code class="language-output">Blog {Id: -2} Added
+  Id: -2 PK Temporary
+  Name: 'Visual Studio Blog'
+  Posts: [{Id: -2}]
+Blog {Id: -1} Added
+  Id: -1 PK Temporary
+  Name: '.NET Blog'
+  Posts: [{Id: -1}]
+Post {Id: -2} Added
+  Id: -2 PK Temporary
+  BlogId: -2 FK
+  Content: 'If you are focused on squeezing out the last bits of perform...'
+  Title: 'Disassembly improvements for optimized managed debugging'
+  Blog: {Id: -2}
+  Tags: []
+Post {Id: -1} Added
+  Id: -1 PK Temporary
+  BlogId: -1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: -1}
+</code></pre>
+<p>After calling SaveChanges, these temporary values have been replaced by real values generated by the database:</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog'
+  Posts: [{Id: 1}]
+Blog {Id: 2} Unchanged
+  Id: 2 PK
+  Name: 'Visual Studio Blog'
+  Posts: [{Id: 2}]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+  Tags: []
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 2 FK
+  Content: 'If you are focused on squeezing out the last bits of perform...'
+  Title: 'Disassembly improvements for optimized managed debugging'
+  Blog: {Id: 2}
+  Tags: []
+</code></pre>
+<h2><a href="#working-with-default-values" aria-hidden="true" class="anchor" id="working-with-default-values"></a>Working with default values</h2>
+<p>In this article, I'm going to show you how to use EF Core to get a property's default value from the database when SaveChanges is called.</p>
+<pre><code class="language-csharp">public class Token
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public DateTime ValidFrom { get; set; }
+}
+</code></pre>
+<p>The <code>ValidFrom</code> property is configured to get a default value from the database:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Token&gt;()
+    .Property(e =&gt; e.ValidFrom)
+    .HasDefaultValueSql(&quot;CURRENT_TIMESTAMP&quot;);
+</code></pre>
+<p>When inserting an entity of this type, EF Core will let the database generate the value unless an explicit value has been set instead. For example:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+context.AddRange(
+    new Token { Name = &quot;A&quot; },
+    new Token { Name = &quot;B&quot;, ValidFrom = new DateTime(1111, 11, 11, 11, 11, 11) });
+
+context.SaveChanges();
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<p>Looking at the change tracker debug view shows that the first token had <code>ValidFrom</code> generated by the database, while the second token used the value explicitly set:</p>
+<pre><code class="language-output">Token {Id: 1} Unchanged
+  Id: 1 PK
+  Name: 'A'
+  ValidFrom: '12/30/2020 6:36:06 PM'
+Token {Id: 2} Unchanged
+  Id: 2 PK
+  Name: 'B'
+  ValidFrom: '11/11/1111 11:11:11 AM'
+</code></pre>
+<blockquote>
+<p>Note
+Using database default values requires that the database column has a default value constraint configured. This is done automatically by EF Core migrations when using <code>HasDefaultValueSql</code> or <code>HasDefaultValue</code>. Make sure to create the default constraint on the column in some other way when not using EF Core migrations.</p>
+</blockquote>
+<h3><a href="#using-nullable-properties" aria-hidden="true" class="anchor" id="using-nullable-properties"></a>Using nullable properties</h3>
+<p>The default property setting (CLR) in the Entity Framework Core (EF) is not explicitly set in the database.</p>
+<pre><code class="language-csharp">public class Foo1
+{
+    public int Id { get; set; }
+    public int Count { get; set; }
+}
+</code></pre>
+<p>Where that property is configured to have a database default of -1:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Foo1&gt;()
+    .Property(e =&gt; e.Count)
+    .HasDefaultValue(-1);
+</code></pre>
+<p>The default value for the CLR property is -1.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var fooA = new Foo1 { Count = 10 };
+var fooB = new Foo1 { Count = 0 };
+var fooC = new Foo1();
+
+context.AddRange(fooA, fooB, fooC);
+context.SaveChanges();
+
+Debug.Assert(fooA.Count == 10);
+Debug.Assert(fooB.Count == -1); // Not what we want!
+Debug.Assert(fooC.Count == -1);
+</code></pre>
+<p>In this post I'm going to show you how to set the <code>Count</code> property to 0.</p>
+<pre><code class="language-csharp">public class Foo2
+{
+    public int Id { get; set; }
+    public int? Count { get; set; }
+}
+</code></pre>
+<p>This makes the CLR default null, instead of 0, which means 0 will now be inserted when explicitly set:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var fooA = new Foo2 { Count = 10 };
+var fooB = new Foo2 { Count = 0 };
+var fooC = new Foo2();
+
+context.AddRange(fooA, fooB, fooC);
+context.SaveChanges();
+
+Debug.Assert(fooA.Count == 10);
+Debug.Assert(fooB.Count == 0);
+Debug.Assert(fooC.Count == -1);
+</code></pre>
+<h3><a href="#using-nullable-backing-fields" aria-hidden="true" class="anchor" id="using-nullable-backing-fields"></a>Using nullable backing fields</h3>
+<p>The problem with making the property nullable that it may not be conceptually nullable in the domain model. Forcing the property to be nullable therefore compromises the model.</p>
+<p>The property can be left non-nullable, with only the backing field being nullable. For example:</p>
+<pre><code class="language-csharp">public class Foo3
+{
+    public int Id { get; set; }
+
+    private int? _count;
+
+    public int Count
+    {
+        get =&gt; _count ?? -1;
+        set =&gt; _count = value;
+    }
+}
+</code></pre>
+<p>This allows the CLR default (0) to be inserted if the property is explicitly set to 0, while not needing to expose the property as nullable in the domain model. For example:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var fooA = new Foo3 { Count = 10 };
+var fooB = new Foo3 { Count = 0 };
+var fooC = new Foo3();
+
+context.AddRange(fooA, fooB, fooC);
+context.SaveChanges();
+
+Debug.Assert(fooA.Count == 10);
+Debug.Assert(fooB.Count == 0);
+Debug.Assert(fooC.Count == -1);
+</code></pre>
+<h4><a href="#nullable-backing-fields-for-bool-properties" aria-hidden="true" class="anchor" id="nullable-backing-fields-for-bool-properties"></a>Nullable backing fields for <code>bool</code> properties</h4>
+<p>The CLR defaults for a property's &quot;false&quot; or &quot;true&quot; state can be overridden by the normal pattern of the property's &quot;false&quot; or &quot;true&quot; state.</p>
+<pre><code class="language-csharp">public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    private bool? _isAuthorized;
+
+    public bool IsAuthorized
+    {
+        get =&gt; _isAuthorized ?? true;
+        set =&gt; _isAuthorized = value;
+    }
+}
+</code></pre>
+<p>The <code>IsAuthorized</code> property is configured with a database default value of &quot;true&quot;:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;User&gt;()
+    .Property(e =&gt; e.IsAuthorized)
+    .HasDefaultValue(true);
+</code></pre>
+<p>The <code>IsAuthorized</code> property can be set to &quot;true&quot; or &quot;false&quot; explicitly before inserting, or can be left unset in which case the database default will be used:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var userA = new User { Name = &quot;Mac&quot; };
+var userB = new User { Name = &quot;Alice&quot;, IsAuthorized = true };
+var userC = new User { Name = &quot;Baxter&quot;, IsAuthorized = false }; // Always deny Baxter access!
+
+context.AddRange(userA, userB, userC);
+
+context.SaveChanges();
+</code></pre>
+<p>The output from SaveChanges when using SQLite shows that the database default is used for Mac, while explicit values are set for Alice and Baxter:</p>
+<pre><code class="language-sql">-- Executed DbCommand (0ms) [Parameters=[@p0='Mac' (Size = 3)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;User&quot; (&quot;Name&quot;)
+VALUES (@p0);
+SELECT &quot;Id&quot;, &quot;IsAuthorized&quot;
+FROM &quot;User&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='True' (DbType = String), @p1='Alice' (Size = 5)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;User&quot; (&quot;IsAuthorized&quot;, &quot;Name&quot;)
+VALUES (@p0, @p1);
+SELECT &quot;Id&quot;
+FROM &quot;User&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+
+-- Executed DbCommand (0ms) [Parameters=[@p0='False' (DbType = String), @p1='Baxter' (Size = 6)], CommandType='Text', CommandTimeout='30']
+INSERT INTO &quot;User&quot; (&quot;IsAuthorized&quot;, &quot;Name&quot;)
+VALUES (@p0, @p1);
+SELECT &quot;Id&quot;
+FROM &quot;User&quot;
+WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+</code></pre>
+<h3><a href="#schema-defaults-only" aria-hidden="true" class="anchor" id="schema-defaults-only"></a>Schema defaults only</h3>
+<p>EF Core has a property called <code>PropertyBuilder</code> that can be used to create defaults in the database schema created by EF Core migrations without EF Core ever using these values for inserts.</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Bar&gt;()
+    .Property(e =&gt; e.Count)
+    .HasDefaultValue(-1)
+    .ValueGeneratedNever();
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/miscellaneous">Additional Change Tracking Features</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

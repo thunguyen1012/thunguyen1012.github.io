@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Change tracking - Change tracker debugging | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The Entity Framework Core (EF Core) change tracker generates two kinds of output to help with debugging:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Change tracking - Change tracker debugging</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The Entity Framework Core (EF Core) change tracker generates two kinds of output to help with debugging:</p>
+<ul>
+<li>
+<p>The <code>ChangeTracker.DebugView</code> provides a human-readable view of all entities being tracked</p>
+</li>
+<li>
+<p><code>Debug</code>-level log messages are generated when the change tracker detects state and fixes up relationships</p>
+</li>
+</ul>
+<blockquote>
+<p>Tip
+This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<h2><a href="#change-tracker-debug-view" aria-hidden="true" class="anchor" id="change-tracker-debug-view"></a>Change tracker debug view</h2>
+<p>The change tracker debug view can be accessed in the debugger of your IDE. For example, with Visual Studio:</p>
+<p>It can also be accessed directly from code, for example to send the debug view to the console:</p>
+<pre><code class="language-csharp">Console.WriteLine(context.ChangeTracker.DebugView.ShortView);
+</code></pre>
+<p>The debug view has a short form and a long form. The short form shows tracked entities, their state, and key values. The long form also includes all property and navigation values and state.</p>
+<h3><a href="#the-short-view" aria-hidden="true" class="anchor" id="the-short-view"></a>The short view</h3>
+<p>In this document we are going to look at how to create a debug view.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blogs = context.Blogs
+    .Include(e =&gt; e.Posts).ThenInclude(e =&gt; e.Tags)
+    .Include(e =&gt; e.Assets)
+    .ToList();
+
+// Mark something Added
+blogs[0].Posts.Add(
+    new Post
+    {
+        Title = &quot;What’s next for System.Text.Json?&quot;,
+        Content = &quot;.NET 5.0 was released recently and has come with many new features and...&quot;
+    });
+
+// Mark something Deleted
+blogs[1].Posts.Remove(blogs[1].Posts[1]);
+
+// Make something Modified
+blogs[0].Name = &quot;.NET Blog (All new!)&quot;;
+
+context.ChangeTracker.DetectChanges();
+</code></pre>
+<p>Printing the short view at this point, as shown above, results in the following output:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified AK {AssetsId: ed727978-1ffe-4709-baee-73913e8e44a0}
+Blog {Id: 2} Unchanged AK {AssetsId: 3a54b880-2b9d-486b-9403-dc2e52d36d65}
+BlogAssets {Id: 3a54b880-2b9d-486b-9403-dc2e52d36d65} Unchanged FK {Id: 3a54b880-2b9d-486b-9403-dc2e52d36d65}
+BlogAssets {Id: ed727978-1ffe-4709-baee-73913e8e44a0} Unchanged FK {Id: ed727978-1ffe-4709-baee-73913e8e44a0}
+Post {Id: -2147482643} Added FK {BlogId: 1}
+Post {Id: 1} Unchanged FK {BlogId: 1}
+Post {Id: 2} Unchanged FK {BlogId: 1}
+Post {Id: 3} Unchanged FK {BlogId: 2}
+Post {Id: 4} Deleted FK {BlogId: 2}
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 1, TagsId: 1} Unchanged FK {PostsId: 1} FK {TagsId: 1}
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 1, TagsId: 3} Unchanged FK {PostsId: 1} FK {TagsId: 3}
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 2, TagsId: 1} Unchanged FK {PostsId: 2} FK {TagsId: 1}
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 3, TagsId: 2} Unchanged FK {PostsId: 3} FK {TagsId: 2}
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 4, TagsId: 2} Deleted FK {PostsId: 4} FK {TagsId: 2}
+Tag {Id: 1} Unchanged
+Tag {Id: 2} Unchanged
+Tag {Id: 3} Unchanged
+</code></pre>
+<p>Notice:</p>
+<ul>
+<li>
+<p>Each tracked entity is listed with its primary key (PK) value. For example, <code>Blog {Id: 1}</code>.</p>
+</li>
+<li>
+<p>If the entity is a shared-type entity type, then it's CLR type is also shown. For example, <code>PostTag (Dictionary&lt;string, object&gt;)</code>.</p>
+</li>
+<li>
+<p>The EntityState is shown next. This will be one of <code>Unchanged</code>, <code>Added</code>, <code>Modified</code>, or <code>Deleted</code>.</p>
+</li>
+<li>
+<p>Values for any alternate keys (AKs) are shown next. For example, <code>AK {AssetsId: ed727978-1ffe-4709-baee-73913e8e44a0}</code>.</p>
+</li>
+<li>
+<p>Finally, values for any foreign keys (FKs) are shown. For example, <code>FK {PostsId: 4} FK {TagsId: 2}</code>.</p>
+</li>
+</ul>
+<h3><a href="#the-long-view" aria-hidden="true" class="anchor" id="the-long-view"></a>The long view</h3>
+<p>The long view can be sent to the console in the same way as the short view:</p>
+<pre><code class="language-csharp">Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<p>The output for the same state as the short view above is:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  AssetsId: 'ed727978-1ffe-4709-baee-73913e8e44a0' AK
+  Name: '.NET Blog (All new!)' Modified Originally '.NET Blog'
+  Assets: {Id: ed727978-1ffe-4709-baee-73913e8e44a0}
+  Posts: [{Id: 1}, {Id: 2}, {Id: -2147482643}]
+Blog {Id: 2} Unchanged
+  Id: 2 PK
+  AssetsId: '3a54b880-2b9d-486b-9403-dc2e52d36d65' AK
+  Name: 'Visual Studio Blog'
+  Assets: {Id: 3a54b880-2b9d-486b-9403-dc2e52d36d65}
+  Posts: [{Id: 3}]
+BlogAssets {Id: 3a54b880-2b9d-486b-9403-dc2e52d36d65} Unchanged
+  Id: '3a54b880-2b9d-486b-9403-dc2e52d36d65' PK FK
+  Banner: &lt;null&gt;
+  Blog: {Id: 2}
+BlogAssets {Id: ed727978-1ffe-4709-baee-73913e8e44a0} Unchanged
+  Id: 'ed727978-1ffe-4709-baee-73913e8e44a0' PK FK
+  Banner: &lt;null&gt;
+  Blog: {Id: 1}
+Post {Id: -2147482643} Added
+  Id: -2147482643 PK Temporary
+  BlogId: 1 FK
+  Content: '.NET 5.0 was released recently and has come with many new fe...'
+  Title: 'What's next for System.Text.Json?'
+  Blog: {Id: 1}
+  Tags: []
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+  Tags: [{Id: 1}, {Id: 3}]
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+  Tags: [{Id: 1}]
+Post {Id: 3} Unchanged
+  Id: 3 PK
+  BlogId: 2 FK
+  Content: 'If you are focused on squeezing out the last bits of perform...'
+  Title: 'Disassembly improvements for optimized managed debugging'
+  Blog: {Id: 2}
+  Tags: [{Id: 2}]
+Post {Id: 4} Deleted
+  Id: 4 PK
+  BlogId: 2 FK
+  Content: 'Examine when database queries were executed and measure how ...'
+  Title: 'Database Profiling with Visual Studio'
+  Blog: &lt;null&gt;
+  Tags: [{Id: 2}]
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 1, TagsId: 1} Unchanged
+  PostsId: 1 PK FK
+  TagsId: 1 PK FK
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 1, TagsId: 3} Unchanged
+  PostsId: 1 PK FK
+  TagsId: 3 PK FK
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 2, TagsId: 1} Unchanged
+  PostsId: 2 PK FK
+  TagsId: 1 PK FK
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 3, TagsId: 2} Unchanged
+  PostsId: 3 PK FK
+  TagsId: 2 PK FK
+PostTag (Dictionary&lt;string, object&gt;) {PostsId: 4, TagsId: 2} Deleted
+  PostsId: 4 PK FK
+  TagsId: 2 PK FK
+Tag {Id: 1} Unchanged
+  Id: 1 PK
+  Text: '.NET'
+  Posts: [{Id: 1}, {Id: 2}]
+Tag {Id: 2} Unchanged
+  Id: 2 PK
+  Text: 'Visual Studio'
+  Posts: [{Id: 3}, {Id: 4}]
+Tag {Id: 3} Unchanged
+  Id: 3 PK
+  Text: 'EF Core'
+  Posts: [{Id: 1}]
+</code></pre>
+<p>Each tracked entity and its state is shown as before. However, the long view also shows property and navigation values.</p>
+<h4><a href="#property-values" aria-hidden="true" class="anchor" id="property-values"></a>Property values</h4>
+<p>For each property, the long view shows whether or not the property is part of a primary key (PK), alternate key (AK), or foreign key (FK). For example:</p>
+<ul>
+<li>
+<p><code>Blog.Id</code> is a primary key property: <code>Id: 1 PK</code></p>
+</li>
+<li>
+<p><code>Blog.AssetsId</code> is an alternate key property: <code>AssetsId: 'ed727978-1ffe-4709-baee-73913e8e44a0' AK</code></p>
+</li>
+<li>
+<p><code>Post.BlogId</code> is a foreign key property: <code>BlogId: 2 FK</code></p>
+</li>
+<li>
+<p><code>BlogAssets.Id</code> is both a primary key and a foreign key property: <code>Id: '3a54b880-2b9d-486b-9403-dc2e52d36d65' PK FK</code></p>
+</li>
+</ul>
+<p>Property values that have been modified are marked as such, and the original value of the property is also shown. For example, <code>Name: '.NET Blog (All new!)' Modified Originally '.NET Blog'</code>.</p>
+<p>Finally, <code>Added</code> entities with temporary key values indicate that the value is temporary. For example, <code>Id: -2147482643 PK Temporary</code>.</p>
+<h4><a href="#navigation-values" aria-hidden="true" class="anchor" id="navigation-values"></a>Navigation values</h4>
+<p>The <code>Post.Blog</code> navigation points to the <code>Post.Blog</code> instance with ID 2.</p>
+<p>When an entity has more than one related entity, the entity's key value is ignored.</p>
+<h2><a href="#change-tracker-logging" aria-hidden="true" class="anchor" id="change-tracker-logging"></a>Change tracker logging</h2>
+<p>This article describes how to use ChangeTracker to monitor changes in a document.</p>
+<pre><code class="language-output">dbug: 12/30/2020 13:52:44.815 CoreEventId.DetectChangesStarting[10800] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      DetectChanges starting for 'BlogsContext'.
+dbug: 12/30/2020 13:52:44.818 CoreEventId.PropertyChangeDetected[10802] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      The unchanged property 'Blog.Name' was detected as changed from '.NET Blog' to '.NET Blog (All new!)' and will be marked as modified for entity with key '{Id: 1}'.
+dbug: 12/30/2020 13:52:44.820 CoreEventId.StateChanged[10807] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      The 'Blog' entity with key '{Id: 1}' tracked by 'BlogsContext' changed state from 'Unchanged' to 'Modified'.
+dbug: 12/30/2020 13:52:44.821 CoreEventId.CollectionChangeDetected[10804] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      1 entities were added and 0 entities were removed from navigation 'Blog.Posts' on entity with key '{Id: 1}'.
+dbug: 12/30/2020 13:52:44.822 CoreEventId.ValueGenerated[10808] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      'BlogsContext' generated temporary value '-2147482638' for the property 'Id.Post'.
+dbug: 12/30/2020 13:52:44.822 CoreEventId.StartedTracking[10806] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      Context 'BlogsContext' started tracking 'Post' entity with key '{Id: -2147482638}'.
+dbug: 12/30/2020 13:52:44.827 CoreEventId.CollectionChangeDetected[10804] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      0 entities were added and 1 entities were removed from navigation 'Blog.Posts' on entity with key '{Id: 2}'.
+dbug: 12/30/2020 13:52:44.827 CoreEventId.StateChanged[10807] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      The 'Post' entity with key '{Id: 4}' tracked by 'BlogsContext' changed state from 'Unchanged' to 'Modified'.
+dbug: 12/30/2020 13:52:44.829 CoreEventId.CascadeDeleteOrphan[10003] (Microsoft.EntityFrameworkCore.Update)
+      An entity of type 'Post' with key '{Id: 4}' changed to 'Deleted' state due to severed required relationship to its parent entity of type 'Blog'.
+dbug: 12/30/2020 13:52:44.829 CoreEventId.StateChanged[10807] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      The 'Post' entity with key '{Id: 4}' tracked by 'BlogsContext' changed state from 'Modified' to 'Deleted'.
+dbug: 12/30/2020 13:52:44.829 CoreEventId.CollectionChangeDetected[10804] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      0 entities were added and 1 entities were removed from navigation 'Blog.Posts' on entity with key '{Id: 2}'.
+dbug: 12/30/2020 13:52:44.831 CoreEventId.CascadeDelete[10002] (Microsoft.EntityFrameworkCore.Update)
+      A cascade state change of an entity of type 'PostTag' with key '{PostsId: 4, TagsId: 2}' to 'Deleted' occurred due to the deletion of its parent entity of type 'Post' with key '{Id: 4}'.
+dbug: 12/30/2020 13:52:44.831 CoreEventId.StateChanged[10807] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      The 'PostTag' entity with key '{PostsId: 4, TagsId: 2}' tracked by 'BlogsContext' changed state from 'Unchanged' to 'Deleted'.
+dbug: 12/30/2020 13:52:44.831 CoreEventId.DetectChangesCompleted[10801] (Microsoft.EntityFrameworkCore.ChangeTracking)
+      DetectChanges completed for 'BlogsContext'.
+</code></pre>
+<p>The following table summaries the change tracker logging messages:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Event ID</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.detectchangesstarting#microsoft-entityframeworkcore-diagnostics-coreeventid-detectchangesstarting" class="no-loc" data-linktype="absolute-path">CoreEventId.DetectChangesStarting</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.changetracker.detectchanges#microsoft-entityframeworkcore-changetracking-changetracker-detectchanges" class="no-loc" data-linktype="absolute-path">DetectChanges()</a> is starting</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.detectchangescompleted#microsoft-entityframeworkcore-diagnostics-coreeventid-detectchangescompleted" class="no-loc" data-linktype="absolute-path">CoreEventId.DetectChangesCompleted</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.changetracker.detectchanges#microsoft-entityframeworkcore-changetracking-changetracker-detectchanges" class="no-loc" data-linktype="absolute-path">DetectChanges()</a> has completed</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.propertychangedetected#microsoft-entityframeworkcore-diagnostics-coreeventid-propertychangedetected" class="no-loc" data-linktype="absolute-path">CoreEventId.PropertyChangeDetected</a></td>
+<td>A normal property value has changed</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.foreignkeychangedetected#microsoft-entityframeworkcore-diagnostics-coreeventid-foreignkeychangedetected" class="no-loc" data-linktype="absolute-path">CoreEventId.ForeignKeyChangeDetected</a></td>
+<td>A foreign key property value has changed</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.collectionchangedetected#microsoft-entityframeworkcore-diagnostics-coreeventid-collectionchangedetected" class="no-loc" data-linktype="absolute-path">CoreEventId.CollectionChangeDetected</a></td>
+<td>A non-skip collection navigation has had related entities added or removed.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.referencechangedetected#microsoft-entityframeworkcore-diagnostics-coreeventid-referencechangedetected" class="no-loc" data-linktype="absolute-path">CoreEventId.ReferenceChangeDetected</a></td>
+<td>A reference navigation has been changed to point to another entity, or set to null</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.startedtracking#microsoft-entityframeworkcore-diagnostics-coreeventid-startedtracking" class="no-loc" data-linktype="absolute-path">CoreEventId.StartedTracking</a></td>
+<td>EF Core started tracking an entity</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.statechanged#microsoft-entityframeworkcore-diagnostics-coreeventid-statechanged" class="no-loc" data-linktype="absolute-path">CoreEventId.StateChanged</a></td>
+<td>The <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.entitystate" class="no-loc" data-linktype="absolute-path">EntityState</a> of an entity has changed</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.valuegenerated#microsoft-entityframeworkcore-diagnostics-coreeventid-valuegenerated" class="no-loc" data-linktype="absolute-path">CoreEventId.ValueGenerated</a></td>
+<td>A value was generated for a property</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.coreeventid.skipcollectionchangedetected#microsoft-entityframeworkcore-diagnostics-coreeventid-skipcollectionchangedetected" class="no-loc" data-linktype="absolute-path">CoreEventId.SkipCollectionChangeDetected</a></td>
+<td>A skip collection navigation has had related entities added or removed</td>
+</tr>
+</tbody></table>
+<h2><a href="#the-model" aria-hidden="true" class="anchor" id="the-model"></a>The model</h2>
+<p>The model used for the examples above contains the following entity types:</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public int Id { get; set; } // Primary key
+    public Guid AssetsId { get; set; } // Alternate key
+    public string Name { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;(); // Collection navigation
+    public BlogAssets Assets { get; set; } // Reference navigation
+}
+
+public class BlogAssets
+{
+    public Guid Id { get; set; } // Primary key and foreign key
+    public byte[] Banner { get; set; }
+
+    public Blog Blog { get; set; } // Reference navigation
+}
+
+public class Post
+{
+    public int Id { get; set; } // Primary key
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public int BlogId { get; set; } // Foreign key
+    public Blog Blog { get; set; } // Reference navigation
+
+    public IList&lt;Tag&gt; Tags { get; } = new List&lt;Tag&gt;(); // Skip collection navigation
+}
+
+public class Tag
+{
+    public int Id { get; set; } // Primary key
+    public string Text { get; set; }
+
+    public IList&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;(); // Skip collection navigation
+}
+</code></pre>
+<p>The model is mostly configured by convention, with just a few lines in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder
+        .Entity&lt;Blog&gt;()
+        .Property(e =&gt; e.AssetsId)
+        .ValueGeneratedOnAdd();
+
+    modelBuilder
+        .Entity&lt;BlogAssets&gt;()
+        .HasOne(e =&gt; e.Blog)
+        .WithOne(e =&gt; e.Assets)
+        .HasForeignKey&lt;BlogAssets&gt;(e =&gt; e.Id)
+        .HasPrincipalKey&lt;Blog&gt;(e =&gt; e.AssetsId);
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/debug-views">Change Tracker Debugging</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

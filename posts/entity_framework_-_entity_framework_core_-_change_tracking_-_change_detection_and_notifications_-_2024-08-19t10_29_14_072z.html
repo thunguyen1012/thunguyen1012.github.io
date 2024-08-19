@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Change tracking - Change detection and notifications | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This document describes how to track changes made to entities in a DbContext.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Change tracking - Change detection and notifications</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This document describes how to track changes made to entities in a DbContext.</p>
+<p>This document covers how to use property notifications or change-tracking proxies to force immediate detection of changes in the DbContext.</p>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<h2><a href="#snapshot-change-tracking" aria-hidden="true" class="anchor" id="snapshot-change-tracking"></a>Snapshot change tracking</h2>
+<p>This example shows how to change the property values of an entity when it is first tracked by a DbContext instance.</p>
+<p>Changes to an application's database are detected by the application.</p>
+<h3><a href="#when-change-detection-is-needed" aria-hidden="true" class="anchor" id="when-change-detection-is-needed"></a>When change detection is needed</h3>
+<p>In this article, I'm going to show you how to make changes to a website without using EF Core.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+var blog = context.Blogs.Include(e =&gt; e.Posts).First(e =&gt; e.Name == &quot;.NET Blog&quot;);
+
+// Change a property value
+blog.Name = &quot;.NET Blog (Updated!)&quot;;
+
+// Add a new entity to a navigation
+blog.Posts.Add(
+    new Post
+    {
+        Title = &quot;What’s next for System.Text.Json?&quot;, Content = &quot;.NET 5.0 was released recently and has come with many...&quot;
+    });
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+context.ChangeTracker.DetectChanges();
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<p>How do I debug changes made to an entity?</p>
+<pre><code class="language-output">Blog {Id: 1} Unchanged
+  Id: 1 PK
+  Name: '.NET Blog (Updated!)' Originally '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}, &lt;not found&gt;]
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>The astute will notice that the debug view of the blog has not yet been updated.</p>
+<p>Contrast this with the debug view after calling DetectChanges:</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  Name: '.NET Blog (Updated!)' Modified Originally '.NET Blog'
+  Posts: [{Id: 1}, {Id: 2}, {Id: -2147482643}]
+Post {Id: -2147482643} Added
+  Id: -2147482643 PK Temporary
+  BlogId: 1 FK
+  Content: '.NET 5.0 was released recently and has come with many...'
+  Title: 'What's next for System.Text.Json?'
+  Blog: {Id: 1}
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<p>Now the blog is correctly marked as <code>Modified</code> and the new post has been detected and is tracked as <code>Added</code>.</p>
+<p>In this section we are going to look at how to make changes to a property and navigation on an entity instance.</p>
+<p>Contrast this to the following code which modifies the entities in the same way, but this time using EF Core methods:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+var blog = context.Blogs.Include(e =&gt; e.Posts).First(e =&gt; e.Name == &quot;.NET Blog&quot;);
+
+// Change a property value
+context.Entry(blog).Property(e =&gt; e.Name).CurrentValue = &quot;.NET Blog (Updated!)&quot;;
+
+// Add a new entity to the DbContext
+context.Add(
+    new Post
+    {
+        Blog = blog,
+        Title = &quot;What’s next for System.Text.Json?&quot;,
+        Content = &quot;.NET 5.0 was released recently and has come with many...&quot;
+    });
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<p>This example shows how EF Core can detect changes made to an entity by a method called <code>DbContext.Add</code>.</p>
+<blockquote>
+<p>Tip
+Don't attempt to avoid detecting changes by always using EF Core methods to make entity changes. Doing so is often more cumbersome and performs less well than making changes to entities in the normal way. The intention of this document is to inform as to when detecting changes is needed and when it is not. The intention is not to encourage avoidance of change detection.</p>
+</blockquote>
+<h3><a href="#methods-that-automatically-detect-changes" aria-hidden="true" class="anchor" id="methods-that-automatically-detect-changes"></a>Methods that automatically detect changes</h3>
+<p><code>DetectChanges()</code> is called automatically by methods where doing so is likely to impact the results. These methods are:</p>
+<ul>
+<li>
+<p><code>DbContext.SaveChanges</code> and <code>DbContext.SaveChangesAsync</code>, to ensure that all changes are detected before updating the database.</p>
+</li>
+<li>
+<p><code>ChangeTracker.Entries()</code> and <code>ChangeTracker.Entries&lt;TEntity&gt;()</code>, to ensure entity states and modified properties are up-to-date.</p>
+</li>
+<li>
+<p><code>ChangeTracker.HasChanges()</code>, to ensure that the result is accurate.</p>
+</li>
+<li>
+<p><code>ChangeTracker.CascadeChanges()</code>, to ensure correct entity states for principal/parent entities before cascading.</p>
+</li>
+<li>
+<p><code>DbSet&lt;TEntity&gt;.Local</code>, to ensure that the tracked graph is up-to-date.</p>
+</li>
+</ul>
+<p>There are also some places where detection of changes happens on only a single entity instance, rather than on the entire graph of tracked entities. These places are:</p>
+<ul>
+<li>
+<p>When using <code>DbContext.Entry</code>, to ensure that the entity's state and modified properties are up-to-date.</p>
+</li>
+<li>
+<p>When using <code>EntityEntry</code> methods such as <code>Property</code>, <code>Collection</code>, <code>Reference</code> or <code>Member</code> to ensure property modifications, current values, etc. are up-to-date.</p>
+</li>
+<li>
+<p>When a dependent/child entity is going to be deleted because a required relationship has been severed. This detects when an entity should not be deleted because it has been re-parented.</p>
+</li>
+</ul>
+<p>Local detection of changes for a single entity can be triggered explicitly by calling <code>EntityEntry.DetectChanges()</code>.</p>
+<blockquote>
+<p>Note
+Local detect changes can miss some changes that a full detection would find. This happens when cascading actions resulting from undetected changes to other entities have an impact on the entity in question. In such situations the application may need to force a full scan of all entities by explicitly calling <code>ChangeTracker.DetectChanges()</code>.</p>
+</blockquote>
+<h3><a href="#disabling-automatic-change-detection" aria-hidden="true" class="anchor" id="disabling-automatic-change-detection"></a>Disabling automatic change detection</h3>
+<p>Changes to entities can be automatically detected by ChangeTracker.</p>
+<pre><code class="language-csharp">public override int SaveChanges()
+{
+    foreach (var entityEntry in ChangeTracker.Entries&lt;PostTag&gt;()) // Detects changes automatically
+    {
+        if (entityEntry.State == EntityState.Added)
+        {
+            entityEntry.Entity.TaggedBy = &quot;ajcvickers&quot;;
+            entityEntry.Entity.TaggedOn = DateTime.Now;
+        }
+    }
+
+    try
+    {
+        ChangeTracker.AutoDetectChangesEnabled = false;
+        return base.SaveChanges(); // Avoid automatically detecting changes again here
+    }
+    finally
+    {
+        ChangeTracker.AutoDetectChangesEnabled = true;
+    }
+}
+</code></pre>
+<p>This code shows how to disable automatic change detection when calling down into the base SaveChanges method.</p>
+<blockquote>
+<p>Tip
+Do not assume that your code must disable automatic change detection to perform well. This is only needed when profiling an application tracking many entities indicates that performance of change detection is an issue.</p>
+</blockquote>
+<h3><a href="#detecting-changes-and-value-conversions" aria-hidden="true" class="anchor" id="detecting-changes-and-value-conversions"></a>Detecting changes and value conversions</h3>
+<p>To use snapshot change tracking with an entity type, EF Core must be able to:</p>
+<ul>
+<li>
+<p>Make a snapshot of each property value when the entity is tracked</p>
+</li>
+<li>
+<p>Compare this value to the current value of the property</p>
+</li>
+<li>
+<p>Generate a hash code for the value</p>
+</li>
+</ul>
+<p>When a value converter is used to map a property to a database it must specify how to perform these actions.</p>
+<h2><a href="#notification-entities" aria-hidden="true" class="anchor" id="notification-entities"></a>Notification entities</h2>
+<p>EF Core supports a number of tracking and notification methods.</p>
+<h3><a href="#implementing-notification-entities" aria-hidden="true" class="anchor" id="implementing-notification-entities"></a>Implementing notification entities</h3>
+<p>In our series of articles on Microsoft's .NET platform, we look at some of the ways that Notification entities can be used.</p>
+<pre><code class="language-csharp">public class Blog : INotifyPropertyChanging, INotifyPropertyChanged
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private int _id;
+
+    public int Id
+    {
+        get =&gt; _id;
+        set
+        {
+            PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(nameof(Id)));
+            _id = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Id)));
+        }
+    }
+
+    private string _name;
+
+    public string Name
+    {
+        get =&gt; _name;
+        set
+        {
+            PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(nameof(Name)));
+            _name = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+        }
+    }
+
+    public IList&lt;Post&gt; Posts { get; } = new ObservableCollection&lt;Post&gt;();
+}
+</code></pre>
+<p>EF Core ships with an <code>ObservableHashSet&lt;T&gt;</code> implementation that has more efficient lookups at the expense of stable ordering. EF Core also ships with an <code>ObservableHashSet&lt;T&gt;</code> implementation that has more efficient lookups at the expense of stable ordering.</p>
+<p>Most of this notification code is typically moved into an unmapped base class. For example:</p>
+<pre><code class="language-csharp">public class Blog : NotifyingEntity
+{
+    private int _id;
+
+    public int Id
+    {
+        get =&gt; _id;
+        set =&gt; SetWithNotify(value, out _id);
+    }
+
+    private string _name;
+
+    public string Name
+    {
+        get =&gt; _name;
+        set =&gt; SetWithNotify(value, out _name);
+    }
+
+    public IList&lt;Post&gt; Posts { get; } = new ObservableCollection&lt;Post&gt;();
+}
+
+public abstract class NotifyingEntity : INotifyPropertyChanging, INotifyPropertyChanged
+{
+    protected void SetWithNotify&lt;T&gt;(T value, out T field, [CallerMemberName] string propertyName = &quot;&quot;)
+    {
+        NotifyChanging(propertyName);
+        field = value;
+        NotifyChanged(propertyName);
+    }
+
+    public event PropertyChangingEventHandler PropertyChanging;
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private void NotifyChanged(string propertyName)
+        =&gt; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private void NotifyChanging(string propertyName)
+        =&gt; PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(propertyName));
+}
+</code></pre>
+<h3><a href="#configuring-notification-entities" aria-hidden="true" class="anchor" id="configuring-notification-entities"></a>Configuring notification entities</h3>
+<p><code>INotifyPropertyChanged</code> and <code>INotifyPropertyChanging</code> are interfaces used by EF Core to notify users of changes to their properties.</p>
+<p>Instead, EF Core must be configured to use these notification entities. This is usually done for all entity types by calling <code>ModelBuilder.HasChangeTrackingStrategy</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.HasChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotifications);
+}
+</code></pre>
+<p>The following example shows how to use the DetectChanges strategy to track changes in a notification entity.</p>
+<p>Full notification change tracking requires that both <code>INotifyPropertyChanging</code> and <code>INotifyPropertyChanged</code> are implemented.</p>
+<p>The different ChangeTrackingStrategy values are summarized in the following table.</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">ChangeTrackingStrategy</th>
+<th>Interfaces needed</th>
+<th>Needs DetectChanges</th>
+<th>Snapshots original values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Snapshot</td>
+<td>None</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;">ChangedNotifications</td>
+<td>INotifyPropertyChanged</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;">ChangingAndChangedNotifications</td>
+<td>INotifyPropertyChanged and ```INotifyPropertyChanging```</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td style="text-align: left;">ChangingAndChangedNotificationsWithOriginalValues</td>
+<td>INotifyPropertyChanged and ```INotifyPropertyChanging```</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+</tbody></table>
+<h3><a href="#using-notification-entities" aria-hidden="true" class="anchor" id="using-notification-entities"></a>Using notification entities</h3>
+<p>Notification entities behave like any other entities, except that making changes to the entity instances do not require a call to <code>ChangeTracker.DetectChanges()</code> to detect these changes. For example:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+var blog = context.Blogs.Include(e =&gt; e.Posts).First(e =&gt; e.Name == &quot;.NET Blog&quot;);
+
+// Change a property value
+blog.Name = &quot;.NET Blog (Updated!)&quot;;
+
+// Add a new entity to a navigation
+blog.Posts.Add(
+    new Post
+    {
+        Title = &quot;What’s next for System.Text.Json?&quot;, Content = &quot;.NET 5.0 was released recently and has come with many...&quot;
+    });
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<p>When notification entities are used, changes to entities are detected immediately.</p>
+<pre><code class="language-output">Blog {Id: 1} Modified
+  Id: 1 PK
+  Name: '.NET Blog (Updated!)' Modified
+  Posts: [{Id: 1}, {Id: 2}, {Id: -2147482643}]
+Post {Id: -2147482643} Added
+  Id: -2147482643 PK Temporary
+  BlogId: 1 FK
+  Content: '.NET 5.0 was released recently and has come with many...'
+  Title: 'What's next for System.Text.Json?'
+  Blog: {Id: 1}
+Post {Id: 1} Unchanged
+  Id: 1 PK
+  BlogId: 1 FK
+  Content: 'Announcing the release of EF Core 5.0, a full featured cross...'
+  Title: 'Announcing the Release of EF Core 5.0'
+  Blog: {Id: 1}
+Post {Id: 2} Unchanged
+  Id: 2 PK
+  BlogId: 1 FK
+  Content: 'F# 5 is the latest version of F#, the functional programming...'
+  Title: 'Announcing F# 5'
+  Blog: {Id: 1}
+</code></pre>
+<h2><a href="#change-tracking-proxies" aria-hidden="true" class="anchor" id="change-tracking-proxies"></a>Change-tracking proxies</h2>
+<p>EF Core is a plug-in for Microsoft's Visual Studio that allows you to implement change-tracking in your application.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.UseChangeTrackingProxies();
+</code></pre>
+<p>A dynamic proxy is a component of the <code>Castle.Core</code> framework that can be used to create collections.</p>
+<pre><code class="language-csharp">public class Blog
+{
+    public virtual int Id { get; set; }
+    public virtual string Name { get; set; }
+
+    public virtual IList&lt;Post&gt; Posts { get; } = new ObservableCollection&lt;Post&gt;();
+}
+
+public class Post
+{
+    public virtual int Id { get; set; }
+    public virtual string Title { get; set; }
+    public virtual string Content { get; set; }
+
+    public virtual int BlogId { get; set; }
+    public virtual Blog Blog { get; set; }
+}
+</code></pre>
+<p>EF Core has a change-tracking proxy that can be used to track changes made to Entity Framework entities.</p>
+<p>The following examples show how to create proxy instances for entities in the EF Core database.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+var blog = context.Blogs.Include(e =&gt; e.Posts).First(e =&gt; e.Name == &quot;.NET Blog&quot;);
+
+// Change a property value
+blog.Name = &quot;.NET Blog (Updated!)&quot;;
+
+// Add a new entity to a navigation
+blog.Posts.Add(
+    context.CreateProxy&lt;Post&gt;(
+        p =&gt;
+        {
+            p.Title = &quot;What’s next for System.Text.Json?&quot;;
+            p.Content = &quot;.NET 5.0 was released recently and has come with many...&quot;;
+        }));
+
+Console.WriteLine(context.ChangeTracker.DebugView.LongView);
+</code></pre>
+<h2><a href="#change-tracking-events" aria-hidden="true" class="anchor" id="change-tracking-events"></a>Change tracking events</h2>
+<p>EF Core fires the ChangeTracker.Tracked event when an entity is tracked for the first time.</p>
+<blockquote>
+<p>Note
+The <code>StateChanged</code> event is not fired when an entity is first tracked, even though the state has changed from <code>Detached</code> to one of the other states. Make sure to listen for both <code>StateChanged</code> and <code>Tracked</code> events to get all relevant notifications.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/change-detection">Change Detection and Notifications</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

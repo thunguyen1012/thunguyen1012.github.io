@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Change tracking - Identity resolution | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A DbContext can only track one entity instance with any given primary key value.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Change tracking - Identity resolution</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A DbContext can only track one entity instance with any given primary key value.</p>
+<blockquote>
+<p>Tip
+This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
+</blockquote>
+<blockquote>
+<p>Tip
+You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
+</blockquote>
+<h2><a href="#introduction" aria-hidden="true" class="anchor" id="introduction"></a>Introduction</h2>
+<p>The following code queries for an entity and then attempts to attach a different instance with the same primary key value:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blogA = context.Blogs.Single(e =&gt; e.Id == 1);
+var blogB = new Blog { Id = 1, Name = &quot;.NET Blog (All new!)&quot; };
+
+try
+{
+    context.Update(blogB); // This will throw
+}
+catch (Exception e)
+{
+    Console.WriteLine($&quot;{e.GetType().FullName}: {e.Message}&quot;);
+}
+</code></pre>
+<p>Running this code results in the following exception:</p>
+<p>EF Core requires a single instance because:</p>
+<ul>
+<li>
+<p>Property values may be different between multiple instances. When updating the database, EF Core needs to know which property values to use.</p>
+</li>
+<li>
+<p>Relationships with other entities may be different between multiple instances. For example, &quot;blogA&quot; may be related to a different collection of posts than &quot;blogB&quot;.</p>
+</li>
+</ul>
+<p>The exception above is commonly encountered in these situations:</p>
+<ul>
+<li>
+<p>When attempting to update an entity</p>
+</li>
+<li>
+<p>When attempting to track a serialized graph of entities</p>
+</li>
+<li>
+<p>When failing to set a key value that is not automatically generated</p>
+</li>
+<li>
+<p>When reusing a DbContext instance for multiple units-of-work</p>
+</li>
+</ul>
+<p>Each of these situations is discussed in the following sections.</p>
+<h2><a href="#updating-an-entity" aria-hidden="true" class="anchor" id="updating-an-entity"></a>Updating an entity</h2>
+<p>Identity resolution is the process of updating an entity with a new value.</p>
+<h3><a href="#call-update" aria-hidden="true" class="anchor" id="call-update"></a>Call <code>Update</code></h3>
+<p>The easiest way to update an entity is to use DbContext.Update or DbSetT&gt;.Update.</p>
+<pre><code class="language-csharp">public static void UpdateFromHttpPost1(Blog blog)
+{
+    using var context = new BlogsContext();
+
+    context.Update(blog);
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>In this case:</p>
+<ul>
+<li>
+<p>Only a single instance of the entity is created.</p>
+</li>
+<li>
+<p>The entity instance is not queried from the database as part of making the update.</p>
+</li>
+<li>
+<p>All property values will be updated in the database, regardless of whether they have actually changed or not.</p>
+</li>
+<li>
+<p>One database round-trip is made.</p>
+</li>
+</ul>
+<h3><a href="#query-then-apply-changes" aria-hidden="true" class="anchor" id="query-then-apply-changes"></a>Query then apply changes</h3>
+<p>In our previous article we looked at how to update property values in a database.</p>
+<pre><code class="language-csharp">public static void UpdateFromHttpPost2(Blog blog)
+{
+    using var context = new BlogsContext();
+
+    var trackedBlog = context.Blogs.Find(blog.Id);
+
+    trackedBlog.Name = blog.Name;
+    trackedBlog.Summary = blog.Summary;
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>In this case:</p>
+<ul>
+<li>
+<p>Only a single instance of the entity is tracked; the one that is returned from the database by the <code>Find</code> query.</p>
+</li>
+<li>
+<p><code>Update</code>, <code>Attach</code>, etc. are not used.</p>
+</li>
+<li>
+<p>Only property values that have actually changed are updated in the database.</p>
+</li>
+<li>
+<p>Two database round-trips are made.</p>
+</li>
+</ul>
+<p>EF Core has some helpers for transferring property values like this. For example, <code>PropertyValues.SetValues</code> will copy all the values from the given object and set them on the tracked object:</p>
+<pre><code class="language-csharp">public static void UpdateFromHttpPost3(Blog blog)
+{
+    using var context = new BlogsContext();
+
+    var trackedBlog = context.Blogs.Find(blog.Id);
+
+    context.Entry(trackedBlog).CurrentValues.SetValues(blog);
+
+    context.SaveChanges();
+}
+</code></pre>
+<p><code>SetValues</code> accepts various object types, including data transfer objects (DTOs) with property names that match the properties of the entity type. For example:</p>
+<pre><code class="language-csharp">public static void UpdateFromHttpPost4(BlogDto dto)
+{
+    using var context = new BlogsContext();
+
+    var trackedBlog = context.Blogs.Find(dto.Id);
+
+    context.Entry(trackedBlog).CurrentValues.SetValues(dto);
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>Or a dictionary with name/value entries for the property values:</p>
+<pre><code class="language-csharp">public static void UpdateFromHttpPost5(Dictionary&lt;string, object&gt; propertyValues)
+{
+    using var context = new BlogsContext();
+
+    var trackedBlog = context.Blogs.Find(propertyValues[&quot;Id&quot;]);
+
+    context.Entry(trackedBlog).CurrentValues.SetValues(propertyValues);
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>See Accessing tracked entities for more information on working with property values like this.</p>
+<h3><a href="#use-original-values" aria-hidden="true" class="anchor" id="use-original-values"></a>Use original values</h3>
+<p>There are a number of ways to update property values on a website.</p>
+<pre><code class="language-csharp">public static void UpdateFromHttpPost6(Blog blog, Dictionary&lt;string, object&gt; originalValues)
+{
+    using var context = new BlogsContext();
+
+    context.Attach(blog);
+    context.Entry(blog).OriginalValues.SetValues(originalValues);
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>This code shows how to mark properties with different current and original values as modified.</p>
+<p>In this case:</p>
+<ul>
+<li>
+<p>Only a single instance of the entity is tracked, using <code>Attach</code>.</p>
+</li>
+<li>
+<p>The entity instance is not queried from the database as part of making the update.</p>
+</li>
+<li>
+<p>Applying the original values ensures that only property values that have actually changed are updated in the database.</p>
+</li>
+<li>
+<p>One database round-trip is made.</p>
+</li>
+</ul>
+<p>As with the examples in the previous section, the original values do not have to be passed as a dictionary; an entity instance or DTO will also work.</p>
+<blockquote>
+<p>Tip
+While this approach has appealing characteristics, it does require sending the entity's original values to and from the web client. Carefully consider whether this extra complexity is worth the benefits; for many applications one of the simpler approaches is more pragmatic.</p>
+</blockquote>
+<h2><a href="#attaching-a-serialized-graph" aria-hidden="true" class="anchor" id="attaching-a-serialized-graph"></a>Attaching a serialized graph</h2>
+<p>This article describes how to resolve duplicate entities in an EF Core graph.</p>
+<h3><a href="#graphs-with-no-duplicates" aria-hidden="true" class="anchor" id="graphs-with-no-duplicates"></a>Graphs with no duplicates</h3>
+<p>Before going any further it is important to recognize that:</p>
+<ul>
+<li>
+<p>Serializers often have options for handling loops and duplicate instances in the graph.</p>
+</li>
+<li>
+<p>The choice of object used as the graph root can often help reduce or remove duplicates.</p>
+</li>
+</ul>
+<p>If possible, use serialization options and choose roots that do not result in duplicates. For example, the following code uses Json.NET to serialize a list of blogs each with its associated posts:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var blogs = context.Blogs.Include(e =&gt; e.Posts).ToList();
+
+var serialized = JsonConvert.SerializeObject(
+    blogs,
+    new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, Formatting = Formatting.Indented });
+
+Console.WriteLine(serialized);
+</code></pre>
+<p>The JSON generated from this code is:</p>
+<pre><code class="language-json">[
+  {
+    &quot;Id&quot;: 1,
+    &quot;Name&quot;: &quot;.NET Blog&quot;,
+    &quot;Summary&quot;: &quot;Posts about .NET&quot;,
+    &quot;Posts&quot;: [
+      {
+        &quot;Id&quot;: 1,
+        &quot;Title&quot;: &quot;Announcing the Release of EF Core 5.0&quot;,
+        &quot;Content&quot;: &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;,
+        &quot;BlogId&quot;: 1
+      },
+      {
+        &quot;Id&quot;: 2,
+        &quot;Title&quot;: &quot;Announcing F# 5&quot;,
+        &quot;Content&quot;: &quot;F# 5 is the latest version of F#, the functional programming language...&quot;,
+        &quot;BlogId&quot;: 1
+      }
+    ]
+  },
+  {
+    &quot;Id&quot;: 2,
+    &quot;Name&quot;: &quot;Visual Studio Blog&quot;,
+    &quot;Summary&quot;: &quot;Posts about Visual Studio&quot;,
+    &quot;Posts&quot;: [
+      {
+        &quot;Id&quot;: 3,
+        &quot;Title&quot;: &quot;Disassembly improvements for optimized managed debugging&quot;,
+        &quot;Content&quot;: &quot;If you are focused on squeezing out the last bits of performance for your .NET service or...&quot;,
+        &quot;BlogId&quot;: 2
+      },
+      {
+        &quot;Id&quot;: 4,
+        &quot;Title&quot;: &quot;Database Profiling with Visual Studio&quot;,
+        &quot;Content&quot;: &quot;Examine when database queries were executed and measure how long the take using...&quot;,
+        &quot;BlogId&quot;: 2
+      }
+    ]
+  }
+]
+</code></pre>
+<p>Notice that there are no duplicate blogs or posts in the JSON. This means that simple calls to <code>Update</code> will work to update these entities in the database:</p>
+<pre><code class="language-csharp">public static void UpdateBlogsFromJson(string json)
+{
+    using var context = new BlogsContext();
+
+    var blogs = JsonConvert.DeserializeObject&lt;List&lt;Blog&gt;&gt;(json);
+
+    foreach (var blog in blogs)
+    {
+        context.Update(blog);
+    }
+
+    context.SaveChanges();
+}
+</code></pre>
+<h3><a href="#handling-duplicates" aria-hidden="true" class="anchor" id="handling-duplicates"></a>Handling duplicates</h3>
+<p>The following example shows how to introduce new posts to a blog.</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+var posts = context.Posts.Include(e =&gt; e.Blog).ToList();
+
+var serialized = JsonConvert.SerializeObject(
+    posts,
+    new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, Formatting = Formatting.Indented });
+
+Console.WriteLine(serialized);
+</code></pre>
+<p>The serialized JSON now looks like this:</p>
+<pre><code class="language-json">[
+  {
+    &quot;Id&quot;: 1,
+    &quot;Title&quot;: &quot;Announcing the Release of EF Core 5.0&quot;,
+    &quot;Content&quot;: &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;,
+    &quot;BlogId&quot;: 1,
+    &quot;Blog&quot;: {
+      &quot;Id&quot;: 1,
+      &quot;Name&quot;: &quot;.NET Blog&quot;,
+      &quot;Summary&quot;: &quot;Posts about .NET&quot;,
+      &quot;Posts&quot;: [
+        {
+          &quot;Id&quot;: 2,
+          &quot;Title&quot;: &quot;Announcing F# 5&quot;,
+          &quot;Content&quot;: &quot;F# 5 is the latest version of F#, the functional programming language...&quot;,
+          &quot;BlogId&quot;: 1
+        }
+      ]
+    }
+  },
+  {
+    &quot;Id&quot;: 2,
+    &quot;Title&quot;: &quot;Announcing F# 5&quot;,
+    &quot;Content&quot;: &quot;F# 5 is the latest version of F#, the functional programming language...&quot;,
+    &quot;BlogId&quot;: 1,
+    &quot;Blog&quot;: {
+      &quot;Id&quot;: 1,
+      &quot;Name&quot;: &quot;.NET Blog&quot;,
+      &quot;Summary&quot;: &quot;Posts about .NET&quot;,
+      &quot;Posts&quot;: [
+        {
+          &quot;Id&quot;: 1,
+          &quot;Title&quot;: &quot;Announcing the Release of EF Core 5.0&quot;,
+          &quot;Content&quot;: &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;,
+          &quot;BlogId&quot;: 1
+        }
+      ]
+    }
+  },
+  {
+    &quot;Id&quot;: 3,
+    &quot;Title&quot;: &quot;Disassembly improvements for optimized managed debugging&quot;,
+    &quot;Content&quot;: &quot;If you are focused on squeezing out the last bits of performance for your .NET service or...&quot;,
+    &quot;BlogId&quot;: 2,
+    &quot;Blog&quot;: {
+      &quot;Id&quot;: 2,
+      &quot;Name&quot;: &quot;Visual Studio Blog&quot;,
+      &quot;Summary&quot;: &quot;Posts about Visual Studio&quot;,
+      &quot;Posts&quot;: [
+        {
+          &quot;Id&quot;: 4,
+          &quot;Title&quot;: &quot;Database Profiling with Visual Studio&quot;,
+          &quot;Content&quot;: &quot;Examine when database queries were executed and measure how long the take using...&quot;,
+          &quot;BlogId&quot;: 2
+        }
+      ]
+    }
+  },
+  {
+    &quot;Id&quot;: 4,
+    &quot;Title&quot;: &quot;Database Profiling with Visual Studio&quot;,
+    &quot;Content&quot;: &quot;Examine when database queries were executed and measure how long the take using...&quot;,
+    &quot;BlogId&quot;: 2,
+    &quot;Blog&quot;: {
+      &quot;Id&quot;: 2,
+      &quot;Name&quot;: &quot;Visual Studio Blog&quot;,
+      &quot;Summary&quot;: &quot;Posts about Visual Studio&quot;,
+      &quot;Posts&quot;: [
+        {
+          &quot;Id&quot;: 3,
+          &quot;Title&quot;: &quot;Disassembly improvements for optimized managed debugging&quot;,
+          &quot;Content&quot;: &quot;If you are focused on squeezing out the last bits of performance for your .NET service or...&quot;,
+          &quot;BlogId&quot;: 2
+        }
+      ]
+    }
+  }
+]
+</code></pre>
+<p>In the previous example we showed how to track the number of Blog and Post instances with the same key value.</p>
+<p>We can fix this in two ways:</p>
+<ul>
+<li>
+<p>Use JSON serialization options that preserve references</p>
+</li>
+<li>
+<p>Perform identity resolution while the graph is being tracked</p>
+</li>
+</ul>
+<h4><a href="#preserve-references" aria-hidden="true" class="anchor" id="preserve-references"></a>Preserve references</h4>
+<p>Json.NET provides the <code>PreserveReferencesHandling</code> option to handle this. For example:</p>
+<pre><code class="language-csharp">var serialized = JsonConvert.SerializeObject(
+    posts,
+    new JsonSerializerSettings
+    {
+        PreserveReferencesHandling = PreserveReferencesHandling.All, Formatting = Formatting.Indented
+    });
+</code></pre>
+<p>The resulting JSON now looks like this:</p>
+<pre><code class="language-json">{
+  &quot;$id&quot;: &quot;1&quot;,
+  &quot;$values&quot;: [
+    {
+      &quot;$id&quot;: &quot;2&quot;,
+      &quot;Id&quot;: 1,
+      &quot;Title&quot;: &quot;Announcing the Release of EF Core 5.0&quot;,
+      &quot;Content&quot;: &quot;Announcing the release of EF Core 5.0, a full featured cross-platform...&quot;,
+      &quot;BlogId&quot;: 1,
+      &quot;Blog&quot;: {
+        &quot;$id&quot;: &quot;3&quot;,
+        &quot;Id&quot;: 1,
+        &quot;Name&quot;: &quot;.NET Blog&quot;,
+        &quot;Summary&quot;: &quot;Posts about .NET&quot;,
+        &quot;Posts&quot;: [
+          {
+            &quot;$ref&quot;: &quot;2&quot;
+          },
+          {
+            &quot;$id&quot;: &quot;4&quot;,
+            &quot;Id&quot;: 2,
+            &quot;Title&quot;: &quot;Announcing F# 5&quot;,
+            &quot;Content&quot;: &quot;F# 5 is the latest version of F#, the functional programming language...&quot;,
+            &quot;BlogId&quot;: 1,
+            &quot;Blog&quot;: {
+              &quot;$ref&quot;: &quot;3&quot;
+            }
+          }
+        ]
+      }
+    },
+    {
+      &quot;$ref&quot;: &quot;4&quot;
+    },
+    {
+      &quot;$id&quot;: &quot;5&quot;,
+      &quot;Id&quot;: 3,
+      &quot;Title&quot;: &quot;Disassembly improvements for optimized managed debugging&quot;,
+      &quot;Content&quot;: &quot;If you are focused on squeezing out the last bits of performance for your .NET service or...&quot;,
+      &quot;BlogId&quot;: 2,
+      &quot;Blog&quot;: {
+        &quot;$id&quot;: &quot;6&quot;,
+        &quot;Id&quot;: 2,
+        &quot;Name&quot;: &quot;Visual Studio Blog&quot;,
+        &quot;Summary&quot;: &quot;Posts about Visual Studio&quot;,
+        &quot;Posts&quot;: [
+          {
+            &quot;$ref&quot;: &quot;5&quot;
+          },
+          {
+            &quot;$id&quot;: &quot;7&quot;,
+            &quot;Id&quot;: 4,
+            &quot;Title&quot;: &quot;Database Profiling with Visual Studio&quot;,
+            &quot;Content&quot;: &quot;Examine when database queries were executed and measure how long the take using...&quot;,
+            &quot;BlogId&quot;: 2,
+            &quot;Blog&quot;: {
+              &quot;$ref&quot;: &quot;6&quot;
+            }
+          }
+        ]
+      }
+    },
+    {
+      &quot;$ref&quot;: &quot;7&quot;
+    }
+  ]
+}
+</code></pre>
+<p>This example shows how to update a graph using the simple calls to <code>Update</code>.</p>
+<p>The <code>System.Text.Json</code> support in the .NET base class libraries (BCL) has a similar option which produces the same result. For example:</p>
+<pre><code class="language-csharp">var serialized = JsonSerializer.Serialize(
+    posts, new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.Preserve, WriteIndented = true });
+</code></pre>
+<h4><a href="#resolve-duplicates" aria-hidden="true" class="anchor" id="resolve-duplicates"></a>Resolve duplicates</h4>
+<p>It is easy to create duplicates in a process, but it is not always possible to remove them.</p>
+<pre><code class="language-csharp">public static void UpdatePostsFromJsonWithIdentityResolution(string json)
+{
+    using var context = new BlogsContext();
+
+    var posts = JsonConvert.DeserializeObject&lt;List&lt;Post&gt;&gt;(json);
+
+    foreach (var post in posts)
+    {
+        context.ChangeTracker.TrackGraph(
+            post, node =&gt;
+            {
+                var keyValue = node.Entry.Property(&quot;Id&quot;).CurrentValue;
+                var entityType = node.Entry.Metadata;
+
+                var existingEntity = node.Entry.Context.ChangeTracker.Entries()
+                    .FirstOrDefault(
+                        e =&gt; Equals(e.Metadata, entityType)
+                             &amp;&amp; Equals(e.Property(&quot;Id&quot;).CurrentValue, keyValue));
+
+                if (existingEntity == null)
+                {
+                    Console.WriteLine($&quot;Tracking {entityType.DisplayName()} entity with key value {keyValue}&quot;);
+
+                    node.Entry.State = EntityState.Modified;
+                }
+                else
+                {
+                    Console.WriteLine($&quot;Discarding duplicate {entityType.DisplayName()} entity with key value {keyValue}&quot;);
+                }
+            });
+    }
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>For each entity in the graph, this code will:</p>
+<ul>
+<li>
+<p><code>Find</code> the entity type and key value of the entity</p>
+</li>
+<li>
+<p>Lookup the entity with this key in the change tracker</p>
+<ul>
+<li>
+<p>If the entity is found, then no further action is taken as the entity is a duplicate</p>
+</li>
+<li>
+<p>If the entity is not found, then it is tracked by setting the state to <code>Modified</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<p>The output from running this code is:</p>
+<pre><code class="language-output">Tracking EntityType: Post entity with key value 1
+Tracking EntityType: Blog entity with key value 1
+Tracking EntityType: Post entity with key value 2
+Discarding duplicate EntityType: Post entity with key value 2
+Tracking EntityType: Post entity with key value 3
+Tracking EntityType: Blog entity with key value 2
+Tracking EntityType: Post entity with key value 4
+Discarding duplicate EntityType: Post entity with key value 4
+</code></pre>
+<blockquote>
+<p>Important
+This code assumes that all duplicates are identical. This makes it safe to arbitrarily choose one of the duplicates to track while discarding the others. If the duplicates can differ, then the code will need to decide how to determine which one to use, and how to combine property and navigation values together.</p>
+</blockquote>
+<blockquote>
+<p>Note
+For simplicity, this code assumes each entity has a primary key property called <code>Id</code>. This could be codified into an abstract base class or interface. Alternately, the primary key property or properties could be obtained from the IEntityType metadata such that this code would work with any type of entity.</p>
+</blockquote>
+<h2><a href="#failing-to-set-key-values" aria-hidden="true" class="anchor" id="failing-to-set-key-values"></a>Failing to set key values</h2>
+<p>Entity types are often configured to use automatically generated key values.</p>
+<pre><code class="language-csharp">public class Pet
+{
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public int Id { get; set; }
+
+    public string Name { get; set; }
+}
+</code></pre>
+<p>Consider code that attempts to tracker two new entity instances without setting key values:</p>
+<pre><code class="language-csharp">using var context = new BlogsContext();
+
+context.Add(new Pet { Name = &quot;Smokey&quot; });
+
+try
+{
+    context.Add(new Pet { Name = &quot;Clippy&quot; }); // This will throw
+}
+catch (Exception e)
+{
+    Console.WriteLine($&quot;{e.GetType().FullName}: {e.Message}&quot;);
+}
+</code></pre>
+<p>This code will throw:</p>
+<p>The fix for this is to either to set key values explicitly or configure the key property to use generated key values. See Generated Values for more information.</p>
+<h2><a href="#overusing-a-single-dbcontext-instance" aria-hidden="true" class="anchor" id="overusing-a-single-dbcontext-instance"></a>Overusing a single DbContext instance</h2>
+<p>This article explains how to use DbContext to track multiple instances of the same entity.</p>
+<ul>
+<li>
+<p>Using the same DbContext instance to both set up test state and then execute the test. This often results in the DbContext still tracking one entity instance from test setup, while then attempting to attach a new instance in the test proper. Instead, use a different DbContext instance for setting up test state and the test code proper.</p>
+</li>
+<li>
+<p>Using a shared DbContext instance in a repository or similar code. Instead, make sure your repository uses a single DbContext instance for each unit-of-work.</p>
+</li>
+</ul>
+<h2><a href="#identity-resolution-and-queries" aria-hidden="true" class="anchor" id="identity-resolution-and-queries"></a>Identity resolution and queries</h2>
+<p>Identity resolution is an important feature in EF Core.</p>
+<blockquote>
+<p>Important
+It is important to understand that EF Core always executes a LINQ query on a DbSet against the database and only returns results based on what is in the database. However, for a tracking query, if the entities returned are already tracked, then the tracked instances are used instead of creating instances from the data in the database.</p>
+</blockquote>
+<p><code>Reload()</code> or <code>GetDatabaseValues()</code> can be used when tracked entities need to be refreshed with the latest data from the database. See Accessing Tracked Entities for more information.</p>
+<p>No-tracking queries do not return duplicate results.</p>
+<blockquote>
+<p>Tip
+Do not routinely perform a no-tracking query and then attach the returned entities to the same context. This will be both slower and harder to get right than using a tracking query.</p>
+</blockquote>
+<p>No-tracking queries do not perform identity resolution because doing so impacts the performance of streaming a large number of entities from a query.</p>
+<p>No-tracking queries can be forced to perform identity resolution by using <code>AsNoTrackingWithResolution&lt;T&gt;(IIdentityable&lt;T&gt;)</code>.</p>
+<h2><a href="#overriding-object-equality" aria-hidden="true" class="anchor" id="overriding-object-equality"></a>Overriding object equality</h2>
+<p>In this article, we will look at the impact of overriding equality when reporting multiple instances of the same entity.</p>
+<p>Entity equality can cause problems if it is used in the same way as reference equality.</p>
+<pre><code class="language-csharp">public sealed class ReferenceEqualityComparer : IEqualityComparer&lt;object&gt;
+{
+    private ReferenceEqualityComparer()
+    {
+    }
+
+    public static ReferenceEqualityComparer Instance { get; } = new ReferenceEqualityComparer();
+
+    bool IEqualityComparer&lt;object&gt;.Equals(object x, object y) =&gt; x == y;
+
+    int IEqualityComparer&lt;object&gt;.GetHashCode(object obj) =&gt; RuntimeHelpers.GetHashCode(obj);
+}
+</code></pre>
+<p>(Starting with .NET 5, this is included in the BCL as ReferenceEqualityComparer.)</p>
+<p>This comparer can then be used when creating collection navigations. For example:</p>
+<pre><code class="language-csharp">public ICollection&lt;Order&gt; Orders { get; set; }
+    = new HashSet&lt;Order&gt;(ReferenceEqualityComparer.Instance);
+</code></pre>
+<h3><a href="#comparing-key-properties" aria-hidden="true" class="anchor" id="comparing-key-properties"></a>Comparing key properties</h3>
+<p>Microsoft has updated IE to support equality comparisons between key values.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/identity-resolution">Identity Resolution in EF Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

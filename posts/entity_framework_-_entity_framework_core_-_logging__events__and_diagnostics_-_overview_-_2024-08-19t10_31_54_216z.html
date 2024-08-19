@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Logging is an important part of any Entity Framework application.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Logging is an important part of any Entity Framework application.</p>
+<h2><a href="#quick-reference" aria-hidden="true" class="anchor" id="quick-reference"></a>Quick reference</h2>
+<p>The table below provides a quick reference for the differences between the mechanisms described here.</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Mechanism</th>
+<th>Async</th>
+<th>Scope</th>
+<th>Registered</th>
+<th>Intended use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Simple Logging</td>
+<td>No</td>
+<td>Per context</td>
+<td>Context configuration</td>
+<td>Development-time logging</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.Extensions.Logging</td>
+<td>No</td>
+<td>Per context*</td>
+<td>D.I. or context configuration</td>
+<td>Production logging</td>
+</tr>
+<tr>
+<td style="text-align: left;">Events</td>
+<td>No</td>
+<td>Per context</td>
+<td>Any time</td>
+<td>Reacting to EF events</td>
+</tr>
+<tr>
+<td style="text-align: left;">Interceptors</td>
+<td>Yes</td>
+<td>Per context</td>
+<td>Context configuration</td>
+<td>Manipulating EF operations</td>
+</tr>
+<tr>
+<td style="text-align: left;">Diagnostics listeners</td>
+<td>No</td>
+<td>Process</td>
+<td>Globally</td>
+<td>Application diagnostics</td>
+</tr>
+</tbody></table>
+<p>*Typically <code>Microsoft.Extensions.Logging</code> is configured per-application via dependency injection. However, at the EF level, each context can be configured with a different logger if needed.</p>
+<h2><a href="#simple-logging" aria-hidden="true" class="anchor" id="simple-logging"></a>Simple logging</h2>
+<p>EF Core logs can be accessed from any type of application through the use of LogTo when configuring a DbContext instance.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(Console.WriteLine);
+</code></pre>
+<p>This concept is similar to <code>Database.Log</code> in EF6.</p>
+<p>See Simple Logging for more information.</p>
+<h2><a href="#microsoftextensions.logging" aria-hidden="true" class="anchor" id="microsoftextensions.logging"></a><code>Microsoft.Extensions.Logging</code></h2>
+<p>EF Core supports <code>Microsoft.Extensions.Logging</code>.</p>
+<p>See Using <code>Microsoft.Extensions.Logging</code> in EF Core for more information.</p>
+<h2><a href="#events" aria-hidden="true" class="anchor" id="events"></a>Events</h2>
+<p>EF Core exposes .NET events to act as callbacks when certain things happen in the EF Core code.</p>
+<p>Events are registered per DbContext instance and this registration can be done at any time. Use a diagnostic listener to get the same information but for all DbContext instances in the process.</p>
+<p>See .NET Events in EF Core for more information.</p>
+<h2><a href="#interception" aria-hidden="true" class="anchor" id="interception"></a>Interception</h2>
+<p>EF Core interceptors enable interception, modification, and/or suppression of EF Core operations.</p>
+<p>Interceptors are software tools that allow the interception of communications.</p>
+<p>Interceptors are registered per DbContext instance when the context is configured. Use a diagnostic listener to get the same information but for all DbContext instances in the process.</p>
+<p>See Interception for more information.</p>
+<h2><a href="#diagnostic-listeners" aria-hidden="true" class="anchor" id="diagnostic-listeners"></a>Diagnostic listeners</h2>
+<p>Diagnostic listeners allow listening for any EF Core event that occurs in the current .NET process.</p>
+<p>Diagnostic listeners are not suitable for getting events from a single DbContext instance. EF Core interceptors provide access to the same events with per-context registration.</p>
+<p>Diagnostic listeners are not designed for logging. Simple logging or <code>Microsoft.Extensions.Logging</code> are better choices for logging.</p>
+<p>See Using diagnostic listeners in EF Core for more information.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/">Overview of Logging and Interception</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
