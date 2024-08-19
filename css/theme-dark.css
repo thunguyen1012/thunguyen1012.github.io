@@ -729,6 +729,15 @@ hr {
   }
 }
 
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #f9a825;
+  border: none;
+}
+
 img:hover {
   transform: scale(2);
 }
