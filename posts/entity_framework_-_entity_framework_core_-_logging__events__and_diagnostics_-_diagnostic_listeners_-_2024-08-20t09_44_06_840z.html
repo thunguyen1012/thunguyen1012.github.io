@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Diagnostic listeners | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The DiagnosticListener class is a part of a common mechanism across .NET for obtaining diagnostic information from running applications.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Diagnostic listeners</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote class="tip">Tip
+You can download this article's sample from GitHub.</blockquote>
+<p>The <code>DiagnosticListener</code> class is a part of a common mechanism across .NET for obtaining diagnostic information from running applications.</p>
+<p>Diagnostic listeners are not suitable for getting events from a single DbContext instance. EF Core interceptors provide access to the same events with per-context registration.</p>
+<p>Diagnostic listeners are not designed for logging. Consider using simple logging or <code>Microsoft.Extensions.Logging</code> for logging.</p>
+<h2><a href="#example-observing-diagnostic-events" aria-hidden="true" class="anchor" id="example-observing-diagnostic-events"></a>Example: Observing diagnostic events</h2>
+<p>Resolving EF Core events is a two-step process. First, an observer for <code>DiagnosticListener</code> itself must be created:</p>
+<pre><code class="language-csharp">public class DiagnosticObserver : IObserver&lt;DiagnosticListener&gt;
+{
+    public void OnCompleted()
+        =&gt; throw new NotImplementedException();
+
+    public void OnError(Exception error)
+        =&gt; throw new NotImplementedException();
+
+    public void OnNext(DiagnosticListener value)
+    {
+        if (value.Name == DbLoggerCategory.Name) // &quot;Microsoft.EntityFrameworkCore&quot;
+        {
+            value.Subscribe(new KeyValueObserver());
+        }
+    }
+}
+</code></pre>
+<p>The <code>OnNext</code> method looks for the <code>DiagnosticListener</code> that comes from EF Core. This listener has the name &quot;Microsoft.EntityFrameworkCore&quot;, which can be obtained from the DbLoggerCategory class as shown.</p>
+<p>This observer must then be registered globally, for example in the application's <code>Main</code> method:</p>
+<pre><code class="language-csharp">DiagnosticListener.AllListeners.Subscribe(new DiagnosticObserver());
+</code></pre>
+<p>Second, once the EF Core <code>DiagnosticListener</code> is found, a new key-value observer is created to subscribe to the actual EF Core events. For example:</p>
+<pre><code class="language-csharp">public class KeyValueObserver : IObserver&lt;KeyValuePair&lt;string, object&gt;&gt;
+{
+    public void OnCompleted()
+        =&gt; throw new NotImplementedException();
+
+    public void OnError(Exception error)
+        =&gt; throw new NotImplementedException();
+
+    public void OnNext(KeyValuePair&lt;string, object&gt; value)
+    {
+        if (value.Key == CoreEventId.ContextInitialized.Name)
+        {
+            var payload = (ContextInitializedEventData)value.Value;
+            Console.WriteLine($&quot;EF is initializing {payload.Context.GetType().Name} &quot;);
+        }
+
+        if (value.Key == RelationalEventId.ConnectionOpening.Name)
+        {
+            var payload = (ConnectionEventData)value.Value;
+            Console.WriteLine($&quot;EF is opening a connection to {payload.Connection.ConnectionString} &quot;);
+        }
+    }
+}
+</code></pre>
+<p>The <code>OnNext</code> method is this time called with a key/value pair for each EF Core event. The key is the name of the event, which can be obtained from one of:</p>
+<ul>
+<li>
+<p><code>CoreEventId</code> for events common to all EF Core database providers</p>
+</li>
+<li>
+<p><code>RelationalEventId</code> for events common to all relational database providers</p>
+</li>
+<li>
+<p>A similar class for events specific to the current database provider. For example, <code>SqlServerEventId</code> for the SQL Server provider.</p>
+</li>
+</ul>
+<p>The value of the key/value pair is a payload type specific to the event. The type of payload to expect is documented on each event defined in these event classes.</p>
+<p>The payload is the data that the application is trying to retrieve.</p>
+<blockquote class="tip">Tip
+```ToString``` is overridden in every EF Core event data class to generate the equivalent log message for the event. For example, calling ```ContextInitializedEventData.ToString``` generates "Entity Framework Core 5.0.0 initialized 'BlogsContext' using provider 'Microsoft.EntityFrameworkCore.Sqlite' with options: None".</blockquote>
+<p>The sample contains a simple console application that makes changes to the blogging database and prints out the diagnostic events encountered.</p>
+<pre><code class="language-csharp">public static void Main()
+{
+    DiagnosticListener.AllListeners.Subscribe(new DiagnosticObserver());
+
+    using (var context = new BlogsContext())
+    {
+        context.Database.EnsureDeleted();
+        context.Database.EnsureCreated();
+
+        context.Add(
+            new Blog { Name = &quot;EF Blog&quot;, Posts = { new Post { Title = &quot;EF Core 3.1!&quot; }, new Post { Title = &quot;EF Core 5.0!&quot; } } });
+
+        context.SaveChanges();
+    }
+
+    using (var context = new BlogsContext())
+    {
+        var blog = context.Blogs.Include(e =&gt; e.Posts).Single();
+
+        blog.Name = &quot;EF Core Blog&quot;;
+        context.Remove(blog.Posts.First());
+        blog.Posts.Add(new Post { Title = &quot;EF Core 6.0!&quot; });
+
+        context.SaveChanges();
+    }
+</code></pre>
+<p>The output from this code shows the events detected:</p>
+<pre><code class="language-output">EF is initializing BlogsContext
+EF is opening a connection to Data Source=blogs.db;Mode=ReadOnly
+EF is opening a connection to DataSource=blogs.db
+EF is opening a connection to Data Source=blogs.db;Mode=ReadOnly
+EF is opening a connection to DataSource=blogs.db
+EF is opening a connection to DataSource=blogs.db
+EF is opening a connection to DataSource=blogs.db
+EF is initializing BlogsContext
+EF is opening a connection to DataSource=blogs.db
+EF is opening a connection to DataSource=blogs.db
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/diagnostic-listeners">Using Diagnostic Listeners in EF Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

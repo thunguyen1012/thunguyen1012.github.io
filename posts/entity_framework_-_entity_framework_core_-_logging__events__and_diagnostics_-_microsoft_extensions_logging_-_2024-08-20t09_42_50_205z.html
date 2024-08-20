@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Microsoft.Extensions.Logging | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Microsoft.Extensions.Logging is an extension of Microsoft.Extensions.Logging.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Microsoft.Extensions.Logging</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p><code>Microsoft.Extensions.Logging</code> is an extension of <code>Microsoft.Extensions.Logging</code>.</p>
+<p>Entity Framework Core (EF Core) fully integrates with <code>Microsoft.Extensions.Logging</code>.</p>
+<h2><a href="#aspnet-core-applications" aria-hidden="true" class="anchor" id="aspnet-core-applications"></a>ASP.NET Core applications</h2>
+<p>The <code>AddDbContext</code> or <code>AddDbContextExtensions.Logging</code> methods of the <code>AddDbContext</code> or <code>AddDbContextExtensions</code>.</p>
+<h2><a href="#other-application-types" aria-hidden="true" class="anchor" id="other-application-types"></a>Other application types</h2>
+<p>This example shows how to use ASP.NET Core's GenericHost to get the same dependency injection patterns as are used in ASP.NET Core applications.</p>
+<p><code>Microsoft.Extensions.Logging</code> can also be used for applications that don't use dependency injection, although simple logging can be easier to set up.</p>
+<p>The <code>Microsoft.Extensions.Logging</code> method returns a loggerFactory instance of the DbContext.</p>
+<ul>
+<li>
+<p>EF Core 3.0 and above</p>
+</li>
+<li>
+<p>EF Core 2.1</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public static readonly ILoggerFactory MyLoggerFactory
+    = LoggerFactory.Create(builder =&gt; { builder.AddConsole(); });
+</code></pre>
+<pre><code class="language-csharp">public static readonly LoggerFactory MyLoggerFactory
+    = new LoggerFactory(new[] { new ConsoleLoggerProvider((_, __) =&gt; true, true) });
+</code></pre>
+<blockquote class="warning">Warning
+In EF Core 2.1, It is very important that applications do not create a new LoggerFactory instance for each DbContext instance. Doing so will result in a memory leak and poor performance. This has been fixed in EF Core 3.0 and above.</blockquote>
+<p>This singleton/global instance should then be registered with EF Core on the <code>DbContextOptionsBuilder</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .UseLoggerFactory(MyLoggerFactory)
+        .UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=EFLogging;Trusted_Connection=True;ConnectRetryCount=0&quot;);
+</code></pre>
+<h2><a href="#getting-detailed-messages" aria-hidden="true" class="anchor" id="getting-detailed-messages"></a>Getting detailed messages</h2>
+<blockquote class="tip">Tip
+```OnConfiguring``` is still called when ```AddDbContext``` is used or a ```DbContextOptions``` instance is passed to the DbContext constructor. This makes it the ideal place to apply context configuration regardless of how the DbContext is constructed.</blockquote>
+<h3><a href="#sensitive-data" aria-hidden="true" class="anchor" id="sensitive-data"></a>Sensitive data</h3>
+<p>An exception message should be sent to EF Core if there is a problem with any of the following:</p>
+<p>However, knowing data values, especially for keys, can be very helpful when debugging. This can be enabled in EF Core by calling <code>EnableSensitiveDataLogging()</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.EnableSensitiveDataLogging();
+</code></pre>
+<h3><a href="#detailed-query-exceptions" aria-hidden="true" class="anchor" id="detailed-query-exceptions"></a>Detailed query exceptions</h3>
+<p>This article describes how to diagnose exceptions in the EF Core database.</p>
+<p>Turning on <code>EnableDetailedErrors</code> will cause EF to introduce these try-catch blocks and thereby provide more detailed errors. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.EnableDetailedErrors();
+</code></pre>
+<h2><a href="#configuration-for-specific-messages" aria-hidden="true" class="anchor" id="configuration-for-specific-messages"></a>Configuration for specific messages</h2>
+<p>The EF Core <code>ConfigureWarnings</code> API allows applications to change what happens when a specific event is encountered. This can be used to:</p>
+<ul>
+<li>
+<p>Change the log level at which the event is logged</p>
+</li>
+<li>
+<p>Skip logging the event altogether</p>
+</li>
+<li>
+<p>Throw an exception when the event occurs</p>
+</li>
+</ul>
+<h3><a href="#changing-the-log-level-for-an-event" aria-hidden="true" class="anchor" id="changing-the-log-level-for-an-event"></a>Changing the log level for an event</h3>
+<p>Sometimes it can be useful to change the pre-defined log level for an event. For example, this can be used to promote two additional events from <code>LogLevel.Debug</code> to <code>LogLevel.Information</code>:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .ConfigureWarnings(
+            b =&gt; b.Log(
+                (RelationalEventId.ConnectionOpened, LogLevel.Information),
+                (RelationalEventId.ConnectionClosed, LogLevel.Information)));
+</code></pre>
+<h3><a href="#suppress-logging-an-event" aria-hidden="true" class="anchor" id="suppress-logging-an-event"></a>Suppress logging an event</h3>
+<p>In a similar way, an individual event can be suppressed from logging. This is particularly useful for ignoring a warning that has been reviewed and understood. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .ConfigureWarnings(b =&gt; b.Ignore(CoreEventId.DetachedLazyLoadingWarning));
+</code></pre>
+<h3><a href="#throw-for-an-event" aria-hidden="true" class="anchor" id="throw-for-an-event"></a>Throw for an event</h3>
+<p>EF Core is a wrapper around the existing EFWarnings method.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .ConfigureWarnings(b =&gt; b.Throw(RelationalEventId.QueryPossibleUnintendedUseOfEqualsWarning));
+</code></pre>
+<h2><a href="#filtering-and-other-configuration" aria-hidden="true" class="anchor" id="filtering-and-other-configuration"></a>Filtering and other configuration</h2>
+<p>See Logging in .NET for guidance on log filtering and other configuration.</p>
+<p>EF Core logging events are defined in one of:</p>
+<ul>
+<li>
+<p><code>CoreEventId</code> for events common to all EF Core database providers</p>
+</li>
+<li>
+<p><code>RelationalEventId</code> for events common to all relational database providers</p>
+</li>
+<li>
+<p>A similar class for events specific to the current database provider. For example, <code>SqlServerEventId</code> for the SQL Server provider.</p>
+</li>
+</ul>
+<p>These definitions contain the event IDs, log level, and category for each event, as used by <code>Microsoft.Extensions.Logging</code>.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/extensions-logging">Using <code>Microsoft.Extensions.Logging</code> in EF Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

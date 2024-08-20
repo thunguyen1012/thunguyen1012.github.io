@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Interceptors | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core interceptors enable interception, modification, and/or suppression of Entity Framework Core operations.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Interceptors</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Entity Framework Core interceptors enable interception, modification, and/or suppression of Entity Framework Core operations.</p>
+<p>Interceptors are software tools that allow the interception of communications.</p>
+<p>Interceptors are registered per DbContext instance when the context is configured. Use a diagnostic listener to get the same information but for all DbContext instances in the process.</p>
+<h2><a href="#registering-interceptors" aria-hidden="true" class="anchor" id="registering-interceptors"></a>Registering interceptors</h2>
+<p>Interceptors are registered using <code>AddInterceptors</code> when configuring a DbContext instance. This is commonly done in an override of <code>DbContext.OnConfiguring</code>. For example:</p>
+<pre><code class="language-csharp">public class ExampleContext : BlogsContext
+{
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        =&gt; optionsBuilder.AddInterceptors(new TaggedQueryCommandInterceptor());
+}
+</code></pre>
+<p>Alternately, <code>AddInterceptors</code> can be called as part of <code>AddDbContext</code> or when creating a <code>DbContextOptions</code> instance to pass to the <code>DbContext</code> constructor.</p>
+<blockquote class="tip">Tip
+```OnConfiguring``` is still called when ```AddDbContext``` is used or a ```DbContextOptions``` instance is passed to the ```DbContext``` constructor. This makes it the ideal place to apply context configuration regardless of how the ```DbContext``` is constructed.</blockquote>
+<p>Interceptors are often stateless, which means that a single interceptor instance can be used for all DbContext instances. For example:</p>
+<pre><code class="language-csharp">public class TaggedQueryCommandInterceptorContext : BlogsContext
+{
+    private static readonly TaggedQueryCommandInterceptor _interceptor
+        = new TaggedQueryCommandInterceptor();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        =&gt; optionsBuilder.AddInterceptors(_interceptor);
+}
+</code></pre>
+<p>Each interceptor instance must implement one or more interfaces derived from <code>IInterceptor</code>.</p>
+<h2><a href="#database-interception" aria-hidden="true" class="anchor" id="database-interception"></a>Database interception</h2>
+<blockquote class="note">Note
+Database interception is only available for relational database providers.</blockquote>
+<p>Low-level database interception is split into the three interfaces shown in the following table.</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Interceptor</th>
+<th>Database operations intercepted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.idbcommandinterceptor" class="no-loc" data-linktype="absolute-path">IDbCommandInterceptor</a></td>
+<td>Creating commands<br>Executing commands<br>Command failures<br>Disposing the command's DbDataReader</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.idbconnectioninterceptor" class="no-loc" data-linktype="absolute-path">IDbConnectionInterceptor</a></td>
+<td>Opening and closing connections<br>Connection failures</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.diagnostics.idbtransactioninterceptor" class="no-loc" data-linktype="absolute-path">IDbTransactionInterceptor</a></td>
+<td>Creating transactions<br>Using existing transactions<br>Committing transactions<br>Rolling back transactions<br>Creating and using savepoints<br>Transaction failures</td>
+</tr>
+</tbody></table>
+<p>The <code>DbCommandInterceptor</code> and <code>DbConnectionInterceptor</code> classes are used to intercept incoming commands.</p>
+<p>Each pair of methods have both sync and async variations. This allows for asynchronous I/O, such as requesting an access token, to happen as part of intercepting an async database operation.</p>
+<h3><a href="#example-command-interception-to-add-query-hints" aria-hidden="true" class="anchor" id="example-command-interception-to-add-query-hints"></a>Example: Command interception to add query hints</h3>
+<blockquote class="tip">Tip
+You can download the command interceptor sample from GitHub.</blockquote>
+<p>An <code>IDbCommandInterceptor</code> can be used to modify SQL before it is sent to the database. This example shows how to modify the SQL to include a query hint.</p>
+<p>In our series of articles on Apache Struts, we look at how to intercept Struts commands that use SQL queries.</p>
+<pre><code class="language-csharp">var blogs1 = context.Blogs.TagWith(&quot;Use hint: robust plan&quot;).ToList();
+</code></pre>
+<p>This SQL query adds a tag to the first line of the command text.</p>
+<pre><code class="language-csharp">public class TaggedQueryCommandInterceptor : DbCommandInterceptor
+{
+    public override InterceptionResult&lt;DbDataReader&gt; ReaderExecuting(
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult&lt;DbDataReader&gt; result)
+    {
+        ManipulateCommand(command);
+
+        return result;
+    }
+
+    public override ValueTask&lt;InterceptionResult&lt;DbDataReader&gt;&gt; ReaderExecutingAsync(
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult&lt;DbDataReader&gt; result,
+        CancellationToken cancellationToken = default)
+    {
+        ManipulateCommand(command);
+
+        return new ValueTask&lt;InterceptionResult&lt;DbDataReader&gt;&gt;(result);
+    }
+
+    private static void ManipulateCommand(DbCommand command)
+    {
+        if (command.CommandText.StartsWith(&quot;-- Use hint: robust plan&quot;, StringComparison.Ordinal))
+        {
+            command.CommandText += &quot; OPTION (ROBUST PLAN)&quot;;
+        }
+    }
+}
+</code></pre>
+<p>Notice:</p>
+<ul>
+<li>
+<p>The interceptor inherits from <code>DbCommandInterceptor</code> to avoid having to implement every method in the interceptor interface.</p>
+</li>
+<li>
+<p>The interceptor implements both sync and async methods. This ensures that the same query hint is applied to sync and async queries.</p>
+</li>
+<li>
+<p>The interceptor implements the <code>Executing</code> methods which are called by EF Core with the generated SQL before it is sent to the database. Contrast this with the <code>Executed</code> methods, which are called after the database call has returned.</p>
+</li>
+</ul>
+<p>Running the code in this example generates the following when a query is tagged:</p>
+<pre><code class="language-sql">-- Use hint: robust plan
+
+SELECT [b].[Id], [b].[Name]
+FROM [Blogs] AS [b] OPTION (ROBUST PLAN)
+</code></pre>
+<p>On the other hand, when a query is not tagged, then it is sent to the database unmodified:</p>
+<pre><code class="language-sql">SELECT [b].[Id], [b].[Name]
+FROM [Blogs] AS [b]
+</code></pre>
+<h3><a href="#example-connection-interception-for-sql-azure-authentication-using-aad" aria-hidden="true" class="anchor" id="example-connection-interception-for-sql-azure-authentication-using-aad"></a>Example: Connection interception for SQL Azure authentication using AAD</h3>
+<blockquote class="tip">Tip
+You can download the connection interceptor sample from GitHub.</blockquote>
+<p>An IDbConnectionInterceptor can be used to manipulate the DbConnection before it is used to connect to the database.</p>
+<pre><code class="language-csharp">public class AadAuthenticationInterceptor : DbConnectionInterceptor
+{
+    public override InterceptionResult ConnectionOpening(
+        DbConnection connection,
+        ConnectionEventData eventData,
+        InterceptionResult result)
+        =&gt; throw new InvalidOperationException(&quot;Open connections asynchronously when using AAD authentication.&quot;);
+
+    public override async ValueTask&lt;InterceptionResult&gt; ConnectionOpeningAsync(
+        DbConnection connection,
+        ConnectionEventData eventData,
+        InterceptionResult result,
+        CancellationToken cancellationToken = default)
+    {
+        var sqlConnection = (SqlConnection)connection;
+
+        var provider = new AzureServiceTokenProvider();
+        // Note: in some situations the access token may not be cached automatically the Azure Token Provider.
+        // Depending on the kind of token requested, you may need to implement your own caching here.
+        sqlConnection.AccessToken = await provider.GetAccessTokenAsync(&quot;https://database.windows.net/&quot;, null, cancellationToken);
+
+        return result;
+    }
+}
+</code></pre>
+<blockquote class="tip">Tip
+```Microsoft.Data.SqlClient``` now supports AAD authentication via connection string. See SqlAuthenticationMethod for more information.</blockquote>
+<blockquote class="warning">Warning
+Notice that the interceptor throws if a sync call is made to open the connection. This is because there is no non-async method to obtain the access token and there is no universal and simple way to call an async method from non-async context without risking deadlock.</blockquote>
+<blockquote class="warning">Warning
+in some situations the access token may not be cached automatically the Azure Token Provider. Depending on the kind of token requested, you may need to implement your own caching here.</blockquote>
+<h3><a href="#example-advanced-command-interception-for-caching" aria-hidden="true" class="anchor" id="example-advanced-command-interception-for-caching"></a>Example: Advanced command interception for caching</h3>
+<blockquote class="tip">Tip
+You can download the advanced command interceptor sample from GitHub.</blockquote>
+<p>EF Core interceptors can:</p>
+<ul>
+<li>
+<p>Tell EF Core to suppress executing the operation being intercepted</p>
+</li>
+<li>
+<p>Change the result of the operation reported back to EF Core</p>
+</li>
+</ul>
+<p>This example shows an interceptor that uses these features to behave like a primitive second-level cache. Cached query results are returned for a specific query, avoiding a database roundtrip.</p>
+<blockquote class="warning">Warning
+Take care when changing the EF Core default behavior in this way. EF Core may behave in unexpected ways if it gets an abnormal result that it cannot process correctly. Also, this example demonstrates interceptor concepts; it is not intended as a template for a robust second-level cache implementation.</blockquote>
+<p>In this example, the application frequently executes a query to obtain the most recent &quot;daily message&quot;:</p>
+<pre><code class="language-csharp">async Task&lt;string&gt; GetDailyMessage(DailyMessageContext context)
+    =&gt; (await context.DailyMessages.TagWith(&quot;Get_Daily_Message&quot;).OrderBy(e =&gt; e.Id).LastAsync()).Message;
+</code></pre>
+<p>This sample application queries a database for a new message.</p>
+<h4><a href="#interceptor-state" aria-hidden="true" class="anchor" id="interceptor-state"></a>Interceptor state</h4>
+<p>This example shows how to use an interceptor to cache a daily message.</p>
+<pre><code class="language-csharp">private readonly object _lock = new object();
+private int _id;
+private string _message;
+private DateTime _queriedAt;
+</code></pre>
+<h4><a href="#before-execution" aria-hidden="true" class="anchor" id="before-execution"></a>Before execution</h4>
+<p>The <code>Executing</code> method tags a query and then checks if there is a cached result.</p>
+<pre><code class="language-csharp">public override ValueTask&lt;InterceptionResult&lt;DbDataReader&gt;&gt; ReaderExecutingAsync(
+    DbCommand command,
+    CommandEventData eventData,
+    InterceptionResult&lt;DbDataReader&gt; result,
+    CancellationToken cancellationToken = default)
+{
+    if (command.CommandText.StartsWith(&quot;-- Get_Daily_Message&quot;, StringComparison.Ordinal))
+    {
+        lock (_lock)
+        {
+            if (_message != null
+                &amp;&amp; DateTime.UtcNow &lt; _queriedAt + new TimeSpan(0, 0, 10))
+            {
+                command.CommandText = &quot;-- Get_Daily_Message: Skipping DB call; using cache.&quot;;
+                result = InterceptionResult&lt;DbDataReader&gt;.SuppressWithResult(new CachedDailyMessageDataReader(_id, _message));
+            }
+        }
+    }
+
+    return new ValueTask&lt;InterceptionResult&lt;DbDataReader&gt;&gt;(result);
+}
+</code></pre>
+<p>This example shows how to suppress the execution of an EF Core query.</p>
+<p>This interceptor checks if the query is going to be executed before executing it.</p>
+<h4><a href="#after-execution" aria-hidden="true" class="anchor" id="after-execution"></a>After execution</h4>
+<p>This method will suppress the result if a cached message is available.</p>
+<pre><code class="language-csharp">public override async ValueTask&lt;DbDataReader&gt; ReaderExecutedAsync(
+    DbCommand command,
+    CommandExecutedEventData eventData,
+    DbDataReader result,
+    CancellationToken cancellationToken = default)
+{
+    if (command.CommandText.StartsWith(&quot;-- Get_Daily_Message&quot;, StringComparison.Ordinal)
+        &amp;&amp; !(result is CachedDailyMessageDataReader))
+    {
+        try
+        {
+            await result.ReadAsync(cancellationToken);
+
+            lock (_lock)
+            {
+                _id = result.GetInt32(0);
+                _message = result.GetString(1);
+                _queriedAt = DateTime.UtcNow;
+                return new CachedDailyMessageDataReader(_id, _message);
+            }
+        }
+        finally
+        {
+            await result.DisposeAsync();
+        }
+    }
+
+    return result;
+}
+</code></pre>
+<h4><a href="#demonstration" aria-hidden="true" class="anchor" id="demonstration"></a>Demonstration</h4>
+<p>The caching interceptor sample contains a simple console application that queries for daily messages to test the caching:</p>
+<pre><code class="language-csharp">// 1. Initialize the database with some daily messages.
+using (var context = new DailyMessageContext())
+{
+    await context.Database.EnsureDeletedAsync();
+    await context.Database.EnsureCreatedAsync();
+
+    context.AddRange(
+        new DailyMessage { Message = &quot;Remember: All builds are GA; no builds are RTM.&quot; },
+        new DailyMessage { Message = &quot;Keep calm and drink tea&quot; });
+
+    await context.SaveChangesAsync();
+}
+
+// 2. Query for the most recent daily message. It will be cached for 10 seconds.
+using (var context = new DailyMessageContext())
+{
+    Console.WriteLine(await GetDailyMessage(context));
+}
+
+// 3. Insert a new daily message.
+using (var context = new DailyMessageContext())
+{
+    context.Add(new DailyMessage { Message = &quot;Free beer for unicorns&quot; });
+
+    await context.SaveChangesAsync();
+}
+
+// 4. Cached message is used until cache expires.
+using (var context = new DailyMessageContext())
+{
+    Console.WriteLine(await GetDailyMessage(context));
+}
+
+// 5. Pretend it's the next day.
+Thread.Sleep(10000);
+
+// 6. Cache is expired, so the last message will not be queried again.
+using (var context = new DailyMessageContext())
+{
+    Console.WriteLine(await GetDailyMessage(context));
+}
+
+async Task&lt;string&gt; GetDailyMessage(DailyMessageContext context)
+    =&gt; (await context.DailyMessages.TagWith(&quot;Get_Daily_Message&quot;).OrderBy(e =&gt; e.Id).LastAsync()).Message;
+</code></pre>
+<p>This results in the following output:</p>
+<pre><code class="language-output">info: 10/15/2020 12:32:11.801 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      -- Get_Daily_Message
+
+      SELECT &quot;d&quot;.&quot;Id&quot;, &quot;d&quot;.&quot;Message&quot;
+      FROM &quot;DailyMessages&quot; AS &quot;d&quot;
+      ORDER BY &quot;d&quot;.&quot;Id&quot; DESC
+      LIMIT 1
+
+Keep calm and drink tea
+
+info: 10/15/2020 12:32:11.821 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[@p0='Free beer for unicorns' (Size = 22)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO &quot;DailyMessages&quot; (&quot;Message&quot;)
+      VALUES (@p0);
+      SELECT &quot;Id&quot;
+      FROM &quot;DailyMessages&quot;
+      WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
+
+info: 10/15/2020 12:32:11.826 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      -- Get_Daily_Message: Skipping DB call; using cache.
+
+Keep calm and drink tea
+
+info: 10/15/2020 12:32:21.833 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      -- Get_Daily_Message
+
+      SELECT &quot;d&quot;.&quot;Id&quot;, &quot;d&quot;.&quot;Message&quot;
+      FROM &quot;DailyMessages&quot; AS &quot;d&quot;
+      ORDER BY &quot;d&quot;.&quot;Id&quot; DESC
+      LIMIT 1
+
+Free beer for unicorns
+</code></pre>
+<p>Notice from the log output that the application continues to use the cached message until the timeout expires, at which point the database is queried again for any new message.</p>
+<h2><a href="#savechanges-interception" aria-hidden="true" class="anchor" id="savechanges-interception"></a><code>SaveChanges</code> interception</h2>
+<blockquote class="tip">Tip
+You can download the ```SaveChanges``` interceptor sample from GitHub.</blockquote>
+<p>The SaveChangesInterceptor class defines a set of methods that can be used to intercept changes in a database.</p>
+<blockquote class="tip">Tip
+Interceptors are powerful. However, in many cases it may be easier to override the ```SaveChanges``` method or use the .NET events for ```SaveChanges``` exposed on DbContext.</blockquote>
+<h3><a href="#example-savechanges-interception-for-auditing" aria-hidden="true" class="anchor" id="example-savechanges-interception-for-auditing"></a>Example: <code>SaveChanges</code> interception for auditing</h3>
+<p><code>SaveChanges</code> can be intercepted to create an independent audit record of the changes made.</p>
+<blockquote class="note">Note
+This is not intended to be a robust auditing solution. Rather it is a simplistic example used to demonstrate the features of interception.</blockquote>
+<h4><a href="#the-application-context" aria-hidden="true" class="anchor" id="the-application-context"></a>The application context</h4>
+<p>The sample for auditing uses a simple DbContext with blogs and posts.</p>
+<pre><code class="language-csharp">public class BlogsContext : DbContext
+{
+    private readonly AuditingInterceptor _auditingInterceptor = new AuditingInterceptor(&quot;DataSource=audit.db&quot;);
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        =&gt; optionsBuilder
+            .AddInterceptors(_auditingInterceptor)
+            .UseSqlite(&quot;DataSource=blogs.db&quot;);
+
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+}
+
+public class Blog
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public ICollection&lt;Post&gt; Posts { get; } = new List&lt;Post&gt;();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+
+    public Blog Blog { get; set; }
+}
+</code></pre>
+<p>Notice that a new instance of the interceptor is registered for each DbContext instance. This is because the auditing interceptor contains state linked to the current context instance.</p>
+<h4><a href="#the-audit-context" aria-hidden="true" class="anchor" id="the-audit-context"></a>The audit context</h4>
+<p>The sample also contains a second DbContext and model used for the auditing database.</p>
+<pre><code class="language-csharp">public class AuditContext : DbContext
+{
+    private readonly string _connectionString;
+
+    public AuditContext(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        =&gt; optionsBuilder.UseSqlite(_connectionString);
+
+    public DbSet&lt;SaveChangesAudit&gt; SaveChangesAudits { get; set; }
+}
+
+public class SaveChangesAudit
+{
+    public int Id { get; set; }
+    public Guid AuditId { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public bool Succeeded { get; set; }
+    public string ErrorMessage { get; set; }
+
+    public ICollection&lt;EntityAudit&gt; Entities { get; } = new List&lt;EntityAudit&gt;();
+}
+
+public class EntityAudit
+{
+    public int Id { get; set; }
+    public EntityState State { get; set; }
+    public string AuditMessage { get; set; }
+
+    public SaveChangesAudit SaveChangesAudit { get; set; }
+}
+</code></pre>
+<h4><a href="#the-interceptor" aria-hidden="true" class="anchor" id="the-interceptor"></a>The interceptor</h4>
+<p>The general idea for auditing with the interceptor is:</p>
+<ul>
+<li>
+<p>An audit message is created at the beginning of <code>SaveChanges</code> and is written to the auditing database</p>
+</li>
+<li>
+<p><code>SaveChanges</code> is allowed to continue</p>
+</li>
+<li>
+<p>If <code>SaveChanges</code> succeeds, then the audit message is updated to indicate success</p>
+</li>
+<li>
+<p>If <code>SaveChanges</code> fails, then the audit message is updated to indicate the failure</p>
+</li>
+</ul>
+<p>The first stage is handled before any changes are sent to the database using overrides of <code>ISaveChangesInterceptor.SavingChanges</code> and <code>ISaveChangesInterceptor.SavingChangesAsync</code>.</p>
+<pre><code class="language-csharp">public async ValueTask&lt;InterceptionResult&lt;int&gt;&gt; SavingChangesAsync(
+    DbContextEventData eventData,
+    InterceptionResult&lt;int&gt; result,
+    CancellationToken cancellationToken = default)
+{
+    _audit = CreateAudit(eventData.Context);
+
+    using var auditContext = new AuditContext(_connectionString);
+
+    auditContext.Add(_audit);
+    await auditContext.SaveChangesAsync();
+
+    return result;
+}
+
+public InterceptionResult&lt;int&gt; SavingChanges(
+    DbContextEventData eventData,
+    InterceptionResult&lt;int&gt; result)
+{
+    _audit = CreateAudit(eventData.Context);
+
+    using var auditContext = new AuditContext(_connectionString);
+    auditContext.Add(_audit);
+    auditContext.SaveChanges();
+
+    return result;
+}
+</code></pre>
+<p>You may wish to throw from the sync <code>SavingChanges</code> method to ensure that all database I/O is async.</p>
+<h4><a href="#the-audit-message" aria-hidden="true" class="anchor" id="the-audit-message"></a>The audit message</h4>
+<p>interceptor methods are used to intercept incoming events.</p>
+<pre><code class="language-csharp">private static SaveChangesAudit CreateAudit(DbContext context)
+{
+    context.ChangeTracker.DetectChanges();
+
+    var audit = new SaveChangesAudit { AuditId = Guid.NewGuid(), StartTime = DateTime.UtcNow };
+
+    foreach (var entry in context.ChangeTracker.Entries())
+    {
+        var auditMessage = entry.State switch
+        {
+            EntityState.Deleted =&gt; CreateDeletedMessage(entry),
+            EntityState.Modified =&gt; CreateModifiedMessage(entry),
+            EntityState.Added =&gt; CreateAddedMessage(entry),
+            _ =&gt; null
+        };
+
+        if (auditMessage != null)
+        {
+            audit.Entities.Add(new EntityAudit { State = entry.State, AuditMessage = auditMessage });
+        }
+    }
+
+    return audit;
+
+    string CreateAddedMessage(EntityEntry entry)
+        =&gt; entry.Properties.Aggregate(
+            $&quot;Inserting {entry.Metadata.DisplayName()} with &quot;,
+            (auditString, property) =&gt; auditString + $&quot;{property.Metadata.Name}: '{property.CurrentValue}' &quot;);
+
+    string CreateModifiedMessage(EntityEntry entry)
+        =&gt; entry.Properties.Where(property =&gt; property.IsModified || property.Metadata.IsPrimaryKey()).Aggregate(
+            $&quot;Updating {entry.Metadata.DisplayName()} with &quot;,
+            (auditString, property) =&gt; auditString + $&quot;{property.Metadata.Name}: '{property.CurrentValue}' &quot;);
+
+    string CreateDeletedMessage(EntityEntry entry)
+        =&gt; entry.Properties.Where(property =&gt; property.Metadata.IsPrimaryKey()).Aggregate(
+            $&quot;Deleting {entry.Metadata.DisplayName()} with &quot;,
+            (auditString, property) =&gt; auditString + $&quot;{property.Metadata.Name}: '{property.CurrentValue}' &quot;);
+}
+</code></pre>
+<p>The result is a <code>SaveChangesAudit</code> entity with a collection of <code>EntityAudit</code> entities, one for each insert, update, or delete. The interceptor then inserts these entities into the audit database.</p>
+<blockquote class="tip">Tip
+```ToString``` is overridden in every EF Core event data class to generate the equivalent log message for the event. For example, calling ```ContextInitializedEventData.ToString``` generates "Entity Framework Core 5.0.0 initialized 'BlogsContext' using provider 'Microsoft.EntityFrameworkCore.Sqlite' with options: None".</blockquote>
+<h4><a href="#detecting-success" aria-hidden="true" class="anchor" id="detecting-success"></a>Detecting success</h4>
+<p>The <code>SaveChanges</code> interceptor retrieves the audit entity that contains the saved changes.</p>
+<pre><code class="language-csharp">public int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+{
+    using var auditContext = new AuditContext(_connectionString);
+
+    auditContext.Attach(_audit);
+    _audit.Succeeded = true;
+    _audit.EndTime = DateTime.UtcNow;
+
+    auditContext.SaveChanges();
+
+    return result;
+}
+
+public async ValueTask&lt;int&gt; SavedChangesAsync(
+    SaveChangesCompletedEventData eventData,
+    int result,
+    CancellationToken cancellationToken = default)
+{
+    using var auditContext = new AuditContext(_connectionString);
+
+    auditContext.Attach(_audit);
+    _audit.Succeeded = true;
+    _audit.EndTime = DateTime.UtcNow;
+
+    await auditContext.SaveChangesAsync(cancellationToken);
+
+    return result;
+}
+</code></pre>
+<p>We need to update an audit entity in the database.</p>
+<h4><a href="#detecting-failure" aria-hidden="true" class="anchor" id="detecting-failure"></a>Detecting failure</h4>
+<p>The failure method of the <code>ISaveChangesInterceptor</code> method throws an exception when a change is made in the database.</p>
+<pre><code class="language-csharp">public void SaveChangesFailed(DbContextErrorEventData eventData)
+{
+    using var auditContext = new AuditContext(_connectionString);
+
+    auditContext.Attach(_audit);
+    _audit.Succeeded = false;
+    _audit.EndTime = DateTime.UtcNow;
+    _audit.ErrorMessage = eventData.Exception.Message;
+
+    auditContext.SaveChanges();
+}
+
+public async Task SaveChangesFailedAsync(
+    DbContextErrorEventData eventData,
+    CancellationToken cancellationToken = default)
+{
+    using var auditContext = new AuditContext(_connectionString);
+
+    auditContext.Attach(_audit);
+    _audit.Succeeded = false;
+    _audit.EndTime = DateTime.UtcNow;
+    _audit.ErrorMessage = eventData.Exception.InnerException?.Message;
+
+    await auditContext.SaveChangesAsync(cancellationToken);
+}
+</code></pre>
+<h4><a href="#demonstration-1" aria-hidden="true" class="anchor" id="demonstration-1"></a>Demonstration</h4>
+<p>The auditing sample contains a simple console application that makes changes to the blogging database and then shows the auditing that was created.</p>
+<pre><code class="language-csharp">// Insert, update, and delete some entities
+
+using (var context = new BlogsContext())
+{
+    context.Add(
+        new Blog { Name = &quot;EF Blog&quot;, Posts = { new Post { Title = &quot;EF Core 3.1!&quot; }, new Post { Title = &quot;EF Core 5.0!&quot; } } });
+
+    await context.SaveChangesAsync();
+}
+
+using (var context = new BlogsContext())
+{
+    var blog = context.Blogs.Include(e =&gt; e.Posts).Single();
+
+    blog.Name = &quot;EF Core Blog&quot;;
+    context.Remove(blog.Posts.First());
+    blog.Posts.Add(new Post { Title = &quot;EF Core 6.0!&quot; });
+
+    context.SaveChanges();
+}
+
+// Do an insert that will fail
+
+using (var context = new BlogsContext())
+{
+    try
+    {
+        context.Add(new Post { Id = 3, Title = &quot;EF Core 3.1!&quot; });
+
+        await context.SaveChangesAsync();
+    }
+    catch (DbUpdateException)
+    {
+    }
+}
+
+// Look at the audit trail
+
+using (var context = new AuditContext(&quot;DataSource=audit.db&quot;))
+{
+    foreach (var audit in context.SaveChangesAudits.Include(e =&gt; e.Entities).ToList())
+    {
+        Console.WriteLine(
+            $&quot;Audit {audit.AuditId} from {audit.StartTime} to {audit.EndTime} was{(audit.Succeeded ? &quot;&quot; : &quot; not&quot;)} successful.&quot;);
+
+        foreach (var entity in audit.Entities)
+        {
+            Console.WriteLine($&quot;  {entity.AuditMessage}&quot;);
+        }
+
+        if (!audit.Succeeded)
+        {
+            Console.WriteLine($&quot;  Error: {audit.ErrorMessage}&quot;);
+        }
+    }
+}
+</code></pre>
+<p>The result shows the contents of the auditing database:</p>
+<pre><code class="language-output">Audit 52e94327-1767-4046-a3ca-4c6b1eecbca6 from 10/14/2020 9:10:17 PM to 10/14/2020 9:10:17 PM was successful.
+  Inserting Blog with Id: '-2147482647' Name: 'EF Blog'
+  Inserting Post with Id: '-2147482647' BlogId: '-2147482647' Title: 'EF Core 3.1!'
+  Inserting Post with Id: '-2147482646' BlogId: '-2147482647' Title: 'EF Core 5.0!'
+Audit 8450f57a-5030-4211-a534-eb66b8da7040 from 10/14/2020 9:10:17 PM to 10/14/2020 9:10:17 PM was successful.
+  Inserting Post with Id: '-2147482645' BlogId: '1' Title: 'EF Core 6.0!'
+  Updating Blog with Id: '1' Name: 'EF Core Blog'
+  Deleting Post with Id: '1'
+Audit 201fef4d-66a7-43ad-b9b6-b57e9d3f37b3 from 10/14/2020 9:10:17 PM to 10/14/2020 9:10:17 PM was not successful.
+  Inserting Post with Id: '3' BlogId: '' Title: 'EF Core 3.1!'
+  Error: SQLite Error 19: 'UNIQUE constraint failed: Post.Id'.
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/interceptors">Interceptors</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

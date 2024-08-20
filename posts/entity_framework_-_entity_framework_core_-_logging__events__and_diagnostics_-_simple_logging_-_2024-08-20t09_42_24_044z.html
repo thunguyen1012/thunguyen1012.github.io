@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Simple logging | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core (EF Core) simple logging can be used to easily obtain logs while developing and debugging applications.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Simple logging</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote class="tip">Tip
+You can download this article's sample from GitHub.</blockquote>
+<p>Entity Framework Core (EF Core) simple logging can be used to easily obtain logs while developing and debugging applications.</p>
+<blockquote class="tip">Tip
+EF Core also integrates with ```Microsoft.Extensions.Logging```, which requires more configuration, but is often more suitable for logging in production applications.</blockquote>
+<h2><a href="#configuration" aria-hidden="true" class="anchor" id="configuration"></a>Configuration</h2>
+<p>EF Core logs can be accessed from any type of application through the use of <code>LogTo</code> when configuring a <code>DbContext</code> instance.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(Console.WriteLine);
+</code></pre>
+<p>Alternately, <code>LogTo</code> can be called as part of <code>AddDbContext</code> or when creating a <code>DbContextOptions</code> instance to pass to the <code>DbContext</code> constructor.</p>
+<blockquote class="tip">Tip
+```OnConfiguring``` is still called when ```AddDbContext``` is used or a ```DbContextOptions``` instance is passed to the ```DbContext``` constructor. This makes it the ideal place to apply context configuration regardless of how the ```DbContext``` is constructed.</blockquote>
+<h2><a href="#directing-the-logs" aria-hidden="true" class="anchor" id="directing-the-logs"></a>Directing the logs</h2>
+<h3><a href="#logging-to-the-console" aria-hidden="true" class="anchor" id="logging-to-the-console"></a>Logging to the console</h3>
+<p>This example shows how to generate a log message using EF Core.</p>
+<p>The <code>Console.WriteLine</code> method is often used for this delegate, as shown above. This results in each log message being written to the console.</p>
+<h3><a href="#logging-to-the-debug-window" aria-hidden="true" class="anchor" id="logging-to-the-debug-window"></a>Logging to the debug window</h3>
+<p>This example shows how to use the Lambda.WriteLine class to send an output window to another application.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(message =&gt; Debug.WriteLine(message));
+</code></pre>
+<h3><a href="#logging-to-a-file" aria-hidden="true" class="anchor" id="logging-to-a-file"></a>Logging to a file</h3>
+<p>The following examples show how to write to a file using the WriteLine method.</p>
+<pre><code class="language-csharp">private readonly StreamWriter _logStream = new StreamWriter(&quot;mylog.txt&quot;, append: true);
+
+protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(_logStream.WriteLine);
+
+public override void Dispose()
+{
+    base.Dispose();
+    _logStream.Dispose();
+}
+
+public override async ValueTask DisposeAsync()
+{
+    await base.DisposeAsync();
+    await _logStream.DisposeAsync();
+}
+</code></pre>
+<blockquote class="tip">Tip
+Consider using ```Microsoft.Extensions.Logging``` for logging to files in production applications.</blockquote>
+<h2><a href="#getting-detailed-messages" aria-hidden="true" class="anchor" id="getting-detailed-messages"></a>Getting detailed messages</h2>
+<h3><a href="#sensitive-data" aria-hidden="true" class="anchor" id="sensitive-data"></a>Sensitive data</h3>
+<p>An exception message should be sent to EF Core if there is a problem with any of the following:</p>
+<p>However, knowing data values, especially for keys, can be very helpful when debugging. This can be enabled in EF Core by calling <code>EnableSensitiveDataLogging()</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .LogTo(Console.WriteLine)
+        .EnableSensitiveDataLogging();
+</code></pre>
+<h3><a href="#detailed-query-exceptions" aria-hidden="true" class="anchor" id="detailed-query-exceptions"></a>Detailed query exceptions</h3>
+<p>This article describes how to diagnose exceptions in the EF Core database.</p>
+<p>Turning on <code>EnableDetailedErrors</code> will cause EF to introduce these try-catch blocks and thereby provide more detailed errors. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .LogTo(Console.WriteLine)
+        .EnableDetailedErrors();
+</code></pre>
+<h2><a href="#filtering" aria-hidden="true" class="anchor" id="filtering"></a>Filtering</h2>
+<h3><a href="#log-levels" aria-hidden="true" class="anchor" id="log-levels"></a><code>Log</code> levels</h3>
+<p>EF Core logs all messages sent to the EF Core database.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(Console.WriteLine, LogLevel.Information);
+</code></pre>
+<h3><a href="#specific-messages" aria-hidden="true" class="anchor" id="specific-messages"></a>Specific messages</h3>
+<p>A log message is a collection of messages sent to an event server by an application.</p>
+<p><code>LogTo</code> can be configured to only log the messages associated with one or more event IDs. For example, to log only messages for the context being initialized or disposed:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .LogTo(Console.WriteLine, new[] { CoreEventId.ContextDisposed, CoreEventId.ContextInitialized });
+</code></pre>
+<h3><a href="#message-categories" aria-hidden="true" class="anchor" id="message-categories"></a>Message categories</h3>
+<p>Every log message is assigned to a named hierarchical logger category. The categories are:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Category</th>
+<th>Messages</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore</td>
+<td>All EF Core messages</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Database</td>
+<td>All database interactions</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Database.Connection</td>
+<td>Uses of a database connection</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Database.Command</td>
+<td>Uses of a database command</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Database.Transaction</td>
+<td>Uses of a database transaction</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Update</td>
+<td>Saving entities, excluding database interactions</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Model</td>
+<td>All model and metadata interactions</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Model.Validation</td>
+<td>Model validation</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Query</td>
+<td>Queries, excluding database interactions</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Infrastructure</td>
+<td>General events, such as context creation</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Scaffolding</td>
+<td>Database reverse engineering</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.Migrations</td>
+<td>Migrations</td>
+</tr>
+<tr>
+<td style="text-align: left;">Microsoft.EntityFrameworkCore.ChangeTracking</td>
+<td>Change tracking interactions</td>
+</tr>
+</tbody></table>
+<p><code>LogTo</code> can be configured to only log the messages from one or more categories. For example, to log only database interactions:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Name });
+</code></pre>
+<p>Notice that the DbLoggerCategory class provides a hierarchical API for finding a category and avoids the need to hard-code strings.</p>
+<p>Since categories are hierarchical, this example using the <code>Database</code> category will include all messages for the subcategories <code>Database.Connection</code>, <code>Database.Command</code>, and <code>Database.Transaction</code>.</p>
+<h3><a href="#custom-filters" aria-hidden="true" class="anchor" id="custom-filters"></a>Custom filters</h3>
+<p><code>LogTo</code> allows a custom filter to be used for cases where none of the filtering options above are sufficient.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .LogTo(
+            Console.WriteLine,
+            (eventId, logLevel) =&gt; logLevel &gt;= LogLevel.Information
+                                   || eventId == RelationalEventId.ConnectionOpened
+                                   || eventId == RelationalEventId.ConnectionClosed);
+</code></pre>
+<blockquote class="tip">Tip
+Filtering using custom filters or using any of the other options shown here is more efficient than filtering in the ```LogTo``` delegate. This is because if the filter determines the message should not be logged, then the log message is not even created.</blockquote>
+<h2><a href="#configuration-for-specific-messages" aria-hidden="true" class="anchor" id="configuration-for-specific-messages"></a>Configuration for specific messages</h2>
+<p>The EF Core <code>ConfigureWarnings</code> API allows applications to change what happens when a specific event is encountered. This can be used to:</p>
+<ul>
+<li>
+<p>Change the log level at which the event is logged</p>
+</li>
+<li>
+<p>Skip logging the event altogether</p>
+</li>
+<li>
+<p>Throw an exception when the event occurs</p>
+</li>
+</ul>
+<h3><a href="#changing-the-log-level-for-an-event" aria-hidden="true" class="anchor" id="changing-the-log-level-for-an-event"></a>Changing the log level for an event</h3>
+<p>This example shows how to change the log level of a message.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .ConfigureWarnings(
+            b =&gt; b.Log(
+                (RelationalEventId.ConnectionOpened, LogLevel.Information),
+                (RelationalEventId.ConnectionClosed, LogLevel.Information)))
+        .LogTo(Console.WriteLine, LogLevel.Information);
+</code></pre>
+<h3><a href="#suppress-logging-an-event" aria-hidden="true" class="anchor" id="suppress-logging-an-event"></a>Suppress logging an event</h3>
+<p>In a similar way, an individual event can be suppressed from logging. This is particularly useful for ignoring a warning that has been reviewed and understood. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .ConfigureWarnings(b =&gt; b.Ignore(CoreEventId.DetachedLazyLoadingWarning))
+        .LogTo(Console.WriteLine);
+</code></pre>
+<h3><a href="#throw-for-an-event" aria-hidden="true" class="anchor" id="throw-for-an-event"></a>Throw for an event</h3>
+<p>EF Core is a wrapper around the existing EFWarnings method.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .ConfigureWarnings(b =&gt; b.Throw(RelationalEventId.MultipleCollectionIncludeWarning))
+        .LogTo(Console.WriteLine);
+</code></pre>
+<h2><a href="#message-contents-and-formatting" aria-hidden="true" class="anchor" id="message-contents-and-formatting"></a>Message contents and formatting</h2>
+<p>The default content from <code>LogTo</code> is formatted across multiple lines. The first line contains message metadata:</p>
+<ul>
+<li>
+<p>The <code>LogLevel</code> as a four-character prefix</p>
+</li>
+<li>
+<p>A local timestamp, formatted for the current culture</p>
+</li>
+<li>
+<p>The <code>EventId</code> in the form that can be copy/pasted to get the member from CoreEventId or one of the other <code>EventId</code> classes, plus the raw ID value</p>
+</li>
+<li>
+<p>The event category, as described above.</p>
+</li>
+</ul>
+<p>For example:</p>
+<pre><code class="language-output">info: 10/6/2020 10:52:45.581 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      CREATE TABLE &quot;Blogs&quot; (
+          &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Blogs&quot; PRIMARY KEY AUTOINCREMENT,
+          &quot;Name&quot; INTEGER NOT NULL
+      );
+dbug: 10/6/2020 10:52:45.582 RelationalEventId.TransactionCommitting[20210] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committing transaction.
+dbug: 10/6/2020 10:52:45.585 RelationalEventId.TransactionCommitted[20202] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committed transaction.
+</code></pre>
+<p>This content can be customized by passing values from <code>DbContextLoggerOptions</code>, as shown in the following sections.</p>
+<blockquote class="tip">Tip
+Consider using Microsoft.Extensions.Logging for more control over log formatting.</blockquote>
+<h3><a href="#using-utc-time" aria-hidden="true" class="anchor" id="using-utc-time"></a>Using UTC time</h3>
+<p><code>DbContextLoggerOptions.DefaultWithUtcTime</code> can be used to specify timestamps for the context logger.</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(
+        Console.WriteLine,
+        LogLevel.Debug,
+        DbContextLoggerOptions.DefaultWithUtcTime);
+</code></pre>
+<p>This example results in the following log formatting:</p>
+<pre><code class="language-output">info: 2020-10-06T17:55:39.0333701Z RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      CREATE TABLE &quot;Blogs&quot; (
+          &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Blogs&quot; PRIMARY KEY AUTOINCREMENT,
+          &quot;Name&quot; INTEGER NOT NULL
+      );
+dbug: 2020-10-06T17:55:39.0333892Z RelationalEventId.TransactionCommitting[20210] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committing transaction.
+dbug: 2020-10-06T17:55:39.0351684Z RelationalEventId.TransactionCommitted[20202] (Microsoft.EntityFrameworkCore.Database.Transaction)
+      Committed transaction.
+</code></pre>
+<h3><a href="#single-line-logging" aria-hidden="true" class="anchor" id="single-line-logging"></a>Single line logging</h3>
+<p>Sometimes it is useful to get exactly one line per log message. This can be enabled by <code>DbContextLoggerOptions.SingleLine</code>. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(
+        Console.WriteLine,
+        LogLevel.Debug,
+        DbContextLoggerOptions.DefaultWithLocalTime | DbContextLoggerOptions.SingleLine);
+</code></pre>
+<p>This example results in the following log formatting:</p>
+<pre><code class="language-output">info: 10/6/2020 10:52:45.723 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command) -&gt; Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']CREATE TABLE &quot;Blogs&quot; (    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Blogs&quot; PRIMARY KEY AUTOINCREMENT,    &quot;Name&quot; INTEGER NOT NULL);
+dbug: 10/6/2020 10:52:45.723 RelationalEventId.TransactionCommitting[20210] (Microsoft.EntityFrameworkCore.Database.Transaction) -&gt; Committing transaction.
+dbug: 10/6/2020 10:52:45.725 RelationalEventId.TransactionCommitted[20202] (Microsoft.EntityFrameworkCore.Database.Transaction) -&gt; Committed transaction.
+</code></pre>
+<h3><a href="#other-content-options" aria-hidden="true" class="anchor" id="other-content-options"></a>Other content options</h3>
+<p>Other flags in <code>DbContextLoggerOptions</code> can be used to trim down the amount of metadata included in the log. This can be useful in conjunction with single-line logging. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(
+        Console.WriteLine,
+        LogLevel.Debug,
+        DbContextLoggerOptions.UtcTime | DbContextLoggerOptions.SingleLine);
+</code></pre>
+<p>This example results in the following log formatting:</p>
+<pre><code class="language-output">2020-10-06T17:52:45.7320362Z -&gt; Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']CREATE TABLE &quot;Blogs&quot; (    &quot;Id&quot; INTEGER NOT NULL CONSTRAINT &quot;PK_Blogs&quot; PRIMARY KEY AUTOINCREMENT,    &quot;Name&quot; INTEGER NOT NULL);
+2020-10-06T17:52:45.7320531Z -&gt; Committing transaction.
+2020-10-06T17:52:45.7339441Z -&gt; Committed transaction.
+</code></pre>
+<h2><a href="#moving-from-ef6" aria-hidden="true" class="anchor" id="moving-from-ef6"></a>Moving from EF6</h2>
+<p>EF Core simple logging differs from <code>Database</code>.Log in EF6 in two important ways:</p>
+<ul>
+<li>
+<p><code>Log</code> messages are not limited to only database interactions</p>
+</li>
+<li>
+<p>The logging must be configured at context initialization time</p>
+</li>
+</ul>
+<p>For the first difference, the filtering described above can be used to limit which messages are logged.</p>
+<p>The first difference between EF7 and EF6 is that EF7 does not generate log messages when they have been set.</p>
+<pre><code class="language-csharp">public Action&lt;string&gt; Log { get; set; }
+
+protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder.LogTo(s =&gt; Log?.Invoke(s));
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/simple-logging">Simple Logging</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

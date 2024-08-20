@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Events | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core (EF Core) exposes .NET events to act as callbacks when certain things happen in the EF Core code.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Events</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote class="tip">Tip
+You can download the events sample from GitHub.</blockquote>
+<p>Entity Framework Core (EF Core) exposes .NET events to act as callbacks when certain things happen in the EF Core code.</p>
+<p>Events are registered per <code>DbContext</code> instance. Use a diagnostic listener to get the same information but for all <code>DbContext</code> instances in the process.</p>
+<h2><a href="#events-raised-by-ef-core" aria-hidden="true" class="anchor" id="events-raised-by-ef-core"></a>Events raised by EF Core</h2>
+<p>The following events are raised by EF Core:</p>
+<table><thead>
+<tr>
+<th style="text-align: left;">Event</th>
+<th>When raised</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savingchanges#microsoft-entityframeworkcore-dbcontext-savingchanges" class="no-loc" data-linktype="absolute-path">DbContext.SavingChanges</a></td>
+<td>At the start of <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savechanges" class="no-loc" data-linktype="absolute-path">SaveChanges</a> or <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savechangesasync" class="no-loc" data-linktype="absolute-path">SaveChangesAsync</a></td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savedchanges#microsoft-entityframeworkcore-dbcontext-savedchanges" class="no-loc" data-linktype="absolute-path">DbContext.SavedChanges</a></td>
+<td>At the end of a successful <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savechanges" class="no-loc" data-linktype="absolute-path">SaveChanges</a> or <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savechangesasync" class="no-loc" data-linktype="absolute-path">SaveChangesAsync</a></td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savechangesfailed#microsoft-entityframeworkcore-dbcontext-savechangesfailed" class="no-loc" data-linktype="absolute-path">DbContext.SaveChangesFailed</a></td>
+<td>At the end of a failed <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savechanges" class="no-loc" data-linktype="absolute-path">SaveChanges</a> or <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbcontext.savechangesasync" class="no-loc" data-linktype="absolute-path">SaveChangesAsync</a></td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.changetracker.tracked#microsoft-entityframeworkcore-changetracking-changetracker-tracked" class="no-loc" data-linktype="absolute-path">ChangeTracker.Tracked</a></td>
+<td>When an entity is tracked by the context</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.changetracking.changetracker.statechanged#microsoft-entityframeworkcore-changetracking-changetracker-statechanged" class="no-loc" data-linktype="absolute-path">ChangeTracker.StateChanged</a></td>
+<td>When a tracked entity changes its state</td>
+</tr>
+</tbody></table>
+<h3><a href="#example-timestamp-state-changes" aria-hidden="true" class="anchor" id="example-timestamp-state-changes"></a>Example: Timestamp state changes</h3>
+<p>Each entity tracked by a <code>DbContext</code> has an EntityState. For example, the <code>Added</code> state indicates that the entity will be inserted into the database.</p>
+<p>This example uses the <code>Tracked</code> and <code>StateChanged</code> events to detect when an entity changes state.</p>
+<p>The entity types in this example implement an interface that defines the timestamp properties:</p>
+<pre><code class="language-csharp">public interface IHasTimestamps
+{
+    DateTime? Added { get; set; }
+    DateTime? Deleted { get; set; }
+    DateTime? Modified { get; set; }
+}
+</code></pre>
+<p>A method on the application's <code>DbContext</code> can then set timestamps for any entity that implements this interface:</p>
+<pre><code class="language-csharp">private static void UpdateTimestamps(object sender, EntityEntryEventArgs e)
+{
+    if (e.Entry.Entity is IHasTimestamps entityWithTimestamps)
+    {
+        switch (e.Entry.State)
+        {
+            case EntityState.Deleted:
+                entityWithTimestamps.Deleted = DateTime.UtcNow;
+                Console.WriteLine($&quot;Stamped for delete: {e.Entry.Entity}&quot;);
+                break;
+            case EntityState.Modified:
+                entityWithTimestamps.Modified = DateTime.UtcNow;
+                Console.WriteLine($&quot;Stamped for update: {e.Entry.Entity}&quot;);
+                break;
+            case EntityState.Added:
+                entityWithTimestamps.Added = DateTime.UtcNow;
+                Console.WriteLine($&quot;Stamped for insert: {e.Entry.Entity}&quot;);
+                break;
+        }
+    }
+}
+</code></pre>
+<p>This method has the appropriate signature to use as an event handler for both the <code>Tracked</code> and <code>StateChanged</code> events.</p>
+<pre><code class="language-csharp">public BlogsContext()
+{
+    ChangeTracker.StateChanged += UpdateTimestamps;
+    ChangeTracker.Tracked += UpdateTimestamps;
+}
+</code></pre>
+<p>Both events are needed because new entities fire <code>Tracked</code> events when they are first tracked. <code>StateChanged</code> events are only fired for entities that change state while they are already being tracked.</p>
+<p>The sample for this example contains a simple console application that makes changes to the blogging database:</p>
+<pre><code class="language-csharp">using (var context = new BlogsContext())
+{
+    context.Database.EnsureDeleted();
+    context.Database.EnsureCreated();
+
+    context.Add(
+        new Blog
+        {
+            Id = 1,
+            Name = &quot;EF Blog&quot;,
+            Posts = { new Post { Id = 1, Title = &quot;EF Core 3.1!&quot; }, new Post { Id = 2, Title = &quot;EF Core 5.0!&quot; } }
+        });
+
+    context.SaveChanges();
+}
+
+using (var context = new BlogsContext())
+{
+    var blog = context.Blogs.Include(e =&gt; e.Posts).Single();
+
+    blog.Name = &quot;EF Core Blog&quot;;
+    context.Remove(blog.Posts.First());
+    blog.Posts.Add(new Post { Id = 3, Title = &quot;EF Core 6.0!&quot; });
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>The output from this code shows the state changes happening and the timestamps being applied:</p>
+<pre><code class="language-output">Stamped for insert: Blog 1 Added on: 10/15/2020 11:01:26 PM
+Stamped for insert: Post 1 Added on: 10/15/2020 11:01:26 PM
+Stamped for insert: Post 2 Added on: 10/15/2020 11:01:26 PM
+Stamped for delete: Post 1 Added on: 10/15/2020 11:01:26 PM Deleted on: 10/15/2020 11:01:26 PM
+Stamped for update: Blog 1 Added on: 10/15/2020 11:01:26 PM Modified on: 10/15/2020 11:01:26 PM
+Stamped for insert: Post 3 Added on: 10/15/2020 11:01:26 PM
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/events">.NET Events in EF Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
