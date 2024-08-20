@@ -741,3 +741,23 @@ hr {
 img:hover {
   transform: scale(2);
 }
+
+.note {
+  background-color: #efd9fd !important;
+}
+
+.tip {
+  background-color: #dff6dd !important;
+}
+
+.warning {
+  background-color: #fff4ce !important;
+}
+
+.caution {
+  background-color: #fde7e9 !important;
+}
+
+.important {
+  background-color: #d7eaf8 !important;
+}
