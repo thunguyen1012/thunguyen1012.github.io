@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Testing - Testing against your production database system | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In this page, we discuss techniques for writing automated tests which involve the database system against which the application runs in production. Alternate testing approaches exist, where the production database system is swapped out by test doubles; see the testing overview page for more information. Note that testing against a different database than what is used in production (e.g. Sqlite) is not covered here, since the different database is used as a test double; this approach is covered in Testing without your production database system.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Testing - Testing against your production database system</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Automated testing can be a useful way to improve the performance of your application.</p>
+<p>In this post I'm going to show you how to test the performance of a database against a real database.</p>
+<blockquote class="tip">Tip
+This page shows xUnit techniques, but similar concepts exist in other testing frameworks, including NUnit.</blockquote>
+<h2><a href="#setting-up-your-database-system" aria-hidden="true" class="anchor" id="setting-up-your-database-system"></a>Setting up your database system</h2>
+<p>In this article I'm going to show you how to install and run a Docker database.</p>
+<p>Database testing can be a bit of a headache.</p>
+<ul>
+<li>
+<p>It doesn't support everything that SQL Server Developer Edition does.</p>
+</li>
+<li>
+<p>It's only available on Windows.</p>
+</li>
+<li>
+<p>It can cause lag on first test run as the service is spun up.</p>
+</li>
+</ul>
+<p>We generally recommend installing SQL Server Developer edition rather than LocalDB, since it provides the full SQL Server feature set and is generally very easy to do.</p>
+<p>The Azure Cosmos DB emulator is a useful tool both for developing locally and for running tests.</p>
+<h2><a href="#creating-seeding-and-managing-a-test-database" aria-hidden="true" class="anchor" id="creating-seeding-and-managing-a-test-database"></a>Creating, seeding and managing a test database</h2>
+<p>In this tutorial, I'll show you how to create a test database and how to use it in your tests.</p>
+<p>When using Xunit, this can be done via a class fixture, which represents the database and is shared across multiple test runs:</p>
+<pre><code class="language-csharp">public class TestDatabaseFixture
+{
+    private const string ConnectionString = @&quot;Server=(localdb)\mssqllocaldb;Database=EFTestSample;Trusted_Connection=True;ConnectRetryCount=0&quot;;
+
+    private static readonly object _lock = new();
+    private static bool _databaseInitialized;
+
+    public TestDatabaseFixture()
+    {
+        lock (_lock)
+        {
+            if (!_databaseInitialized)
+            {
+                using (var context = CreateContext())
+                {
+                    context.Database.EnsureDeleted();
+                    context.Database.EnsureCreated();
+
+                    context.AddRange(
+                        new Blog { Name = &quot;Blog1&quot;, Url = &quot;http://blog1.com&quot; },
+                        new Blog { Name = &quot;Blog2&quot;, Url = &quot;http://blog2.com&quot; });
+                    context.SaveChanges();
+                }
+
+                _databaseInitialized = true;
+            }
+        }
+    }
+
+    public BloggingContext CreateContext()
+        =&gt; new BloggingContext(
+            new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+                .UseSqlServer(ConnectionString)
+                .Options);
+}
+</code></pre>
+<p>When the above fixture is instantiated, it uses <code>EnsureDeleted</code>() to drop the database (in case it exists from a previous run), and then <code>EnsureCreated()</code> to create it with your latest model configuration (see the docs for these APIs). Once the database is created, the fixture seeds it with some data our tests can use. It's worth spending some time thinking about your seed data, since changing it later for a new test may cause existing tests to fail.</p>
+<p>To use the fixture in a test class, simply implement <code>IClassFixture</code> over your fixture type, and xUnit will inject it into your constructor:</p>
+<pre><code class="language-csharp">public class BloggingControllerTest : IClassFixture&lt;TestDatabaseFixture&gt;
+{
+    public BloggingControllerTest(TestDatabaseFixture fixture)
+        =&gt; Fixture = fixture;
+
+    public TestDatabaseFixture Fixture { get; }
+</code></pre>
+<p>Your test class now has a <code>Fixture</code> property which can be used by tests to create a fully functional context instance:</p>
+<pre><code class="language-csharp">[Fact]
+public void GetBlog()
+{
+    using var context = Fixture.CreateContext();
+    var controller = new BloggingController(context);
+
+    var blog = controller.GetBlog(&quot;Blog2&quot;).Value;
+
+    Assert.Equal(&quot;http://blog2.com&quot;, blog.Url);
+}
+</code></pre>
+<p>In our series of posts on how to use xUnit, we've been looking at how to use database fixtures in test classes.</p>
+<h2><a href="#tests-which-modify-data" aria-hidden="true" class="anchor" id="tests-which-modify-data"></a>Tests which modify data</h2>
+<p>In this talk, I'm going to show you how to isolate writing tests from modifying data in a database.</p>
+<p>Here's a controller method which adds a Blog to our database:</p>
+<pre><code class="language-csharp">[HttpPost]
+public ActionResult AddBlog(string name, string url)
+{
+    _context.Blogs.Add(new Blog { Name = name, Url = url });
+    _context.SaveChanges();
+
+    return Ok();
+}
+</code></pre>
+<p>We can test this method with the following:</p>
+<pre><code class="language-csharp">[Fact]
+public void AddBlog()
+{
+    using var context = Fixture.CreateContext();
+    context.Database.BeginTransaction();
+
+    var controller = new BloggingController(context);
+    controller.AddBlog(&quot;Blog3&quot;, &quot;http://blog3.com&quot;);
+
+    context.ChangeTracker.Clear();
+
+    var blog = context.Blogs.Single(b =&gt; b.Name == &quot;Blog3&quot;);
+    Assert.Equal(&quot;http://blog3.com&quot;, blog.Url);
+
+}
+</code></pre>
+<p>Some notes on the test code above:</p>
+<ul>
+<li>
+<p>We start a transaction to make sure the changes below aren't committed to the database, and don't interfere with other tests. Since the transaction is never committed, it is implicitly rolled back at the end of the test when the context instance is disposed.</p>
+</li>
+<li>
+<p>After making the updates we want, we clear the context instance's change tracker with <code>ChangeTracker.Clear</code>, to make sure we actually load the blog from the database below. We could use two context instances instead, but we'd then have to make sure the same transaction is used by both instances.</p>
+</li>
+<li>
+<p>You may even want to start the transaction in the fixture's <code>CreateContext</code>, so that tests receive a context instance that's already in a transaction, and ready for updates. This can help prevent cases where the transaction is accidentally forgotten, leading to test interference which can be hard to debug. You may also want to separate read-only and write tests in different test classes as well.</p>
+</li>
+</ul>
+<h2><a href="#tests-which-explicitly-manage-transactions" aria-hidden="true" class="anchor" id="tests-which-explicitly-manage-transactions"></a>Tests which explicitly manage transactions</h2>
+<p>There are many types of tests which can be carried out on a database: tests which query the database, tests which query the database, tests which query the database, tests which query the database, tests which query the database, tests which query the database, tests which query the database, tests which query the database</p>
+<p>Let's examine the following controller method as an example:</p>
+<pre><code class="language-csharp">[HttpPost]
+public ActionResult UpdateBlogUrl(string name, string url)
+{
+    // Note: it isn't usually necessary to start a transaction for updating. This is done here for illustration purposes only.
+    using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
+
+    var blog = _context.Blogs.FirstOrDefault(b =&gt; b.Name == name);
+    if (blog is null)
+    {
+        return NotFound();
+    }
+
+    blog.Url = url;
+    _context.SaveChanges();
+
+    transaction.Commit();
+    return Ok();
+}
+</code></pre>
+<p>In this class, we'll define a method that commits changes to a database.</p>
+<pre><code class="language-csharp">public class TransactionalTestDatabaseFixture
+{
+    private const string ConnectionString = @&quot;Server=(localdb)\mssqllocaldb;Database=EFTransactionalTestSample;Trusted_Connection=True;ConnectRetryCount=0&quot;;
+
+    public BloggingContext CreateContext()
+        =&gt; new BloggingContext(
+            new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+                .UseSqlServer(ConnectionString)
+                .Options);
+
+    public TransactionalTestDatabaseFixture()
+    {
+        using var context = CreateContext();
+        context.Database.EnsureDeleted();
+        context.Database.EnsureCreated();
+
+        Cleanup();
+    }
+
+    public void Cleanup()
+    {
+        using var context = CreateContext();
+
+        context.Blogs.RemoveRange(context.Blogs);
+
+        context.AddRange(
+            new Blog { Name = &quot;Blog1&quot;, Url = &quot;http://blog1.com&quot; },
+            new Blog { Name = &quot;Blog2&quot;, Url = &quot;http://blog2.com&quot; });
+        context.SaveChanges();
+    }
+}
+</code></pre>
+<p>This fixture is similar to the one used above, but notably contains a <code>Cleanup</code> method; we'll call this after every test to ensure that the database is reset to its starting state.</p>
+<p>In this example, we want to share a test fixture between two classes.</p>
+<p>First, we define a test collection, which references our fixture and will be used by all transactional test classes which require it:</p>
+<pre><code class="language-csharp">[CollectionDefinition(&quot;TransactionalTests&quot;)]
+public class TransactionalTestsCollection : ICollectionFixture&lt;TransactionalTestDatabaseFixture&gt;
+{
+}
+</code></pre>
+<p>We now reference the test collection in our test class, and accept the fixture in the constructor as before:</p>
+<pre><code class="language-csharp">[Collection(&quot;TransactionalTests&quot;)]
+public class TransactionalBloggingControllerTest : IDisposable
+{
+    public TransactionalBloggingControllerTest(TransactionalTestDatabaseFixture fixture)
+        =&gt; Fixture = fixture;
+
+    public TransactionalTestDatabaseFixture Fixture { get; }
+</code></pre>
+<p>Finally, we make our test class disposable, arranging for the fixture's <code>Cleanup</code> method to be called after each test:</p>
+<pre><code class="language-csharp">public void Dispose()
+    =&gt; Fixture.Cleanup();
+</code></pre>
+<p>Note that since xUnit only ever instantiates the collection fixture once, there is no need for us to use locking around database creation and seeding as we did above.</p>
+<p>The full sample code for the above can be viewed here.</p>
+<blockquote class="tip">Tip
+If you have multiple test classes with tests which modify the database, you can still run them in parallel by having different fixtures, each referencing its own database. Creating and using many test databases isn't problematic and should be done whenever it's helpful.</blockquote>
+<h2><a href="#efficient-database-creation" aria-hidden="true" class="anchor" id="efficient-database-creation"></a>Efficient database creation</h2>
+<p>In the samples above, we used <code>EnsureDeleted()</code> and <code>EnsureCreated()</code> before running tests, to make sure we have an up-to-date test database. These operations can be a bit slow in certain databases, which can be a problem as you iterate over code changes and re-run tests over and over. If that's the case, you may want to temporarily comment out <code>EnsureDeleted</code> in your fixture's constructor: this will reuse the same database across test runs.</p>
+<p>If you need to change the model of your database during the development cycle, you may want to consider using a different database model.</p>
+<h2><a href="#efficient-database-cleanup" aria-hidden="true" class="anchor" id="efficient-database-cleanup"></a>Efficient database cleanup</h2>
+<p>In this post, I'm going to show you how to clean up the database between tests.</p>
+<pre><code class="language-csharp">using var context = CreateContext();
+
+context.Blogs.RemoveRange(context.Blogs);
+
+context.AddRange(
+    new Blog { Name = &quot;Blog1&quot;, Url = &quot;http://blog1.com&quot; },
+    new Blog { Name = &quot;Blog2&quot;, Url = &quot;http://blog2.com&quot; });
+context.SaveChanges();
+</code></pre>
+<p>This typically isn't the most efficient way to clear out a table. If test speed is a concern, you may want to use raw SQL to delete the table instead:</p>
+<pre><code class="language-sql">DELETE FROM [Blogs];
+</code></pre>
+<p>You may want to write your own package to clean up tables in your model.</p>
+<h2><a href="#summary" aria-hidden="true" class="anchor" id="summary"></a>Summary</h2>
+<ul>
+<li>
+<p>When testing against a real database, it's worth distinguishing between the following test categories:</p>
+<ul>
+<li>
+<p>Read-only tests are relatively simple, and can always execute in parallel against the same database without having to worry about isolation.</p>
+</li>
+<li>
+<p>Write tests are more problematic, but transactions can be used to make sure they're properly isolated.</p>
+</li>
+<li>
+<p>Transactional tests are the most problematic, requiring logic to reset the database back to its original state, as well as disabling parallelization.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Separating these test categories out into separate classes may avoid confusion and accidental interference between tests.</p>
+</li>
+<li>
+<p>Give some thought up-front to your seeded test data, and try to write your tests in a way that won't break too often if that seed data changes.</p>
+</li>
+<li>
+<p>Use multiple databases to parallelize tests which modify the database, and possibly also to allow different seed data configurations.</p>
+</li>
+<li>
+<p>If test speed is a concern, you may want to look at more efficient techniques for creating your test database, and for cleaning its data between runs.</p>
+</li>
+<li>
+<p>Always keep test parallelization and isolation in mind.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/testing/testing-with-the-database">Testing against your production database system</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

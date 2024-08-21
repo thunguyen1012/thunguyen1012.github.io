@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Metrics | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Entity Framework Core (EF Core) exposes continuous numeric metrics which can provide a good indication of your program's health. These metrics can be used for the following purposes:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Logging, events, and diagnostics - Metrics</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Entity Framework Core (EF Core) exposes continuous numeric metrics which can provide a good indication of your program's health. These metrics can be used for the following purposes:</p>
+<ul>
+<li>
+<p>Track general database load in realtime as the application is running</p>
+</li>
+<li>
+<p>Expose problematic coding practices which can lead to degraded performance</p>
+</li>
+<li>
+<p>Track down and isolate anomalous program behavior</p>
+</li>
+</ul>
+<h2><a href="#metrics" aria-hidden="true" class="anchor" id="metrics"></a>Metrics</h2>
+<p>EF Core reports metrics via the standard System.Diagnostics.Metrics API. <code>Microsoft.EntityFrameworkCore</code> is the name of the meter. It's recommended to read .NET documentation on metrics.</p>
+<blockquote class="note">Note
+This feature is being introduced in EF Core 9.0 (in preview). See event counters below for older versions of EF Core.</blockquote>
+<h3><a href="#metrics-and-their-meaning" aria-hidden="true" class="anchor" id="metrics-and-their-meaning"></a>Metrics and their meaning</h3>
+<ul>
+<li>
+<p><code>microsoft.entityframeworkcore.active_dbcontexts</code></p>
+</li>
+<li>
+<p><code>microsoft.entityframeworkcore.queries</code></p>
+</li>
+<li>
+<p><code>microsoft.entityframeworkcore.savechanges</code></p>
+</li>
+<li>
+<p><code>microsoft.entityframeworkcore.compiled_query_cache_hit_rate</code></p>
+</li>
+<li>
+<p><code>microsoft.entityframeworkcore.execution_strategy_operation_failures</code></p>
+</li>
+<li>
+<p><code>microsoft.entityframeworkcore.optimistic_concurrency_failures</code></p>
+</li>
+</ul>
+<h4><a href="#metric-microsoft.entityframeworkcore.active_dbcontexts" aria-hidden="true" class="anchor" id="metric-microsoft.entityframeworkcore.active_dbcontexts"></a>Metric: <code>microsoft.entityframeworkcore.active_dbcontexts</code></h4>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Instrument Type</th>
+<th>Unit (UCUM)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>microsoft.entityframeworkcore.active_dbcontexts</code></td>
+<td>ObservableUpDownCounter</td>
+<td><code>{dbcontext}</code></td>
+<td>Number of currently active <code>DbContext</code> instances.</td>
+</tr>
+</tbody></table>
+<p>Available starting in: Entity Framework Core 9.0.</p>
+<h4><a href="#metric-microsoft.entityframeworkcore.queries" aria-hidden="true" class="anchor" id="metric-microsoft.entityframeworkcore.queries"></a>Metric: <code>microsoft.entityframeworkcore.queries</code></h4>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Instrument Type</th>
+<th>Unit (UCUM)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>microsoft.entityframeworkcore.queries</code></td>
+<td>ObservableCounter</td>
+<td><code>{query}</code></td>
+<td>Cumulative count of queries executed.</td>
+</tr>
+</tbody></table>
+<p>Available starting in: Entity Framework Core 9.0.</p>
+<h4><a href="#metric-microsoft.entityframeworkcore.savechanges" aria-hidden="true" class="anchor" id="metric-microsoft.entityframeworkcore.savechanges"></a>Metric: <code>microsoft.entityframeworkcore.savechanges</code></h4>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Instrument Type</th>
+<th>Unit (UCUM)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>microsoft.entityframeworkcore.savechanges</code></td>
+<td>ObservableCounter</td>
+<td><code>{savechanges}</code></td>
+<td>Cumulative count of changes saved.</td>
+</tr>
+</tbody></table>
+<p>Available starting in: Entity Framework Core 9.0.</p>
+<h4><a href="#metric-microsoft.entityframeworkcore.compiled_query_cache_hit_rate" aria-hidden="true" class="anchor" id="metric-microsoft.entityframeworkcore.compiled_query_cache_hit_rate"></a>Metric: <code>microsoft.entityframeworkcore.compiled_query_cache_hit_rate</code></h4>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Instrument Type</th>
+<th>Unit (UCUM)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>microsoft.entityframeworkcore.compiled_query_cache_hit_rate</code></td>
+<td>ObservableGauge</td>
+<td><code>%</code></td>
+<td>Hit rate - since last observation - for the compiled query cache.</td>
+</tr>
+</tbody></table>
+<p>Available starting in: Entity Framework Core 9.0.</p>
+<h4><a href="#metric-microsoft.entityframeworkcore.execution_strategy_operation_failures" aria-hidden="true" class="anchor" id="metric-microsoft.entityframeworkcore.execution_strategy_operation_failures"></a>Metric: <code>microsoft.entityframeworkcore.execution_strategy_operation_failures</code></h4>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Instrument Type</th>
+<th>Unit (UCUM)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>microsoft.entityframeworkcore.execution_strategy_operation_failures</code></td>
+<td>ObservableCounter</td>
+<td><code>{failure}</code></td>
+<td>Cumulative number of failed operation executed by an <code>IExecutionStrategy</code>.</td>
+</tr>
+</tbody></table>
+<p>Available starting in: Entity Framework Core 9.0.</p>
+<h4><a href="#metric-microsoft.entityframeworkcore.optimistic_concurrency_failures" aria-hidden="true" class="anchor" id="metric-microsoft.entityframeworkcore.optimistic_concurrency_failures"></a>Metric: <code>microsoft.entityframeworkcore.optimistic_concurrency_failures</code></h4>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Instrument Type</th>
+<th>Unit (UCUM)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>microsoft.entityframeworkcore.optimistic_concurrency_failures</code></td>
+<td>ObservableCounter</td>
+<td><code>{failure}</code></td>
+<td>Cumulative number of optimistic concurrency failures.</td>
+</tr>
+</tbody></table>
+<p>Available starting in: Entity Framework Core 9.0.</p>
+<h2><a href="#event-counters-legacy)" aria-hidden="true" class="anchor" id="event-counters-legacy)"></a>Event Counters (legacy)</h2>
+<p>EF Core reports metrics via the standard .NET event counters feature; it's recommended to read this blog post for a quick overview of how counters work.</p>
+<h3><a href="#attach-to-a-process-using-dotnet-counters" aria-hidden="true" class="anchor" id="attach-to-a-process-using-dotnet-counters"></a>Attach to a process using <code>dotnet-counters</code></h3>
+<p>The <code>dotnet-counters</code> tool can be used to attach to a running process and report EF Core event counters regularly; nothing special needs to be done in the program for these counters to be available.</p>
+<p>First, install the <code>dotnet-counters</code> tool: <code>dotnet tool install --global dotnet-counters</code>.</p>
+<p>Next, find the process ID (PID) of the .NET process running your EF Core application:</p>
+<ul>
+<li>
+<p>Windows</p>
+</li>
+<li>
+<p>Linux or macOS</p>
+</li>
+<li>
+<p>Open the Windows Task Manager by right-clicking on the task bar and selecting &quot;Task Manager&quot;.</p>
+</li>
+<li>
+<p>Make sure that the &quot;More details&quot; option is selected at the bottom of the window.</p>
+</li>
+<li>
+<p>In the Processes tab, right-click a column and make sure that the PID column is enabled.</p>
+</li>
+<li>
+<p>Locate your application in the process list, and get its process ID from the PID column.</p>
+</li>
+<li>
+<p>Use the <code>ps</code> command to list all processes running for your user.</p>
+</li>
+<li>
+<p>Locate your application in the process list, and get its process ID from the PID column.</p>
+</li>
+</ul>
+<p>Inside your .NET application, the process ID is available as <code>Process.GetCurrentProcess().Id</code>; this can be useful for printing the PID upon startup.</p>
+<p>Finally, launch <code>dotnet-counters</code> as follows:</p>
+<pre><code class="language-console">dotnet counters monitor Microsoft.EntityFrameworkCore -p &lt;PID&gt;
+</code></pre>
+<p><code>dotnet-counters</code> will now attach to your running process and start reporting continuous counter data:</p>
+<pre><code class="language-console">Press p to pause, r to resume, q to quit.
+ Status: Running
+
+[Microsoft.EntityFrameworkCore]
+    Active DbContexts                                               1
+    Execution Strategy Operation Failures (Count / 1 sec)           0
+    Execution Strategy Operation Failures (Total)                   0
+    Optimistic Concurrency Failures (Count / 1 sec)                 0
+    Optimistic Concurrency Failures (Total)                         0
+    Queries (Count / 1 sec)                                         1
+    Queries (Total)                                               189
+    Query Cache Hit Rate (%)                                      100
+    SaveChanges (Count / 1 sec)                                     0
+    SaveChanges (Total)                                             0
+</code></pre>
+<h3><a href="#counters-and-their-meaning" aria-hidden="true" class="anchor" id="counters-and-their-meaning"></a>Counters and their meaning</h3>
+<table><thead>
+<tr>
+<th>Counter name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Active DbContexts <br> (<code>active-db-contexts</code>)</td>
+<td>The number of active, undisposed ```DbContext``` instances currently in your application. If this number grows continuously, you may have a leak because ```DbContext``` instances aren't being properly disposed. Note that if <a href="../performance/advanced-performance-topics#dbcontext-pooling" data-linktype="relative-path">context pooling</a> is enabled, this number includes pooled ```DbContext``` instances not currently in use.</td>
+</tr>
+<tr>
+<td>Execution Strategy Operation Failures <br> (<code>total-execution-strategy-operation-failures</code> and  <code>execution-strategy-operation-failures-per-second</code>)</td>
+<td>The number of times a database operation failed to execute. If a retrying execution strategy is enabled, this includes each individual failure within multiple attempts on the same operation. This can be used to detect transient issues with your infrastructure.</td>
+</tr>
+<tr>
+<td>Optimistic Concurrency Failures <br> (<code>total-optimistic-concurrency-failures</code> and <code>optimistic-concurrency-failures-per-second</code>)</td>
+<td>The number of times <code>SaveChanges</code> failed because of an optimistic concurrency error, because data in the data store was changed since your code loaded it. This corresponds to a <a href="/en-us/dotnet/api/microsoft.entityframeworkcore.dbupdateconcurrencyexception" class="no-loc" data-linktype="absolute-path">DbUpdateConcurrencyException</a> being thrown.</td>
+</tr>
+<tr>
+<td>Queries <br> (<code>total-queries</code> and <code>queries-per-second</code>)</td>
+<td>The number of queries executed.</td>
+</tr>
+<tr>
+<td>Query Cache Hit Rate (%) <br> (<code>compiled-query-cache-hit-rate</code>)</td>
+<td>The ratio of query cache hits to misses. The first time a given LINQ query is executed by EF Core (excluding parameters), it must be compiled in what is a relatively heavy process. In a normal application, all queries are reused, and the query cache hit rate should be stable at 100% after an initial warmup period. If this number is less than 100% over time, you may experience degraded perf due to repeated compilations, which could be a result of suboptimal dynamic query generation.</td>
+</tr>
+<tr>
+<td>SaveChanges <br>(<code>total-save-changes</code> and <code>save-changes-per-second</code>)</td>
+<td>The number of times <code>SaveChanges</code> has been called. Note that <code>SaveChanges</code> saves multiple changes in a single batch, so this doesn't necessarily represent each individual update done on a single entity.</td>
+</tr>
+</tbody></table>
+<h3><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h3>
+<ul>
+<li>.NET documentation on event counters</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/metrics">Metrics in EF Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

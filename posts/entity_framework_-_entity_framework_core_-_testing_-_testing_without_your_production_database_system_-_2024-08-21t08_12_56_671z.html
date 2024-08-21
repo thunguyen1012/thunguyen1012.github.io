@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Testing - Testing without your production database system | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In this page, we discuss techniques for writing automated tests which do not involve the database system against which the application runs in production, by swapping your database with a test double. There are various types of test doubles and approaches for doing this, and it's recommended to thoroughly read Choosing a testing strategy to fully understand the different options. Finally, it's also possible to test against your production database system; this is covered in Testing against your production database system.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Testing - Testing without your production database system</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>It's possible to write automated tests which do not involve the database system against which the application runs in production, by swapping your database with a test double.</p>
+<blockquote class="tip">Tip
+This page shows xUnit techniques, but similar concepts exist in other testing frameworks, including NUnit.</blockquote>
+<h2><a href="#repository-pattern" aria-hidden="true" class="anchor" id="repository-pattern"></a>Repository pattern</h2>
+<p>If you've decided to write tests without involving your production database system, then the recommended technique for doing so is the repository pattern:</p>
+<pre><code class="language-csharp">public interface IBloggingRepository
+{
+    Blog GetBlogByName(string name);
+
+    IEnumerable&lt;Blog&gt; GetAllBlogs();
+
+    void AddBlog(Blog blog);
+
+    void SaveChanges();
+}
+</code></pre>
+<p>... and here's a partial sample implementation for production use:</p>
+<pre><code class="language-csharp">public class BloggingRepository : IBloggingRepository
+{
+    private readonly BloggingContext _context;
+
+    public BloggingRepository(BloggingContext context)
+        =&gt; _context = context;
+
+    public Blog GetBlogByName(string name)
+        =&gt; _context.Blogs.FirstOrDefault(b =&gt; b.Name == name);
+
+    // Other code...
+}
+</code></pre>
+<p>There's not much to it: the repository simply wraps an EF Core context, and exposes methods which execute the database queries and updates on it. A key point to note is that our <code>GetAllBlogs</code> method returns <code>IEnumerable&lt;Blog&gt;</code>, and not <code>IQueryable&lt;Blog&gt;</code>. Returning the latter would mean that query operators can still be composed over the result, requiring that EF Core still be involved in translating the query; this would defeat the purpose of having a repository in the first place. <code>IEnumerable&lt;Blog&gt;</code> allows us to easily stub or mock what the repository returns.</p>
+<p>For an ASP.NET Core application, we need to register the repository as a service in dependency injection by adding the following to the application's <code>ConfigureServices</code>:</p>
+<pre><code class="language-csharp">services.AddScoped&lt;IBloggingRepository, BloggingRepository&gt;();
+</code></pre>
+<p>Finally, our controllers get injected with the repository service instead of the EF Core context, and execute methods on it:</p>
+<pre><code class="language-csharp">private readonly IBloggingRepository _repository;
+
+public BloggingControllerWithRepository(IBloggingRepository repository)
+    =&gt; _repository = repository;
+
+[HttpGet]
+public Blog GetBlog(string name)
+    =&gt; _repository.GetBlogByName(name);
+</code></pre>
+<p>You've written your application, and now it's time to write your tests.</p>
+<pre><code class="language-csharp">[Fact]
+public void GetBlog()
+{
+    // Arrange
+    var repositoryMock = new Mock&lt;IBloggingRepository&gt;();
+    repositoryMock
+        .Setup(r =&gt; r.GetBlogByName(&quot;Blog2&quot;))
+        .Returns(new Blog { Name = &quot;Blog2&quot;, Url = &quot;http://blog2.com&quot; });
+
+    var controller = new BloggingControllerWithRepository(repositoryMock.Object);
+
+    // Act
+    var blog = controller.GetBlog(&quot;Blog2&quot;);
+
+    // Assert
+    repositoryMock.Verify(r =&gt; r.GetBlogByName(&quot;Blog2&quot;));
+    Assert.Equal(&quot;http://blog2.com&quot;, blog.Url);
+}
+</code></pre>
+<p>The full sample code can be viewed here.</p>
+<h2><a href="#sqlite-in-memory" aria-hidden="true" class="anchor" id="sqlite-in-memory"></a>SQLite in-memory</h2>
+<p>The EF Core database system can be used as an in-memory database when testing, since it provides easy isolation between tests and does not require dealing with actual files.</p>
+<p>To use in-memory SQLite, it's important to understand that a new database is created whenever a low-level connection is opened, and that it's deleted when that connection is closed. In normal usage, EF Core's <code>DbContext</code> opens and closes database connections as needed - every time a query is executed - to avoid keeping connection for unnecessarily long times. However, with in-memory SQLite this would lead to resetting the database every time; so as a workaround, we open the connection before passing it to EF Core, and arrange for it to be closed only when the test completes:</p>
+<pre><code class="language-csharp">public SqliteInMemoryBloggingControllerTest()
+    {
+        // Create and open a connection. This creates the SQLite in-memory database, which will persist until the connection is closed
+        // at the end of the test (see Dispose below).
+        _connection = new SqliteConnection(&quot;Filename=:memory:&quot;);
+        _connection.Open();
+
+        // These options will be used by the context instances in this test suite, including the connection opened above.
+        _contextOptions = new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+            .UseSqlite(_connection)
+            .Options;
+
+        // Create the schema and seed some data
+        using var context = new BloggingContext(_contextOptions);
+
+        if (context.Database.EnsureCreated())
+        {
+            using var viewCommand = context.Database.GetDbConnection().CreateCommand();
+            viewCommand.CommandText = @&quot;
+CREATE VIEW AllResources AS
+SELECT Url
+FROM Blogs;&quot;;
+            viewCommand.ExecuteNonQuery();
+        }
+
+        context.AddRange(
+            new Blog { Name = &quot;Blog1&quot;, Url = &quot;http://blog1.com&quot; },
+            new Blog { Name = &quot;Blog2&quot;, Url = &quot;http://blog2.com&quot; });
+        context.SaveChanges();
+    }
+
+    BloggingContext CreateContext() =&gt; new BloggingContext(_contextOptions);
+
+    public void Dispose() =&gt; _connection.Dispose();
+</code></pre>
+<p>Tests can now call <code>CreateContext</code>, which returns a context using the connection we set up in the constructor, ensuring we have a clean database with the seeded data.</p>
+<p>The full sample code for SQLite in-memory testing can be viewed here.</p>
+<h2><a href="#in-memory-provider" aria-hidden="true" class="anchor" id="in-memory-provider"></a>In-memory provider</h2>
+<p>In this article, I'm going to show you how to use in-memory databases for testing.</p>
+<pre><code class="language-csharp">public InMemoryBloggingControllerTest()
+{
+    _contextOptions = new DbContextOptionsBuilder&lt;BloggingContext&gt;()
+        .UseInMemoryDatabase(&quot;BloggingControllerTest&quot;)
+        .ConfigureWarnings(b =&gt; b.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+        .Options;
+
+    using var context = new BloggingContext(_contextOptions);
+
+    context.Database.EnsureDeleted();
+    context.Database.EnsureCreated();
+
+    context.AddRange(
+        new Blog { Name = &quot;Blog1&quot;, Url = &quot;http://blog1.com&quot; },
+        new Blog { Name = &quot;Blog2&quot;, Url = &quot;http://blog2.com&quot; });
+
+    context.SaveChanges();
+}
+</code></pre>
+<p>The full sample code for in-memory testing can be viewed here.</p>
+<h3><a href="#in-memory-database-naming" aria-hidden="true" class="anchor" id="in-memory-database-naming"></a>In-memory database naming</h3>
+<p>In-memory databases are identified by a simple, string name, and it's possible to connect to the same database several times by providing the same name (this is why the sample above must call <code>EnsureDeleted</code> before each test). However, note that in-memory databases are rooted in the context's internal service provider; while in most cases contexts share the same service provider, configuring contexts with different options may trigger the use of a new internal service provider. When that's the case, explicitly pass the same instance of <code>InMemoryDatabaseRoot</code> to <code>UseInMemoryDatabase</code> for all contexts which should share in-memory databases (this is typically done by having a static <code>InMemoryDatabaseRoot</code> field).</p>
+<h3><a href="#transactions" aria-hidden="true" class="anchor" id="transactions"></a>Transactions</h3>
+<p>Note that by default, if a transaction is started, the in-memory provider will throw an exception since transactions aren't supported. You may wish to have transactions silently ignored instead, by configuring EF Core to ignore <code>InMemoryEventId.TransactionIgnoredWarning</code> as in the above sample. However, if your code actually relies on transactional semantics - e.g. depends on rollback actually rolling back changes - your test won't work.</p>
+<h3><a href="#views" aria-hidden="true" class="anchor" id="views"></a>Views</h3>
+<p>The in-memory provider allows the definition of views via LINQ queries, using ToInMemoryQuery:</p>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;UrlResource&gt;()
+    .ToInMemoryQuery(() =&gt; context.Blogs.Select(b =&gt; new UrlResource { Url = b.Url }));
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/testing/testing-without-the-database">Testing without your production database system</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

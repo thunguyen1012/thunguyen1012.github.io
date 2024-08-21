@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Testing - Introduction to testing | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Testing is an important concern to almost all application types - it allows you to be sure your application works correctly, and makes it instantly known if its behavior regresses in the future. Since testing may affect how your code is architected, it's highly recommended to plan for testing early and to ensure good coverage as your application evolves. This introductory section provides a quick overview of various testing strategies for applications using EF Core.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Testing - Introduction to testing</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>11/23/2022</p>
+</li>
+<li>
+<p>5 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>EF Core supports a wide range of testing strategies for your applications.</p>
+<h2><a href="#involving-the-database-or-not)" aria-hidden="true" class="anchor" id="involving-the-database-or-not)"></a>Involving the database (or not)</h2>
+<p>This article looks at two examples of test doubles in the EF Core context.</p>
+<p>For an in-depth comparison and analysis of the different approaches, see Choosing a testing strategy. Below is a short point-by-point summary to help you get up to speed with the different options:</p>
+<ul>
+<li>
+<p>Developers frequently avoid testing against their production database system because they believe this is difficult or slow. This isn't always true in our experience, and we suggest giving this approach a chance: Testing against your production database system provides techniques for doing this reliably and efficiently. Writing at least some tests against your database is usually necessary in any case - to make sure your application actually works against your production database - and tests not involving the database can be limited in what they allow you to test (see below).</p>
+</li>
+<li>
+<p>The in-memory provider will not behave like your real database in many important ways. Some features cannot be tested with it at all (e.g. transactions, raw SQL..), while other features may behave differently than your production database (e.g. case-sensitivity in queries). While in-memory can work for simple, constrained query scenarios, it is highly limited and we discourage its use.</p>
+<ul>
+<li>Mocking <code>DbSet</code> for querying is complex and difficult, and suffers from the same disadvantages as the in-memory approach; we discourage this as well.</li>
+</ul>
+</li>
+<li>
+<p>SQLite in-memory mode offers better compatibility with production relational databases, since SQLite is itself a full-fledged relational database. However, there will still be some important discrepancies between SQLite and your production database, and some features cannot be tested at all (e.g. provider-specific methods on EF.Functions).</p>
+</li>
+<li>
+<p>For a testing approach that allows you to use a reliable test double for all the functionality of your production database system, it's possible to introduce a repository layer in your application. This allows you to exclude EF Core entirely from testing and to fully mock the repository; however, this alters the architecture of your application in a way which could be significant, and involves more implementation and maintenance costs.</p>
+</li>
+</ul>
+<h2><a href="#further-reading" aria-hidden="true" class="anchor" id="further-reading"></a>Further reading</h2>
+<p>For more information on testing your production database system, see Testing against your production database system.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/testing/">Testing EF Core Applications</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
