@@ -124,7 +124,7 @@ public class Blog
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 By convention, an index is created in each property (or set of properties) that are used as a foreign key.</p>
 </blockquote>
 <h2><a href="#composite-index" aria-hidden="true" class="anchor" id="composite-index"></a>Composite index</h2>
@@ -179,7 +179,7 @@ public class Blog
 <p>Attempting to insert more than one entity with the same values for the index's column set will cause an exception to be thrown.</p>
 <h2><a href="#index-sort-order" aria-hidden="true" class="anchor" id="index-sort-order"></a>Index sort order</h2>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This feature is being introduced in EF Core 7.0.</p>
 </blockquote>
 <p>The sort order of an index's columns affects its performance.</p>
@@ -256,7 +256,7 @@ public class Blog
         .HasDatabaseName(&quot;Index_Url&quot;);
 }
 </code></pre>
-<p>Note that if you call <code>HasIndex</code> more than once on the same set of properties, that continues to configure a single index rather than create a new one:</p>
+<p class='note'>Note that if you call <code>HasIndex</code> more than once on the same set of properties, that continues to configure a single index rather than create a new one:</p>
 <pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;()
     .HasIndex(b =&gt; new { b.FirstName, b.LastName })
     .HasDatabaseName(&quot;IX_Names_Ascending&quot;);
@@ -275,7 +275,7 @@ modelBuilder.Entity&lt;Blog&gt;()
     .HasIndex(b =&gt; new { b.FirstName, b.LastName }, &quot;IX_Names_Descending&quot;)
     .IsDescending();
 </code></pre>
-<p>Note that this name is also used as a default for the database name, so explicitly calling <code>HasDatabaseName</code> isn't required.</p>
+<p class='note'>Note that this name is also used as a default for the database name, so explicitly calling <code>HasDatabaseName</code> isn't required.</p>
 <h2><a href="#index-filter" aria-hidden="true" class="anchor" id="index-filter"></a>Index filter</h2>
 <p>This article describes how to specify a filtered index in a SQL Server database.</p>
 <p>You can use the Fluent API to specify a filter on an index, provided as a SQL expression:</p>
@@ -317,7 +317,7 @@ modelBuilder.Entity&lt;Blog&gt;()
 }
 </code></pre>
 <p>Multiple check constraints can be defined on the same table, each with their own name.</p>
-<p>Note: some common check constraints can be configured via the community package EFCore.CheckConstraints.</p>
+<p class='note'>Note: some common check constraints can be configured via the community package EFCore.CheckConstraints.</p>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/indexes">Indexes</a></p>
  <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/EFCore.html'>EFCore</a><a class='topic-tag' href='/tags/Summary.html'>Summary</a></div>
       </div>

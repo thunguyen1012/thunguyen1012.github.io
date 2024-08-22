@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>Entity Framework Core allows you to drop down to SQL queries when working with a relational database.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <h2><a href="#basic-sql-queries" aria-hidden="true" class="anchor" id="basic-sql-queries"></a>Basic SQL queries</h2>
@@ -99,7 +99,7 @@ You can view this article's sample on GitHub.</p>
     .ToList();
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 <code>FromSql</code> was introduced in EF Core 7.0. When using older versions, use <code>FromSqlInterpolated</code> instead.</p>
 </blockquote>
 <p>SQL queries can be used to execute a stored procedure which returns entity data:</p>
@@ -108,12 +108,12 @@ You can view this article's sample on GitHub.</p>
     .ToList();
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 <code>FromSql</code> can only be used directly on a <code>DbSet</code>. It cannot be composed over an arbitrary LINQ query.</p>
 </blockquote>
 <h2><a href="#passing-parameters" aria-hidden="true" class="anchor" id="passing-parameters"></a>Passing parameters</h2>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Pay close attention to parameterization when using SQL queries
 When introducing any user-provided values into a SQL query, care must be taken to avoid SQL injection attacks. SQL injection occurs when a program integrates a user-provided string value into a SQL query, and the user-provided value is crafted to terminate the string and perform another malicious SQL operation. To learn more about SQL injection, see this page.
 The <code>FromSql</code> and <code>FromSqlInterpolated</code> methods are safe against SQL injection, and always integrate parameter data as a separate SQL parameter. However, the <code>FromSqlRaw</code> method can be vulnerable to SQL injection attacks, if improperly used. See below for more details.</p>
@@ -141,7 +141,7 @@ var blogs = context.Blogs
     .ToList();
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The parameters you pass must exactly match the stored procedure definition. Pay special attention to the ordering of the parameters, taking care to not miss or misplace any of them - or consider using named parameter notation. Also, make sure the parameter types correspond, and that their facets (size, precision, scale) are set as needed.</p>
 </blockquote>
 <h3><a href="#dynamic-sql-and-parameters" aria-hidden="true" class="anchor" id="dynamic-sql-and-parameters"></a>Dynamic SQL and parameters</h3>
@@ -166,7 +166,7 @@ var blogs = context.Blogs
 <p>This code shows how to insert a column name directly into a SQL query, using C# string interpolation.</p>
 <p>On the other hand, the column value is sent via a <code>DbParameter</code>, and is therefore safe in the face of SQL injection.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Be very careful when using FromSqlRaw, and always make sure values are either from a safe origin, or are properly sanitized. SQL injection attacks can have disasterous consequences for your application.</p>
 </blockquote>
 <h2><a href="#composing-with-linq" aria-hidden="true" class="anchor" id="composing-with-linq"></a>Composing with LINQ</h2>
@@ -221,7 +221,7 @@ var blogs = context.Blogs
 </code></pre>
 <h2><a href="#querying-scalar-non-entity)-types" aria-hidden="true" class="anchor" id="querying-scalar-non-entity)-types"></a>Querying scalar (non-entity) types</h2>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This feature was introduced in EF Core 7.0.</p>
 </blockquote>
 <p>Sql is an extension of the <code>FromSql</code> query language.</p>
@@ -246,7 +246,7 @@ This feature was introduced in EF Core 7.0.</p>
 </code></pre>
 <p><code>ExecuteSqlRaw</code> is a subclass of <code>FromSqlRaw</code>.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Prior to EF Core 7.0, it was sometimes necessary to use the <code>ExecuteSql</code> APIs to perform a &quot;bulk update&quot; on the database, as above; this is considerably more efficient than querying for all matching rows and then using <code>SaveChanges</code> to modify them. EF Core 7.0 introduced <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>, which made it possible to express efficient bulk update operations via LINQ. It's recommended to use those APIs whenever possible, instead of <code>ExecuteSql</code>.</p>
 </blockquote>
 <h2><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h2>

@@ -88,7 +88,7 @@
         <h1>Entity Framework - Entity Framework Core - Create a model - Keyless entity types</h1>
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This feature was added under the name of query types. It was later renamed to keyless entity types.</p>
 </blockquote>
 <p>In addition to regular entity types, an EF Core model can contain keyless entity types, which can be used to carry out database queries against data that doesn't contain key values.</p>
@@ -179,7 +179,7 @@ public class BlogPostsCount
 <h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
 <p>The following example shows how to use keyless entity types to query a database view.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <p>First, we define a simple Blog and Post model:</p>
@@ -241,11 +241,11 @@ foreach (var postCount in postCounts)
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Note we have also defined a context level query property (DbSet) to act as a root for queries against this type.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 To test keyless entity types mapped to views using the in-memory provider, map them to a query via ToInMemoryQuery. See the in-memory provider docs for more information.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/keyless-entity-types">Keyless Entity Types</a></p>

@@ -306,7 +306,9 @@ fn parse_post(template: &str, shared: &Shared, path: &Path, force: bool) -> Opti
         // Parse video
         post.markdown = custom_parser(&post.markdown, |src| src.replace("<animate>", "<video style='max-width: 800px; margin-left: -140px' autoplay loop><source type='video/mp4' src='").replace("</animate>", "'></source></video>"));
 
-        let output_html = apply_template(&template, &post, "", Some(&shared));
+        let mut output_html = apply_template(&template, &post, "", Some(&shared));
+        // Parse alert
+        output_html = output_html.replace("<p>Note", "<p class='note'>Note").replace("<p>Tip", "<p class='tip'>Tip").replace("<p>Warning", "<p class='warning'>Warning").replace("<p>Caution", "<p class='caution'>Caution").replace("<p>Important", "<p class='important'>Important");
         post.output_html = output_html;
         return Some(post);
     }

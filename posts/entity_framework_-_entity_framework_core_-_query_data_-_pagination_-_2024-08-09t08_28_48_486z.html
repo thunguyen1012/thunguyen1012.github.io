@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>Pagination refers to retrieving results in pages, rather than all at once; this is typically done for large resultsets, where a user interface is shown that allows the user to navigate to the next or previous page of the results.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Regardless of the pagination method used, always make sure that your ordering is fully unique. For example, if results are ordered only by date, but there can be multiple results with the same date, then results could be skipped when paginating as they're ordered differently across two paginating queries. Ordering by both date and ID (or any other unique property or combination of properties) makes the ordering fully unique and avoids this problem. Note that relational databases do not apply any ordering by default, even on the primary key.</p>
 </blockquote>
 <h2><a href="#offset-pagination" aria-hidden="true" class="anchor" id="offset-pagination"></a>Offset pagination</h2>
@@ -134,7 +134,7 @@ var nextPage = context.Posts
 </code></pre>
 <p>This ensures that the next page picks off exactly where the previous one ended. As more ordering keys are added, additional clauses can be added.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Most SQL databases support a simpler and more efficient version of the above, using row values: <code>WHERE (Date, Id) &gt; (@lastDate, @lastId)</code>. EF Core does not currently support expressing this in LINQ queries, this is tracked by #26822.</p>
 </blockquote>
 <h2><a href="#indexes" aria-hidden="true" class="anchor" id="indexes"></a>Indexes</h2>

@@ -103,7 +103,7 @@ LEFT JOIN [Contributors] AS [c] ON [b].[Id] = [c].[BlogId]
 ORDER BY [b].[Id], [p].[Id]
 </code></pre>
 <p>In this article, I'm going to show you how to avoid this problem in a relational database application.</p>
-<p>Note that cartesian explosion does not occur when the two JOINs aren't at the same level:</p>
+<p class='note'>Note that cartesian explosion does not occur when the two JOINs aren't at the same level:</p>
 <pre><code class="language-c#">var blogs = ctx.Blogs
     .Include(b =&gt; b.Posts)
     .ThenInclude(p =&gt; p.Comments)
@@ -161,11 +161,11 @@ INNER JOIN [Posts] AS [p] ON [b].[BlogId] = [p].[BlogId]
 ORDER BY [b].[BlogId]
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 When using split queries with <code>Skip/Take</code>, pay special attention to making your query ordering fully unique; not doing so could cause incorrect data to be returned. For example, if results are ordered only by date, but there can be multiple results with the same date, then each one of the split queries could each get different results from the database. Ordering by both date and ID (or any other unique property or combination of properties) makes the ordering fully unique and avoids this problem. Note that relational databases do not apply any ordering by default, even on the primary key.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 One-to-one related entities are always loaded via JOINs in the same query, as it has no performance impact.</p>
 </blockquote>
 <h2><a href="#enabling-split-queries-globally" aria-hidden="true" class="anchor" id="enabling-split-queries-globally"></a>Enabling split queries globally</h2>

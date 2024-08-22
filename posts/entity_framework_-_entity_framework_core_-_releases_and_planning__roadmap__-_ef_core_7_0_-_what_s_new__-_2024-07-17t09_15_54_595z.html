@@ -102,7 +102,7 @@
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>EF Core 7.0 (EF7) was released in November 2022.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into the samples by downloading the sample code from GitHub. Each section links to the source code specific to that section.</p>
 </blockquote>
 <p>EF7 targets .NET 6, and so can be used with either .NET 6 (LTS) or .NET 7.</p>
@@ -267,14 +267,14 @@ public class Commit
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The sample model can be found in BlogsContext.cs.</p>
 </blockquote>
 <h2><a href="#json-columns" aria-hidden="true" class="anchor" id="json-columns"></a>JSON Columns</h2>
 <p>A relational database <code>is</code> a computer program that stores data.</p>
 <p>The <code>Entity</code> Framework 7 (EF) has been released.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 SQLite support for JSON <code>is</code> planned for post EF7. The PostgreSQL and Pomelo MySQL providers already contain some support for JSON columns. We will be working with the authors of those providers to align JSON support across all providers.</p>
 </blockquote>
 <h3><a href="#mapping-to-json-columns" aria-hidden="true" class="anchor" id="mapping-to-json-columns"></a>Mapping to JSON columns</h3>
@@ -320,7 +320,7 @@ public class Address
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from JsonColumnsSample.cs.</p>
 </blockquote>
 <p>This example shows how to map the <code>Authors</code> table to the <code>ContactDetails</code> table.</p>
@@ -359,7 +359,7 @@ The code shown here comes from JsonColumnsSample.cs.</p>
 <p>The <code>Authors</code> table will now contain a JSON column for <code>ContactDetails</code> populated with a JSON document for each author:</p>
 <p><code>Authors</code></p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This use of aggregates <code>is</code> very similar to the way JSON documents are mapped when using the EF Core provider for Azure Cosmos DB. JSON columns bring the capabilities of using EF Core against document databases to documents embedded in a relational database.</p>
 </blockquote>
 <p>In this tutorial, I will show you how to map a post's metadata to a document.</p>
@@ -442,7 +442,7 @@ public class Commit
     });
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 ToJson <code>is</code> only needed on the aggregate root to map the entire aggregate to a JSON document.</p>
 </blockquote>
 <p>With this mapping, EF7 can create and query into a complex JSON document like this:</p>
@@ -505,15 +505,15 @@ ToJson <code>is</code> only needed on the aggregate root to map the entire aggre
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Mapping spatial types directly to JSON <code>is</code> not yet supported. The document above uses <code>double</code> values as a workaround. Vote for Support spatial types in JSON columns if this <code>is</code> something you are interested in.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Mapping collections of primitive types to JSON <code>is</code> not yet supported. The document above uses a value converter to transform the collection into a comma-separated string. Vote for Json: add support for collection of primitive types if this <code>is</code> something you are interested in.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Mapping of owned types to JSON <code>is</code> not yet supported in conjunction with TPT or TPC inheritance. Vote for Support JSON properties with TPT/TPC inheritance mapping if this <code>is</code> something you are interested in.</p>
 </blockquote>
 <h3><a href="#queries-into-json-columns" aria-hidden="true" class="anchor" id="queries-into-json-columns"></a>Queries into JSON columns</h3>
@@ -576,11 +576,11 @@ LEFT JOIN [Authors] AS [a] ON [p].[AuthorId] = [a].[Id]
 WHERE CAST(JSON_VALUE([p].[Metadata],'$.Views') AS int) &gt; 3000
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 More complex queries involving JSON collections require <code>jsonpath</code> support. Vote for Support <code>jsonpath</code> querying if this <code>is</code> something you are interested in.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Consider creating indexes to improve query performance in JSON documents. For example, see <code>Index</code> Json data when using SQL Server.</p>
 </blockquote>
 <h3><a href="#updating-json-columns" aria-hidden="true" class="anchor" id="updating-json-columns"></a>Updating JSON columns</h3>
@@ -650,7 +650,7 @@ WHERE [Id] = @p1;
 <p>All of this means that the <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> methods complement, rather than replace, the existing <code>SaveChanges</code> mechanism.</p>
 <h3><a href="#basic-executedelete-examples" aria-hidden="true" class="anchor" id="basic-executedelete-examples"></a>Basic <code>ExecuteDelete</code> examples</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from ExecuteDeleteSample.cs.</p>
 </blockquote>
 <p>Calling <code>ExecuteDelete</code> or <code>ExecuteDeleteAsync</code> on a <code>DbSet</code> immediately deletes all entities of that <code>DbSet</code> from the database. For example, to delete all <code>Tag</code> entities:</p>
@@ -682,7 +682,7 @@ WHERE NOT EXISTS (
 </code></pre>
 <h3><a href="#basic-executeupdate-examples" aria-hidden="true" class="anchor" id="basic-executeupdate-examples"></a>Basic <code>ExecuteUpdate</code> examples</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from ExecuteUpdateSample.cs.</p>
 </blockquote>
 <p>Two new methods have been added to the Execute method to update properties.</p>
@@ -749,7 +749,7 @@ WHERE [a].[Name] IS NOT NULL AND ([a].[Name] LIKE N'Arthur%')
 </code></pre>
 <p>But fails when using TPC or TPT.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Issue #10879 tracks adding support for automatically sending multiple commands in these scenarios. Vote for this issue if it's something you would like to see implemented.</p>
 </blockquote>
 <h3><a href="#executedelete-and-relationships" aria-hidden="true" class="anchor" id="executedelete-and-relationships"></a><code>ExecuteDelete</code> and relationships</h3>
@@ -762,7 +762,7 @@ Issue #10879 tracks adding support for automatically sending multiple commands i
 await context.Authors.TagWith(&quot;Deleting authors...&quot;).ExecuteDeleteAsync();
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 TagWith can be used to tag <code>ExecuteDelete</code> or <code>ExecuteUpdate</code> in the same way as it tags normal queries.</p>
 </blockquote>
 <p>This results in two separate commands; the first to delete the dependents:</p>
@@ -778,11 +778,11 @@ DELETE FROM [a]
 FROM [Authors] AS [a]
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 Multiple <code>ExecuteDelete</code> and <code>ExecuteUpdate</code> commands will not be contained in a single transaction by default. However, the <code>DbContext</code> transaction APIs can be used in the normal way to wrap these commands in a transaction.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Sending these commands in a single round-trip depends on Issue #10879. Vote for this issue if it's something you would like to see implemented.</p>
 </blockquote>
 <p>In this article we are going to look at how to delete blogs from the EF Core database.</p>
@@ -806,11 +806,11 @@ FROM [Blogs] AS [b]
 </ul>
 <p>Some examples of these improvements are shown below.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 See Announcing <code>Entity</code> Framework Core 7 Preview 6: Performance Edition on the .NET <code>Blog</code> for an in-depth discussion of these changes.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from SaveChangesPerformanceSample.cs.</p>
 </blockquote>
 <h3><a href="#unneeded-transactions-are-eliminated" aria-hidden="true" class="anchor" id="unneeded-transactions-are-eliminated"></a>Unneeded transactions are eliminated</h3>
@@ -878,7 +878,7 @@ dbug: 9/30/2022 17:19:52.023 RelationalEventId.TransactionCommitted[20202] (Micr
       Committed transaction.
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 Even though this <code>is</code> complicated, batching multiple inserts like this <code>is</code> still significantly faster than sending a single command for each insert.</p>
 </blockquote>
 <p>In EF7, you can still get this SQL if your tables contain triggers, but for the common case we now generate much more efficient, if still somewhat complex, commands:</p>
@@ -994,11 +994,11 @@ dbug: 10/1/2022 21:51:55.807 RelationalEventId.TransactionCommitted[20202] (Micr
 <h2><a href="#table-per-concrete-type-tpc)-inheritance-mapping" aria-hidden="true" class="anchor" id="table-per-concrete-type-tpc)-inheritance-mapping"></a>Table-per-concrete-type (TPC) inheritance mapping</h2>
 <p>EF Core 7 introduces two new mapping strategies for inheritance of .NET types.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from TpcInheritanceSample.cs.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The EF Team demonstrated and talked in depth about TPC mapping in an episode of the .NET Data Community Standup. As with all Community Standup episodes, you can watch the TPC episode now on YouTube.</p>
 </blockquote>
 <h3><a href="#tpc-database-schema" aria-hidden="true" class="anchor" id="tpc-database-schema"></a>TPC database schema</h3>
@@ -1161,7 +1161,7 @@ modelBuilder.Entity&lt;FarmAnimal&gt;();
 modelBuilder.Entity&lt;Human&gt;();
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 This <code>is</code> different from the legacy EF6 behavior, where derived types of mapped base types would be automatically discovered if they were contained in the same assembly.</p>
 </blockquote>
 <p>The following example shows how to map a hierarchy as a strategy.</p>
@@ -1289,7 +1289,7 @@ INNER JOIN [Pets] AS [p] ON [a].[Id] = [p].[Id]
 INNER JOIN [Cats] AS [c] ON [a].[Id] = [c].[Id]
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 EF Core uses “discriminator synthesis” to determine which table the data comes from, and hence the correct type to use. This works because the LEFT JOIN returns nulls for the dependent ID column (the “sub-tables”) which aren’t the correct type. So for a dog, [d].[Id] will be non-null, and all the other (concrete) IDs will be null.</p>
 </blockquote>
 <p>All of these queries can suffer from performance issues due to the table joins. This <code>is</code> why TPT <code>is</code> never a good choice for query performance.</p>
@@ -1351,7 +1351,7 @@ FROM [Cats] AS [c]
 <h3><a href="#space-considerations" aria-hidden="true" class="anchor" id="space-considerations"></a>Space considerations</h3>
 <p>The TPT and TPC tables can be used to store large amounts of data when there are many subtypes with many properties that are often not used.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If your database system supports it (e.g. SQL Server), then consider using &quot;sparse columns&quot; for TPH columns that will be rarely populated.</p>
 </blockquote>
 <h3><a href="#key-generation" aria-hidden="true" class="anchor" id="key-generation"></a>Key generation</h3>
@@ -1387,7 +1387,7 @@ dotnet new ef-templates
 <p>The templates can then be customize and will automatically be used by <code>dotnet ef dbcontext scaffold</code> and <code>Scaffold-DbContext</code>.</p>
 <p>For more details, see Custom Reverse Engineering Templates.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The EF Team demonstrated and talked in depth about reverse engineering templates in an episode of the .NET Data Community Standup. As with all Community Standup episodes, you can watch the T4 templates episode now on YouTube.</p>
 </blockquote>
 <h2><a href="#model-building-conventions" aria-hidden="true" class="anchor" id="model-building-conventions"></a>Model building conventions</h2>
@@ -1400,11 +1400,11 @@ The EF Team demonstrated and talked in depth about reverse engineering templates
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 To find all built-in model building conventions, look for every <code>class</code> that implements the IConvention interface.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from ModelBuildingConventionsSample.cs.</p>
 </blockquote>
 <h3><a href="#removing-an-existing-convention" aria-hidden="true" class="anchor" id="removing-an-existing-convention"></a>Removing an existing convention</h3>
@@ -1480,7 +1480,7 @@ public class Post
       BlogId
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If your model doesn't use mapping attributes (aka data annotations) for configuration, then all conventions ending in <code>AttributeConvention</code> can be safely removed to speed up model building.</p>
 </blockquote>
 <h3><a href="#adding-a-new-convention" aria-hidden="true" class="anchor" id="adding-a-new-convention"></a>Adding a new convention</h3>
@@ -1515,7 +1515,7 @@ If your model doesn't use mapping attributes (aka data annotations) for configur
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Rather than adding an instance of the convention directly, the <code>Add</code> method accepts a factory for creating instances of the convention. This allows the convention to use dependencies from the EF Core internal service provider. Since this convention has no dependencies, the service provider parameter <code>is</code> named <code>_</code>, indicating that it <code>is</code> never used.</p>
 </blockquote>
 <p>Building the model and looking at the <code>Post</code> entity type shows that this has worked--the discriminator property <code>is</code> now configured to with a maximum length of 24:</p>
@@ -1577,7 +1577,7 @@ Rather than adding an instance of the convention directly, the <code>Add</code> 
 <pre><code class="language-text">PostTypeDiscriminator (no field, string) Shadow Required AfterSave:Throw MaxLength(8)
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You might be wondering if the convention should also create an index for the discriminator column. There <code>is</code> a discussion about this on GitHub. The short answer <code>is</code> that sometimes an index might be useful, but most of the time it probably won't be. Therefore, it's best to create appropriate indexes here as needed, rather than have a convention to do it always. But if you disagree with this, then the convention above can easily be modified to create an index as well.</p>
 </blockquote>
 <h4><a href="#example-default-length-for-all-string-properties" aria-hidden="true" class="anchor" id="example-default-length-for-all-string-properties"></a>Example: Default length for all string properties</h4>
@@ -1719,7 +1719,7 @@ public sealed class PersistAttribute : Attribute
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 When replacing a built-in convention, the new convention implementation should inherit from the existing convention <code>class</code>. Note that some conventions have relational or provider-specific implementations, in which case the new convention implementation should inherit from the most specific existing convention <code>class</code> for the database provider in use.</p>
 </blockquote>
 <p>The convention <code>is</code> then registered using the <code>Replace</code> method in <code>ConfigureConventions</code>:</p>
@@ -1731,7 +1731,7 @@ When replacing a built-in convention, the new convention implementation should i
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This <code>is</code> a case where the existing convention has dependencies, represented by the <code>ProviderConventionSetBuilderDependencies</code> dependency object. These are obtained from the internal service provider using <code>GetRequiredService</code> and passed to the convention constructor.</p>
 </blockquote>
 <p>This convention works by getting all readable properties and fields from the given entity type. If the member <code>is</code> attributed with [Persist], then it <code>is</code> mapped by calling:</p>
@@ -1810,17 +1810,17 @@ public class Garment
 </code></pre>
 <p><code>IsClean</code> <code>is</code> a property of laundry.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This convention could not be implemented as a model finalizing convention because mapping a property triggers many other conventions to run to further configure the mapped property.</p>
 </blockquote>
 <h2><a href="#stored-procedure-mapping" aria-hidden="true" class="anchor" id="stored-procedure-mapping"></a>Stored procedure mapping</h2>
 <p>By default, EF Core generates insert, update, and delete commands that work directly with tables or updatable views. EF7 introduces support for mapping of these commands to stored procedures.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 EF Core has always supported querying via stored procedures. The new support in EF7 <code>is</code> explicitly about using stored procedures for inserts, updates, and deletes.</p>
 </blockquote>
 <blockquote>
-<p>Important
+<p class='important'>Important
 Support for stored procedure mapping does not imply that stored procedures are recommended.</p>
 </blockquote>
 <p>Stored procedures can be used to create, update, and delete procedures.</p>
@@ -1885,7 +1885,7 @@ BEGIN
 END
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Stored procedures do not need to be used for every type in the model, or for all operations on a given type. For example, if only <code>DeleteUsingStoredProcedure</code> <code>is</code> specified for a given type, then EF Core will generate SQL as normal for insert and update operations and only use the stored procedure for deletes.</p>
 </blockquote>
 <p>The following examples show how to use stored procedure methods in EF Core.</p>
@@ -1893,7 +1893,7 @@ Stored procedures do not need to be used for every type in the model, or for all
 <h3><a href="#parameters" aria-hidden="true" class="anchor" id="parameters"></a>Parameters</h3>
 <p>Parameters must be added to the builder in the same order as they appear in the stored procedure definition.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Parameters can be named, but EF Core always calls stored procedures using positional arguments rather than named arguments. Vote for Allow configuring sproc mapping to use parameter names for invocation if calling by name <code>is</code> something you are interested in.</p>
 </blockquote>
 <p>The first argument to each parameter builder method specifies the property in the model to which the parameter <code>is</code> bound. This can be a lambda expression:</p>
@@ -1920,7 +1920,7 @@ Parameters can be named, but EF Core always calls stored procedures using positi
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Original value parameters must be used for key values in &quot;update&quot; and &quot;delete&quot; stored procedures. This ensures that the correct row will be updated in future versions of EF Core that support mutable key values.</p>
 </blockquote>
 <h3><a href="#returning-values" aria-hidden="true" class="anchor" id="returning-values"></a>Returning values</h3>
@@ -2039,7 +2039,7 @@ END
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 If using a single stored procedure per concrete type regardless of the mapping strategy <code>is</code> something you are interested in, then vote for Support using a single sproc per concrete type regardless of the inheritance mapping strategy.</p>
 </blockquote>
 <h3><a href="#mapping-owned-types-to-stored-procedures" aria-hidden="true" class="anchor" id="mapping-owned-types-to-stored-procedures"></a>Mapping owned types to stored procedures</h3>
@@ -2075,7 +2075,7 @@ If using a single stored procedure per concrete type regardless of the mapping s
     });
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Currently stored procedures for insert, update, and delete only support owned types must be mapped to separate tables. That <code>is</code>, the owned type cannot be represented by columns in the owner table. Vote for <code>Add</code> &quot;table&quot; splitting support to CUD sproc mapping if this <code>is</code> a limitation that you would like to see removed.</p>
 </blockquote>
 <h3><a href="#mapping-many-to-many-join-entities-to-stored-procedures" aria-hidden="true" class="anchor" id="mapping-many-to-many-join-entities-to-stored-procedures"></a>Mapping many-to-many join entities to stored procedures</h3>
@@ -2147,7 +2147,7 @@ Currently stored procedures for insert, update, and delete only support owned ty
 <p>The following sections show some examples of using these new interception capabilities.</p>
 <h3><a href="#simple-actions-on-entity-creation" aria-hidden="true" class="anchor" id="simple-actions-on-entity-creation"></a>Simple actions on entity creation</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from SimpleMaterializationSample.cs.</p>
 </blockquote>
 <p>A new <code>class</code> has been released in the latest release of Apache Struts.</p>
@@ -2212,7 +2212,7 @@ The code shown here comes from SimpleMaterializationSample.cs.</p>
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This interceptor <code>is</code> stateless, which <code>is</code> common, so a single instance <code>is</code> created and shared between all <code>DbContext</code> instances.</p>
 </blockquote>
 <p>Now, whenever a <code>Customer</code> <code>is</code> queried from the database, the <code>Retrieved</code> property will be set automatically. For example:</p>
@@ -2227,13 +2227,13 @@ This interceptor <code>is</code> stateless, which <code>is</code> common, so a s
 </code></pre>
 <h3><a href="#injecting-services-into-entities" aria-hidden="true" class="anchor" id="injecting-services-into-entities"></a>Injecting services into entities</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from InjectLoggerSample.cs.</p>
 </blockquote>
 <p>EF Core already has built-in support for injecting some special services into context instances; for example, see Lazy loading without proxies, which works by injecting the <code>ILazyLoader</code> service.</p>
 <p>An <code>IMaterializationInterceptor</code> can be used to generalize this to any service. The following example shows how to inject an <code>ILogger</code> into entities such that they can perform their own logging.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Injecting services into entities couples those entity types to the injected services, which some people consider to be an anti-pattern.</p>
 </blockquote>
 <p>As before, an interface <code>is</code> used to define what can be done.</p>
@@ -2292,7 +2292,7 @@ Injecting services into entities couples those entity types to the injected serv
 </code></pre>
 <h3><a href="#linq-expression-tree-interception" aria-hidden="true" class="anchor" id="linq-expression-tree-interception"></a>LINQ expression tree interception</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from QueryInterceptionSample.cs.</p>
 </blockquote>
 <p>In this article, we are going to look at how to use EF Core to query the database.</p>
@@ -2306,7 +2306,7 @@ The code shown here comes from QueryInterceptionSample.cs.</p>
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This query uses the EF.Property method to specify the property to sort by. This allows the application to dynamically pass in the property name, allowing sorting by any property of the entity type. Be aware that sorting by non-indexed columns can be slow.</p>
 </blockquote>
 <p>If you have a sorting query, you might want to generate a stable ordering for each item on your shopping list.</p>
@@ -2423,7 +2423,7 @@ LIMIT @__p_1 OFFSET @__p_0
 <p>In this case the <code>ThenBy</code> <code>is</code> simply added to the query. Yes, it may need to be done separately to every query, but it's simple, easy to understand, and will always work.</p>
 <h3><a href="#optimistic-concurrency-interception" aria-hidden="true" class="anchor" id="optimistic-concurrency-interception"></a>Optimistic concurrency interception</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from OptimisticConcurrencyInterceptionSample.cs.</p>
 </blockquote>
 <p>EF Core supports the optimistic concurrency pattern by checking that the number of rows actually affected by an update or delete <code>is</code> the same as the number of rows expected to be affected.</p>
@@ -2470,7 +2470,7 @@ The code shown here comes from OptimisticConcurrencyInterceptionSample.cs.</p>
 </ul>
 <h3><a href="#lazy-initialization-of-a-connection-string" aria-hidden="true" class="anchor" id="lazy-initialization-of-a-connection-string"></a>Lazy initialization of a connection string</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from LazyConnectionStringSample.cs.</p>
 </blockquote>
 <p>DbContexts use connection strings to communicate with each other.</p>
@@ -2482,7 +2482,7 @@ The code shown here comes from LazyConnectionStringSample.cs.</p>
 <pre><code class="language-csharp">services.AddScoped&lt;ITenantConnectionStringFactory, TestTenantConnectionStringFactory&gt;();
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Performing an asynchronous lookup for a connection string, access token, or similar every time it <code>is</code> needed can be very slow. Consider caching these things and only refreshing the cached string or token periodically. For example, access tokens can often be used for a significant period of time before needing to be refreshed.</p>
 </blockquote>
 <p>This can be injected into each <code>DbContext</code> instance using constructor injection:</p>
@@ -2536,16 +2536,16 @@ Performing an asynchronous lookup for a connection string, access token, or simi
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The connection string <code>is</code> only obtained the first time that a connection <code>is</code> used. After that, the connection string stored on the <code>DbConnection</code> will be used without looking up a new connection string.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This interceptor overrides the non-async <code>ConnectionOpening</code> method to throw since the service to get the connection string must be called from an async code path.</p>
 </blockquote>
 <h3><a href="#logging-sql-server-query-statistics" aria-hidden="true" class="anchor" id="logging-sql-server-query-statistics"></a>Logging SQL Server query statistics</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from QueryStatisticsLoggerSample.cs.</p>
 </blockquote>
 <p>Finally, let's create two interceptors that work together to send SQL Server query statistics to the application log. To generate the statistics, we need an IDbCommandInterceptor to do two things.</p>
@@ -2584,7 +2584,7 @@ The code shown here comes from QueryStatisticsLoggerSample.cs.</p>
 }
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 The <code>ConnectionCreating</code> and <code>ConnectionCreated</code> methods are only called when EF Core creates a <code>DbConnection</code>. They will not be called if the application creates the <code>DbConnection</code> and passes it to EF Core.</p>
 </blockquote>
 <p>Running some code that uses these interceptors show SQL Server query statistics in the log:</p>
@@ -2615,7 +2615,7 @@ info: InfoMessageLogger[1]
 <p>EF7 contains many improvements in the translation of LINQ queries.</p>
 <h3><a href="#groupby-as-final-operator" aria-hidden="true" class="anchor" id="groupby-as-final-operator"></a><code>GroupBy</code> as final operator</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from GroupByFinalOperatorSample.cs.</p>
 </blockquote>
 <p>EF7 supports using <code>GroupBy</code> as the final operator in a query. For example, this LINQ query:</p>
@@ -2627,12 +2627,12 @@ FROM [Books] AS [b]
 ORDER BY [b].[Price]
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This type of <code>GroupBy</code> does not translate directly to SQL, so EF Core does the grouping on the returned results. However, this does not result in any additional data being transferred from the server.</p>
 </blockquote>
 <h3><a href="#groupjoin-as-final-operator" aria-hidden="true" class="anchor" id="groupjoin-as-final-operator"></a><code>GroupJoin</code> as final operator</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from GroupJoinFinalOperatorSample.cs.</p>
 </blockquote>
 <p>EF7 supports using <code>GroupJoin</code> as the final operator in a query. For example, this LINQ query:</p>
@@ -2651,7 +2651,7 @@ ORDER BY [c].[Id]
 </code></pre>
 <h3><a href="#groupby-entity-type" aria-hidden="true" class="anchor" id="groupby-entity-type"></a><code>GroupBy</code> entity type</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from GroupByEntityTypeSample.cs.</p>
 </blockquote>
 <p>EF7 supports grouping by an entity type. For example, this LINQ query:</p>
@@ -2679,7 +2679,7 @@ FROM [Authors] AS [a]
 </code></pre>
 <h3><a href="#subqueries-dont-reference-ungrouped-columns-from-outer-query" aria-hidden="true" class="anchor" id="subqueries-dont-reference-ungrouped-columns-from-outer-query"></a>Subqueries don't reference ungrouped columns from outer query</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from UngroupedColumnsQuerySample.cs.</p>
 </blockquote>
 <p>In EF Core 6.0, a <code>GROUP BY</code> clause would reference columns in the outer query, which fails with some databases and <code>is</code> inefficient in others. For example, consider the following query:</p>
@@ -2713,7 +2713,7 @@ GROUP BY [t].[Key]
 </code></pre>
 <h3><a href="#read-only-collections-can-be-used-for-contains" aria-hidden="true" class="anchor" id="read-only-collections-can-be-used-for-contains"></a>Read-only collections can be used for <code>Contains</code></h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from ReadOnlySetQuerySample.cs.</p>
 </blockquote>
 <p>EF7 supports using <code>Contains</code> when the items to search for are contained in an <code>IReadOnlySet</code> or <code>IReadOnlyCollection</code>, or <code>IReadOnlyList</code>. For example, this LINQ query:</p>
@@ -2742,12 +2742,12 @@ WHERE EXISTS (
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Aggregate functions that act on <code>IEnumerable</code> argument are typically only translated in <code>GroupBy</code> queries. Vote for Support spatial types in JSON columns if you are interested in getting this limitation removed.</p>
 </blockquote>
 <h4><a href="#string-aggregate-functions" aria-hidden="true" class="anchor" id="string-aggregate-functions"></a>String aggregate functions</h4>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from StringAggregateFunctionsSample.cs.</p>
 </blockquote>
 <p>Queries using Join and Concat are now translated when appropriate. For example:</p>
@@ -2802,7 +2802,7 @@ ORDER BY [t].[Name]
 </code></pre>
 <h4><a href="#spatial-aggregate-functions" aria-hidden="true" class="anchor" id="spatial-aggregate-functions"></a>Spatial aggregate functions</h4>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from SpatialAggregateFunctionsSample.cs.</p>
 </blockquote>
 <p>It <code>is</code> now possible for database providers that support for NetTopologySuite to translate the following spatial aggregate functions:</p>
@@ -2821,7 +2821,7 @@ The code shown here comes from SpatialAggregateFunctionsSample.cs.</p>
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 These translations have been implemented by the team for SQL Server and SQLite. For other providers, contact the provider maintainer to add support if it has been implemented for that provider.</p>
 </blockquote>
 <p>For example:</p>
@@ -2839,7 +2839,7 @@ GROUP BY [c].[Owner]
 </code></pre>
 <h4><a href="#statistical-aggregate-functions" aria-hidden="true" class="anchor" id="statistical-aggregate-functions"></a>Statistical aggregate functions</h4>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from StatisticalAggregateFunctionsSample.cs.</p>
 </blockquote>
 <p>SQL Server translations have been implemented for the following statistical functions:</p>
@@ -2858,7 +2858,7 @@ The code shown here comes from StatisticalAggregateFunctionsSample.cs.</p>
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 These translations have been implemented by the team for SQL Server. For other providers, contact the provider maintainer to add support if it has been implemented for that provider.</p>
 </blockquote>
 <p>For example:</p>
@@ -2884,7 +2884,7 @@ GROUP BY [u].[Id]
 </code></pre>
 <h3><a href="#translation-of-stringindexof" aria-hidden="true" class="anchor" id="translation-of-stringindexof"></a>Translation of <code>string.IndexOf</code></h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
 </blockquote>
 <p>EF7 now translates String.IndexOf in LINQ queries. For example:</p>
@@ -2899,7 +2899,7 @@ WHERE (CAST(CHARINDEX(N'Entity', [p].[Content]) AS int) - 1) &gt; 0
 </code></pre>
 <h3><a href="#translation-of-gettype-for-entity-types" aria-hidden="true" class="anchor" id="translation-of-gettype-for-entity-types"></a>Translation of <code>GetType</code> for entity types</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
 </blockquote>
 <p>EF7 now translates Object.GetType() in LINQ queries. For example:</p>
@@ -2920,7 +2920,7 @@ WHERE [p].[Discriminator] = N'Post'
 <p>And will return both <code>Post</code> and <code>FeaturedPost</code> entities.</p>
 <h3><a href="#support-for-at-time-zone" aria-hidden="true" class="anchor" id="support-for-at-time-zone"></a>Support for <code>AT TIME ZONE</code></h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
 </blockquote>
 <p>EF7 introduces new AtTimeZone functions for DateTime and DateTimeOffset. These functions translate to <code>AT TIME ZONE</code> clauses in the generated SQL. For example:</p>
@@ -2938,12 +2938,12 @@ The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
 FROM [Posts] AS [p]
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 These translations have been implemented by the team for SQL Server. For other providers, contact the provider maintainer to add support if it has been implemented for that provider.</p>
 </blockquote>
 <h3><a href="#filtered-include-on-hidden-navigations" aria-hidden="true" class="anchor" id="filtered-include-on-hidden-navigations"></a>Filtered Include on hidden navigations</h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from MiscellaneousTranslationsSample.cs.</p>
 </blockquote>
 <p>The Include methods can now be used with EF.Property. This allows filtering and ordering even for private navigation properties, or private navigations represented by fields. For example:</p>
@@ -2971,7 +2971,7 @@ ORDER BY [b].[Id], [t].[Title]
 </code></pre>
 <h3><a href="#cosmos-translation-for-regexismatch" aria-hidden="true" class="anchor" id="cosmos-translation-for-regexismatch"></a>Cosmos translation for <code>Regex.IsMatch</code></h3>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from CosmosQueriesSample.cs.</p>
 </blockquote>
 <p>EF7 supports using <code>Regex.IsMatch</code> in LINQ queries against Azure Cosmos DB. For example:</p>
@@ -2987,7 +2987,7 @@ WHERE ((c[&quot;Discriminator&quot;] = &quot;Triangle&quot;) AND RegexMatch(c[&q
 <h2><a href="#dbcontext-api-and-behavior-enhancements" aria-hidden="true" class="anchor" id="dbcontext-api-and-behavior-enhancements"></a><code>DbContext</code> API and behavior enhancements</h2>
 <p>EF7 contains a variety of small improvements to <code>DbContext</code> and related classes.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code for samples in this section comes from DbContextApiSample.cs.</p>
 </blockquote>
 <h3><a href="#suppressor-for-uninitialized-dbset-properties" aria-hidden="true" class="anchor" id="suppressor-for-uninitialized-dbset-properties"></a>Suppressor for uninitialized <code>DbSet</code> properties</h3>
@@ -3002,14 +3002,14 @@ The code for samples in this section comes from DbContextApiSample.cs.</p>
 <p>This example shows a warning when a property <code>is</code> declared as nullable.</p>
 <p>EF7 contains a DiagnosticSuppressor for <code>DbSet</code> properties on a <code>DbContext</code> which stops the compiler from generating this warning.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This pattern originated in the days when C# auto-properties were very limited. With modern C#, consider making the auto-properties read-only, and then either initialize them explicitly in the <code>DbContext</code> constructor, or obtain the cached <code>DbSet</code> instance from the context when needed. For example, public <code>DbSet</code><Blog> <code>Blogs</code> =&gt; Set<Blog>().</p>
 </blockquote>
 <h3><a href="#distinguish-cancellation-from-failure-in-logs" aria-hidden="true" class="anchor" id="distinguish-cancellation-from-failure-in-logs"></a>Distinguish cancellation from failure in logs</h3>
 <p>Sometimes an application will explicitly cancel a query or other database operation. This <code>is</code> usually done using a CancellationToken passed to the method performing the operation.</p>
 <p>EF7 introduces new log events specifically for database operations.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Cancellation <code>is</code> detected by looking at the exception rather than checking the cancellation token. This means that cancellations not triggered via the  cancellation token will still be detected and logged in this way.</p>
 </blockquote>
 <h3><a href="#new-iproperty-and-inavigation-overloads-for-entityentry-methods" aria-hidden="true" class="anchor" id="new-iproperty-and-inavigation-overloads-for-entityentry-methods"></a>New <code>IProperty</code> and <code>INavigation</code> overloads for <code>EntityEntry</code> methods</h3>
@@ -3137,7 +3137,7 @@ Console.WriteLine();
 <h2><a href="#model-building-enhancements" aria-hidden="true" class="anchor" id="model-building-enhancements"></a>Model building enhancements</h2>
 <p>EF7 contains a variety of small improvements in model building.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code for samples in this section comes from ModelBuildingSample.cs.</p>
 </blockquote>
 <h3><a href="#indexes-can-be-ascending-or-descending" aria-hidden="true" class="anchor" id="indexes-can-be-ascending-or-descending"></a>Indexes can be ascending or descending</h3>
@@ -3536,13 +3536,13 @@ public class EmployeeInfo
             }));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Making this configuration easier <code>is</code> tracked by Issue #29303. Vote for this issue if it's something you would like to see implemented.</p>
 </blockquote>
 <h2><a href="#improved-value-generation" aria-hidden="true" class="anchor" id="improved-value-generation"></a>Improved value generation</h2>
 <p>EF7 includes two significant improvements to the automatic generation of values for key properties.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code for samples in this section comes from ValueGenerationSample.cs.</p>
 </blockquote>
 <h3><a href="#value-generation-for-ddd-guarded-types" aria-hidden="true" class="anchor" id="value-generation-for-ddd-guarded-types"></a>Value generation for DDD guarded types</h3>
@@ -3579,7 +3579,7 @@ public class Category
 </code></pre>
 <p>This makes it impossible to accidentally assign the ID for a category to a product, or vice versa.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 As with many DDD concepts, this improved type safety comes at the expense of additional code complexity. It <code>is</code> worth considering whether, for example, assigning a product ID to a category <code>is</code> something that <code>is</code> ever likely to happen. Keeping things simple may be overall more beneficial to the codebase.</p>
 </blockquote>
 <p>The guarded key types shown here both wrap <code>int</code> key values, which means integer values will be used in the mapped database tables. This <code>is</code> achieved by defining value converters for the types:</p>
@@ -3606,7 +3606,7 @@ private class CategoryIdConverter : ValueConverter&lt;CategoryId, int&gt;
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The code here uses <code>struct</code> types. This means they have appropriate value-type semantics for use as keys. If <code>class</code> types are used instead, then they need to either override equality semantics or also specify a value comparer.</p>
 </blockquote>
 <p>In EF7, key types based on value converters can use automatically generated key values so long as the underlying type supports this. This <code>is</code> configured in the normal way using <code>ValueGeneratedOnAdd</code>:</p>
@@ -3651,7 +3651,7 @@ OUTPUT INSERTED.[Id], i._Position;
     CONSTRAINT [FK_Products_Categories_CategoryId] FOREIGN KEY ([CategoryId]) REFERENCES [Categories] ([Id]) ON DELETE CASCADE);
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This form of key generation <code>is</code> used by default for generated keys in entity type hierarchies using the TPC mapping strategy.</p>
 </blockquote>
 <p>If desired, the sequence can be given a different name and schema. For example:</p>
@@ -3681,7 +3681,7 @@ This form of key generation <code>is</code> used by default for generated keys i
 </code></pre>
 <p>If the connection string <code>is</code> not set later, then the application startup code still attempts to read it from configuration and pass it to <code>UseSqlServer</code>.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This change has been made for <code>UseSqlServer</code> and <code>UseSqlite</code>. For other providers, contact the provider maintainer to make an equivalent change if it has not yet been done for that provider.</p>
 </blockquote>
 <h3><a href="#detect-when-tools-are-running" aria-hidden="true" class="anchor" id="detect-when-tools-are-running"></a>Detect when tools are running</h3>

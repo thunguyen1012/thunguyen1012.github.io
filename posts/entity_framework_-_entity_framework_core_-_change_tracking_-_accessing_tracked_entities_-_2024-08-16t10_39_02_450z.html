@@ -104,11 +104,11 @@
 </ul>
 <p>Each of these is described in more detail in the sections below.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <h2><a href="#using-dbcontextentry-and-entityentry-instances" aria-hidden="true" class="anchor" id="using-dbcontextentry-and-entityentry-instances"></a>Using <code>DbContext.Entry</code> and <code>EntityEntry</code> instances</h2>
@@ -156,7 +156,7 @@ context.Entry(newBlog).State = EntityState.Added;
 Debug.Assert(context.Entry(newBlog).State == EntityState.Added);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Unlike in EF6, setting the state of an individual entity will not cause all connected entities to be tracked. This makes setting the state this way a lower-level operation than calling <code>Add</code>, <code>Attach</code>, or <code>Update</code>, which operate on an entire graph of entities.</p>
 </blockquote>
 <p>The following table summarizes ways to use an EntityEntry to work with an entire entity:</p>
@@ -249,7 +249,7 @@ context.Entry(blog).Property(&quot;Name&quot;).CurrentValue = &quot;1unicorn2&qu
 <td>Indicates whether this property is marked as <a href="miscellaneous#temporary-values#temporary-values" data-linktype="relative-path">temporary</a>, and allows this state to be changed.</td>
 </tr>
 </tbody></table>
-<p>Notes:</p>
+<p class='note'>Notes:</p>
 <ul>
 <li>
 <p>The original value of a property is the value that the property had when the entity was queried from the database. However, original values are not available if the entity was disconnected and then explicitly attached to another DbContext, for example with <code>Attach</code> or <code>Update</code>. In this case, the original value returned will be the same as the current value.</p>
@@ -335,7 +335,7 @@ var databaseValues = context.Entry(blog).GetDatabaseValues();
 context.Entry(blog).CurrentValues.SetValues(blogDto);
 </code></pre>
 <p>An instance of the DTO <code>BlogDto</code> is used to set the current values of a tracked entity.</p>
-<p>Note that properties will only be marked as modified if the value set differs from the current value.</p>
+<p class='note'>Note that properties will only be marked as modified if the value set differs from the current value.</p>
 <h4><a href="#setting-current-or-original-values-from-a-dictionary" aria-hidden="true" class="anchor" id="setting-current-or-original-values-from-a-dictionary"></a>Setting current or original values from a dictionary</h4>
 <p>The previous example set values from an entity or DTO instance. The same behavior is available when property values are stored as name/value pairs in a dictionary. For example:</p>
 <pre><code class="language-csharp">var blogDictionary = new Dictionary&lt;string, object&gt; { [&quot;Id&quot;] = 1, [&quot;Name&quot;] = &quot;1unicorn2&quot; };
@@ -352,7 +352,7 @@ context.Entry(blog).OriginalValues.SetValues(databaseValues);
 <p>The <code>PropertyValues</code> object returned from <code>CurrentValues</code>, <code>OriginalValues</code>, or <code>GetDatabaseValues</code> can be used to create a clone of the entity using <code>PropertyValues.ToObject()</code>. For example:</p>
 <pre><code class="language-csharp">var clonedBlog = context.Entry(blog).GetDatabaseValues().ToObject();
 </code></pre>
-<p>Note that <code>ToObject</code> returns a new instance that is not tracked by the <code>DbContext</code>. The returned object also does not have any relationships set to other entities.</p>
+<p class='note'>Note that <code>ToObject</code> returns a new instance that is not tracked by the <code>DbContext</code>. The returned object also does not have any relationships set to other entities.</p>
 <p>An object can be cloned from another object.</p>
 <h3><a href="#working-with-all-navigations-of-an-entity" aria-hidden="true" class="anchor" id="working-with-all-navigations-of-an-entity"></a>Working with all navigations of an entity</h3>
 <p><code>EntityEntry.Navigation</code> returns an <code>IEnumerable&lt;T&gt;</code> of <code>NavigationEntry</code> for every navigation of the entity.</p>
@@ -375,7 +375,7 @@ Member Name is of type string and has value .NET Blog
 Member Posts is of type IList&lt;Post&gt; and has value System.Collections.Generic.List`1[Post]
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The change tracker debug view shows information like this. The debug view for the entire change tracker is generated from the individual <code>EntityEntry.DebugView</code> of each tracked entity.</p>
 </blockquote>
 <h2><a href="#find-and-findasync" aria-hidden="true" class="anchor" id="find-and-findasync"></a><code>Find</code> and <code>FindAsync</code></h2>
@@ -603,7 +603,7 @@ BindingList&lt;Post&gt; bindingList = context.Posts.Local.ToBindingList();
 </code></pre>
 <p>See Get Started with WPF for more information on WPF data binding with EF Core, and Get Started with Windows Forms for more information on Windows Forms data binding with EF Core.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The local view for a given DbSet instance is created lazily when first accessed and then cached. <code>LocalView</code> creation itself is fast and it does not use significant memory. However, it does call <code>DetectChanges</code>, which can be slow for large numbers of entities. The collections created by <code>ToObservableCollection</code> and <code>ToBindingList</code> are also created lazily and then cached. Both of these methods create new collections, which can be slow and use a lot of memory when thousands of entities are involved.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/entity-entries">Accessing Tracked Entities</a></p>

@@ -103,7 +103,7 @@
 <p>EF Core uses a metadata model to describe how the application's entity types are mapped to the underlying database.</p>
 <p>configuration can be applied to a model targeting any data store.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's samples on GitHub.</p>
 </blockquote>
 <h2><a href="#use-fluent-api-to-configure-a-model" aria-hidden="true" class="anchor" id="use-fluent-api-to-configure-a-model"></a>Use fluent API to configure a model</h2>
@@ -133,7 +133,7 @@ public class Blog
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 To apply the same configuration to multiple objects in the model see bulk configuration.</p>
 </blockquote>
 <h3><a href="#grouping-configuration" aria-hidden="true" class="anchor" id="grouping-configuration"></a>Grouping configuration</h3>
@@ -156,7 +156,7 @@ To apply the same configuration to multiple objects in the model see bulk config
 <pre><code class="language-csharp">modelBuilder.ApplyConfigurationsFromAssembly(typeof(BlogEntityTypeConfiguration).Assembly);
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The order in which the configurations will be applied is undefined, therefore this method should only be used when the order doesn't matter.</p>
 </blockquote>
 <h4><a href="#using-entitytypeconfigurationattribute-on-entity-types" aria-hidden="true" class="anchor" id="using-entitytypeconfigurationattribute-on-entity-types"></a>Using <code>EntityTypeConfigurationAttribute</code> on entity types</h4>
@@ -183,7 +183,7 @@ public class Book
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 EntityTypeConfigurationAttribute types will not be automatically discovered in an assembly. Entity types must be added to the model before the attribute will be discovered on that entity type.</p>
 </blockquote>
 <h2><a href="#use-data-annotations-to-configure-a-model" aria-hidden="true" class="anchor" id="use-data-annotations-to-configure-a-model"></a>Use data annotations to configure a model</h2>
@@ -212,13 +212,13 @@ public class Blog
 <p>This article explains how to use the IConvention interface in EF Core.</p>
 <p>Applications can remove or replace any of these conventions, as well as add new custom conventions that apply configuration for patterns that are not recognized by EF out of the box.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown below comes from ModelBuildingConventionsSample.cs.</p>
 </blockquote>
 <h3><a href="#removing-an-existing-convention" aria-hidden="true" class="anchor" id="removing-an-existing-convention"></a>Removing an existing convention</h3>
 <p>Sometimes one of the built-in conventions may not appropriate for your application, in which case it can be removed.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If your model doesn't use mapping attributes (aka data annotations) for configuration, then all conventions with the name ending in <code>AttributeConvention</code> can be safely removed to speed up model building.</p>
 </blockquote>
 <h4><a href="#example-don't-create-indexes-for-foreign-key-columns" aria-hidden="true" class="anchor" id="example-don't-create-indexes-for-foreign-key-columns"></a>Example: Don't create indexes for foreign key columns</h4>

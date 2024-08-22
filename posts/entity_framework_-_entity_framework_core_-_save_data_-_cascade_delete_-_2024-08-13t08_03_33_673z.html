@@ -101,11 +101,11 @@
 <p>The first option is only valid for optional relationships where the foreign key property (and the database column to which it is mapped) must be nullable.</p>
 <p>The second option is valid for any kind of relationship and is known as &quot;cascade delete&quot;.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This document describes cascade deletes (and deleting orphans) from the perspective of updating the database. It makes heavy use of concepts introduced in Change Tracking in EF Core and Changing Foreign Keys and Navigations. Make sure to fully understand these concepts before tackling the material here.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <h2><a href="#when-cascading-behaviors-happen" aria-hidden="true" class="anchor" id="when-cascading-behaviors-happen"></a>When cascading behaviors happen</h2>
@@ -198,7 +198,7 @@ SELECT @@ROWCOUNT;
 </code></pre>
 <p>Deleting entities that are no longer associated with any principal/dependent is known as &quot;deleting orphans&quot;.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Cascade delete and deleting orphans are closely related. Both result in deleting dependent/child entities when the relationship to their required principal/parent is severed. For cascade delete, this severing happens because the principal/parent is itself deleted. For orphans, the principal/parent entity still exists, but is no longer related to the dependent/child entities.</p>
 </blockquote>
 <h2><a href="#where-cascading-behaviors-happen" aria-hidden="true" class="anchor" id="where-cascading-behaviors-happen"></a>Where cascading behaviors happen</h2>
@@ -214,7 +214,7 @@ Cascade delete and deleting orphans are closely related. Both result in deleting
 <h3><a href="#cascade-delete-of-tracked-entities" aria-hidden="true" class="anchor" id="cascade-delete-of-tracked-entities"></a><code>Cascade</code> delete of tracked entities</h3>
 <p>EF Core always applies configured cascading behaviors to tracked entities.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The exact timing of when cascading behaviors happen to tracked entities can be controlled using <code>ChangeTracker.CascadeDeleteTiming</code> and <code>ChangeTracker.DeleteOrphansTiming</code>. See Changing Foreign Keys and Navigations for more information.</p>
 </blockquote>
 <h3><a href="#cascade-delete-in-the-database" aria-hidden="true" class="anchor" id="cascade-delete-in-the-database"></a><code>Cascade</code> delete in the database</h3>
@@ -247,15 +247,15 @@ SELECT @@ROWCOUNT;
 </code></pre>
 <p>If a post is deleted from a database, the post will be deleted from the database as well.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Databases don't typically have any way to automatically delete orphans. This is because while EF Core represents relationships using navigations as well of foreign keys, databases have only foreign keys and no navigations. This means that it is usually not possible to sever a relationship without loading both sides into the DbContext.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The EF Core in-memory database does not currently support cascade deletes in the database.</p>
 </blockquote>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Do not configure cascade delete in the database when soft-deleting entities. This may cause entities to be accidentally really deleted instead of soft-deleted.</p>
 </blockquote>
 <h3><a href="#database-cascade-limitations" aria-hidden="true" class="anchor" id="database-cascade-limitations"></a>Database cascade limitations</h3>
@@ -432,13 +432,13 @@ SELECT @@ROWCOUNT;
 </code></pre>
 <p>See Changing Foreign Keys and Navigations for more information on how EF Core manages foreign keys and navigations as their values are changed.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The fixup of relationships like this has been the default behavior of Entity Framework since the first version in 2008. Prior to EF Core it didn't have a name and was not possible to change. It is now known as <code>ClientSetNull</code> as described in the next section.</p>
 </blockquote>
 <p>cascading nulls can be configured to cascade nulls like this when a principal or parent in an optional relationship is deleted.</p>
 <h2><a href="#configuring-cascading-behaviors" aria-hidden="true" class="anchor" id="configuring-cascading-behaviors"></a>Configuring cascading behaviors</h2>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Be sure to read sections above before coming here. The configuration options will likely not make sense if the preceding material is not understood.</p>
 </blockquote>
 <p><code>Cascade</code> behaviors are configured per relationship using the <code>OnDelete</code> method in OnModelCreating. For example:</p>
@@ -549,7 +549,7 @@ Be sure to read sections above before coming here. The configuration options wil
 <td><code>InvalidOperationException</code></td>
 </tr>
 </tbody></table>
-<p>Notes:</p>
+<p class='note'>Notes:</p>
 <ul>
 <li>
 <p>The default for required relationships like this is <code>Cascade</code>.</p>
@@ -617,7 +617,7 @@ Be sure to read sections above before coming here. The configuration options wil
 <td>N/A</td>
 </tr>
 </tbody></table>
-<p>Notes:</p>
+<p class='note'>Notes:</p>
 <ul>
 <li>
 <p>Severing a relationship is not valid here since the dependents/children are not loaded.</p>
@@ -682,7 +682,7 @@ Be sure to read sections above before coming here. The configuration options wil
 <td>Dependent FKs set to null by EF Core</td>
 </tr>
 </tbody></table>
-<p>Notes:</p>
+<p class='note'>Notes:</p>
 <ul>
 <li>
 <p>The default for optional relationships like this is <code>ClientSetNull</code>.</p>
@@ -742,7 +742,7 @@ Be sure to read sections above before coming here. The configuration options wil
 <td>N/A</td>
 </tr>
 </tbody></table>
-<p>Notes:</p>
+<p class='note'>Notes:</p>
 <ul>
 <li>
 <p>Severing a relationship is not valid here since the dependents/children are not loaded.</p>

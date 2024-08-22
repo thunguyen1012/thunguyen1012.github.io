@@ -163,7 +163,7 @@
     - MultiPolygon
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 <code>CircularString</code>, <code>CompoundCurve</code>, and <code>CurePolygon</code> aren't supported by NTS.</p>
 </blockquote>
 <p>Using the base Geometry type allows any type of shape to be specified by the property.</p>
@@ -207,7 +207,7 @@ var currentCountry = db.Countries
 <h2><a href="#srid-ignored-during-client-operations" aria-hidden="true" class="anchor" id="srid-ignored-during-client-operations"></a>SRID Ignored during client operations</h2>
 <p>The National Geographic Survey (NTS) uses a coordinate system based on the Cartesian coordinate system.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Use the newer ProjNet NuGet package, not the older package called ProjNet4GeoAPI.</p>
 </blockquote>
 <p>If an operation is server-evaluated by EF Core via SQL, the result's unit will be determined by the database.</p>
@@ -293,7 +293,7 @@ var distanceInDegrees = seattle.Distance(redmond);
 var distanceInMeters = seattle.ProjectTo(2855).Distance(redmond.ProjectTo(2855));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 4326 refers to WGS 84, a standard used in GPS and other geographic systems.</p>
 </blockquote>
 <h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>

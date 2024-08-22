@@ -89,11 +89,11 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>This document covers miscellaneous features and scenarios involving change tracking.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <h2><a href="#add-versus-addasync" aria-hidden="true" class="anchor" id="add-versus-addasync"></a><code>Add</code> versus <code>AddAsync</code></h2>
@@ -104,7 +104,7 @@ You can run and debug into all the code in this document by downloading the samp
 <p><code>DbSet&lt;T&gt;</code> and <code>DbContext</code> provide alternate versions of <code>Add</code>, <code>Update</code>, <code>Attach</code>, and <code>Remove</code> that accept multiple instances in a single call.</p>
 <p>This paper describes the use of methods &quot;range&quot; and &quot;non-range&quot;.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This is different from EF6, where <code>AddRange</code> and <code>Add</code> both automatically called <code>DetectChanges</code>, but calling <code>Add</code> multiple times caused <code>DetectChanges</code> to be called multiple times instead of once. This made <code>AddRange</code> more efficient in EF6. In EF Core, neither of these methods automatically call <code>DetectChanges</code>.</p>
 </blockquote>
 <h2><a href="#dbcontext-versus-dbset-methods" aria-hidden="true" class="anchor" id="dbcontext-versus-dbset-methods"></a><code>DbContext</code> versus <code>DbSet</code> methods</h2>
@@ -147,7 +147,7 @@ context.SaveChanges();
 </code></pre>
 <p>Notice that <code>DbContext.Set&lt;TEntity&gt;(String)</code> is used to create a DbSet for the <code>PostTag</code> entity type. This DbSet can then be used to call <code>Add</code> with the new join entity instance.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 The CLR type used for join entity types by convention may change in future releases to improve performance. Do not depend on any specific join entity type unless it has been explicitly configured as is done for <code>Dictionary&lt;string, int&gt;</code> in the code above.</p>
 </blockquote>
 <h2><a href="#property-versus-field-access" aria-hidden="true" class="anchor" id="property-versus-field-access"></a><code>Property</code> versus field access</h2>
@@ -379,7 +379,7 @@ Token {Id: 2} Unchanged
   ValidFrom: '11/11/1111 11:11:11 AM'
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Using database default values requires that the database column has a default value constraint configured. This is done automatically by EF Core migrations when using <code>HasDefaultValueSql</code> or <code>HasDefaultValue</code>. Make sure to create the default constraint on the column in some other way when not using EF Core migrations.</p>
 </blockquote>
 <h3><a href="#using-nullable-properties" aria-hidden="true" class="anchor" id="using-nullable-properties"></a>Using nullable properties</h3>

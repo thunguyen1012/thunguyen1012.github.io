@@ -101,7 +101,7 @@
 <p>One-to-many relationships are used when a single entity is associated with any number of other entities.</p>
 <p>In this document, we are going to look at some of the basics of configuration management.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code for all the examples below can be found in OneToMany.cs.</p>
 </blockquote>
 <h2><a href="#required-one-to-many" aria-hidden="true" class="anchor" id="required-one-to-many"></a>Required one-to-many</h2>
@@ -145,11 +145,11 @@ public class Post
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 A required relationship ensures that every dependent entity must be associated with some principal entity. However, a principal entity can always exist without any dependent entities. That is, a required relationship does not indicate that there will always be at least one dependent entity. There is no way in the EF model, and also no standard way in a relational database, to ensure that a principal is associated with a certain number of dependents. If this is needed, then it must be implemented in application (business) logic. See Required navigations for more information.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 A relationship with two navigations, one from dependent to principal, and an inverse from principal to dependents, is known as a bidirectional relationship.</p>
 </blockquote>
 <p>This relationship is discovered by convention. That is:</p>
@@ -168,7 +168,7 @@ A relationship with two navigations, one from dependent to principal, and an inv
 </li>
 </ul>
 <blockquote>
-<p>Important
+<p class='important'>Important
 When using C# nullable reference types, the reference navigation must be nullable if the foreign key property is nullable. If the foreign key property is non-nullable, then the reference navigation may be nullable or not. In this case, <code>Post.BlogId</code> is non-nullable and <code>Post.Blog</code> is also non-nullable. The = <code>null</code>!; construct is used to mark this as intentional for the C# compiler, since EF typically sets the <code>Blog</code> instance and it cannot be <code>null</code> for a fully loaded relationship. See Working with Nullable Reference Types for more information.</p>
 </blockquote>
 <p>For cases where the navigations, foreign key, or required/optional nature of the relationship are not discovered by convention, these things can be configured explicitly. For example:</p>
@@ -193,7 +193,7 @@ When using C# nullable reference types, the reference navigation must be nullabl
 </code></pre>
 <p>Neither of these options is better than the other; they both result in exactly the same configuration.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 It is never necessary to configure a relationship twice, once starting from the principal, and then again starting from the dependent. Also, attempting to configure the principal and dependent halves of a relationship separately generally does not work. Choose to configure each relationship from either one end or the other and then write the configuration code only once.</p>
 </blockquote>
 <h2><a href="#optional-one-to-many" aria-hidden="true" class="anchor" id="optional-one-to-many"></a>Optional one-to-many</h2>
@@ -214,7 +214,7 @@ public class Post
 </code></pre>
 <p>The following example shows how to define a relationship between a principal (Blog) and a post (Post).</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 When using C# nullable reference types, the reference navigation must be nullable if the foreign key property is nullable. In this case, <code>Post.BlogId</code> is nullable, so <code>Post.Blog</code> must be nullable too. See Working with Nullable Reference Types for more information.</p>
 </blockquote>
 <p>In this release, we have added a new relationship between two objects.</p>
@@ -299,7 +299,7 @@ public class Post
 </code></pre>
 <p>For this example, the foreign key property has been re-introduced, but the navigation on the dependent has been removed.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 A relationship with only one navigation, one from dependent to principal or one from principal to dependent(s), but not both, is known as a unidirectional relationship.</p>
 </blockquote>
 <p>In this release, we have added a new relationship between two objects.</p>
@@ -493,7 +493,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 A composite foreign key value is considered to be <code>null</code> if any of its property values are <code>null</code>. A composite foreign key with one property <code>null</code> and another non-null will not be considered a match for a primary or alternate key with the same values. Both will be considered <code>null</code>.</p>
 </blockquote>
 <p>Both <code>HasForeignKey</code> and <code>HasPrincipalKey</code> can be used to explicitly specify keys with multiple properties. For example:</p>
@@ -513,7 +513,7 @@ A composite foreign key value is considered to be <code>null</code> if any of it
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 In the code above, the calls to <code>HasKey</code> and <code>HasMany</code> have been grouped together into a nested builder. Nested builders remove the need to call Entity&lt;&gt;() multiple times for the same entity type, but are functionally equivalent to calling Entity&lt;&gt;() multiple times.</p>
 </blockquote>
 <h2><a href="#required-one-to-many-without-cascade-delete" aria-hidden="true" class="anchor" id="required-one-to-many-without-cascade-delete"></a>Required one-to-many without cascade delete</h2>

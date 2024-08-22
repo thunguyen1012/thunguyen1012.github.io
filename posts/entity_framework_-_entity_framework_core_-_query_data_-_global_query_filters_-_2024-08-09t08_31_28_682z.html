@@ -99,11 +99,11 @@
 <h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
 <p>The following example shows how to use Global Query Filters to implement multi-tenancy and soft-delete query behaviors in a simple blogging model.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Multi-tenancy is used here as a simple example. There is also an article with comprehensive guidance for multi-tenancy in EF Core applications.</p>
 </blockquote>
 <p>First, define the entities:</p>
@@ -137,11 +137,11 @@ modelBuilder.Entity&lt;Post&gt;().HasQueryFilter(p =&gt; !p.IsDeleted);
 </code></pre>
 <p>The predicate expressions passed to the <code>HasQueryFilter</code> calls will now automatically be applied to any LINQ queries for those types.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Note the use of a DbContext instance level field: <code>_tenantId</code> used to set the current tenant. Model-level filters will use the value from the correct context instance (that is, the instance that is executing the query).</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 It is currently not possible to define multiple query filters on the same entity - only the last one will be applied. However, you can define a single filter with multiple conditions using the logical <code>AND</code> operator (&amp;&amp; in C#).</p>
 </blockquote>
 <h2><a href="#use-of-navigations" aria-hidden="true" class="anchor" id="use-of-navigations"></a>Use of navigations</h2>
@@ -163,12 +163,12 @@ WHERE (
     WHERE ([p].[Title] LIKE N'%fish%') AND ([b].[BlogId] = [p].[BlogId])) &gt; 0
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Currently EF Core does not detect cycles in global query filter definitions, so you should be careful when defining them. If specified incorrectly, cycles could lead to infinite loops during query translation.</p>
 </blockquote>
 <h2><a href="#accessing-entity-with-query-filter-using-required-navigation" aria-hidden="true" class="anchor" id="accessing-entity-with-query-filter-using-required-navigation"></a>Accessing entity with query filter using required navigation</h2>
 <blockquote>
-<p>Caution
+<p class='caution'>Caution
 Using required navigation to access entity which has global query filter defined may lead to unexpected results.</p>
 </blockquote>
 <p>You may get fewer elements than expected in result if the related entity is filtered out by the query filter.</p>

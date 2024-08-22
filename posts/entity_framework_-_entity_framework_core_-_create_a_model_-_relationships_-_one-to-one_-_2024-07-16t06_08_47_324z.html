@@ -101,7 +101,7 @@
 <p>One-to-one relationships are used when one entity is associated with at most one other entity. For example, a <code>Blog</code> has one <code>BlogHeader</code>, and that <code>BlogHeader</code> belongs to a single <code>Blog</code>.</p>
 <p>In this document, we are going to look at some of the basics of configuration management.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code for all the examples below can be found in OneToOne.cs.</p>
 </blockquote>
 <h2><a href="#required-one-to-one" aria-hidden="true" class="anchor" id="required-one-to-one"></a>Required one-to-one</h2>
@@ -136,7 +136,7 @@ public class BlogHeader
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 It is not always obvious which side of a one-to-one relationship should be the principal, and which side should be the dependent. Some considerations are:</p>
 </blockquote>
 <p>If the database tables for the two types already exist, then the table with the foreign key column(s) must map to the dependent type.
@@ -163,11 +163,11 @@ If there is a natural parent/child relationship, then the child is usually the d
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 A required relationship ensures that every dependent entity must be associated with some principal entity. However, a principal entity can always exist without any dependent entity. That is, a required relationship does not indicate that there will always be a dependent entity. There is no way in the EF model, and also no standard way in a relational database, to ensure that a principal is associated with a dependent. If this is needed, then it must be implemented in application (business) logic. See Required navigations for more information.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 A relationship with two navigations--one from dependent to principal and an inverse from principal to dependent--is known as a bidirectional relationship.</p>
 </blockquote>
 <p>This relationship is discovered by convention. That is:</p>
@@ -186,7 +186,7 @@ A relationship with two navigations--one from dependent to principal and an inve
 </li>
 </ul>
 <blockquote>
-<p>Important
+<p class='important'>Important
 When using C# nullable reference types, the navigation from the dependent to the principal must be nullable if the foreign key property is nullable. If the foreign key property is non-nullable, then the navigation may be nullable or not. In this case, <code>BlogHeader.BlogId</code> is non-nullable, and <code>BlogHeader.Blog</code> is also non-nullable. The = <code>null</code>!; construct is used to mark this as intentional for the C# compiler, since EF typically sets the <code>Blog</code> instance and it cannot be <code>null</code> for a fully loaded relationship. See Working with Nullable Reference Types for more information.</p>
 </blockquote>
 <p>For cases where the navigations, foreign key, or required/optional nature of the relationship are not discovered by convention, these things can be configured explicitly. For example:</p>
@@ -211,7 +211,7 @@ When using C# nullable reference types, the navigation from the dependent to the
 </code></pre>
 <p>Neither of these options is better than the other; they both result in exactly the same configuration.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 It is never necessary to configure a relationship twice, once starting from the principal, and then again starting from the dependent. Also, attempting to configure the principal and dependent halves of a relationship separately generally does not work. Choose to configure each relationship from either one end or the other and then write the configuration code only once.</p>
 </blockquote>
 <h2><a href="#optional-one-to-one" aria-hidden="true" class="anchor" id="optional-one-to-one"></a>Optional one-to-one</h2>
@@ -232,7 +232,7 @@ public class BlogHeader
 </code></pre>
 <p>The following example shows how to set the foreign key property and navigation to a principal (Blog).</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 When using C# nullable reference types, the navigation property from dependent to principal must be nullable if the foreign key property is nullable. In this case, <code>BlogHeader.BlogId</code> is nullable, so <code>BlogHeader.Blog</code> must be nullable too. See Working with Nullable Reference Types for more information.</p>
 </blockquote>
 <p>In this release, we have added a new relationship between two objects.</p>
@@ -271,7 +271,7 @@ public class BlogHeader
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 HasPrincipalKey can also used for this purpose, but doing so is less common.</p>
 </blockquote>
 <p>When the primary key is suitable, then it is used as the foreign key.</p>
@@ -374,7 +374,7 @@ public class BlogHeader
 </code></pre>
 <p>For this example, the foreign key property has been re-introduced, but the navigation on the dependent has been removed.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 A relationship with only one navigation--one from dependent to principal or one from principal to dependent, but not both--is known as a unidirectional relationship.</p>
 </blockquote>
 <p>A relationship between a navigation and a foreign key is a relationship between the navigation and the foreign key.</p>
@@ -577,7 +577,7 @@ public class BlogHeader
 }
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 A composite foreign key value is considered to be <code>null</code> if any of its property values are <code>null</code>. A composite foreign key with one property <code>null</code> and another non-null will not be considered a match for a primary or alternate key with the same values. Both will be considered <code>null</code>.</p>
 </blockquote>
 <p>Both <code>HasForeignKey</code> and <code>HasPrincipalKey</code> can be used to explicitly specify keys with multiple properties. For example:</p>
@@ -597,7 +597,7 @@ A composite foreign key value is considered to be <code>null</code> if any of it
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 In the code above, the calls to <code>HasKey</code> and <code>HasOne</code> have been grouped together into a nested builder. Nested builders remove the need to call Entity&lt;&gt;() multiple times for the same entity type, but are functionally equivalent to calling Entity&lt;&gt;() multiple times.</p>
 </blockquote>
 <h2><a href="#required-one-to-one-without-cascade-delete" aria-hidden="true" class="anchor" id="required-one-to-one-without-cascade-delete"></a>Required one-to-one without cascade delete</h2>
@@ -647,7 +647,7 @@ public class BlogHeader
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 For one-to-one self referencing relationships, since the principal and dependent entity types are the same, specifying which type contains the foreign key does not clarify the dependent end. In this case, the navigation specified in <code>HasOne</code> points from dependent to principal, and the navigation specified in <code>WithOne</code> points from principal to dependent.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/relationships/one-to-one">One-to-one relationships</a></p>

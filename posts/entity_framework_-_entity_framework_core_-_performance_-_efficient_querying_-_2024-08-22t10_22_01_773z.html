@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Performance - Efficient querying | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Querying efficiently is a vast subject, that covers subjects as wide-ranging as indexes, related entity loading strategies, and many others. This section details some common themes for making your queries faster, and pitfalls users typically encounter.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Performance - Efficient querying</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>How do you make your queries faster?</p>
+<h2><a href="#use-indexes-properly" aria-hidden="true" class="anchor" id="use-indexes-properly"></a>Use indexes properly</h2>
+<p>The performance of a query is an important consideration for any software developer.</p>
+<pre><code class="language-csharp">// Matches on start, so uses an index (on SQL Server)
+var posts1 = context.Posts.Where(p =&gt; p.Title.StartsWith(&quot;A&quot;)).ToList();
+// Matches on end, so does not use the index
+var posts2 = context.Posts.Where(p =&gt; p.Title.EndsWith(&quot;A&quot;)).ToList();
+</code></pre>
+<p>A slow index query can be a sign that your database is suffering from indexing problems.</p>
+<p>When using indexes in an EF application, it's important to keep in mind some general guidelines.</p>
+<ul>
+<li>
+<p>While indexes speed up queries, they also slow down updates since they need to be kept up-to-date. Avoid defining indexes which aren't needed, and consider using index filters to limit the index to a subset of the rows, thereby reducing this overhead.</p>
+</li>
+<li>
+<p>Composite indexes can speed up queries which filter on multiple columns, but they can also speed up queries which don't filter on all the index's columns - depending on ordering. For example, an index on columns A and B speeds up queries filtering by A and B as well as queries filtering only by A, but it does not speed up queries only filtering over B.</p>
+</li>
+<li>
+<p>If a query filters by an expression over a column (e.g. <code>price / 2</code>), a simple index cannot be used. However, you can define a stored persisted column for your expression, and create an index over that. Some databases also support expression indexes, which can be directly used to speed up queries filtering by any expression.</p>
+</li>
+<li>
+<p>Different databases allow indexes to be configured in various ways, and in many cases EF Core providers expose these via the Fluent API. For example, the SQL Server provider allows you to configure whether an index is clustered, or set its fill factor. Consult your provider's documentation for more information.</p>
+</li>
+</ul>
+<h2><a href="#project-only-properties-you-need" aria-hidden="true" class="anchor" id="project-only-properties-you-need"></a>Project only properties you need</h2>
+<p>Entity instances are instances of data stored in a database.</p>
+<pre><code class="language-csharp">foreach (var blog in context.Blogs)
+{
+    Console.WriteLine(&quot;Blog: &quot; + blog.Url);
+}
+</code></pre>
+<p>Although this code only actually needs each Blog's <code>Url</code> property, the entire Blog entity is fetched, and unneeded columns are transferred from the database:</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[CreationDate], [b].[Name], [b].[Rating], [b].[Url]
+FROM [Blogs] AS [b]
+</code></pre>
+<p>This can be optimized by using <code>Select</code> to tell EF which columns to project out:</p>
+<pre><code class="language-csharp">foreach (var blogName in context.Blogs.Select(b =&gt; b.Url))
+{
+    Console.WriteLine(&quot;Blog: &quot; + blogName);
+}
+</code></pre>
+<p>The resulting SQL pulls back only the needed columns:</p>
+<pre><code class="language-sql">SELECT [b].[Url]
+FROM [Blogs] AS [b]
+</code></pre>
+<p>If you need to project out more than one column, project out to a C# anonymous type with the properties you want.</p>
+<p>In this post I'm going to show you how to change the properties of an Entity Framework blog.</p>
+<h2><a href="#limit-the-resultset-size" aria-hidden="true" class="anchor" id="limit-the-resultset-size"></a>Limit the resultset size</h2>
+<p>By default, a query returns all rows that matches its filters:</p>
+<pre><code class="language-csharp">var blogsAll = context.Posts
+    .Where(p =&gt; p.Title.StartsWith(&quot;A&quot;))
+    .ToList();
+</code></pre>
+<p>If you want to test the performance of a query against real-world data, use a test database.</p>
+<p>As a result, it's usually worth giving thought to limiting the number of results:</p>
+<pre><code class="language-csharp">var blogs25 = context.Posts
+    .Where(p =&gt; p.Title.StartsWith(&quot;A&quot;))
+    .Take(25)
+    .ToList();
+</code></pre>
+<p>Is there a way to show the number of rows in a database at a time?</p>
+<h2><a href="#efficient-pagination" aria-hidden="true" class="anchor" id="efficient-pagination"></a>Efficient pagination</h2>
+<p>Pagination refers to retrieving results in pages, rather than all at once; this is typically done for large resultsets, where a user interface is shown that allows the user to navigate to the next or previous page of the results. A common way to implement pagination with databases is to use the <code>Skip</code> and <code>Take</code> operators (OFFSET and <code>LIMIT</code> in SQL); while this is an intuitive implementation, it's also quite inefficient. For pagination that allows moving one page at a time (as opposed to jumping to arbitrary pages), consider using keyset pagination instead.</p>
+<p>For more information, see the documentation page on pagination.</p>
+<h2><a href="#avoid-cartesian-explosion-when-loading-related-entities" aria-hidden="true" class="anchor" id="avoid-cartesian-explosion-when-loading-related-entities"></a>Avoid cartesian explosion when loading related entities</h2>
+<p>In relational databases, all related entities are loaded by introducing JOINs in single query.</p>
+<pre><code class="language-sql">SELECT [b].[BlogId], [b].[OwnerId], [b].[Rating], [b].[Url], [p].[PostId], [p].[AuthorId], [p].[BlogId], [p].[Content], [p].[Rating], [p].[Title]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[BlogId] = [p].[BlogId]
+ORDER BY [b].[BlogId], [p].[PostId]
+</code></pre>
+<p>This article explains how to avoid the &quot;cartesian explosion&quot; problem in your application.</p>
+<p>EF allows avoiding this effect via the use of &quot;split queries&quot;, which load the related entities via separate queries. For more information, read the documentation on split and single queries.</p>
+<blockquote>
+<p class='note'>Note
+The current implementation of split queries executes a roundtrip for each query. We plan to improve this in the future, and execute all queries in a single roundtrip.</p>
+</blockquote>
+<h2><a href="#load-related-entities-eagerly-when-possible" aria-hidden="true" class="anchor" id="load-related-entities-eagerly-when-possible"></a>Load related entities eagerly when possible</h2>
+<p>It's recommended to read the dedicated page on related entities before continuing with this section.</p>
+<p>In this article, I'm going to show you how to use eager loading and filtered include to load related entities.</p>
+<pre><code class="language-csharp">using (var context = new BloggingContext())
+{
+    var filteredBlogs = context.Blogs
+        .Include(
+            blog =&gt; blog.Posts
+                .Where(post =&gt; post.BlogId == 1)
+                .OrderByDescending(post =&gt; post.Title)
+                .Take(5))
+        .ToList();
+}
+</code></pre>
+<p>In some cases, it may be more efficient to just always load all Posts, rather than to execute the additional roundtrips and selectively get only the Posts you need.</p>
+<h3><a href="#beware-of-lazy-loading" aria-hidden="true" class="anchor" id="beware-of-lazy-loading"></a>Beware of lazy loading</h3>
+<p>In this talk, I'm going to show you how to use lazy loading in the EF Core database.</p>
+<p>Consider the following:</p>
+<pre><code class="language-csharp">foreach (var blog in context.Blogs.ToList())
+{
+    foreach (var post in blog.Posts)
+    {
+        Console.WriteLine($&quot;Blog {blog.Url}, Post: {post.Title}&quot;);
+    }
+}
+</code></pre>
+<p>This seemingly innocent piece of code iterates through all the blogs and their posts, printing them out. Turning on EF Core's statement logging reveals the following:</p>
+<pre><code class="language-console">info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT [b].[BlogId], [b].[Rating], [b].[Url]
+      FROM [Blogs] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@__p_0='1'], CommandType='Text', CommandTimeout='30']
+      SELECT [p].[PostId], [p].[BlogId], [p].[Content], [p].[Title]
+      FROM [Post] AS [p]
+      WHERE [p].[BlogId] = @__p_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__p_0='2'], CommandType='Text', CommandTimeout='30']
+      SELECT [p].[PostId], [p].[BlogId], [p].[Content], [p].[Title]
+      FROM [Post] AS [p]
+      WHERE [p].[BlogId] = @__p_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__p_0='3'], CommandType='Text', CommandTimeout='30']
+      SELECT [p].[PostId], [p].[BlogId], [p].[Content], [p].[Title]
+      FROM [Post] AS [p]
+      WHERE [p].[BlogId] = @__p_0
+
+... and so on
+</code></pre>
+<p>I'm having problems with lazy loading and N+1 problems.</p>
+<p>In this post we're going to show you how to load some of the blog posts that we're going to be publishing over the next few weeks.</p>
+<pre><code class="language-csharp">foreach (var blog in context.Blogs.Select(b =&gt; new { b.Url, b.Posts }).ToList())
+{
+    foreach (var post in blog.Posts)
+    {
+        Console.WriteLine($&quot;Blog {blog.Url}, Post: {post.Title}&quot;);
+    }
+}
+</code></pre>
+<p>This will make EF Core fetch all the Blogs - along with their Posts - in a single query. In some cases, it may also be useful to avoid cartesian explosion effects by using split queries.</p>
+<blockquote>
+<p class='warning'>Warning
+Because lazy loading makes it extremely easy to inadvertently trigger the N+1 problem, it is recommended to avoid it. Eager or explicit loading make it very clear in the source code when a database roundtrip occurs.</p>
+</blockquote>
+<h2><a href="#buffering-and-streaming" aria-hidden="true" class="anchor" id="buffering-and-streaming"></a>Buffering and streaming</h2>
+<p>The difference between buffering and streaming queries is significant.</p>
+<p>Whether a query buffers or streams depends on how it is evaluated:</p>
+<pre><code class="language-csharp">// ToList and ToArray cause the entire resultset to be buffered:
+var blogsList = context.Posts.Where(p =&gt; p.Title.StartsWith(&quot;A&quot;)).ToList();
+var blogsArray = context.Posts.Where(p =&gt; p.Title.StartsWith(&quot;A&quot;)).ToArray();
+
+// Foreach streams, processing one row at a time:
+foreach (var blog in context.Posts.Where(p =&gt; p.Title.StartsWith(&quot;A&quot;)))
+{
+    // ...
+}
+
+// AsEnumerable also streams, allowing you to execute LINQ operators on the client-side:
+var doubleFilteredBlogs = context.Posts
+    .Where(p =&gt; p.Title.StartsWith(&quot;A&quot;)) // Translated to SQL and executed in the database
+    .AsEnumerable()
+    .Where(p =&gt; SomeDotNetMethod(p)); // Executed at the client on all database results
+</code></pre>
+<p>If you have a large number of rows to query, then you might want to consider buffering your results.</p>
+<blockquote>
+<p class='note'>Note
+Avoid using <code>ToList</code> or <code>ToArray</code> if you intend to use another LINQ operator on the result - this will needlessly buffer all results into memory. Use <code>AsEnumerable</code> instead.</p>
+</blockquote>
+<h3><a href="#internal-buffering-by-ef" aria-hidden="true" class="anchor" id="internal-buffering-by-ef"></a>Internal buffering by EF</h3>
+<p>In certain situations, EF will itself buffer the resultset internally, regardless of how you evaluate your query. The two cases where this happens are:</p>
+<ul>
+<li>
+<p>When a retrying execution strategy is in place. This is done to make sure the same results are returned if the query is retried later.</p>
+</li>
+<li>
+<p>When split query is used, the resultsets of all but the last query are buffered - unless MARS (Multiple Active Result Sets) is enabled on SQL Server. This is because it is usually impossible to have multiple query resultsets active at the same time.</p>
+</li>
+</ul>
+<p>You may want to consider buffering the resultset before loading it into memory.</p>
+<h2><a href="#tracking-no-tracking-and-identity-resolution" aria-hidden="true" class="anchor" id="tracking-no-tracking-and-identity-resolution"></a>Tracking, no-tracking and identity resolution</h2>
+<p>It's recommended to read the dedicated page on tracking and no-tracking before continuing with this section.</p>
+<p>Changes made to an instance of Entity Framework (EF) will be tracked and persisted.</p>
+<ul>
+<li>
+<p>EF internally maintains a dictionary of tracked instances. When new data is loaded, EF checks the dictionary to see if an instance is already tracked for that entity's key (identity resolution). The dictionary maintenance and lookups take up some time when loading the query's results.</p>
+</li>
+<li>
+<p>Before handing a loaded instance to the application, EF snapshots that instance and keeps the snapshot internally. When SaveChanges is called, the application's instance is compared with the snapshot to discover the changes to be persisted. The snapshot takes up more memory, and the snapshotting process itself takes time; it's sometimes possible to specify different, possibly more efficient snapshotting behavior via value comparers, or to use change-tracking proxies to bypass the snapshotting process altogether (though that comes with its own set of disadvantages).</p>
+</li>
+</ul>
+<p>In read-only scenarios where changes aren't saved back to the database, the following overheads can be avoided:</p>
+<p>In this post, I'm going to walk you through some of the differences between tracking and no-tracking queries.</p>
+<p>Is it possible to track the number of posts on a blog?</p>
+<table><thead>
+<tr>
+<th>Method</th>
+<th>NumBlogs</th>
+<th>NumPostsPerBlog</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">Error</th>
+<th style="text-align: right;">StdDev</th>
+<th style="text-align: right;">Median</th>
+<th style="text-align: right;">Ratio</th>
+<th style="text-align: right;">RatioSD</th>
+<th style="text-align: right;">Gen 0</th>
+<th style="text-align: right;">Gen 1</th>
+<th style="text-align: right;">Gen 2</th>
+<th style="text-align: right;">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AsTracking</td>
+<td>10</td>
+<td>20</td>
+<td style="text-align: right;">1,414.7 us</td>
+<td style="text-align: right;">27.20 us</td>
+<td style="text-align: right;">45.44 us</td>
+<td style="text-align: right;">1,405.5 us</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">60.5469</td>
+<td style="text-align: right;">13.6719</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">380.11 KB</td>
+</tr>
+<tr>
+<td>AsNoTracking</td>
+<td>10</td>
+<td>20</td>
+<td style="text-align: right;">993.3 us</td>
+<td style="text-align: right;">24.04 us</td>
+<td style="text-align: right;">65.40 us</td>
+<td style="text-align: right;">966.2 us</td>
+<td style="text-align: right;">0.71</td>
+<td style="text-align: right;">0.05</td>
+<td style="text-align: right;">37.1094</td>
+<td style="text-align: right;">6.8359</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">232.89 KB</td>
+</tr>
+</tbody></table>
+<p>In this paper, we demonstrate how to reduce the overhead of change tracking in the Entity Framework (EF).</p>
+<h2><a href="#using-sql-queries" aria-hidden="true" class="anchor" id="using-sql-queries"></a>Using SQL queries</h2>
+<p>In most cases, SQL exists for your query in EF.</p>
+<ul>
+<li>
+<p>Use SQL queries directly in your query, e.g. via FromSqlRaw. EF even lets you compose over the SQL with regular LINQ queries, allowing you to express only a part of the query in SQL. This is a good technique when the SQL only needs to be used in a single query in your codebase.</p>
+</li>
+<li>
+<p>Define a user-defined function (UDF), and then call that from your queries. Note that EF allows UDFs to return full resultsets - these are known as table-valued functions (TVFs) - and also allows mapping a <code>DbSet</code> to a function, making it look just like just another table.</p>
+</li>
+<li>
+<p>Define a database view and query from it in your queries. Note that unlike functions, views cannot accept parameters.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Raw SQL should generally be used as a last resort, after making sure that EF can't generate the SQL you want, and when performance is important enough for the given query to justify it. Using raw SQL brings considerable maintenance disadvantages.</p>
+</blockquote>
+<h2><a href="#asynchronous-programming" aria-hidden="true" class="anchor" id="asynchronous-programming"></a>Asynchronous programming</h2>
+<p>In this article, I'm going to show you how to use asynchronous APIs.</p>
+<p>For more information, see the page on async programming.</p>
+<blockquote>
+<p class='warning'>Warning
+Avoid mixing synchronous and asynchronous code in the same application - it's very easy to inadvertently trigger subtle thread-pool starvation issues.</p>
+</blockquote>
+<blockquote>
+<p class='warning'>Warning
+The async implementation of Microsoft.Data.SqlClient unfortunately has some known issues (e.g. #593, #601, and others). If you're seeing unexpected performance problems, try using sync command execution instead, especially when dealing with large text or binary values.</p>
+</blockquote>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>See the advanced performance topics page for additional topics related to efficient querying.</p>
+</li>
+<li>
+<p>See the performance section of the null comparison documentation page for some best practices when comparing nullable values.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying">Efficient Querying</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

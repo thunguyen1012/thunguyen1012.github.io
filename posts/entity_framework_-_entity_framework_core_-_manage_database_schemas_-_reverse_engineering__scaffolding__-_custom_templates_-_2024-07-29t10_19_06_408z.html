@@ -88,7 +88,7 @@
         <h1>Entity Framework - Entity Framework Core - Manage database schemas - Reverse engineering (scaffolding) - Custom templates</h1>
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This feature was added in EF Core 7.</p>
 </blockquote>
 <p>This article shows how to scaffold code using T4 text templates.</p>
@@ -123,13 +123,13 @@ This feature was added in EF Core 7.</p>
 </ul>
 <p>The <code>DbContext.t4</code> template is used to scaffold a DbContext class for the database, and the <code>EntityType.t4</code> template is used to scaffold entity type classes for each table and view in the database.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The .t4 extension is used (instead of .tt) to prevent Visual Studio from transforming the templates. The templates will be transformed by EF Core instead.</p>
 </blockquote>
 <h2><a href="#introduction-to-t4" aria-hidden="true" class="anchor" id="introduction-to-t4"></a>Introduction to T4</h2>
 <p>The following code shows how to use a T4 template to generate text using .NET.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 T4 text templates--especially ones that generate code--can be difficult to read without syntax highlighting. If necessary, search for an extension to your code editor that enables T4 syntax highlighting.</p>
 </blockquote>
 <pre><code class="language-T4">&lt;#@ template hostSpecific=&quot;true&quot; #&gt;

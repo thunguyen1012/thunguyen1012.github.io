@@ -90,15 +90,15 @@
 <p>Each <code>DbContext</code> instance tracks changes made to entities. These tracked entities in turn drive the changes to the database when <code>SaveChanges</code> is called.</p>
 <p><code>DbContext</code> change tracking works best when the same DbContext instance is used to query for entities and update them by calling <code>SaveChanges</code>.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 For simplicity, this document uses and references synchronous methods such as <code>SaveChanges</code> rather than their async equivalents such as <code>SaveChangesAsync</code>. Calling and awaiting the async method can be substituted unless otherwise noted.</p>
 </blockquote>
 <h2><a href="#introduction" aria-hidden="true" class="anchor" id="introduction"></a>Introduction</h2>
@@ -115,7 +115,7 @@ For simplicity, this document uses and references synchronous methods such as <c
 <p><code>DbContexts</code> are defined in two ways: the first is needed by applications that track entities or their relationships while the entities are being tracked, and the second is only needed by applications that change entities or their relationships while the entities are not being tracked.</p>
 <p>The <code>DbContext.Attach</code> method has been deprecated.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Attaching entities to the same DbContext instance that they were queried from should not normally be needed. Do not routinely perform a no-tracking query and then attach the returned entities to the same context. This will be slower than using a tracking query, and may also result in issues such as missing shadow property values, making it harder to get right.</p>
 </blockquote>
 <h3><a href="#generated-versus-explicit-key-values" aria-hidden="true" class="anchor" id="generated-versus-explicit-key-values"></a>Generated versus explicit key values</h3>
@@ -167,7 +167,7 @@ public class Post
 <h3><a href="#explicit-key-values" aria-hidden="true" class="anchor" id="explicit-key-values"></a>Explicit key values</h3>
 <p>An entity can be put in the <code>Added</code> state by calling <code>DbContext.AddRange</code>, <code>DbContext.AddAsync</code>, or the equivalent methods on <code>DbSet&lt;T&gt;</code>.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 These methods all work in the same way in the context of change tracking. See Additional Change Tracking Features for more information.</p>
 </blockquote>
 <p>For example, to start tracking a new blog:</p>
@@ -333,7 +333,7 @@ Post {Id: 2} Unchanged
 </code></pre>
 <p>This is exactly the same end-state as the previous example that used explicit key values.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 An explicit key value can still be set even when using generated key values. EF Core will then attempt to insert using this key value. Some database configurations, including SQL Server with Identity columns, do not support such inserts and will throw (see these docs for a workaround).</p>
 </blockquote>
 <h2><a href="#attaching-existing-entities" aria-hidden="true" class="anchor" id="attaching-existing-entities"></a>Attaching existing entities</h2>
@@ -343,7 +343,7 @@ An explicit key value can still be set even when using generated key values. EF 
     new Blog { Id = 1, Name = &quot;.NET Blog&quot;, });
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The examples here are creating entities explicitly with new for simplicity. Normally the entity instances will have come from another source, such as being deserialized from a client, or being created from data in an HTTP Post.</p>
 </blockquote>
 <p>Inspecting the change tracker debug view following this call shows that the entity is tracked in the <code>Unchanged</code> state:</p>
@@ -791,7 +791,7 @@ WHERE &quot;Id&quot; = @p1;
 </code></pre>
 <p>After <code>SaveChanges</code> completes, all the deleted entities are detached from the DbContext since they no longer exist in the database. Output from the debug view is therefore empty.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This document only scratches the surface on working with relationships in EF Core. See Relationships for more information on modeling relationships, and Changing Foreign Keys and Navigations for more information on updating/deleting dependent/child entities when calling <code>SaveChanges</code>.</p>
 </blockquote>
 <h2><a href="#custom-tracking-with-trackgraph" aria-hidden="true" class="anchor" id="custom-tracking-with-trackgraph"></a>Custom tracking with <code>TrackGraph</code></h2>
@@ -847,7 +847,7 @@ Tracking Post with key value -2 as Deleted
 Tracking Post with key value 0 as Added
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 For simplicity, this code assumes each entity has an integer primary key property called <code>Id</code>. This could be codified into an abstract base class or interface. Alternately, the primary key property or properties could be obtained from the IEntityType metadata such that this code would work with any type of entity.</p>
 </blockquote>
 <p>In this post, I'm going to show you how to overload TrackGraph with EF Core.</p>

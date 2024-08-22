@@ -100,11 +100,11 @@
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>EF Core uses a set of conventions when discovering and building a model based on entity type classes.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 The conventions described here can be overridden by explicit configuration of the relationship using either mapping attributes or the model building API.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code below can be found in RelationshipConventions.cs.</p>
 </blockquote>
 <h2><a href="#discovering-navigations" aria-hidden="true" class="anchor" id="discovering-navigations"></a>Discovering navigations</h2>
@@ -305,12 +305,12 @@ public class Tag
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This pairing of navigations may be incorrect if the two navigations represent two, different, unidirectional relationships. In this case, the two relationships must be configured explicitly.</p>
 </blockquote>
 <p>Pairing of relationships only works when there is a single relationship between two types. Multiple relationships between two types must be configured explicitly.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The descriptions here are in terms of relationships between two different types. However, it is possible for the same type to be on both ends of a relationship, and therefore for a single type to have two navigations both paired with each other. This is called a self-referencing relationship.</p>
 </blockquote>
 <h2><a href="#discovering-foreign-key-properties" aria-hidden="true" class="anchor" id="discovering-foreign-key-properties"></a>Discovering foreign key properties</h2>
@@ -344,7 +344,7 @@ The descriptions here are in terms of relationships between two different types.
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The &quot;Id&quot; suffix can have any casing.</p>
 </blockquote>
 <p>The following entity types show examples for each of these naming conventions.</p>
@@ -405,7 +405,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 In the case of one-to-many navigations, the foreign key properties must be on the type with the reference navigation, since this will be the dependent entity. In the case of one-to-one relationships, discovery of a foreign key property is used to determine which type represents the dependent end of the relationship. If no foreign key property is discovered, then the dependent end must be configured using <code>HasForeignKey</code>. See One-to-one relationships for examples of this.</p>
 </blockquote>
 <p>The following rules apply to the naming of foreign keys, where each property of the foreign key must have a compatible type with the corresponding property of the primary or alternate key, and each property name must match one of the naming conventions described above.</p>
@@ -571,7 +571,7 @@ CREATE INDEX &quot;IX_PostTag_TagsId&quot; ON &quot;PostTag&quot; (&quot;TagsId&
 <pre><code class="language-sql">CREATE INDEX &quot;IX_Post_ContainingBlogId1_ContainingBlogId2&quot; ON &quot;Post&quot; (&quot;ContainingBlogId1&quot;, &quot;ContainingBlogId2&quot;);
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 EF does not create indexes for properties that are already covered by an existing index or primary key constraint.</p>
 </blockquote>
 <h3><a href="#how-to-stop-ef-creating-indexes-for-foreign-keys" aria-hidden="true" class="anchor" id="how-to-stop-ef-creating-indexes-for-foreign-keys"></a>How to stop EF creating indexes for foreign keys</h3>

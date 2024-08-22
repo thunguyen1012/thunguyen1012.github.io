@@ -155,7 +155,7 @@
     .HaveMaxLength(1024);
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The type specified in a call from <code>ConfigureConventions</code> can be a base type, an interface or a generic type definition. All matching configurations will be applied in order from the least specific:</p>
 </blockquote>
 <p>Interface
@@ -181,7 +181,7 @@ Exact type</p>
 </li>
 </ul>
 <blockquote>
-<p>Important
+<p class='important'>Important
 Pre-convention configuration is equivalent to explicit configuration that is applied as soon as a matching object is added to the model. It will override all conventions and Data Annotations. For example, with the above configuration all <code>string</code> foreign key properties will be created as non-unicode with <code>MaxLength</code> of 1024, even when this doesn't match the principal key.</p>
 </blockquote>
 <h3><a href="#ignoring-types" aria-hidden="true" class="anchor" id="ignoring-types"></a>Ignoring types</h3>
@@ -209,7 +209,7 @@ Pre-convention configuration is equivalent to explicit configuration that is app
 </ul>
 <h2><a href="#conventions" aria-hidden="true" class="anchor" id="conventions"></a>Conventions</h2>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Custom model building conventions were introduced in EF Core 7.0.</p>
 </blockquote>
 <p>EF Core model building conventions are classes that contain logic that is triggered based on changes being made to the model as it is being built.</p>
@@ -245,7 +245,7 @@ Custom model building conventions were introduced in EF Core 7.0.</p>
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Rather than adding an instance of the convention directly, the <code>Add</code> method accepts a factory for creating instances of the convention. This allows the convention to use dependencies from the EF Core internal service provider. Since this convention has no dependencies, the service provider parameter is named <code>_</code>, indicating that it is never used.</p>
 </blockquote>
 <p>Building the model and looking at the <code>Post</code> entity type shows that this has worked - the discriminator property is now configured to with a maximum length of 24:</p>
@@ -335,7 +335,7 @@ Rather than adding an instance of the convention directly, the <code>Add</code> 
     Title (string) Required MaxLength(512)
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The same can be accomplished by pre-convention configuration, but using a convention allows to further filter applicable properties and for Data Annotations to override the configuration.</p>
 </blockquote>
 <p>This example shows how to set the max length of a <code>string</code> to the max length of a discriminator property.</p>
@@ -409,7 +409,7 @@ public sealed class PersistAttribute : Attribute
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 When replacing a built-in convention, the new convention implementation should inherit from the existing convention class. Note that some conventions have relational or provider-specific implementations, in which case the new convention implementation should inherit from the most specific existing convention class for the database provider in use.</p>
 </blockquote>
 <p>The convention is then registered using the Replace method in <code>ConfigureConventions</code>:</p>
@@ -421,7 +421,7 @@ When replacing a built-in convention, the new convention implementation should i
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This is a case where the existing convention has dependencies, represented by the <code>ProviderConventionSetBuilderDependencies</code> dependency object. These are obtained from the internal service provider using <code>GetRequiredService</code> and passed to the convention constructor.</p>
 </blockquote>
 <p>Notice that this convention allows fields to be mapped (in addition to properties) so long as they are marked with <code>[Persist]</code>. This means we can use private fields as hidden keys in the model.</p>
@@ -494,7 +494,7 @@ public class Garment
 </code></pre>
 <p>Normally, <code>IsClean</code> would have been mapped, but since it is not marked with <code>[Persist]</code>, it is now treated as an un-mapped property.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This convention could not be implemented as a model finalizing convention because there are existing model finalizing conventions that need to run after the property is mapped to further configure it.</p>
 </blockquote>
 <h3><a href="#conventions-implementation-considerations" aria-hidden="true" class="anchor" id="conventions-implementation-considerations"></a>Conventions implementation considerations</h3>
@@ -544,7 +544,7 @@ This convention could not be implemented as a model finalizing convention becaus
 </code></pre>
 <p>Here we can be sure that the call to <code>HasMaxLength</code> will not return <code>null</code>. It is still recommended to use the builder instance returned from <code>HasMaxLength</code> as it might be different from <code>propertyBuilder</code>.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Other conventions are not triggered immediately after a convention makes a change, they are delayed until all conventions have finished processing the current change.</p>
 </blockquote>
 <h3><a href="#iconventioncontext" aria-hidden="true" class="anchor" id="iconventioncontext"></a><code>IConventionContext</code></h3>
@@ -570,7 +570,7 @@ Other conventions are not triggered immediately after a convention makes a chang
 <h3><a href="#iconventionmodel" aria-hidden="true" class="anchor" id="iconventionmodel"></a><code>IConventionModel</code></h3>
 <p>The <code>IMutableModel</code> API exposes methods that allow you to iterate over and apply common configuration to the model.</p>
 <blockquote>
-<p>Caution
+<p class='caution'>Caution
 It is advised to always perform configuration by calling methods on the builder exposed as the Builder property, because the builders check whether the given configuration would override something that was already specified using Fluent API or Data Annotations.</p>
 </blockquote>
 <h2><a href="#when-to-use-each-approach-for-bulk-configuration" aria-hidden="true" class="anchor" id="when-to-use-each-approach-for-bulk-configuration"></a>When to use each approach for bulk configuration</h2>

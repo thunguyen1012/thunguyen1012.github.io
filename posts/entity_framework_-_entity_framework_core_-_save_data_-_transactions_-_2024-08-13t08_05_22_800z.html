@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>A transaction is a type of database operation.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <h2><a href="#default-transaction-behavior" aria-hidden="true" class="anchor" id="default-transaction-behavior"></a>Default transaction behavior</h2>
@@ -123,13 +123,13 @@ catch (Exception)
 </code></pre>
 <p>While all relational database providers support transactions, other providers types may throw or no-op when transaction APIs are called.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Manually controlling transactions in this way is incompatible with implicitly invoked retrying execution strategies. See Connection Resiliency for more information.</p>
 </blockquote>
 <h2><a href="#savepoints" aria-hidden="true" class="anchor" id="savepoints"></a>Savepoints</h2>
 <p><code>SaveChanges</code> is a library that allows you to automatically roll back a database transaction if it encounters an error.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Savepoints are incompatible with SQL Server's Multiple Active Result Sets (MARS). Savepoints will not be created by EF when MARS is enabled on the connection, even if MARS is not actively in use. If an error occurs during <code>SaveChanges</code>, the transaction may be left in an unknown state.</p>
 </blockquote>
 <p>It's also possible to manually manage savepoints, just as it is with transactions. The following example creates a savepoint within a transaction, and rolls back to it on failure:</p>
@@ -164,7 +164,7 @@ catch (Exception)
 <p>Sharing a <code>DbConnection</code> requires the ability to pass a connection into a context when constructing it.</p>
 <p>The <code>DbConnection</code> method is used to provide an external connection to the DbContext.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 <code>DbContextOptionsBuilder</code> is the API you used in <code>DbContext.OnConfiguring</code> to configure the context, you are now going to use it externally to create <code>DbContextOptions</code>.</p>
 </blockquote>
 <pre><code class="language-csharp">public class BloggingContext : DbContext
@@ -342,7 +342,7 @@ catch (Exception)
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 If you're using async APIs, be sure to specify <code>TransactionScopeAsyncFlowOption.Enabled</code> in the <code>TransactionScope</code> constructor to ensure that the ambient transaction flows across async calls.</p>
 </blockquote>
 <p>For more information on <code>TransactionScope</code> and ambient transactions, see this documentation.</p>
@@ -350,10 +350,10 @@ If you're using async APIs, be sure to specify <code>TransactionScopeAsyncFlowOp
 <ul>
 <li>EF Core relies on database providers to implement support for <code>System.Transactions</code>. If a provider does not implement support for <code>System.Transactions</code>, it is possible that calls to these APIs will be completely ignored. SqlClient supports it.</li>
 </ul>
-<p>Important
+<p class='important'>Important
 It is recommended that you test that the API behaves correctly with your provider before you rely on it for managing transactions. You are encouraged to contact the maintainer of the database provider if it does not.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 It is recommended that you test that the API behaves correctly with your provider before you rely on it for managing transactions. You are encouraged to contact the maintainer of the database provider if it does not.</p>
 </blockquote>
 <ul>

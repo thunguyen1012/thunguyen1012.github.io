@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>Entity Framework Core allows you to write queries based on your derived context entity classes.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This article is out of date and some parts of it needs to be updated to account for changes happened in design of query pipeline. If you have any doubts about any behavior mentioned here, please ask a question.</p>
 </blockquote>
 <h2><a href="#the-life-of-a-query" aria-hidden="true" class="anchor" id="the-life-of-a-query"></a>The life of a query</h2>
@@ -155,7 +155,7 @@ If not, a new entity is created, change tracking is set up, and the new entity i
 </li>
 </ul>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Always validate user input: While EF Core protects against SQL injection attacks by using parameters and escaping literals in queries, it does not validate inputs. Appropriate validation, per the application's requirements, should be performed before values from un-trusted sources are used in LINQ queries, assigned to entity properties, or passed to other EF Core APIs. This includes any user input used to dynamically construct queries. Even when using LINQ, if you are accepting user input to build expressions, you need to make sure that only intended expressions can be constructed.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/how-query-works">How Queries Work</a></p>

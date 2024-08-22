@@ -90,11 +90,11 @@
 <p>Each DbContext instance tracks changes made to entities. These tracked entities in turn drive the changes to the database when SaveChanges is called.</p>
 <p>This document presents an overview of Entity Framework Core (EF Core) change tracking and how it relates to queries and updates.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 For simplicity, this document uses and references synchronous methods such as SaveChanges rather than their async equivalents such as SaveChangesAsync. Calling and awaiting the async method can be substituted unless otherwise noted.</p>
 </blockquote>
 <h2><a href="#how-to-track-entities" aria-hidden="true" class="anchor" id="how-to-track-entities"></a>How to track entities</h2>
@@ -141,7 +141,7 @@ For simplicity, this document uses and references synchronous methods such as Sa
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 It is not necessary to clear the change tracker or explicitly detach entity instances when taking this approach. However, if you do need to detach entities, then calling <code>ChangeTracker.Clear</code> is more efficient than detaching entities one-by-one.</p>
 </blockquote>
 <h2><a href="#entity-states" aria-hidden="true" class="anchor" id="entity-states"></a>Entity states</h2>
@@ -212,7 +212,7 @@ It is not necessary to clear the change tracker or explicitly detach entity inst
 </tr>
 </tbody></table>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This text uses relational database terms for clarity. NoSQL databases typically support similar operations but possibly with different names. Consult your database provider documentation for more information.</p>
 </blockquote>
 <h2><a href="#tracking-from-queries" aria-hidden="true" class="anchor" id="tracking-from-queries"></a>Tracking from queries</h2>
@@ -410,7 +410,7 @@ WHERE changes() = 1 AND &quot;rowid&quot; = last_insert_rowid();
 </code></pre>
 <p>For more information on how to add or remove entities, see Adding or Removing Entity.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Call <code>ChangeTracker.HasChanges()</code> to determine whether any changes have been made that will cause <code>SaveChanges</code> to make updates to the database. If <code>HasChanges</code> return false, then <code>SaveChanges</code> will be a no-op.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/">Change Tracking in EF Core</a></p>

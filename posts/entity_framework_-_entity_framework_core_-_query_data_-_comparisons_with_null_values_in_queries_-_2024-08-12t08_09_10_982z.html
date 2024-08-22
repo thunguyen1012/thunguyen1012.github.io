@@ -169,7 +169,7 @@ WHERE ([e].[String1] IS NOT NULL AND [e].[String2] IS NOT NULL) AND (([e].[Strin
 <pre><code class="language-csharp">new SqlServerDbContextOptionsBuilder(optionsBuilder).UseRelationalNulls();
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 When using relational <code>null</code> semantics, your LINQ queries no longer have the same meaning as they do in C#, and may yield different results than expected. Exercise caution when using this mode.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/null-comparisons">Query <code>null</code> semantics</a></p>

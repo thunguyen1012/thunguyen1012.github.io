@@ -101,12 +101,7 @@ h6 {
 }
 
 blockquote {
-  font-style: italic;
-  border-left: 3px solid #f9a825 !important;
-  padding: 1em;
-  background: #2a9d8f !important;
-  margin: 1em 0;
-  color: black;
+  margin: 0;
 }
 
 code {
@@ -743,21 +738,46 @@ img:hover {
 }
 
 .note {
-  background-color: #264653 !important;
+  background-color: #588157 !important;
+  font-style: italic;
+  border-left: 3px solid #f9a825 !important;
+  padding: 1em;
+  margin: 1em 0;
+  color: #000;
 }
 
 .tip {
   background-color: #2a9d8f !important;
+  font-style: italic;
+  border-left: 3px solid #f9a825 !important;
+  padding: 1em;
+  margin: 1em 0;
+  color: #000;
 }
 
 .warning {
   background-color: #e9c46a !important;
+  font-style: italic;
+  border-left: 3px solid #f9a825 !important;
+  padding: 1em;
+  margin: 1em 0;
+  color: #000;
 }
 
 .caution {
   background-color: #f4a261 !important;
+  font-style: italic;
+  border-left: 3px solid #f9a825 !important;
+  padding: 1em;
+  margin: 1em 0;
+  color: #000;
 }
 
 .important {
   background-color: #e76f51 !important;
+  font-style: italic;
+  border-left: 3px solid #f9a825 !important;
+  padding: 1em;
+  margin: 1em 0;
+  color: #000;
 }

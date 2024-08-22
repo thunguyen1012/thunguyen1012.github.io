@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>Migrations are files that move your model from one version of EF to another.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If the <code>DbContext</code> is in a different assembly than the startup project, you can explicitly specify the target and startup projects in either the Package Manager Console tools or the .NET Core CLI tools.</p>
 </blockquote>
 <h2><a href="#add-a-migration" aria-hidden="true" class="anchor" id="add-a-migration"></a>Add a migration</h2>
@@ -133,13 +133,13 @@ If the <code>DbContext</code> is in a different assembly than the startup projec
 <pre><code class="language-dotnetcli">dotnet ef migrations add InitialCreate --output-dir Your/Directory
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 You can also change the namespace independently of the directory using <code>--namespace</code>.</p>
 </blockquote>
 <pre><code class="language-powershell">Add-Migration InitialCreate -OutputDir Your\Directory
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 You can also change the namespace independently of the directory using <code>-Namespace</code>.</p>
 </blockquote>
 <h2><a href="#customize-migration-code" aria-hidden="true" class="anchor" id="customize-migration-code"></a>Customize migration code</h2>
@@ -162,7 +162,7 @@ migrationBuilder.AddColumn&lt;string&gt;(
     newName: &quot;FullName&quot;);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The migration scaffolding process warns when an operation might result in data loss (like dropping a column). If you see that warning, be especially sure to review the migrations code for accuracy.</p>
 </blockquote>
 <h3><a href="#adding-raw-sql" aria-hidden="true" class="anchor" id="adding-raw-sql"></a>Adding raw SQL</h3>
@@ -212,7 +212,7 @@ migrationBuilder.DropColumn(
         RETURN @LastName + @FirstName;')&quot;);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 EXEC is used when a statement must be the first or only one in a SQL batch. It can also be used to work around parser errors in idempotent migration scripts that can occur when referenced columns don't currently exist on a table.</p>
 </blockquote>
 <p>This can be used to manage any aspect of your database, including:</p>
@@ -250,7 +250,7 @@ EXEC is used when a statement must be the first or only one in a SQL batch. It c
 </code></pre>
 <p>After removing the migration, you can make the additional model changes and add it again.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Avoid removing any migrations which have already been applied to production databases. Doing so means you won't be able to revert those migrations from the databases, and may break the assumptions made by subsequent migrations.</p>
 </blockquote>
 <h2><a href="#listing-migrations" aria-hidden="true" class="anchor" id="listing-migrations"></a>Listing migrations</h2>
@@ -269,7 +269,7 @@ Avoid removing any migrations which have already been applied to production data
 </code></pre>
 <h2><a href="#checking-for-pending-model-changes" aria-hidden="true" class="anchor" id="checking-for-pending-model-changes"></a>Checking for pending model changes</h2>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This feature was added in EF Core 8.0.</p>
 </blockquote>
 <p>How do I check if a model has been migrated?</p>
@@ -300,7 +300,7 @@ This feature was added in EF Core 8.0.</p>
 VALUES (N'&lt;full_migration_timestamp_and_name&gt;', N'&lt;EF_version&gt;');
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Any custom migration code will be lost when the Migrations folder is deleted.  Any customizations must be applied to the new initial migration manually in order to be preserved.</p>
 </blockquote>
 <h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>

@@ -285,7 +285,7 @@ public class TransactionalBloggingControllerTest : IDisposable
 <pre><code class="language-csharp">public void Dispose()
     =&gt; Fixture.Cleanup();
 </code></pre>
-<p>Note that since xUnit only ever instantiates the collection fixture once, there is no need for us to use locking around database creation and seeding as we did above.</p>
+<p class='note'>Note that since xUnit only ever instantiates the collection fixture once, there is no need for us to use locking around database creation and seeding as we did above.</p>
 <p>The full sample code for the above can be viewed here.</p>
 <blockquote class="tip">Tip
 If you have multiple test classes with tests which modify the database, you can still run them in parallel by having different fixtures, each referencing its own database. Creating and using many test databases isn't problematic and should be done whenever it's helpful.</blockquote>

@@ -104,7 +104,7 @@
 <h2><a href="#the-dbcontext-lifetime" aria-hidden="true" class="anchor" id="the-dbcontext-lifetime"></a>The <code>DbContext</code> lifetime</h2>
 <p>The lifetime of a <code>DbContext</code> instance is the length of the lifetime of the instance itself.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 To quote Martin Fowler from the link above, &quot;A Unit of Work keeps track of everything you do during a business transaction that can affect the database. When you're done, it figures out everything that needs to be done to alter the database as a result of your work.&quot;</p>
 </blockquote>
 <p>A typical unit-of-work when using Entity Framework Core (EF Core) involves:</p>
@@ -134,7 +134,7 @@ To quote Martin Fowler from the link above, &quot;A Unit of Work keeps track of 
 </li>
 </ul>
 <blockquote>
-<p>Important</p>
+<p class='important'>Important</p>
 </blockquote>
 <p>It is very important to dispose the <code>DbContext</code> after use. This ensures both that any unmanaged resources are freed, and that any events or other hooks are unregistered so as to prevent memory leaks in case the instance remains referenced.
 DbContext is not thread-safe. Do not share contexts between threads. Make sure to <code>await</code> all async calls before continuing to use the context instance.
@@ -290,13 +290,13 @@ public MyController(IDbContextFactory&lt;ApplicationDbContext&gt; contextFactory
 </code></pre>
 <p>These Use* methods are extension methods implemented by the database provider. This means that the database provider NuGet package must be installed before the extension method can be used.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 EF Core database providers make extensive use of extension methods. If the compiler indicates that a method cannot be found, then make sure that the provider's NuGet package is installed and that you have using Microsoft.EntityFrameworkCore; in your code.</p>
 </blockquote>
 <p>The following table contains examples for common database providers.</p>
 <p>*These database providers are not shipped by Microsoft. See Database Providers for more information about database providers.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 The EF Core in-memory database is not designed for production use. In addition, it may not be the best choice even for testing. See Testing Code That Uses EF Core for more information.</p>
 </blockquote>
 <p>See Connection Strings for more information on using connection strings with EF Core.</p>
@@ -313,7 +313,7 @@ The EF Core in-memory database is not designed for production use. In addition, 
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The same database provider is used for SQL Server and Azure SQL. However, it is recommended that connection resiliency be used when connecting to SQL Azure.</p>
 </blockquote>
 <p>See Database Providers for more information on provider-specific configuration.</p>
@@ -331,7 +331,7 @@ The same database provider is used for SQL Server and Azure SQL. However, it is 
 </code></pre>
 <p>The following table contains examples of common methods called on <code>DbContextOptionsBuilder</code>.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 UseLazyLoadingProxies and UseChangeTrackingProxies are extension methods from the Microsoft.EntityFrameworkCore.Proxies NuGet package. This kind of &quot;.UseSomething()&quot; call is the recommended way to configure and/or use EF Core extensions contained in other packages.</p>
 </blockquote>
 <h3><a href="#dbcontextoptions-versus-dbcontextoptions" aria-hidden="true" class="anchor" id="dbcontextoptions-versus-dbcontextoptions"></a><code>DbContextOptions</code> versus <code>DbContextOptions</code><TContext></h3>
@@ -346,7 +346,7 @@ UseLazyLoadingProxies and UseChangeTrackingProxies are extension methods from th
 </code></pre>
 <p>This ensures that the correct options for the specific <code>DbContext</code> subtype are resolved from dependency injection, even when multiple <code>DbContext</code> subtypes are registered.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Your <code>DbContext</code> does not need to be sealed, but sealing is best practice to do so for classes not designed to be inherited from.</p>
 </blockquote>
 <p>However, if the <code>DbContext</code> subtype is itself intended to be inherited from, then it should expose a protected constructor taking a non-generic <code>DbContextOptions</code>. For example:</p>

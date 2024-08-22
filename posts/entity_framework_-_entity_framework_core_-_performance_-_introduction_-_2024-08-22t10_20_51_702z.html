@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Performance - Introduction | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Database performance is a vast and complex topic, spanning an entire stack of components: the database, networking, the database driver, and data access layers such as EF Core. While high-level layers and O/RMs such as EF Core considerably simplify application development and improve maintainability, they can sometimes be opaque, hiding performance-critical internal details such as the SQL being executed. This section attempts to provide an overview of how to achieve good performance with EF Core, and how to avoid common pitfalls which can degrade application performance.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Performance - Introduction</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>How to achieve good performance with EF Core, and how to avoid common pitfalls which can degrade application performance.</p>
+<h2><a href="#identify-bottlenecks-and-measure-measure,-measure" aria-hidden="true" class="anchor" id="identify-bottlenecks-and-measure-measure,-measure"></a>Identify bottlenecks and measure, measure, measure</h2>
+<p>In our series of articles on database performance, we look at how to diagnose slow queries.</p>
+<p>Don't rely on public benchmarks to tell you which database solution is best for your application.</p>
+<h2><a href="#aspects-of-data-access-performance" aria-hidden="true" class="anchor" id="aspects-of-data-access-performance"></a>Aspects of data access performance</h2>
+<p>Overall data access performance can be broken down into the following broad categories:</p>
+<ul>
+<li>
+<p>Pure database performance. With relational database, EF translates the application's LINQ queries into the SQL statements getting executed by the database; these SQL statements themselves can run more or less efficiently. The right index in the right place can make a world of difference in SQL performance, or rewriting your LINQ query may make EF generate a better SQL query.</p>
+</li>
+<li>
+<p>Network data transfer. As with any networking system, it's important to limit the amount of data going back and forth on the wire. This covers making sure that you only send and load data which you're actually going to need, but also avoiding the so-called &quot;cartesian explosion&quot; effect when loading related entities.</p>
+</li>
+<li>
+<p>Network roundtrips. Beyond the amount of data going back and forth, the network roundtrips, since the time taken for a query to execute in the database can be dwarfed by the time packets travel back and forth between your application and your database. Roundtrip overhead heavily depends on your environment; the further away your database server is, the higher the latency and the costlier each roundtrip. With the advent of the cloud, applications increasingly find themselves further away from the database, and &quot;chatty&quot; applications which perform too many roundtrips experience degraded performance. Therefore, it's important to understand exactly when your application contacts the database, how many roundtrips it performs, and whether that number can be minimized.</p>
+</li>
+<li>
+<p>EF runtime overhead. Finally, EF itself adds some runtime overhead to database operations: EF needs to compile your queries from LINQ to SQL (although that should normally be done only once), change tracking adds some overhead (but can be disabled), etc. In practice, the EF overhead for real-world applications is likely to be negligible in most cases, as query execution time in the database and network latency dominate the total time; but it's important to understand what your options are and how to avoid some pitfalls.</p>
+</li>
+</ul>
+<h2><a href="#know-whats-happening-under-the-hood" aria-hidden="true" class="anchor" id="know-whats-happening-under-the-hood"></a>Know what's happening under the hood</h2>
+<p>The Entity Framework (EF) is a component of the SQL Server operating system.</p>
+<h2><a href="#cache-outside-the-database" aria-hidden="true" class="anchor" id="cache-outside-the-database"></a>Cache outside the database</h2>
+<p>The most efficient way to interact with a database, is to not interact with it at all.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/performance/">Introduction to Performance</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

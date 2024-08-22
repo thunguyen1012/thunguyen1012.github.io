@@ -101,7 +101,7 @@
 </ul>
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code in this document can be found on GitHub as a runnable sample.</p>
 </blockquote>
 <h2><a href="#background" aria-hidden="true" class="anchor" id="background"></a>Background</h2>
@@ -120,7 +120,7 @@ The code in this document can be found on GitHub as a runnable sample.</p>
             c =&gt; c.ToList()));
 </code></pre>
 <p>See mutable classes below for further details.</p>
-<p>Note that value comparers are also used when determining whether two key values are the same when resolving relationships; this is explained below.</p>
+<p class='note'>Note that value comparers are also used when determining whether two key values are the same when resolving relationships; this is explained below.</p>
 <h2><a href="#shallow-vs-deep-comparison" aria-hidden="true" class="anchor" id="shallow-vs-deep-comparison"></a>Shallow vs. deep comparison</h2>
 <p>For large, immutable value types such as <code>int</code>, EF Core's default logic works well: the value is copied as-is when snapshotted, and compared with the type's built-in equality comparison.</p>
 <p>Consider byte arrays, which can be arbitrarily large. These could be compared:</p>
@@ -134,7 +134,7 @@ The code in this document can be found on GitHub as a runnable sample.</p>
 </ul>
 <p>There are two ways to perform a SaveChanges operation on a byte array: copying the current array to the new array, or comparing it to the existing array.</p>
 <p>reference equality would not work when byte arrays are used to represent binary keys, since it's very unlikely that an FK property is set to the same instance as a PK property to which it needs to be compared.</p>
-<p>Note that the chosen comparison and snapshotting logic must correspond to each other: deep comparison requires deep snapshotting to function correctly.</p>
+<p class='note'>Note that the chosen comparison and snapshotting logic must correspond to each other: deep comparison requires deep snapshotting to function correctly.</p>
 <h2><a href="#simple-immutable-classes" aria-hidden="true" class="anchor" id="simple-immutable-classes"></a>Simple immutable classes</h2>
 <p>Consider a property that uses a value converter to map a simple, immutable class.</p>
 <pre><code class="language-csharp">public sealed class ImmutableClass
@@ -260,14 +260,14 @@ modelBuilder
 <p>Likewise, the hash code is built from this same sequence. (Note that this is a hash code over mutable values and hence can cause problems. Be immutable instead if you can.)</p>
 <p>The snapshot is created by cloning the list with <code>ToList</code>. Again, this is only needed if the lists are going to be mutated. Be immutable instead if you can.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Value converters and comparers are constructed using expressions rather than simple delegates. This is because EF Core inserts these expressions into a much more complex expression tree that is then compiled into an entity shaper delegate. Conceptually, this is similar to compiler inlining. For example, a simple conversion may just be a compiled in cast, rather than a call to another method to do the conversion.</p>
 </blockquote>
 <h2><a href="#key-comparers" aria-hidden="true" class="anchor" id="key-comparers"></a>Key comparers</h2>
 <p>This course teaches you how to create a comparer for a key property.</p>
 <p>Use SetKeyValueComparer in the rare cases where different semantics is required on the same property.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 SetStructuralValueComparer has been obsoleted. Use SetKeyValueComparer instead.</p>
 </blockquote>
 <h2><a href="#overriding-the-default-comparer" aria-hidden="true" class="anchor" id="overriding-the-default-comparer"></a>Overriding the default comparer</h2>

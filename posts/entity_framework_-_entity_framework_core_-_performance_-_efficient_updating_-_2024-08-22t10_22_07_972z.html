@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Performance - Efficient updating | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core helps minimize roundtrips by automatically batching together all updates in a single roundtrip. Consider the following:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Performance - Efficient updating</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#batching" aria-hidden="true" class="anchor" id="batching"></a>Batching</h2>
+<p>EF Core helps minimize roundtrips by automatically batching together all updates in a single roundtrip. Consider the following:</p>
+<pre><code class="language-csharp">var blog = context.Blogs.Single(b =&gt; b.Url == &quot;http://someblog.microsoft.com&quot;);
+blog.Url = &quot;http://someotherblog.microsoft.com&quot;;
+context.Add(new Blog { Url = &quot;http://newblog1.microsoft.com&quot; });
+context.Add(new Blog { Url = &quot;http://newblog2.microsoft.com&quot; });
+context.SaveChanges();
+</code></pre>
+<p>The above loads a blog from the database, changes its URL, and then adds two new blogs; to apply this, two SQL INSERT statements and one <code>UPDATE</code> statement are sent to the database. Rather than sending them one by one, as Blog instances are added, EF Core tracks these changes internally, and executes them in a single roundtrip when <code>SaveChanges</code> is called.</p>
+<p>EF Core defaults to executing batches of statements in a single roundtrip.</p>
+<p>Users can also tweak these thresholds to achieve potentially higher performance - but benchmark carefully before modifying these:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder.UseSqlServer(
+        @&quot;Server=(localdb)\mssqllocaldb;Database=Blogging;Trusted_Connection=True&quot;,
+        o =&gt; o
+            .MinBatchSize(1)
+            .MaxBatchSize(100));
+}
+</code></pre>
+<h2><a href="#use-executeupdate-and-executedelete-when-relevant" aria-hidden="true" class="anchor" id="use-executeupdate-and-executedelete-when-relevant"></a>Use <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> when relevant</h2>
+<p>Let's assume you want to give all your employees a raise. A typical implementation for this in EF Core would look like the following:</p>
+<pre><code class="language-c#">foreach (var employee in context.Employees)
+{
+    employee.Salary += 1000;
+}
+context.SaveChanges();
+</code></pre>
+<p>While this is perfectly valid code, let's analyze what it does from a performance perspective:</p>
+<ul>
+<li>
+<p>A database roundtrip is performed, to load all the relevant employees; note that this brings all the Employees' row data to the client, even if only the salary will be needed.</p>
+</li>
+<li>
+<p>EF Core's change tracking creates snapshots when loading the entities, and then compares those snapshots to the instances to find out which properties changed.</p>
+</li>
+<li>
+<p>Typically, a second database roundtrip is performed to save all the changes (note that some database providers split the changes into multiples roundtrips). Although this batching behavior is far better than doing a roundtrip for each update, EF Core still sends an <code>UPDATE</code> statement per employee, and the database must execute each statement separately.</p>
+</li>
+</ul>
+<p>Starting with EF Core 7.0, you can use the <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> methods to do the same thing far more efficiently:</p>
+<pre><code class="language-c#">context.Employees.ExecuteUpdate(s =&gt; s.SetProperty(e =&gt; e.Salary, e =&gt; e.Salary + 1000));
+</code></pre>
+<p>This sends the following SQL statement to the database:</p>
+<pre><code class="language-sql">UPDATE [Employees] SET [Salary] = [Salary] + 1000;
+</code></pre>
+<p>This <code>UPDATE</code> performs the entire operation in a single roundtrip, without loading or sending any actual data to the database, and without making use of EF's change tracking machinery, which imposes an additional overhead. For more information, see <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>.</p>
+<p>If you're using an older version of EF Core which doesn't yet support <code>ExecuteUpdate</code> and <code>ExecuteDelete</code>, or want to execute a complex SQL statement which isn't supported by these methods, you can still use a SQL query to perform the operation:</p>
+<ul>
+<li>
+<p>EF Core 7.0</p>
+</li>
+<li>
+<p>Older Versions</p>
+</li>
+</ul>
+<pre><code class="language-c#">context.Database.ExecuteSql($&quot;UPDATE [Employees] SET [Salary] = [Salary] + 1000&quot;);
+</code></pre>
+<pre><code class="language-c#">context.Database.ExecuteSqlInterpolated($&quot;UPDATE [Employees] SET [Salary] = [Salary] + 1000&quot;);
+</code></pre>
+<p>To learn more about the differences between <code>SaveChanges</code> and <code>ExecuteUpdate</code>/ExecuteDelete, see the Overview page on saving data.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/performance/efficient-updating">Efficient Updating</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -102,7 +102,7 @@
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>EF Core 8.0 (EF8) was released in November 2023.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into the samples by downloading the sample code from GitHub. Each section links to the source code specific to that section.</p>
 </blockquote>
 <p>EF8 requires the .NET 8 SDK to build and requires the .NET 8 runtime to run. EF8 will not run on earlier .NET versions, and will not run on .NET Framework.</p>
@@ -251,7 +251,7 @@ WHERE [Id] = @p4;
 </code></pre>
 <p>Notice that all three <code>Line1</code> columns have changed, since they are all sharing the same instance. This is usually not what we want.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If order addresses should change automatically when the customer address changes, then consider mapping the address as an entity type. <code>Order</code> and <code>Customer</code> can then safely reference the same address instance (which is now identified by a key) via a navigation property.</p>
 </blockquote>
 <p>One of the problems with creating a new type is that if you change the type of an existing type, it will no longer work the way it was intended to.</p>
@@ -278,7 +278,7 @@ If order addresses should change automatically when the customer address changes
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 With C# 12 or above, this <code>class</code> definition can be simplified using a primary constructor:
 public <code>class</code> <code>Address</code>(string line1, <code>string</code>? line2, <code>string</code> city, <code>string</code> country, <code>string</code> postCode)
 {
@@ -332,7 +332,7 @@ WHERE [Id] = @p1;
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This record definition can be simplified using a primary constructor:
 public record <code>Address</code>(string <code>Line1</code>, <code>string</code>? Line2, <code>string</code> City, <code>string</code> Country, <code>string</code> PostCode);</p>
 </blockquote>
@@ -603,7 +603,7 @@ OR ([c].[Contact_HomePhone_CountryCode] = @__entity_equality_phoneNumber_0_Count
 <p>In this section, we're going to look at the two most common ways to represent a data model: a collection of primitive types, or a natural representation of the data in the model.</p>
 <p>EF8 now supports two formats for columns: relational and tabular.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from PrimitiveCollectionsSample.cs.</p>
 </blockquote>
 <h3><a href="#primitive-collection-properties" aria-hidden="true" class="anchor" id="primitive-collection-properties"></a>Primitive collection properties</h3>
@@ -669,7 +669,7 @@ public uint[] UnsignedInts { get; set; }
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 In a real application, it would probably make more sense to create an entity type for beer, and have a table for beers. We're showing a primitive collection here to illustrate how they work. But remember, just because you can model something as a primitive collection doesn't mean that you necessarily should.</p>
 </blockquote>
 <p>The second entity type represents a dog walk in the British countryside:</p>
@@ -712,7 +712,7 @@ WHERE [w].[Terrain] IN (1, 5, 4)
 </code></pre>
 <p>However, this strategy does not work well with database query caching; see Announcing EF8 Preview 4 on the .NET <code>Blog</code> for a discussion of the issue.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 The inlining of values here is done in such a way that there is no chance of a SQL injection attack. The change to use JSON described below is all about performance, and nothing to do with security.</p>
 </blockquote>
 <p>For EF Core 8, the default is now to pass the list of terrains as a single parameter containing a JSON collection. For example:</p>
@@ -880,7 +880,7 @@ public class Visits
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from PrimitiveCollectionsInJsonSample.cs.</p>
 </blockquote>
 <p>We can now run a variation of our final query that, this <code>time</code>, extracts data from the JSON document, including queries into the primitive collections contained in the document:</p>
@@ -920,7 +920,7 @@ FROM &quot;Walks&quot; AS &quot;w&quot;
 INNER JOIN &quot;Pubs&quot; AS &quot;p&quot; ON &quot;w&quot;.&quot;ClosestPubId&quot; = &quot;p&quot;.&quot;Id&quot;
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Notice that on SQLite EF Core now makes use of the -&gt;&gt; operator, resulting in queries that are both easier to read and often more performant.</p>
 </blockquote>
 <h3><a href="#mapping-primitive-collections-to-a-table" aria-hidden="true" class="anchor" id="mapping-primitive-collections-to-a-table"></a>Mapping primitive collections to a table</h3>
@@ -961,7 +961,7 @@ public class Beer
 <h2><a href="#enhancements-to-json-column-mapping" aria-hidden="true" class="anchor" id="enhancements-to-json-column-mapping"></a>Enhancements to JSON column mapping</h2>
 <p>EF8 includes improvements to the JSON column mapping support introduced in EF7.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from JsonColumnsSample.cs.</p>
 </blockquote>
 <h3><a href="#translate-element-access-into-json-arrays" aria-hidden="true" class="anchor" id="translate-element-access-into-json-arrays"></a>Translate element access into JSON arrays</h3>
@@ -1059,7 +1059,7 @@ WHERE EXISTS (
 </ul>
 <p>The existing documentation from What's New in EF7 provides detailed information on JSON mapping, queries, and updates. This documentation now also applies to SQLite.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown in the EF7 documentation has been updated to also run on SQLite can can be found in JsonColumnsSample.cs.</p>
 </blockquote>
 <h4><a href="#queries-into-json-columns" aria-hidden="true" class="anchor" id="queries-into-json-columns"></a>Queries into JSON columns</h4>
@@ -1114,7 +1114,7 @@ RETURNING 1;
 <p>The SQL Server <code>hierarchyid</code> type is one of the most commonly used types in SQL Server.</p>
 <p>At the next level, a new <code>Microsoft.EntityFrameworkCore.SqlServer.Abstractions</code> package has been introduced, which includes a higher-level <code>HierarchyId</code> type intended for use in entity types.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The <code>HierarchyId</code> type is more idiomatic to the norms of .NET than <code>SqlHierarchyId</code>, which is instead modeled after how .NET Framework types are hosted inside the SQL Server database engine.  <code>HierarchyId</code> is designed to work with EF Core, but it can also be used outside of EF Core in other applications. The <code>Microsoft.EntityFrameworkCore.SqlServer.Abstractions</code> package doesn't reference any other packages, and so has minimal impact on deployed application size and dependencies.</p>
 </blockquote>
 <p>The Microsoft.FrameworkCore.SqlServer.HierarchyId package is often the only package needed.</p>
@@ -1144,11 +1144,11 @@ Unofficial support for <code>hierarchyid</code> in EF Core has been available fo
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here and in the examples below comes from HierarchyIdSample.cs.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If desired, <code>HierarchyId</code> is suitable for use as a key property type.</p>
 </blockquote>
 <p>In this article, I'm going to show you how to trace a family tree using SQL Server.</p>
@@ -1206,7 +1206,7 @@ If desired, <code>HierarchyId</code> is suitable for use as a key property type.
 await SaveChangesAsync();
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If needed, decimal values can be used to create new nodes between two existing nodes. For example, <code>/3/</code>2.5/2/ goes between <code>/3/2/</code>2/ and <code>/3/</code>3/2/.</p>
 </blockquote>
 <h3><a href="#querying-hierarchies" aria-hidden="true" class="anchor" id="querying-hierarchies"></a>Querying hierarchies</h3>
@@ -1277,7 +1277,7 @@ WHERE [h].[PathFromPatriarch].GetAncestor(1) = (
         .OrderByDescending(ancestor =&gt; ancestor.PathFromPatriarch.GetLevel());
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 IsDescendantOf returns <code>true</code> for itself, which is why it is filtered out in the query above.</p>
 </blockquote>
 <p>This translates to the following SQL:</p>
@@ -1378,7 +1378,7 @@ The parameters values for <code>HierarchyId</code> properties are sent to the da
 <h2><a href="#raw-sql-queries-for-unmapped-types" aria-hidden="true" class="anchor" id="raw-sql-queries-for-unmapped-types"></a>Raw SQL queries for unmapped types</h2>
 <p>EF7 introduced raw SQL queries returning scalar types. This is enhanced in EF8 to include raw SQL queries returning any mappable CLR type, without including that type in the EF model.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from RawSqlSample.cs.</p>
 </blockquote>
 <p>In this article, I'm going to show you how to query a database using an unmapped type.</p>
@@ -1491,7 +1491,7 @@ INNER JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
 WHERE [p].[PublishedOn] &gt;= @__start_0 AND [p].[PublishedOn] &lt; @__end_1
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 EF is able to generate cleaner SQL when it is responsible for the entire query than it is when composing over user-supplied SQL because, in the former case, the full semantics of the query is available to EF.</p>
 </blockquote>
 <p>So far, all the queries have been executed directly against tables. <code>SqlQuery</code> can also be used to return results from a view without mapping the view type in the EF model. For example:</p>
@@ -1518,7 +1518,7 @@ EF is able to generate cleaner SQL when it is responsible for the entire query t
 <h3><a href="#lazy-loading-for-no-tracking-queries" aria-hidden="true" class="anchor" id="lazy-loading-for-no-tracking-queries"></a>Lazy-loading for no-tracking queries</h3>
 <p>EF8 adds support for lazy-loading of navigations on entities that are not being tracked by the <code>DbContext</code>.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code for the lazy-loading examples shown below comes from LazyLoadingSample.cs.</p>
 </blockquote>
 <p>For example, consider a no-tracking query for blogs:</p>
@@ -1584,7 +1584,7 @@ if (int.TryParse(ReadLine(), out var blogId))
 <pre><code class="language-csharp">var blogEntry = context.Blogs.Local.FindEntry(2)!;
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from LookupByKeySample.cs.</p>
 </blockquote>
 <p>The <code>FindEntry</code> method returns information about an entity that is being tracked on <code>LocalView</code>.</p>
@@ -1643,13 +1643,13 @@ public class Magazine : Document
     CONSTRAINT [PK_Documents] PRIMARY KEY ([Id]),
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Fibonacci numbers are used to limit the number of times a migration is generated to change the column length as new types are added to the hierarchy.</p>
 </blockquote>
 <h3><a href="#dateonlytimeonly-supported-on-sql-server" aria-hidden="true" class="anchor" id="dateonlytimeonly-supported-on-sql-server"></a><code>DateOnly</code>/TimeOnly supported on SQL Server</h3>
 <p>This paper deals with the implementation of two new types in Entity Framework 8 (EF8).</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 DateOnly and <code>TimeOnly</code> can be used in EF Core 6 and 7 using the ErikEJ.EntityFrameworkCore.SqlServer.DateOnlyTimeOnly community package from @ErikEJ.</p>
 </blockquote>
 <p>For example, consider the following EF model for British schools:</p>
@@ -1687,7 +1687,7 @@ public class OpeningHours
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown here comes from DateOnlyTimeOnlySample.cs.</p>
 </blockquote>
 <blockquote>
@@ -1792,7 +1792,7 @@ WHERE EXISTS (
 <h3><a href="#reverse-engineer-synapse-and-dynamics-365-tds" aria-hidden="true" class="anchor" id="reverse-engineer-synapse-and-dynamics-365-tds"></a>Reverse engineer Synapse and Dynamics 365 TDS</h3>
 <p>EF8 reverse engineering (a.k.a. scaffolding from an existing database) now supports Synapse Serverless SQL Pool and Dynamics 365 TDS Endpoint databases.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 These database systems have differences from normal SQL Server and Azure SQL databases. These differences mean that not all EF Core functionality is supported when writing queries against or performing other operations with these database systems.</p>
 </blockquote>
 <h2><a href="#enhancements-to-math-translations" aria-hidden="true" class="anchor" id="enhancements-to-math-translations"></a>Enhancements to <code>Math</code> translations</h2>
@@ -1816,7 +1816,7 @@ These database systems have differences from normal SQL Server and Azure SQL dat
 <pre><code class="language-csharp">b.Property(e =&gt; e.LeaseDate).HasDefaultValueSql(&quot;getutcdate()&quot;);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code shown below comes from DefaultConstraintSample.cs.</p>
 </blockquote>
 <p>A column in a database can have a default value that is sent to the database when the property is set.</p>
@@ -1836,7 +1836,7 @@ The code shown below comes from DefaultConstraintSample.cs.</p>
 </code></pre>
 <p>This means that the sentinel value of <code>-1</code> gets set automatically when the instance is created, meaning that the property starts in its &quot;not-set&quot; state.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If you want to configure the database default constraint for use when <code>Migrations</code> creates the column, but you want EF to always insert a value, then configure the property as not-generated. For example, b.Property(e =&gt; e.Credits).HasDefaultValueSql(10).ValueGeneratedNever();.</p>
 </blockquote>
 <h3><a href="#database-defaults-for-booleans" aria-hidden="true" class="anchor" id="database-defaults-for-booleans"></a>Database defaults for booleans</h3>
@@ -1844,7 +1844,7 @@ If you want to configure the database default constraint for use when <code>Migr
 <p>If the database default value is <code>false</code>, then the database default will be used, which is <code>false</code>!</p>
 <p>When the database default is <code>false</code> or <code>true</code>, the <code>bool</code> properties of the sentinel are not inserted correctly.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 When scaffolding from an existing database, EF8 parses and then includes simple default values into <code>HasDefaultValue</code> calls. (Previously, all default values were scaffolded as opaque <code>HasDefaultValueSql</code> calls.) This means that non-nullable <code>bool</code> columns with a <code>true</code> or <code>false</code> constant database default are no longer scaffolded as nullable.</p>
 </blockquote>
 <h3><a href="#database-defaults-for-enums" aria-hidden="true" class="anchor" id="database-defaults-for-enums"></a>Database defaults for enums</h3>

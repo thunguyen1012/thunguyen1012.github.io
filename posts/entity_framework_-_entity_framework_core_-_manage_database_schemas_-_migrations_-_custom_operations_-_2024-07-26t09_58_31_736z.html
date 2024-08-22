@@ -100,7 +100,7 @@
     =&gt; migrationBuilder.Sql($&quot;CREATE USER {name} WITH PASSWORD '{password}';&quot;);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Use the <code>EXEC</code> function when a statement must be the first or only one in a SQL batch. It might also be needed to work around parser errors in idempotent migration scripts that can occur when referenced columns don't currently exist on a table.</p>
 </blockquote>
 <p>If your migrations need to support multiple database providers, you can use the <code>MigrationBuilder.ActiveProvider</code> property. Here's an example supporting both Microsoft SQL Server and PostgreSQL.</p>

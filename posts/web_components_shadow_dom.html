@@ -154,7 +154,7 @@ customElements.define('fancy-tabs', class extends HTMLElement {
   ...
 });
 </code></pre>
-<p>Note: Trong ví dụ trên, shadow DOM của element được render trong vị trí con của nó. Nếu bạn muốn thể hiện con củe element, bạn sẽ dùng <code>&lt;slot&gt;</code> trong shadow DOM.</p>
+<p class='note'>Note: Trong ví dụ trên, shadow DOM của element được render trong vị trí con của nó. Nếu bạn muốn thể hiện con củe element, bạn sẽ dùng <code>&lt;slot&gt;</code> trong shadow DOM.</p>
 <h2><a href="#composition-and-slots" aria-hidden="true" class="anchor" id="composition-and-slots"></a>Composition and slots</h2>
 <h3><a href="#terminology-light-dom-vs.-shadow-dom" aria-hidden="true" class="anchor" id="terminology-light-dom-vs.-shadow-dom"></a>Terminology: light DOM vs. shadow DOM</h3>
 <p>Kết hợp shadow DOM giới thiệu một nhóm các nền tảng mới trong lập trình web. Phân tích vài thuật ngữ.</p>
@@ -456,7 +456,7 @@ slot.addEventListener('slotchange', e =&gt; {
   console.log('light dom children changed!');
 });
 </code></pre>
-<p>Note: slotchange sẽ không được kích hoạt cho lần khởi tạo đầu tiên.</p>
+<p class='note'>Note: slotchange sẽ không được kích hoạt cho lần khởi tạo đầu tiên.</p>
 <h4><a href="#assignednoded)" aria-hidden="true" class="anchor" id="assignednoded)"></a>assignedNoded()</h4>
 <p>Dùng để tìm những element nào slot đang render.</p>
 <p>Ví dụ có shadow DOM như sau</p>

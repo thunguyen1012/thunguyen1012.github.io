@@ -90,7 +90,7 @@
 <p>This document describes how to track changes made to entities in a DbContext.</p>
 <p>This document covers how to use property notifications or change-tracking proxies to force immediate detection of changes in the DbContext.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <h2><a href="#snapshot-change-tracking" aria-hidden="true" class="anchor" id="snapshot-change-tracking"></a>Snapshot change tracking</h2>
@@ -180,7 +180,7 @@ Console.WriteLine(context.ChangeTracker.DebugView.LongView);
 </code></pre>
 <p>This example shows how EF Core can detect changes made to an entity by a method called <code>DbContext.Add</code>.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Don't attempt to avoid detecting changes by always using EF Core methods to make entity changes. Doing so is often more cumbersome and performs less well than making changes to entities in the normal way. The intention of this document is to inform as to when detecting changes is needed and when it is not. The intention is not to encourage avoidance of change detection.</p>
 </blockquote>
 <h3><a href="#methods-that-automatically-detect-changes" aria-hidden="true" class="anchor" id="methods-that-automatically-detect-changes"></a>Methods that automatically detect changes</h3>
@@ -216,7 +216,7 @@ Don't attempt to avoid detecting changes by always using EF Core methods to make
 </ul>
 <p>Local detection of changes for a single entity can be triggered explicitly by calling <code>EntityEntry.DetectChanges()</code>.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Local detect changes can miss some changes that a full detection would find. This happens when cascading actions resulting from undetected changes to other entities have an impact on the entity in question. In such situations the application may need to force a full scan of all entities by explicitly calling <code>ChangeTracker.DetectChanges()</code>.</p>
 </blockquote>
 <h3><a href="#disabling-automatic-change-detection" aria-hidden="true" class="anchor" id="disabling-automatic-change-detection"></a>Disabling automatic change detection</h3>
@@ -245,7 +245,7 @@ Local detect changes can miss some changes that a full detection would find. Thi
 </code></pre>
 <p>This code shows how to disable automatic change detection when calling down into the base SaveChanges method.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Do not assume that your code must disable automatic change detection to perform well. This is only needed when profiling an application tracking many entities indicates that performance of change detection is an issue.</p>
 </blockquote>
 <h3><a href="#detecting-changes-and-value-conversions" aria-hidden="true" class="anchor" id="detecting-changes-and-value-conversions"></a>Detecting changes and value conversions</h3>
@@ -474,7 +474,7 @@ Console.WriteLine(context.ChangeTracker.DebugView.LongView);
 <h2><a href="#change-tracking-events" aria-hidden="true" class="anchor" id="change-tracking-events"></a>Change tracking events</h2>
 <p>EF Core fires the ChangeTracker.Tracked event when an entity is tracked for the first time.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The <code>StateChanged</code> event is not fired when an entity is first tracked, even though the state has changed from <code>Detached</code> to one of the other states. Make sure to listen for both <code>StateChanged</code> and <code>Tracked</code> events to get all relevant notifications.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/change-tracking/change-detection">Change Detection and Notifications</a></p>

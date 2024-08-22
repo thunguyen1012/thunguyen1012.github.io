@@ -138,11 +138,11 @@
 </code></pre>
 <p>This connection from <code>Blog</code> to <code>Post</code> and, inversely, from <code>Post</code> back to <code>Blog</code> is known as a &quot;relationship&quot; in EF Core.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 A single relationship can typically traversed in either direction. In this example, that is from <code>Blog</code> to <code>Post</code> via the <code>Blog.Posts</code> property, and from <code>Post</code> back to <code>Blog</code> via the <code>Post.Blog</code> property. This is one relationship, not two.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 In EF Core, the <code>Blog.Posts</code> and <code>Post.Blog</code> properties are called &quot;navigations&quot;.</p>
 </blockquote>
 <h2><a href="#relationships-in-relational-databases" aria-hidden="true" class="anchor" id="relationships-in-relational-databases"></a>Relationships in relational databases</h2>
@@ -180,7 +180,7 @@ CREATE TABLE [Blogs] (
 </ul>
 <p>EF mappings objects to foreign key values.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Primary keys are used for more than mapping relationships. See Keys for more information.</p>
 </blockquote>
 <p>For example, the entity types shown above can be updated with primary and foreign key properties:</p>
@@ -206,7 +206,7 @@ Primary keys are used for more than mapping relationships. See Keys for more inf
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Primary and foreign key properties don't need to be publicly visible properties of the entity type. However, even when the properties are hidden, it is important to recognize that they still exist in the EF model.</p>
 </blockquote>
 <p>The following example shows how to create a simple relationship between entity types <code>Blog</code>, <code>Blog.Id</code>, and <code>Post</code>, <code>Post.Blog</code>.</p>
@@ -253,7 +253,7 @@ Primary and foreign key properties don't need to be publicly visible properties 
 </li>
 </ul>
 <blockquote>
-<p>Important
+<p class='important'>Important
 The model-building API is the final source of truth for the EF model--it always takes precedence over configuration discovered by convention or specified by mapping attributes. It is also the only mechanism with full fidelity to configure every aspect of the EF model.</p>
 </blockquote>
 <p>Other topics related to relationships include:</p>
@@ -266,7 +266,7 @@ The model-building API is the final source of truth for the EF model--it always 
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Refer to the glossary of relationship terms as needed when reading the documentation to help understand the terminology used.</p>
 </blockquote>
 <h2><a href="#using-relationships" aria-hidden="true" class="anchor" id="using-relationships"></a>Using relationships</h2>

@@ -88,7 +88,7 @@
         <h1>Entity Framework - Entity Framework Core - Save data - Concurrency conflicts</h1>
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <p>This page discusses mechanisms for ensuring that your data stays consistent in the face of such concurrent changes.</p>
@@ -278,7 +278,7 @@ while (!saved)
 <p>Rather than locking, the database allows the external transaction to update the row, but when your own transaction attempts to do the update, a &quot;serialization&quot; error will be raised, indicating that a concurrency conflict occurred. This is a form of optimistic locking - not unlike EF's concurrency token feature - and is implemented by the SQL Server snapshot isolation level, as well as by the PostgreSQL repeatable reads isolation level.</p>
 </li>
 </ul>
-<p>Note that the &quot;serializable&quot; isolation level provides the same guarantees as repeatable read (and adds additional ones), so it functions in the same way with respect to the above.</p>
+<p class='note'>Note that the &quot;serializable&quot; isolation level provides the same guarantees as repeatable read (and adds additional ones), so it functions in the same way with respect to the above.</p>
 <p>concurrency is one of the biggest challenges facing modern web developers.</p>
 <p>There are a couple of things to keep in mind when implementing isolation levels in SQL Server.</p>
 <p>In this article, I'm going to show you how to query an object in order to display its details to a user.</p>

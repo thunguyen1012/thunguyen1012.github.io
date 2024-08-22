@@ -118,7 +118,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Lazy loading can cause unneeded extra database roundtrips to occur (the so-called N+1 problem), and care should be taken to avoid this. See the performance section for more details.</p>
 </blockquote>
 <h2><a href="#lazy-loading-without-proxies" aria-hidden="true" class="anchor" id="lazy-loading-without-proxies"></a>Lazy loading without proxies</h2>
@@ -243,7 +243,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The constructor parameter for the lazy-loading delegate must be called &quot;lazyLoader&quot;. Configuration to use a different name than this is planned for a future release.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/querying/related-data/lazy">Lazy Loading of Related Data</a></p>

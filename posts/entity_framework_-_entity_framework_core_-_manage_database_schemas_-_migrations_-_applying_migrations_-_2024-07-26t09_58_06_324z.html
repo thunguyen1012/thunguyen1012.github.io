@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>In this article we are going to look at how to add migrations to your database.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Whatever your deployment strategy, always inspect the generated migrations and test them before applying to a production database. A migration may drop a column when the intent was to rename it, or may fail for various reasons when applied to a database.</p>
 </blockquote>
 <h2><a href="#sql-scripts" aria-hidden="true" class="anchor" id="sql-scripts"></a>SQL scripts</h2>
@@ -124,7 +124,7 @@ Whatever your deployment strategy, always inspect the generated migrations and t
 <pre><code class="language-dotnetcli">dotnet ef migrations script AddNewTables AddAuditTable
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Please take note of potential data loss scenarios.</p>
 </blockquote>
 <h4><a href="#basic-usage-1" aria-hidden="true" class="anchor" id="basic-usage-1"></a>Basic Usage</h4>
@@ -137,7 +137,7 @@ Please take note of potential data loss scenarios.</p>
 <pre><code class="language-powershell">Script-Migration AddNewTables AddAuditTable
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Please take note of potential data loss scenarios.</p>
 </blockquote>
 <p>Script generation accepts the following two arguments to indicate which range of migrations should be generated:</p>
@@ -175,7 +175,7 @@ Please take note of potential data loss scenarios.</p>
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Each migration is applied in its own transaction. See GitHub issue #22616 for a discussion of possible future enhancements in this area.</p>
 </blockquote>
 <ul>
@@ -191,7 +191,7 @@ Each migration is applied in its own transaction. See GitHub issue #22616 for a 
 <pre><code class="language-dotnetcli">dotnet ef database update AddNewTables
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Please take note of potential data loss scenarios.</p>
 </blockquote>
 <pre><code class="language-powershell">Update-Database
@@ -199,7 +199,7 @@ Please take note of potential data loss scenarios.</p>
 <pre><code class="language-powershell">Update-Database AddNewTables
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Please take note of potential data loss scenarios.</p>
 </blockquote>
 <p>For more information on applying migrations via the command-line tools, see the EF Core tools reference.</p>
@@ -283,7 +283,7 @@ Please take note of potential data loss scenarios.</p>
 <pre><code class="language-powershell">.\efbundle.exe --connection 'Data Source=(local)\MSSQLSERVER;Initial Catalog=Blogging;User ID=myUsername;Password=myPassword'
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Don't forget to copy appsettings.json alongside your bundle. The bundle relies on the presence of <code>appsettings.json</code> in the execution directory.</p>
 </blockquote>
 <h3><a href="#migration-bundle-example" aria-hidden="true" class="anchor" id="migration-bundle-example"></a>Migration bundle example</h3>
@@ -324,7 +324,7 @@ Done. Migrations Bundle: C:\local\AllTogetherNow\SixOh\efbundle.exe
 PS C:\local\AllTogetherNow\SixOh&gt;
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The <code>--force</code> option can be used to overwrite the existing bundle with a new one.</p>
 </blockquote>
 <p>Executing this new bundle applies these two new migrations to the database:</p>
@@ -343,7 +343,7 @@ Done.
 PS C:\local\AllTogetherNow\SixOh&gt;
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This time, all three migrations were applied, since none of them had yet been applied to the production database.</p>
 </blockquote>
 <h2><a href="#apply-migrations-at-runtime" aria-hidden="true" class="anchor" id="apply-migrations-at-runtime"></a>Apply migrations at runtime</h2>
@@ -379,9 +379,9 @@ This time, all three migrations were applied, since none of them had yet been ap
     host.Run();
 }
 </code></pre>
-<p>Note that <code>Migrate()</code> builds on top of the <code>IMigrator</code> service, which can be used for more advanced scenarios. Use <code>myDbContext.GetInfrastructure().GetService&lt;IMigrator&gt;()</code> to access it.</p>
+<p class='note'>Note that <code>Migrate()</code> builds on top of the <code>IMigrator</code> service, which can be used for more advanced scenarios. Use <code>myDbContext.GetInfrastructure().GetService&lt;IMigrator&gt;()</code> to access it.</p>
 <blockquote>
-<p>Warning</p>
+<p class='warning'>Warning</p>
 </blockquote>
 <p>Carefully consider before using this approach in production. Experience has shown that the simplicity of this deployment strategy is outweighed by the issues it creates. Consider generating SQL scripts from migrations instead.
 Don't call <code>EnsureCreated()</code> before <code>Migrate()</code>. <code>EnsureCreated()</code> bypasses Migrations to create the schema, which causes <code>Migrate()</code> to fail.</p>

@@ -222,7 +222,7 @@ END
 <p>In this article we will look at how to specify an explicit value for a property.</p>
 <p>You can override value generation with an explicit value by setting the property to any value that is not the CLR default value for that property's type (null for <code>string</code>, <code>0</code> for <code>int</code>, <code>Guid</code>, etc.).</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Trying to insert explicit values into SQL Server IDENTITY fails by default; see these docs for a workaround.</p>
 </blockquote>
 <p>To provide an explicit value for properties that have been configured as value generated on add or update, you must also configure the property as follows:</p>

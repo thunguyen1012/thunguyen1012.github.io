@@ -162,7 +162,7 @@ public class PostTag
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 These new navigations are known as &quot;skip navigations&quot;, because they skip over the join entity to provide direct access to the other side of the many-to-many relationship.</p>
 </blockquote>
 <p>The Entity Framework (EF) can transparently map many-to-many relationships between entities.</p>
@@ -182,7 +182,7 @@ public class Tag
 <h2><a href="#examples" aria-hidden="true" class="anchor" id="examples"></a>Examples</h2>
 <p>The following sections contain examples of many-to-many relationships, including the configuration needed to achieve each mapping.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code for all the examples below can be found in ManyToMany.cs.</p>
 </blockquote>
 <h2><a href="#basic-many-to-many" aria-hidden="true" class="anchor" id="basic-many-to-many"></a>Basic many-to-many</h2>
@@ -221,7 +221,7 @@ public class Tag
 }
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 Please don't attempt to fully configure everything even when it is not needed. As can be seen above, the code gets complicated quickly and its easy to make a mistake. And even in the example above there are many things in the model that are still configured by convention. It's not realistic to think that everything in an EF model can always be fully configured explicitly.</p>
 </blockquote>
 <p>Regardless of whether the relationship is built by convention or using either of the shown explicit configurations, the resulting mapped schema (using SQLite) is:</p>
@@ -239,11 +239,11 @@ CREATE TABLE &quot;PostTag&quot; (
     CONSTRAINT &quot;FK_PostTag_Tags_TagsId&quot; FOREIGN KEY (&quot;TagsId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 When using a Database First flow to scaffold a DbContext from an existing database, EF Core 6 and later looks for this pattern in the database schema and scaffolds a many-to-many relationship as described in this document. This behavior can be changed through use of a custom T4 template. For other options, see Many-to-many relationships without mapped join entities are now scaffolded.</p>
 </blockquote>
 <blockquote>
-<p>Important
+<p class='important'>Important
 Currently, EF Core uses Dictionary&lt;string, object&gt; to represent join entity instances for which no .NET class has been configured. However, to improve performance, a different type may be used in a future EF Core release. Do not depend on the join type being Dictionary&lt;string, object&gt; unless this has been explicitly configured.</p>
 </blockquote>
 <h2><a href="#many-to-many-with-named-join-table" aria-hidden="true" class="anchor" id="many-to-many-with-named-join-table"></a>Many-to-many with named join table</h2>
@@ -299,7 +299,7 @@ Currently, EF Core uses Dictionary&lt;string, object&gt; to represent join entit
     CONSTRAINT &quot;FK_PostTag_Tags_TagForeignKey&quot; FOREIGN KEY (&quot;TagForeignKey&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Although not shown here, the previous two examples can be combined to map change the join table name and its foreign key column names.</p>
 </blockquote>
 <h2><a href="#many-to-many-with-class-for-join-entity" aria-hidden="true" class="anchor" id="many-to-many-with-class-for-join-entity"></a>Many-to-many with class for join entity</h2>
@@ -323,7 +323,7 @@ public class PostTag
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The class can have any name, but it is common to combine the names of the types at either end of the relationship.</p>
 </blockquote>
 <p>Now the <code>UsingEntity</code> method can be used to configure this as the join entity type for the relationship. For example:</p>
@@ -377,7 +377,7 @@ public class PostTag
 }
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 As shown in this example, navigations to the join entity type can be used in addition to the skip navigations between the two ends of the many-to-many relationship. This means that the skip navigations can be used to interact with the many-to-many relationship in a natural manner, while the navigations to the join entity type can be used when greater control over the join entities themselves is needed. In a sense, this mapping provides the best of both worlds between a simple many-to-many mapping, and a mapping that more explicitly matches the database schema.</p>
 </blockquote>
 <p>This example shows how to create a join entity with a single name.</p>
@@ -505,7 +505,7 @@ public class PostTag
 </code></pre>
 <h2><a href="#unidirectional-many-to-many" aria-hidden="true" class="anchor" id="unidirectional-many-to-many"></a>Unidirectional many-to-many</h2>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Unidirectional many-to-many relationships were introduced in EF Core 7. In earlier releases, a private navigation could be used as a workaround.</p>
 </blockquote>
 <p>It is not necessary to include a navigation on both sides of the many-to-many relationship. For example:</p>
@@ -585,7 +585,7 @@ public class PostTag
     CONSTRAINT &quot;FK_PostTag_Tags_TagId&quot; FOREIGN KEY (&quot;TagId&quot;) REFERENCES &quot;Tags&quot; (&quot;Id&quot;) ON DELETE CASCADE);
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The SQL shown here is for SQLite. On SQL Server/Azure SQL, use .HasDefaultValueSql(&quot;GETUTCDATE()&quot;) and for <code>TEXT</code> read <code>datetime</code>.</p>
 </blockquote>
 <h2><a href="#custom-shared-type-entity-type-as-a-join-entity" aria-hidden="true" class="anchor" id="custom-shared-type-entity-type-as-a-join-entity"></a>Custom shared-type entity type as a join entity</h2>
@@ -768,7 +768,7 @@ CREATE TABLE &quot;PostTag&quot; (
 <h2><a href="#many-to-many-and-join-table-with-separate-primary-key" aria-hidden="true" class="anchor" id="many-to-many-and-join-table-with-separate-primary-key"></a>Many-to-many and join table with separate primary key</h2>
 <p>The join entity type in all the examples has a primary key composed of the two foreign key properties.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 EF Core does not support duplicate entities in any collection navigation.</p>
 </blockquote>
 <p>Is it possible to define an additional primary key column in a join table?</p>

@@ -100,11 +100,11 @@
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p><code>OnModelCreating</code> implements the <code>OnModelCreating</code> mapping attribute.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 This document only covers mapping attributes in the context of relationship configuration. Other uses of mapping attributes are covered in the relevant sections of the wider modeling documentation.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The code below can be found in MappingAttributes.cs.</p>
 </blockquote>
 <h2><a href="#where-to-get-mapping-attributes" aria-hidden="true" class="anchor" id="where-to-get-mapping-attributes"></a>Where to get mapping attributes</h2>
@@ -129,7 +129,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 When using C# nullable reference types, the <code>BlogId</code> property in this example is already non-nullable, which means the [Required] attribute will have no affect.</p>
 </blockquote>
 <p>[Required] placed on the dependent navigation has the same effect. That is, making the foreign key non-nullable, and thereby making the relationship required. For example:</p>
@@ -165,7 +165,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Using [Required] on the principal navigation side of a relationship has no effect.</p>
 </blockquote>
 <h2><a href="#foreignkeyattribute" aria-hidden="true" class="anchor" id="foreignkeyattribute"></a>ForeignKeyAttribute</h2>
@@ -240,7 +240,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 [InverseProperty] is only needed when there is more than one relationship between the same types. With a single relationship, the two navigations are paired automatically.</p>
 </blockquote>
 <h2><a href="#deletebehaviorattribute" aria-hidden="true" class="anchor" id="deletebehaviorattribute"></a>DeleteBehaviorAttribute</h2>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Performance - Performance diagnosis | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This section discusses ways for detecting performance issues in your EF application, and once a problematic area has been identified, how to further analyze them to identify the root problem. It's important to carefully diagnose and investigate any problems before jumping to any conclusions, and to avoid assuming where the root of the issue is.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Performance - Performance diagnosis</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>If you are experiencing problems with your EF application, it's important to know how to diagnose them.</p>
+<h2><a href="#identifying-slow-database-commands-via-logging" aria-hidden="true" class="anchor" id="identifying-slow-database-commands-via-logging"></a>Identifying slow database commands via logging</h2>
+<p>In this article, I'm going to show you how to monitor the time it takes EF to query your database.</p>
+<p>EF makes it very easy to capture command execution times, via either simple logging or Microsoft.Extensions.Logging:</p>
+<ul>
+<li>
+<p>Simple logging</p>
+</li>
+<li>
+<p>Microsoft.Extensions.Logging</p>
+</li>
+</ul>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder
+        .UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=Blogging;Trusted_Connection=True;ConnectRetryCount=0&quot;)
+        .LogTo(Console.WriteLine, LogLevel.Information);
+}
+</code></pre>
+<pre><code class="language-csharp">private static ILoggerFactory ContextLoggerFactory
+    =&gt; LoggerFactory.Create(b =&gt; b.AddConsole().AddFilter(&quot;&quot;, LogLevel.Information));
+
+protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder
+        .UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=Blogging;Trusted_Connection=True;ConnectRetryCount=0&quot;)
+        .UseLoggerFactory(ContextLoggerFactory);
+}
+</code></pre>
+<p>When the logging level is set at <code>LogLevel.Information</code>, EF emits a log message for each command execution with the time taken:</p>
+<pre><code class="language-log">info: 06/12/2020 09:12:36.117 RelationalEventId.CommandExecuted[20101] (Microsoft.EntityFrameworkCore.Database.Command)
+      Executed DbCommand (4ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT [b].[Id], [b].[Name]
+      FROM [Blogs] AS [b]
+      WHERE [b].[Name] = N'foo'
+</code></pre>
+<p>Command logging allows you to see how long it takes for a given command to run.</p>
+<blockquote>
+<p class='warning'>Warning
+Leaving command execution logging enabled in your production environment is usually a bad idea. The logging itself slows down your application, and may quickly create huge log files which can fill up your server's disk. It's recommended to only keep logging on for a short interval of time to gather data - while carefully monitoring your application - or to capture logging data on a pre-production system.</p>
+</blockquote>
+<h2><a href="#correlating-database-commands-to-linq-queries" aria-hidden="true" class="anchor" id="correlating-database-commands-to-linq-queries"></a>Correlating database commands to LINQ queries</h2>
+<p>In this article, I'm going to show you how to use EF's command execution logging feature.</p>
+<pre><code class="language-csharp">var myLocation = new Point(1, 2);
+var nearestPeople = (from f in context.People.TagWith(&quot;This is my spatial query!&quot;)
+                     orderby f.Location.Distance(myLocation) descending
+                     select f).Take(5).ToList();
+</code></pre>
+<p>The tag shows up in the logs:</p>
+<pre><code class="language-sql">-- This is my spatial query!
+
+SELECT TOP(@__p_1) [p].[Id], [p].[Location]
+FROM [People] AS [p]
+ORDER BY [p].[Location].STDistance(@__myLocation_0) DESC
+</code></pre>
+<p>It's often worth tagging the major queries of an application in this way, to make the command execution logs more immediately readable.</p>
+<h2><a href="#other-interfaces-for-capturing-performance-data" aria-hidden="true" class="anchor" id="other-interfaces-for-capturing-performance-data"></a>Other interfaces for capturing performance data</h2>
+<p>In this article, we'll look at some of the ways in which EF can be used to monitor database performance.</p>
+<p>SQL Server offers a number of tools that can help you monitor and manage your SQL Server instance.</p>
+<p>Another approach for capturing performance data is to collect information automatically emitted by either EF or the database driver via the <code>DiagnosticSource</code> interface, and then analyze that data or display it on a dashboard. If you are using Azure, then Azure Application Insights provides such powerful monitoring out of the box, integrating database performance and query execution times in the analysis of how quickly your web requests are being served. More information on this is available in the Application Insights performance tutorial, and in the Azure SQL analytics page.</p>
+<h2><a href="#inspecting-query-execution-plans" aria-hidden="true" class="anchor" id="inspecting-query-execution-plans"></a>Inspecting query execution plans</h2>
+<p>In our series of articles on how to improve the performance of your SQL queries, we'll be looking at how to optimize your queries.</p>
+<p>In this article, I'm going to show you how to identify slow queries using SQL Server.</p>
+<p>In this article, I'm going to show you how to write an execution plan.</p>
+<p>While the above information is specific to SQL Server, other databases typically provide the same kind of tools with similar visualization.</p>
+<blockquote>
+<p class='important'>Important
+Databases sometimes generate different query plans depending on actual data in the database. For example, if a table contains only a few rows, a database may choose not to use an index on that table, but to perform a full table scan instead. If analyzing query plans on a test database, always make sure it contains data that is similar to your production system.</p>
+</blockquote>
+<h2><a href="#metrics" aria-hidden="true" class="anchor" id="metrics"></a>Metrics</h2>
+<p>In this article, I'm going to show you how to get performance information about the Entity Framework (EF).</p>
+<p>See the dedicated page on EF's metrics for more information.</p>
+<h2><a href="#benchmarking-with-ef-core" aria-hidden="true" class="anchor" id="benchmarking-with-ef-core"></a>Benchmarking with EF Core</h2>
+<p>In this article, I'm going to show you how to write a benchmark.</p>
+<blockquote>
+<p class='tip'>Tip
+The full benchmark project for the source below is available here. You are encouraged to copy it and use it as a template for your own benchmarks.</p>
+</blockquote>
+<p>As a simple benchmark scenario, let's compare the following different methods of calculating the average ranking of all Blogs in our database:</p>
+<ul>
+<li>
+<p>Load all entities, sum up their individual rankings, and calculate the average.</p>
+</li>
+<li>
+<p>The same as above, only use a non-tracking query. This should be faster, since identity resolution isn't performed, and the entities aren't snapshotted for the purposes of change tracking.</p>
+</li>
+<li>
+<p>Avoid loading the entire Blog entity instances at all, by projecting out the ranking only. The saves us from transferring the other, unneeded columns of the Blog entity type.</p>
+</li>
+<li>
+<p>Calculate the average in the database by making it part of the query. This should be the fastest way, since everything is calculated in the database and only the result is transferred back to the client.</p>
+</li>
+</ul>
+<p>BenchmarkDotNet makes it easy to benchmark the performance of your code.</p>
+<ul>
+<li>
+<p>Load entities</p>
+</li>
+<li>
+<p>Load entities, no tracking</p>
+</li>
+<li>
+<p>Project only ranking</p>
+</li>
+<li>
+<p>Calculate in database</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Benchmark]
+public double LoadEntities()
+{
+    var sum = 0;
+    var count = 0;
+    using var ctx = new BloggingContext();
+    foreach (var blog in ctx.Blogs)
+    {
+        sum += blog.Rating;
+        count++;
+    }
+
+    return (double)sum / count;
+}
+</code></pre>
+<pre><code class="language-csharp">[Benchmark]
+public double LoadEntitiesNoTracking()
+{
+    var sum = 0;
+    var count = 0;
+    using var ctx = new BloggingContext();
+    foreach (var blog in ctx.Blogs.AsNoTracking())
+    {
+        sum += blog.Rating;
+        count++;
+    }
+
+    return (double)sum / count;
+}
+</code></pre>
+<pre><code class="language-csharp">[Benchmark]
+public double ProjectOnlyRanking()
+{
+    var sum = 0;
+    var count = 0;
+    using var ctx = new BloggingContext();
+    foreach (var rating in ctx.Blogs.Select(b =&gt; b.Rating))
+    {
+        sum += rating;
+        count++;
+    }
+
+    return (double)sum / count;
+}
+</code></pre>
+<pre><code class="language-csharp">[Benchmark(Baseline = true)]
+public double CalculateInDatabase()
+{
+    using var ctx = new BloggingContext();
+    return ctx.Blogs.Average(b =&gt; b.Rating);
+}
+</code></pre>
+<p>The results are below, as printed by BenchmarkDotNet:</p>
+<table><thead>
+<tr>
+<th>Method</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">Error</th>
+<th style="text-align: right;">StdDev</th>
+<th style="text-align: right;">Median</th>
+<th style="text-align: right;">Ratio</th>
+<th style="text-align: right;">RatioSD</th>
+<th style="text-align: right;">Gen 0</th>
+<th style="text-align: right;">Gen 1</th>
+<th style="text-align: right;">Gen 2</th>
+<th style="text-align: right;">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LoadEntities</td>
+<td style="text-align: right;">2,860.4 us</td>
+<td style="text-align: right;">54.31 us</td>
+<td style="text-align: right;">93.68 us</td>
+<td style="text-align: right;">2,844.5 us</td>
+<td style="text-align: right;">4.55</td>
+<td style="text-align: right;">0.33</td>
+<td style="text-align: right;">210.9375</td>
+<td style="text-align: right;">70.3125</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">1309.56 KB</td>
+</tr>
+<tr>
+<td>LoadEntitiesNoTracking</td>
+<td style="text-align: right;">1,353.0 us</td>
+<td style="text-align: right;">21.26 us</td>
+<td style="text-align: right;">18.85 us</td>
+<td style="text-align: right;">1,355.6 us</td>
+<td style="text-align: right;">2.10</td>
+<td style="text-align: right;">0.14</td>
+<td style="text-align: right;">87.8906</td>
+<td style="text-align: right;">3.9063</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">540.09 KB</td>
+</tr>
+<tr>
+<td>ProjectOnlyRanking</td>
+<td style="text-align: right;">910.9 us</td>
+<td style="text-align: right;">20.91 us</td>
+<td style="text-align: right;">61.65 us</td>
+<td style="text-align: right;">892.9 us</td>
+<td style="text-align: right;">1.46</td>
+<td style="text-align: right;">0.14</td>
+<td style="text-align: right;">41.0156</td>
+<td style="text-align: right;">0.9766</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">252.08 KB</td>
+</tr>
+<tr>
+<td>CalculateInDatabase</td>
+<td style="text-align: right;">627.1 us</td>
+<td style="text-align: right;">14.58 us</td>
+<td style="text-align: right;">42.54 us</td>
+<td style="text-align: right;">626.4 us</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">4.8828</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">33.27 KB</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p class='note'>Note
+As the methods instantiate and dispose the context within the method, these operations are counted for the benchmark, although strictly speaking they are not part of the querying process. This should not matter if the goal is to compare two alternatives to one another (since the context instantiation and disposal are the same), and gives a more holistic measurement for the entire operation.</p>
+</blockquote>
+<p>One limitation of BenchmarkDotNet is that it measures simple, single-thread performance of the methods you provide, and is therefore not well-suited for benchmarking concurrent scenarios.</p>
+<blockquote>
+<p class='important'>Important
+Always make sure to have data in your database that is similar to production data when benchmarking, otherwise the benchmark results may not represent actual performance in production.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/performance/performance-diagnosis">Performance Diagnosis</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

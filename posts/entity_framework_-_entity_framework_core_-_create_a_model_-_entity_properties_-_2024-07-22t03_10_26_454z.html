@@ -189,7 +189,7 @@
 <h3><a href="#maximum-length" aria-hidden="true" class="anchor" id="maximum-length"></a>Maximum length</h3>
 <p>The maximum length of a row in an array.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Entity Framework does not do any validation of maximum length before passing data to the provider. It is up to the provider or data store to validate if appropriate. For example, when targeting SQL Server, exceeding the maximum length will result in an exception as the data type of the underlying column will not allow excess data to be stored.</p>
 </blockquote>
 <p>In the following example, configuring a maximum length of 500 will cause a column of type nvarchar(500) to be created on SQL Server:</p>
@@ -219,7 +219,7 @@ Entity Framework does not do any validation of maximum length before passing dat
 <h3><a href="#precision-and-scale" aria-hidden="true" class="anchor" id="precision-and-scale"></a>Precision and Scale</h3>
 <p>The properties of a column are controlled by the facets of the column.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Entity Framework does not do any validation of precision or scale before passing data to the provider. It is up to the provider or data store to validate as appropriate. For example, when targeting SQL Server, a column of data type <code>datetime</code> does not allow the precision to be set, whereas a <code>datetime2</code> one can have precision between 0 and 7 inclusive.</p>
 </blockquote>
 <p>The <code>Score</code> and <code>LastUpdated</code> properties can cause columns to be created on SQL Server.</p>
@@ -333,7 +333,7 @@ Entity Framework does not do any validation of precision or scale before passing
 </code></pre>
 <p>This article describes the use of nullable reference types in the Fluent database.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Exercise caution when enabling nullable reference types on an existing project: reference type properties which were previously configured as optional will now be configured as required, unless they are explicitly annotated to be nullable. When managing a relational database schema, this may cause migrations to be generated which alter the database column's nullability.</p>
 </blockquote>
 <p>For more information on nullable reference types and how to use them with EF Core, see the dedicated documentation page for this feature.</p>

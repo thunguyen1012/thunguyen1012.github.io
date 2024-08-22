@@ -90,7 +90,7 @@
 <p>This article describes two methods that can be used to ensure that data is not dropped when the database schema changes.</p>
 <p>Some providers (especially non-relational ones) don't support Migrations. For these providers, <code>EnsureCreated</code> is often the easiest way to initialize the database schema.</p>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 EnsureCreated and Migrations don't work well together. If you're using Migrations, don't use <code>EnsureCreated</code> to initialize the schema.</p>
 </blockquote>
 <p>How do I transition from <code>EnsureCreated</code> to Migrations?</p>
@@ -105,7 +105,7 @@ dbContext.Database.EnsureDeleted();
 dbContext.Database.EnsureCreated();
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Async versions of these methods are also available.</p>
 </blockquote>
 <h2><a href="#sql-script" aria-hidden="true" class="anchor" id="sql-script"></a>SQL Script</h2>

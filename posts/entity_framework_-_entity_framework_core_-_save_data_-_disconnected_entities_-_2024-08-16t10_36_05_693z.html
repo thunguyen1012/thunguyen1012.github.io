@@ -90,11 +90,11 @@
 <p>Save changes to entities in a database.</p>
 <p>When entities are queried using a context instance, they are queried and saved using the same instance.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 EF Core can only track one instance of any entity with a given primary key value. The best way to avoid this being an issue is to use a short-lived context for each unit-of-work such that the context starts empty, has entities attached to it, saves those entities, and then the context is disposed and discarded.</p>
 </blockquote>
 <h2><a href="#identifying-new-entities" aria-hidden="true" class="anchor" id="identifying-new-entities"></a>Identifying new entities</h2>
@@ -112,7 +112,7 @@ EF Core can only track one instance of any entity with a given primary key value
     =&gt; !context.Entry(entity).IsKeySet;
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Keys are set as soon as entities are tracked by the context, even if the entity is in the Added state. This helps when traversing a graph of entities and deciding what to do with each, such as when using the TrackGraph API. The key value should only be used in the way shown here before any call is made to track the entity.</p>
 </blockquote>
 <h3><a href="#with-other-keys" aria-hidden="true" class="anchor" id="with-other-keys"></a>With other keys</h3>
@@ -185,7 +185,7 @@ public static void Update(DbContext context, object entity)
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 SetValues will only mark as modified the properties that have different values to those in the tracked entity. This means that when the update is sent, only those columns that have actually changed will be updated. (And if nothing has changed, then no update will be sent at all.)</p>
 </blockquote>
 <h2><a href="#working-with-graphs" aria-hidden="true" class="anchor" id="working-with-graphs"></a>Working with graphs</h2>

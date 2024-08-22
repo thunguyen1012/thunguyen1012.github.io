@@ -150,7 +150,7 @@ END
 </code></pre>
 <p>The CLR method will be invoked client-side, unless EF Core can't translate its arguments.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 In the example, the method is defined on <code>DbContext</code>, but it can also be defined as a static method inside other classes.</p>
 </blockquote>
 <p>This function definition can now be associated with user-defined function in the model configuration:</p>
@@ -277,7 +277,7 @@ WHERE ([dbo].[ConcatStrings]([b].[Url], CONVERT(VARCHAR(11), [b].[Rating])) &lt;
 </code></pre>
 <p>The second query doesn't need to re-evaluate the function itself to test its nullability.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This optimization should only be used if the function can only return <code>null</code> when it's parameters are <code>null</code>.</p>
 </blockquote>
 <h2><a href="#mapping-a-queryable-function-to-a-table-valued-function" aria-hidden="true" class="anchor" id="mapping-a-queryable-function-to-a-table-valued-function"></a>Mapping a queryable function to a table-valued function</h2>
@@ -301,7 +301,7 @@ RETURN
     =&gt; FromExpression(() =&gt; PostsWithPopularComments(likeThreshold));
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The <code>FromExpression</code> call in the CLR function body allows for the function to be used instead of a regular DbSet.</p>
 </blockquote>
 <p>And below is the mapping:</p>
@@ -309,7 +309,7 @@ The <code>FromExpression</code> call in the CLR function body allows for the fun
 modelBuilder.HasDbFunction(typeof(BloggingContext).GetMethod(nameof(PostsWithPopularComments), new[] { typeof(int) }));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 A queryable function must be mapped to a table-valued function and can't make use of <code>HasTranslation</code>.</p>
 </blockquote>
 <p>When the function is mapped, the following query:</p>

@@ -234,11 +234,11 @@ public class Blog
     modelBuilder.HasDefaultSchema(&quot;blogging&quot;);
 }
 </code></pre>
-<p>Note that setting the default schema will also affect other database objects, such as sequences.</p>
+<p class='note'>Note that setting the default schema will also affect other database objects, such as sequences.</p>
 <h2><a href="#view-mapping" aria-hidden="true" class="anchor" id="view-mapping"></a>View mapping</h2>
 <p>Entity types can be mapped to database views using the Fluent API.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 EF will assume that the referenced view already exists in the database, it will not create it automatically in a migration.</p>
 </blockquote>
 <pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;()
@@ -246,7 +246,7 @@ EF will assume that the referenced view already exists in the database, it will 
 </code></pre>
 <p>Mapping to a view will remove the default table mapping, but the entity type can also be mapped to a table explicitly.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 To test keyless entity types mapped to views using the in-memory provider, map them to a query via ToInMemoryQuery. See the in-memory provider docs for more information.</p>
 </blockquote>
 <h2><a href="#table-valued-function-mapping" aria-hidden="true" class="anchor" id="table-valued-function-mapping"></a>Table-valued function mapping</h2>
@@ -274,7 +274,7 @@ RETURN
 <pre><code class="language-csharp">modelBuilder.Entity&lt;BlogWithMultiplePosts&gt;().HasNoKey().ToFunction(&quot;BlogsWithMultiplePosts&quot;);
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 In order to map an entity to a table-valued function the function must be parameterless.</p>
 </blockquote>
 <p><code>HasColumnName</code> method can be used to specify the columns of entity properties returned by the TVF.</p>

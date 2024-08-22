@@ -92,11 +92,11 @@
 <p>The foreign key (FK) representation is used to store relationships between entities in the database.</p>
 <p>The FK property can be used as a navigation property in a relationship.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <h3><a href="#example-model" aria-hidden="true" class="anchor" id="example-model"></a>Example model</h3>
@@ -356,7 +356,7 @@ Post {Id: 4} Unchanged
 </code></pre>
 <p>This is the same end-state as was achieved with the original single query, since EF Core fixed up navigations as entities were tracked, even when coming from multiple different queries.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Fixup never causes more data to be returned from the database. It only connects entities that are already returned by the query or already tracked by the DbContext. See Identity Resolution in EF Core for information about handling duplicates when serializing entities.</p>
 </blockquote>
 <h2><a href="#changing-relationships-using-navigations" aria-hidden="true" class="anchor" id="changing-relationships-using-navigations"></a>Changing relationships using navigations</h2>
@@ -388,7 +388,7 @@ Console.WriteLine(context.ChangeTracker.DebugView.LongView);
 context.SaveChanges();
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 A call to <code>ChangeTracker.DetectChanges()</code> is needed here because accessing the debug view does not cause automatic detection of changes.</p>
 </blockquote>
 <p>This is the debug view printed after running the code above:</p>
@@ -452,7 +452,7 @@ post.BlogId = dotNetBlog.Id;
 <p>Notice how this is very similar to changing the reference navigation, as shown in the previous example.</p>
 <p>The debug view after this change is exactly the same as was the case with the previous two examples.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Do not write code to manipulate all navigations and FK values each time a relationship changes. Such code is more complicated and must ensure consistent changes to foreign keys and navigations in every case. If possible, just manipulate a single navigation, or maybe both navigations. If needed, just manipulate FK values. Avoid manipulating both navigations and FK values.</p>
 </blockquote>
 <h2><a href="#fixup-for-added-or-deleted-entities" aria-hidden="true" class="anchor" id="fixup-for-added-or-deleted-entities"></a>Fixup for added or deleted entities</h2>
@@ -778,7 +778,7 @@ Post {Id: 4} Deleted
 <p>cascade delete when a parent or principal is deleted.</p>
 <p>A cascade delete is the process of deleting an orphan from a database.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Cascade delete and deleting orphans are closely related. Both result in deleting dependent/child entities when the relationship to their required principal/parent is severed. For cascade delete, this severing happens because the principal/parent is itself deleted. For orphans, the principal/parent entity still exists, but is no longer related to the dependent/child entities.</p>
 </blockquote>
 <h2><a href="#many-to-many-relationships" aria-hidden="true" class="anchor" id="many-to-many-relationships"></a>Many-to-many relationships</h2>
@@ -960,7 +960,7 @@ PostTag (Dictionary&lt;string, object&gt;) {PostsId: 3, TagsId: 1} Added
 </code></pre>
 <p>See Relationships for more information about implicit join entities and the use of <code>Dictionary&lt;string, object&gt;</code> entity types.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 The CLR type used for join entity types by convention may change in future releases to improve performance. Do not depend on the join type being <code>Dictionary&lt;string, object&gt;</code> unless this has been explicitly configured.</p>
 </blockquote>
 <h3><a href="#join-entities-with-payloads" aria-hidden="true" class="anchor" id="join-entities-with-payloads"></a>Join entities with payloads</h3>
@@ -1047,7 +1047,7 @@ Console.WriteLine(context.ChangeTracker.DebugView.LongView);
 </code></pre>
 <p>Once the join entity has been located it can be manipulated in the normal way--in this example, to set the <code>TaggedBy</code> payload property before calling SaveChanges.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Note that a call to <code>ChangeTracker.DetectChanges()</code> is required here to give EF Core a chance to detect the navigation property change and create the join entity instance before <code>Find</code> is used. See Change Detection and Notifications for more information.</p>
 </blockquote>
 <p>Alternately, the join entity can be created explicitly to associate a post with a tag. For example:</p>

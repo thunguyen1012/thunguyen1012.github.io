@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>How do I keep track of which migrations have been applied to the database?</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 If you customize the Migrations history table after applying migrations, you are responsible for updating the
 existing table in the database.</p>
 </blockquote>
@@ -109,7 +109,7 @@ existing table in the database.</p>
         .ReplaceService&lt;IHistoryRepository, MyHistoryRepository&gt;();
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 <code>SqlServerHistoryRepository</code> is inside an internal namespace and may change in future releases.</p>
 </blockquote>
 <pre><code class="language-csharp">internal class MyHistoryRepository : SqlServerHistoryRepository

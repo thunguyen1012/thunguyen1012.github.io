@@ -89,11 +89,11 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>A DbContext can only track one entity instance with any given primary key value.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This document assumes that entity states and the basics of EF Core change tracking are understood. See Change Tracking in EF Core for more information on these topics.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <h2><a href="#introduction" aria-hidden="true" class="anchor" id="introduction"></a>Introduction</h2>
@@ -262,7 +262,7 @@ catch (Exception e)
 </ul>
 <p>As with the examples in the previous section, the original values do not have to be passed as a dictionary; an entity instance or DTO will also work.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 While this approach has appealing characteristics, it does require sending the entity's original values to and from the web client. Carefully consider whether this extra complexity is worth the benefits; for many applications one of the simpler approaches is more pragmatic.</p>
 </blockquote>
 <h2><a href="#attaching-a-serialized-graph" aria-hidden="true" class="anchor" id="attaching-a-serialized-graph"></a>Attaching a serialized graph</h2>
@@ -595,11 +595,11 @@ Tracking EntityType: Post entity with key value 4
 Discarding duplicate EntityType: Post entity with key value 4
 </code></pre>
 <blockquote>
-<p>Important
+<p class='important'>Important
 This code assumes that all duplicates are identical. This makes it safe to arbitrarily choose one of the duplicates to track while discarding the others. If the duplicates can differ, then the code will need to decide how to determine which one to use, and how to combine property and navigation values together.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 For simplicity, this code assumes each entity has a primary key property called <code>Id</code>. This could be codified into an abstract base class or interface. Alternately, the primary key property or properties could be obtained from the IEntityType metadata such that this code would work with any type of entity.</p>
 </blockquote>
 <h2><a href="#failing-to-set-key-values" aria-hidden="true" class="anchor" id="failing-to-set-key-values"></a>Failing to set key values</h2>
@@ -641,13 +641,13 @@ catch (Exception e)
 <h2><a href="#identity-resolution-and-queries" aria-hidden="true" class="anchor" id="identity-resolution-and-queries"></a>Identity resolution and queries</h2>
 <p>Identity resolution is an important feature in EF Core.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 It is important to understand that EF Core always executes a LINQ query on a DbSet against the database and only returns results based on what is in the database. However, for a tracking query, if the entities returned are already tracked, then the tracked instances are used instead of creating instances from the data in the database.</p>
 </blockquote>
 <p><code>Reload()</code> or <code>GetDatabaseValues()</code> can be used when tracked entities need to be refreshed with the latest data from the database. See Accessing Tracked Entities for more information.</p>
 <p>No-tracking queries do not return duplicate results.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Do not routinely perform a no-tracking query and then attach the returned entities to the same context. This will be both slower and harder to get right than using a tracking query.</p>
 </blockquote>
 <p>No-tracking queries do not perform identity resolution because doing so impacts the performance of streaming a large number of entities from a query.</p>

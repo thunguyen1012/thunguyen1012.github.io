@@ -112,14 +112,14 @@ dotnet ef migrations add InitialCreate --context SqliteBlogContext --output-dir 
 Add-Migration InitialCreate -Context SqliteBlogContext -OutputDir Migrations\SqliteMigrations
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You don't need to specify the output directory for subsequent migrations since they are created as siblings to the
 last one.</p>
 </blockquote>
 <h2><a href="#using-one-context-type" aria-hidden="true" class="anchor" id="using-one-context-type"></a>Using one context type</h2>
 <p>It is possible to use one DbContext type in your migrations.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <p>You can pass arguments into the app from the tools. This can enable a more streamlined workflow that avoids having to make manual changes to the project when running the tools.</p>
@@ -163,7 +163,7 @@ You can view this article's sample on GitHub.</p>
 dotnet ef migrations add MyMigration --project ../SqliteMigrations -- --provider Sqlite
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The -- token directs <code>dotnet ef</code> to treat everything that follows as an argument and not try to parse them as options. Any extra arguments not used by <code>dotnet ef</code> are forwarded to the app.</p>
 </blockquote>
 <pre><code class="language-powershell">Add-Migration MyMigration -Args &quot;--provider SqlServer&quot;

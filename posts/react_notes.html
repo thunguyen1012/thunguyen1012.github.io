@@ -170,7 +170,7 @@ var george = Person('George'); // case2 🔴 Won’t work, george = undefined
 <pre><code class="language-javascript">(() =&gt; {}).prototype // undefined
 (function() {}).prototype // {constructor: f}
 </code></pre>
-<p>Note: chạy với babel thì kết quả không như thế.</p>
+<p class='note'>Note: chạy với babel thì kết quả không như thế.</p>
 <p>Không thể <code>new</code> cho functional component, cái trả về giá trị nguyên bản: chuỗi, số,..</p>
 <pre><code class="language-javascript">function Greeting() {
   return 'Hello';
@@ -179,7 +179,7 @@ var george = Person('George'); // case2 🔴 Won’t work, george = undefined
 Greeting(); // ✅ 'Hello'
 new Greeting(); // 😳 Greeting {}
 </code></pre>
-<p>Note: một trick ở đây, dùng <code>new</code> để thay đổi giá trị trả về của 1 hàm khi được gọi với <code>new</code>.</p>
+<p class='note'>Note: một trick ở đây, dùng <code>new</code> để thay đổi giá trị trả về của 1 hàm khi được gọi với <code>new</code>.</p>
 <pre><code class="language-javascript">// Created lazily
 var zeroVector = null;
 

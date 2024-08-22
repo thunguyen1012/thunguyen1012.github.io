@@ -89,11 +89,11 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>In this article, we will learn how to perform reverse engineering using the EF Core Package Manager Console and the dotnet ef dbcontext command of the .NET Command-line Interface (CLI) tools.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The scaffolding of a <code>DbContext</code> and entity types documented here is distinct from the scaffolding of controllers in ASP.NET Core using Visual Studio, which is not documented here.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If you use Visual Studio, try out the EF Core Power Tools community extension. These tools provide a graphical tool which builds on top of the EF Core command line tools and offers additional workflow and customization options.</p>
 </blockquote>
 <h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
@@ -177,7 +177,7 @@ If you use Visual Studio, try out the EF Core Power Tools community extension. T
 </code></pre>
 <p>In this example, the <code>DbContextListener</code> method is used to create a connection string between the generated code and the DbContextListener.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The <code>-NoOnConfiguring</code> (Visual Studio PMC) or <code>--no-onconfiguring</code> (.NET CLI) option can be passed to suppress creation of the <code>OnConfiguring</code> method containing the connection string.</p>
 </blockquote>
 <h3><a href="#provider-name" aria-hidden="true" class="anchor" id="provider-name"></a>Provider name</h3>
@@ -297,7 +297,7 @@ public partial class post
 public string Title { get; set; }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Some aspects of the model cannot be configured using mapping attributes. The scaffolder will still use the model building API to handle these cases.</p>
 </blockquote>
 <h3><a href="#dbcontext-name" aria-hidden="true" class="anchor" id="dbcontext-name"></a><code>DbContext</code> name</h3>
@@ -331,7 +331,7 @@ Some aspects of the model cannot be configured using mapping attributes. The sca
 </li>
 </ul>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Starting in EF7, you can also use T4 text templates to customize the generated code. See Custom Reverse Engineering Templates for more details.</p>
 </blockquote>
 <h3><a href="#c-nullable-reference-types" aria-hidden="true" class="anchor" id="c-nullable-reference-types"></a>C# Nullable reference types</h3>

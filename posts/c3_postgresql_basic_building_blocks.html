@@ -154,7 +154,7 @@ Các table <code>pg_catalog</code> chứa các thông tin của database.
 <li><code>INHERIT</code>: Nếu chỉ định, role sẽ kế thừa các quyền đã gắn với các role mà nó là một thành viên. Nếu không chỉ định, <code>INHERIT</code> là mặc định.</li>
 <li><code>BYPASSRLS</code>: Nếu chỉ định, role này có thể vượt qua <b>row-level security (RLS)</b></li>
 </ul>
-<p>Note: khi cài đặt PostgreSQL, postgres superuser role được tạo.<br />
+<p class='note'>Note: khi cài đặt PostgreSQL, postgres superuser role được tạo.<br />
 <code>CREATE USER</code> tương đương với <code>CREATEROLE</code> + <code>LOGIN</code> option<br />
 <code>CREATE GROUP</code> tương đương với <code>CREATEROLE</code> + <code>NOLOGIN</code> option.<br />
 Một role có thể là một thành viên của một role khác. <code>GRANT</code>, <code>REVOKE</code>.</p>
@@ -191,7 +191,7 @@ Một role có thể là một thành viên của một role khác. <code>GRANT<
 <p>Một PostgreSQL database được xem như là một container cho các database schema (database chứa ít nhất một schema). Mặc định có <code>public</code> schema trong các template database.</p>
 <h3><a href="#schemas" aria-hidden="true" class="anchor" id="schemas"></a>Schemas</h3>
 <p>Dùng để cô lập các object name. Schema chứa tất cả các database-named object: tables, views, functions, aggregates, indexes, sequences, triggers, data types, domains, và ranges.</p>
-<p>Note: trong môi trường nhiều user, nhiều database, nên huỷ khả năng tạo object trong public schema: <code>REVOKE CREATE ON SCHEMA public FROM PUBLIC;</code></p>
+<p class='note'>Note: trong môi trường nhiều user, nhiều database, nên huỷ khả năng tạo object trong public schema: <code>REVOKE CREATE ON SCHEMA public FROM PUBLIC;</code></p>
 <p><code>search_path</code> là tổng hợp các schema để server dùng khi tìm object. Khi tìm object, server tìm theo qualified database-object name.
 <img src="./c3_postgresql_basic_building_blocks/search_path.png" alt="search_path" title="search_path" /></p>
 <h4><a href="#schema-usages" aria-hidden="true" class="anchor" id="schema-usages"></a>Schema usages</h4>

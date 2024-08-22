@@ -102,7 +102,7 @@
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <h2><a href="#dbcontext-pooling" aria-hidden="true" class="anchor" id="dbcontext-pooling"></a><code>DbContext</code> pooling</h2>
 <p>EF Core can pool your context instances: when you dispose your context, EF Core resets its state and stores it in an internal pool; when a new instance is next requested, that pooled instance is returned instead of setting up a new one.</p>
-<p>Note that context pooling is orthogonal to database connection pooling, which is managed at a lower level in the database driver.</p>
+<p class='note'>Note that context pooling is orthogonal to database connection pooling, which is managed at a lower level in the database driver.</p>
 <ul>
 <li>
 <p>With dependency injection</p>
@@ -183,7 +183,7 @@ builder.Services.AddScoped&lt;ITenant&gt;(sp =&gt;
 <p>As this point, your controllers automatically get injected with a context instance that has the right tenant ID, without having to know anything about it.</p>
 <p>The full source code for this sample is available here.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Although EF Core takes care of resetting internal state for <code>DbContext</code> and its related services, it generally does not reset state in the underlying database driver, which is outside of EF. For example, if you manually open and use a <code>DbConnection</code> or otherwise manipulate ADO.NET state, it's up to you to restore that state before returning the context instance to the pool, e.g. by closing the connection. Failure to do so may cause state to get leaked across unrelated requests.</p>
 </blockquote>
 <h2><a href="#compiled-queries" aria-hidden="true" class="anchor" id="compiled-queries"></a>Compiled queries</h2>
@@ -201,7 +201,7 @@ Although EF Core takes care of resetting internal state for <code>DbContext</cod
     // Do something with the results
 }
 </code></pre>
-<p>Note that the delegate is thread-safe, and can be invoked concurrently on different context instances.</p>
+<p class='note'>Note that the delegate is thread-safe, and can be invoked concurrently on different context instances.</p>
 <h3><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h3>
 <ul>
 <li>
@@ -240,11 +240,11 @@ WHERE [b].[Name] = @__postTitle_0
 </code></pre>
 <p>Here's an example of how to parameterize a query.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 EF Core's metrics report the Query Cache Hit Rate. In a normal application, this metric reaches 100% soon after program startup, once most queries have executed at least once. If this metric remains stable below 100%, that is an indication that your application may be doing something which defeats the query cache - it's a good idea to investigate that.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 How the database manages caches query plans is database-dependent. For example, SQL Server implicitly maintains an LRU query plan cache, whereas PostgreSQL does not (but prepared statements can produce a very similar end effect). Consult your database documentation for more details.</p>
 </blockquote>
 <h2><a href="#dynamically-constructed-queries" aria-hidden="true" class="anchor" id="dynamically-constructed-queries"></a>Dynamically-constructed queries</h2>
@@ -353,7 +353,7 @@ public int SimpleWithParameter()
 <p>Benchmarking these two techniques gives the following results:</p>
 <p>If you have a constant version of a query, it's a good idea to keep it that way.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Avoid constructing queries with the expression tree API unless you really need to. Aside from the API's complexity, it's very easy to inadvertently cause significant performance issues when using them.</p>
 </blockquote>
 <h2><a href="#compiled-models" aria-hidden="true" class="anchor" id="compiled-models"></a>Compiled models</h2>

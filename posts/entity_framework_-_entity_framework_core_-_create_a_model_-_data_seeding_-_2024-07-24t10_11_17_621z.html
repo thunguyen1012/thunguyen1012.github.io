@@ -103,7 +103,7 @@
 <h2><a href="#model-seed-data" aria-hidden="true" class="anchor" id="model-seed-data"></a>Model seed data</h2>
 <p>Seeding data can be imported into the EF Core database as part of the model configuration.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Migrations only considers model changes when determining what operation should be performed to get the seed data into the desired state. Thus any changes to the data performed outside of migrations might be lost or cause an error.</p>
 </blockquote>
 <p>As an example, this will configure seed data for a <code>Blog</code> in <code>OnModelCreating</code>:</p>
@@ -125,7 +125,7 @@ Migrations only considers model changes when determining what operation should b
 <p>See the full sample project for more context.</p>
 <p>Once the data has been added to the model, migrations should be used to apply the changes.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If you need to apply migrations as part of an automated deployment you can create a SQL script that can be previewed before execution.</p>
 </blockquote>
 <p>You can create a new database containing the seed data, for example for a test database or when using the in-memory provider or any non-relational database.</p>
@@ -184,7 +184,7 @@ If you need to apply migrations as part of an automated deployment you can creat
 }
 </code></pre>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 The seeding code should not be part of the normal app execution as this can cause concurrency issues when multiple instances are running and would also require the app having permission to modify the database schema.</p>
 </blockquote>
 <p>Depending on the constraints of your deployment the initialization code can be executed in different ways:</p>

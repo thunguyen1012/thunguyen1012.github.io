@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>EF Core has a constructor that can be defined with parameters.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Currently, all constructor binding is by convention. Configuration of specific constructors to use is planned for a future release.</p>
 </blockquote>
 <h2><a href="#binding-to-mapped-properties" aria-hidden="true" class="anchor" id="binding-to-mapped-properties"></a>Binding to mapped properties</h2>
@@ -280,7 +280,7 @@ public class Post
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This code will result in compiler warning '169' indicating that the field is never used. This can be ignored since in reality EF Core is using the field in an extralinguistic manner.</p>
 </blockquote>
 <h2><a href="#injecting-services" aria-hidden="true" class="anchor" id="injecting-services"></a>Injecting services</h2>
@@ -300,7 +300,7 @@ This code will result in compiler warning '169' indicating that the field is nev
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Currently, only services known by EF Core can be injected. Support for injecting application services is being considered for a future release.</p>
 </blockquote>
 <p>An injected <code>DbContext</code> can be used to access a database without loading it all.</p>
@@ -352,7 +352,7 @@ public class Post
 </li>
 </ul>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Injecting the <code>DbContext</code> like this is often considered an anti-pattern since it couples your entity types directly to EF Core. Carefully consider all options before using service injection like this.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/modeling/constructors">Entity types with constructors</a></p>

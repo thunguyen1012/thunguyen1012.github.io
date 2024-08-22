@@ -100,11 +100,11 @@
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>This paper describes the use of navigations in the Entity Framework (EF).</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 Multiple relationships cannot share navigations. Any foreign key can be associated with at most one navigation from principal to dependent, and at most one navigation from dependent to principal.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 There is no need to make navigations virtual unless they are being used by lazy-loading or change-tracking proxies.</p>
 </blockquote>
 <h2><a href="#reference-navigations" aria-hidden="true" class="anchor" id="reference-navigations"></a>Reference navigations</h2>
@@ -124,13 +124,13 @@ There is no need to make navigations virtual unless they are being used by lazy-
 <pre><code class="language-csharp">public ICollection&lt;Post&gt; ThePosts { get; } = new List&lt;Post&gt;();
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 Don't accidentally create an expression bodied property, such as public ICollection<Post> ThePosts =&gt; new List<Post>();. This will create a new, empty collection instance each time the property is accessed, and will therefore be useless as a navigation.</p>
 </blockquote>
 <h3><a href="#collection-types" aria-hidden="true" class="anchor" id="collection-types"></a>Collection types</h3>
 <p>ICollectionT&gt; is a collection implementation.</p>
 <blockquote>
-<p>Important
+<p class='important'>Important
 The collection must use reference equality. When creating a HashSet<T> for a collection navigation, make sure to use <code>ReferenceEqualityComparer</code>.</p>
 </blockquote>
 <p>Arrays cannot be used for collection navigations because, even though they implement ICollection<T>, the <code>Add</code> method throws an exception when called.</p>
@@ -167,7 +167,7 @@ The collection must use reference equality. When creating a HashSet<T> for a col
 </code></pre>
 <p>Carefully consider whether the value gained from this is high enough that it outweighs the overhead of creating a copy of the collection every time the navigation is accessed.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 This final pattern works because, by-default, EF accesses the collection through its backing field. This means that EF itself adds and removes entities from the actual collection, while applications only interact with a defensive copy of the collection.</p>
 </blockquote>
 <h3><a href="#initialization-of-collection-navigations" aria-hidden="true" class="anchor" id="initialization-of-collection-navigations"></a>Initialization of collection navigations</h3>
@@ -204,11 +204,11 @@ This final pattern works because, by-default, EF accesses the collection through
 </li>
 </ul>
 <blockquote>
-<p>Note
+<p class='note'>Note
 If notification entities, including change-tracking proxies, are being used, then ObservableCollection<T> and ObservableHashSet<T> are used in place of List<T> and HashSet<T>.</p>
 </blockquote>
 <blockquote>
-<p>Important
+<p class='important'>Important
 As described in the change tracking documentation, EF only tracks a single instance of any entity with a given key value. This means that collections used as navigations must use reference equality semantics. Entity types that don't override object equality will get this by default. Make sure to use <code>ReferenceEqualityComparer</code> when creating a HashSet<T> for use as a navigation to ensure it works for all entity types.</p>
 </blockquote>
 <h2><a href="#configuring-navigations" aria-hidden="true" class="anchor" id="configuring-navigations"></a>Configuring navigations</h2>
@@ -226,7 +226,7 @@ As described in the change tracking documentation, EF only tracks a single insta
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 The <code>Navigation</code> call cannot be used to create a navigation property. It is only used to configure a navigation property which has been previously created by defining a relationship or from a convention.</p>
 </blockquote>
 <h3><a href="#required-navigations" aria-hidden="true" class="anchor" id="required-navigations"></a>Required navigations</h3>

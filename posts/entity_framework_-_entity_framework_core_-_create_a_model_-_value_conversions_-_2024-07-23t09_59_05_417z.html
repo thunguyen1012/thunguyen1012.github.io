@@ -102,14 +102,14 @@
 <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>Property values can be converted from one type to another in the database.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can run and debug into all the code in this document by downloading the sample code from GitHub.</p>
 </blockquote>
 <h2><a href="#overview" aria-hidden="true" class="anchor" id="overview"></a>Overview</h2>
 <p>Value converters can be used to convert data between entities in a database.</p>
 <p>The following examples show how to define and implement simple and complex database conversions.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 A property that has been configured for value conversion may also need to specify a ValueComparer<T>. See the examples below, and the Value Comparers documentation for more information.</p>
 </blockquote>
 <h2><a href="#configuring-a-value-converter" aria-hidden="true" class="anchor" id="configuring-a-value-converter"></a>Configuring a value converter</h2>
@@ -140,7 +140,7 @@ public enum EquineBeast
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 A <code>null</code> value will never be passed to a value converter. A <code>null</code> in a database column is always a <code>null</code> in the entity instance, and vice-versa. This makes the implementation of conversions easier and allows them to be shared amongst nullable and non-nullable properties. See GitHub issue #13850 for more information.</p>
 </blockquote>
 <h3><a href="#bulk-configuring-a-value-converter" aria-hidden="true" class="anchor" id="bulk-configuring-a-value-converter"></a>Bulk-configuring a value converter</h3>
@@ -607,7 +607,7 @@ A <code>null</code> value will never be passed to a value converter. A <code>nul
 </ul>
 </li>
 </ul>
-<p>Note that all the built-in converters are stateless and so a single instance can be safely shared by multiple properties.</p>
+<p class='note'>Note that all the built-in converters are stateless and so a single instance can be safely shared by multiple properties.</p>
 <h2><a href="#column-facets-and-mapping-hints" aria-hidden="true" class="anchor" id="column-facets-and-mapping-hints"></a>Column facets and mapping hints</h2>
 <p>Some database types have facets that modify how the data is stored. These include:</p>
 <ul>
@@ -698,7 +698,7 @@ A <code>null</code> value will never be passed to a value converter. A <code>nul
         v =&gt; new Dollars(v));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 This value object is implemented as a readonly struct. This means that EF Core can snapshot and compare values without issue. See Value Comparers for more information.</p>
 </blockquote>
 <h3><a href="#composite-value-objects" aria-hidden="true" class="anchor" id="composite-value-objects"></a>Composite value objects</h3>
@@ -741,11 +741,11 @@ public enum Currency
         v =&gt; JsonSerializer.Deserialize&lt;Money&gt;(v, (JsonSerializerOptions)null));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 We plan to allow mapping an object to multiple columns in a future version of EF Core, removing the need to use serialization here. This is tracked by GitHub issue #13947.</p>
 </blockquote>
 <blockquote>
-<p>Note
+<p class='note'>Note
 As with the previous example, this value object is implemented as a readonly struct. This means that EF Core can snapshot and compare values without issue. See Value Comparers for more information.</p>
 </blockquote>
 <h3><a href="#collections-of-primitives" aria-hidden="true" class="anchor" id="collections-of-primitives"></a>Collections of primitives</h3>
@@ -833,7 +833,7 @@ public enum Currency
             c =&gt; (IList&lt;AnnualFinance&gt;)c.ToList()));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 As before, this conversion requires a ValueComparer<T>. See Value Comparers for more information.</p>
 </blockquote>
 <h3><a href="#value-objects-as-keys" aria-hidden="true" class="anchor" id="value-objects-as-keys"></a>Value objects as keys</h3>
@@ -872,7 +872,7 @@ public class Post
 </code></pre>
 <p>Notice that <code>Blog.Id</code> cannot accidentally be assigned a <code>PostKey</code>, and <code>Post.Id</code> cannot accidentally be assigned a <code>BlogKey</code>. Similarly, the <code>Post.BlogId</code> foreign key property must be assigned a <code>BlogKey</code>.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Showing this pattern does not mean we recommend it. Carefully consider whether this level of abstraction is helping or hampering your development experience. Also, consider using navigations and generated keys instead of dealing with key values directly.</p>
 </blockquote>
 <p>These key properties can then be mapped using value converters:</p>
@@ -893,7 +893,7 @@ Showing this pattern does not mean we recommend it. Carefully consider whether t
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Key properties with conversions can only use generated key values starting with EF Core 7.0.</p>
 </blockquote>
 <h3><a href="#use-ulong-for-timestamprowversion" aria-hidden="true" class="anchor" id="use-ulong-for-timestamprowversion"></a>Use <code>ulong</code> for <code>timestamp</code>/rowversion</h3>
@@ -934,7 +934,7 @@ Key properties with conversions can only use generated key values starting with 
         v =&gt; new DateTime(v.Ticks, DateTimeKind.Utc));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Carefully consider unifying all database access code to use <code>UTC</code> time all the time, only dealing with local time when presenting data to users.</p>
 </blockquote>
 <h3><a href="#use-case-insensitive-string-keys" aria-hidden="true" class="anchor" id="use-case-insensitive-string-keys"></a>Use case-insensitive <code>string</code> keys</h3>
@@ -978,7 +978,7 @@ public class Post
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 .NET <code>string</code> comparisons and database <code>string</code> comparisons can differ in more than just case sensitivity. This pattern works for simple ASCII keys, but may fail for keys with any kind of culture-specific characters. See Collations and Case Sensitivity for more information.</p>
 </blockquote>
 <h3><a href="#handle-fixed-length-database-strings" aria-hidden="true" class="anchor" id="handle-fixed-length-database-strings"></a>Handle fixed-length database strings</h3>
@@ -1015,11 +1015,11 @@ public class Post
     v =&gt; new string(v.Reverse().ToArray()));
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 There is currently no way to get a reference to the current DbContext, or other session state, from within a value converter. This limits the kinds of encryption that can be used. Vote for GitHub issue #11597 to have this limitation removed.</p>
 </blockquote>
 <blockquote>
-<p>Warning
+<p class='warning'>Warning
 Make sure to understand all the implications if you roll your own encryption to protect sensitive data. Consider instead using pre-built encryption mechanisms, such as Always Encrypted on SQL Server.</p>
 </blockquote>
 <h2><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h2>

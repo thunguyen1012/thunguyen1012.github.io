@@ -89,11 +89,11 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In <code>this</code> article</h2>
 <p>Entity Framework Core attempts to evaluate queries on the server as much as possible.</p>
 <blockquote>
-<p>Note
+<p class='note'>Note
 Prior to version 3.0, Entity Framework Core supported client evaluation anywhere in the query. For more information, see the previous versions section.</p>
 </blockquote>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <h2><a href="#client-evaluation-in-the-top-level-projection" aria-hidden="true" class="anchor" id="client-evaluation-in-the-top-level-projection"></a>Client evaluation in the top-level projection</h2>
@@ -139,7 +139,7 @@ You can view this article's sample on GitHub.</p>
     .ToList();
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 If you are using <code>AsAsyncEnumerable</code> and want to compose the query further on client side then you can use System.Interactive.Async library which defines operators for async enumerables. For more information, see client side linq operators.</p>
 </blockquote>
 <h2><a href="#potential-memory-leak-in-client-evaluation" aria-hidden="true" class="anchor" id="potential-memory-leak-in-client-evaluation"></a>Potential memory leak in client evaluation</h2>

@@ -89,7 +89,7 @@
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p><code>DbContext.SaveChanges</code> is a method for saving changes to the database with EF.</p>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 You can view this article's sample on GitHub.</p>
 </blockquote>
 <h2><a href="#adding-data" aria-hidden="true" class="anchor" id="adding-data"></a>Adding Data</h2>
@@ -102,7 +102,7 @@ You can view this article's sample on GitHub.</p>
 }
 </code></pre>
 <blockquote>
-<p>Tip
+<p class='tip'>Tip
 The <code>Add</code>, <code>Attach</code>, and <code>Update</code> methods all work on the full graph of entities passed to them, as described in the Related Data section. Alternately, the <code>EntityEntry.State</code> property can be used to set the state of just a single entity. For example, <code>context.Entry(blog).State = EntityState.Modified</code>.</p>
 </blockquote>
 <h2><a href="#updating-data" aria-hidden="true" class="anchor" id="updating-data"></a>Updating Data</h2>
@@ -153,7 +153,7 @@ using (var context = new BloggingContext())
 }
 </code></pre>
 <blockquote>
-<p>Note
+<p class='note'>Note
 For most database providers, <code>SaveChanges</code> is transactional. This means all the operations either succeed or fail and the operations are never be left partially applied.</p>
 </blockquote>
 <p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/saving/basic">Basic <code>SaveChanges</code></a></p>
