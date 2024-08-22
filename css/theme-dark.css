@@ -743,21 +743,21 @@ img:hover {
 }
 
 .note {
-  background-color: #efd9fd !important;
+  background-color: #264653 !important;
 }
 
 .tip {
-  background-color: #dff6dd !important;
+  background-color: #2a9d8f !important;
 }
 
 .warning {
-  background-color: #fff4ce !important;
+  background-color: #e9c46a !important;
 }
 
 .caution {
-  background-color: #fde7e9 !important;
+  background-color: #f4a261 !important;
 }
 
 .important {
-  background-color: #d7eaf8 !important;
+  background-color: #e76f51 !important;
 }
