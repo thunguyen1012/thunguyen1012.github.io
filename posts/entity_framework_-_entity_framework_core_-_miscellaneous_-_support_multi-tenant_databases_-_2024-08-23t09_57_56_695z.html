@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Miscellaneous - Support multi-tenant databases | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Many line of business applications are designed to work with multiple customers. It is important to secure the data so that customer data isn't "leaked" or seen by other customers and potential competitors. These applications are classified as "multi-tenant" because each customer is considered a tenant of the application with their own set of data.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Miscellaneous - Support multi-tenant databases</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A multi-tenant application is an application designed to work with multiple customers.</p>
+<blockquote>
+<p class='important'>Important
+This document provides examples and solutions &quot;as is.&quot; These are not intended to be &quot;best practices&quot; but rather &quot;working practices&quot; for your consideration.</p>
+</blockquote>
+<blockquote>
+<p class='tip'>Tip
+You can view the source code for this sample on GitHub</p>
+</blockquote>
+<h2><a href="#supporting-multi-tenancy" aria-hidden="true" class="anchor" id="supporting-multi-tenancy"></a>Supporting multi-tenancy</h2>
+<p>Multi-tenancy is the practice of keeping data for more than one customer in a database.</p>
+<table><thead>
+<tr>
+<th style="text-align: center;">Approach</th>
+<th style="text-align: center;">Column for Tenant?</th>
+<th style="text-align: center;">Schema per Tenant?</th>
+<th style="text-align: center;">Multiple Databases?</th>
+<th style="text-align: center;">EF Core Support</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">Discriminator (column)</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">Global query filter</td>
+</tr>
+<tr>
+<td style="text-align: center;">Database per tenant</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">Configuration</td>
+</tr>
+<tr>
+<td style="text-align: center;">Schema per tenant</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">Not supported</td>
+</tr>
+</tbody></table>
+<p>In our series of articles on how to use Apache Struts, we look at two approaches to Struts: database-per-tenant and database-per-tenant.</p>
+<p>These examples should work fine in most app models, including console, WPF, WinForms, and ASP.NET Core apps. Blazor Server apps require special consideration.</p>
+<h3><a href="#blazor-server-apps-and-the-life-of-the-factory" aria-hidden="true" class="anchor" id="blazor-server-apps-and-the-life-of-the-factory"></a>Blazor Server apps and the life of the factory</h3>
+<p>The recommended pattern for using Entity Framework Core in Blazor apps is to register the <code>DbContextFactory</code>, then call it to create a new instance of the <code>DbContext</code> each operation. By default, the factory is a singleton so only one copy exists for all users of the application. This is usually fine because although the factory is shared, the individual <code>DbContext</code> instances are not.</p>
+<p>For multi-tenancy, however, the connection string may change per user. Because the factory caches the configuration with the same lifetime, this means all users must share the same configuration. Therefore, the lifetime should be changed to <code>Scoped</code>.</p>
+<p>In Blazor Server apps, a singleton cannot be scoped to the user.</p>
+<h2><a href="#an-example-solution-single-database)" aria-hidden="true" class="anchor" id="an-example-solution-single-database)"></a>An example solution (single database)</h2>
+<p>A possible solution is to create a simple <code>ITenantService</code> service that handles setting the user's current tenant. It provides callbacks so code is notified when the tenant changes. The implementation (with the callbacks omitted for clarity) might look like this:</p>
+<pre><code class="language-csharp">namespace Common
+{
+    public interface ITenantService
+    {
+        string Tenant { get; }
+
+        void SetTenant(string tenant);
+
+        string[] GetTenants();
+
+        event TenantChangedEventHandler OnTenantChanged;
+    }
+}
+</code></pre>
+<p>The <code>DbContext</code> can then manage the multi-tenancy. The approach depends on your database strategy. If you are storing all tenants in a single database, you are likely going to use a query filter. The <code>ITenantService</code> is passed to the constructor via dependency injection and used to resolve and store the tenant identifier.</p>
+<pre><code class="language-csharp">public ContactContext(
+    DbContextOptions&lt;ContactContext&gt; opts,
+    ITenantService service)
+    : base(opts) =&gt; _tenant = service.Tenant;
+</code></pre>
+<p>The <code>OnModelCreating</code> method is overridden to specify the query filter:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+    =&gt; modelBuilder.Entity&lt;MultitenantContact&gt;()
+        .HasQueryFilter(mt =&gt; mt.Tenant == _tenant);
+</code></pre>
+<p>This ensures that every query is filtered to the tenant on every request. There is no need to filter in application code because the global filter will be automatically applied.</p>
+<p>The tenant provider and <code>DbContextFactory</code> are configured in the application startup like this, using Sqlite as an example:</p>
+<pre><code class="language-csharp">builder.Services.AddDbContextFactory&lt;ContactContext&gt;(
+    opt =&gt; opt.UseSqlite(&quot;Data Source=singledb.sqlite&quot;), ServiceLifetime.Scoped);
+</code></pre>
+<p>Notice that the service lifetime is configured with <code>ServiceLifetime.Scoped</code>. This enables it to take a dependency on the tenant provider.</p>
+<blockquote>
+<p class='note'>Note
+Dependencies must always flow towards the singleton. That means a <code>Scoped</code> service can depend on another <code>Scoped</code> service or a <code>Singleton</code> service, but a <code>Singleton</code> service can only depend on other <code>Singleton</code> services: <code>Transient =&gt; Scoped =&gt; Singleton</code>.</p>
+</blockquote>
+<h2><a href="#multiple-schemas" aria-hidden="true" class="anchor" id="multiple-schemas"></a>Multiple schemas</h2>
+<blockquote>
+<p class='warning'>Warning
+This scenario is not directly supported by EF Core and is not a recommended solution.</p>
+</blockquote>
+<p>In a different approach, the same database may handle <code>tenant1</code> and <code>tenant2</code> by using table schemas.</p>
+<ul>
+<li>
+<p>Tenant1 - <code>tenant1.CustomerData</code></p>
+</li>
+<li>
+<p>Tenant2 - <code>tenant2.CustomerData</code></p>
+</li>
+</ul>
+<p>If you are not using EF Core to handle database updates with migrations and already have multi-schema tables, you can override the schema in a <code>DbContext</code> in <code>OnModelCreating</code> like this (the schema for table <code>CustomerData</code> is set to the tenant):</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder) =&gt;
+    modelBuilder.Entity&lt;CustomerData&gt;().ToTable(nameof(CustomerData), tenant);
+</code></pre>
+<h2><a href="#multiple-databases-and-connection-strings" aria-hidden="true" class="anchor" id="multiple-databases-and-connection-strings"></a>Multiple databases and connection strings</h2>
+<p>The multiple database version is implemented by passing a different connection string for each tenant. This can be configured at startup by resolving the service provider and using it to build the connection string. A connection string by tenant section is added to the <code>appsettings.json</code> configuration file.</p>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;ConnectionStrings&quot;: {
+    &quot;TenantA&quot;: &quot;Data Source=tenantacontacts.sqlite&quot;,
+    &quot;TenantB&quot;: &quot;Data Source=tenantbcontacts.sqlite&quot;
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;
+}
+</code></pre>
+<p>The service and configuration are both injected into the <code>DbContext</code>:</p>
+<pre><code class="language-csharp">public ContactContext(
+    DbContextOptions&lt;ContactContext&gt; opts,
+    IConfiguration config,
+    ITenantService service)
+    : base(opts)
+{
+    _tenantService = service;
+    _configuration = config;
+}
+</code></pre>
+<p>The tenant is then used to look up the connection string in <code>OnConfiguring</code>:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    var tenant = _tenantService.Tenant;
+    var connectionStr = _configuration.GetConnectionString(tenant);
+    optionsBuilder.UseSqlite(connectionStr);
+}
+</code></pre>
+<p>This works fine for most scenarios unless the user can switch tenants during the same session.</p>
+<h3><a href="#switching-tenants" aria-hidden="true" class="anchor" id="switching-tenants"></a>Switching tenants</h3>
+<p>In the previous configuration for multiple databases, the options are cached at the <code>Scoped</code> level. This means that if the user changes the tenant, the options are not reevaluated and so the tenant change isn't reflected in queries.</p>
+<p>The easy solution for this when the tenant can change is to set the lifetime to <code>Transient</code>. This ensures the tenant is re-evaluated along with the connection string each time a <code>DbContext</code> is requested. The user can switch tenants as often as they like. The following table helps you choose which lifetime makes the most sense for your factory.</p>
+<table><thead>
+<tr>
+<th style="text-align: left;"><strong>Scenario</strong></th>
+<th style="text-align: left;"><strong>Single database</strong></th>
+<th style="text-align: left;"><strong>Multiple databases</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><em>User stays in a single tenant</em></td>
+<td style="text-align: left;"><code>Scoped</code></td>
+<td style="text-align: left;"><code>Scoped</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><em>User can switch tenants</em></td>
+<td style="text-align: left;"><code>Scoped</code></td>
+<td style="text-align: left;"><code>Transient</code></td>
+</tr>
+</tbody></table>
+<p>The default of <code>Singleton</code> still makes sense if your database does not take on user-scoped dependencies.</p>
+<h2><a href="#performance-notes" aria-hidden="true" class="anchor" id="performance-notes"></a>Performance notes</h2>
+<p>EF Core was designed so that <code>DbContext</code> instances can be instantiated quickly with as little overhead as possible. For that reason, creating a new <code>DbContext</code> per operation should usually be fine. If this approach is impacting the performance of your application, consider using <code>DbContext</code> pooling.</p>
+<h2><a href="#conclusion" aria-hidden="true" class="anchor" id="conclusion"></a>Conclusion</h2>
+<p>This is working guidance for implementing multi-tenancy in EF Core apps. If you have further examples or scenarios or wish to provide feedback, please open an issue and reference this document.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/miscellaneous/multitenancy">Multi-tenancy</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

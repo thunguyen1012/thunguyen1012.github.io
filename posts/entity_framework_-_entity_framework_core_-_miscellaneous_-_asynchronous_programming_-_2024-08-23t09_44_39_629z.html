@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Miscellaneous - Asynchronous programming | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Asynchronous operations avoid blocking a thread while the query is executed in the database. Async operations are important for keeping a responsive UI in rich client applications, and can also increase throughput in web applications where they free up the thread to service other requests in web applications.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Miscellaneous - Asynchronous programming</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Async operations are used to query a database.</p>
+<p>Following the .NET standard, EF Core provides asynchronous counterparts to all synchronous methods which perform I/O. These have the same effects as the sync methods, and can be used with the C# <code>async</code> and <code>await</code> keywords. For example, instead of using <code>DbContext.SaveChanges</code>, which will block a thread while database I/O is performed, <code>DbContext.SaveChangesAsync</code> can be used:</p>
+<pre><code class="language-csharp">var blog = new Blog { Url = &quot;http://sample.com&quot; };
+context.Blogs.Add(blog);
+await context.SaveChangesAsync();
+</code></pre>
+<p>For more information, see the general C# asynchronous programming docs.</p>
+<blockquote>
+<p class='warning'>Warning
+EF Core doesn't support multiple parallel operations being run on the same context instance. You should always wait for an operation to complete before beginning the next operation. This is typically done by using the <code>await</code> keyword on each <code>async</code> operation.</p>
+</blockquote>
+<blockquote>
+<p class='warning'>Warning
+The <code>async</code> implementation of <code>Microsoft.Data.SqlClient</code> unfortunately has some known issues (e.g. #593, #601, and others). If you're seeing unexpected performance problems, try using sync command execution instead, especially when dealing with large text or binary values.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+EF Core passes cancellation tokens down to the underlying database provider in use (e.g. Microsoft.Data.SqlClient). These tokens may or may not be honored - consult your database provider's documentation.</p>
+</blockquote>
+<h2><a href="#async-linq-operators" aria-hidden="true" class="anchor" id="async-linq-operators"></a>Async LINQ operators</h2>
+<p>In order to support executing LINQ queries asynchronously, EF Core provides a set of <code>async</code> extension methods which execute the query and return results. These counterparts to the standard, synchronous LINQ operators include <code>ToListAsync</code>, <code>SingleAsync</code>, <code>AsAsyncEnumerable</code>, etc.:</p>
+<pre><code class="language-csharp">var blogs = await context.Blogs.Where(b =&gt; b.Rating &gt; 3).ToListAsync();
+</code></pre>
+<p class='note'>Note that there are no <code>async</code> versions of some LINQ operators such as Where or OrderBy, because these only build up the LINQ expression tree and don't cause the query to be executed in the database. Only operators which cause query execution have <code>async</code> counterparts.</p>
+<blockquote>
+<p class='important'>Important
+The EF Core <code>async</code> extension methods are defined in the <code>Microsoft.EntityFrameworkCore</code> namespace. This namespace must be imported for the methods to be available.</p>
+</blockquote>
+<h2><a href="#client-side-async-linq-operators" aria-hidden="true" class="anchor" id="client-side-async-linq-operators"></a>Client-side <code>async</code> LINQ operators</h2>
+<p>The <code>async</code> LINQ operators discussed above can only be used on EF queries - you cannot use them with client-side LINQ to Objects query. To perform client-side <code>async</code> LINQ operations outside of EF, use the <code>System.Linq.Async</code> package; this package can be especially useful for performing operations on the client that cannot be translated for evaluation at the server.</p>
+<p>In EF Core 6.0 and lower, referencing <code>System.Linq.Async</code> unfortunately causes ambiguous invocation compilation errors on LINQ operators applied to EF's DbSets; this makes it hard to use both EF and <code>System.Linq.Async</code> in the same project. To work around this issue, add AsQueryable to your DbSet:</p>
+<pre><code class="language-csharp">var groupedHighlyRatedBlogs = await context.Blogs
+    .AsQueryable()
+    .Where(b =&gt; b.Rating &gt; 3) // server-evaluated
+    .AsAsyncEnumerable()
+    .GroupBy(b =&gt; b.Rating) // client-evaluated
+    .ToListAsync();
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/miscellaneous/async">Asynchronous Programming</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

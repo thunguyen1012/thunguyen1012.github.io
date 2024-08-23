@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Miscellaneous - Context pooling | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A DbContext is generally a light object: creating and disposing one doesn't involve a database operation, and most applications can do so without any noticeable impact on performance. However, each context instance does set up various internal services and objects necessary for performing its duties, and the overhead of continuously doing so may be significant in high-performance scenarios. For these cases, EF Core can pool your context instances: when you dispose your context, EF Core resets its state and stores it in an internal pool; when a new instance is next requested, that pooled instance is returned instead of setting up a new one. Context pooling allows you to pay context setup costs only once at program startup, rather than continuously.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Miscellaneous - Context pooling</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#dbcontext-pooling" aria-hidden="true" class="anchor" id="dbcontext-pooling"></a><code>DbContext</code> pooling</h2>
+<p>A <code>DbContext</code> is generally a light object: creating and disposing one doesn't involve a database operation, and most applications can do so without any noticeable impact on performance. However, each context instance does set up various internal services and objects necessary for performing its duties, and the overhead of continuously doing so may be significant in high-performance scenarios. For these cases, EF Core can pool your context instances: when you dispose your context, EF Core resets its state and stores it in an internal pool; when a new instance is next requested, that pooled instance is returned instead of setting up a new one. Context pooling allows you to pay context setup costs only once at program startup, rather than continuously.</p>
+<p class='note'>Note that context pooling is orthogonal to database connection pooling, which is managed at a lower level in the database driver.</p>
+<ul>
+<li>With dependency injection</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddDbContextPool&lt;WeatherForecastContext&gt;(
+    o =&gt; o.UseSqlServer(builder.Configuration.GetConnectionString(&quot;WeatherForecastContext&quot;)));
+</code></pre>
+<ul>
+<li>Without dependency injection</li>
+</ul>
+<pre><code class="language-csharp">var options = new DbContextOptionsBuilder&lt;PooledBloggingContext&gt;()
+    .UseSqlServer(@&quot;Server=(localdb)\mssqllocaldb;Database=Blogging;Trusted_Connection=True;ConnectRetryCount=0&quot;)
+    .Options;
+
+var factory = new PooledDbContextFactory&lt;PooledBloggingContext&gt;(options);
+
+using (var context = factory.CreateDbContext())
+{
+    var allPosts = context.Posts.ToList();
+}
+</code></pre>
+<h3><a href="#benchmarks" aria-hidden="true" class="anchor" id="benchmarks"></a>Benchmarks</h3>
+<p>This week we're testing the performance of fetching a single row from a SQL Server database running locally on the same machine, with and without context pooling.</p>
+<table><thead>
+<tr>
+<th>Method</th>
+<th>NumBlogs</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">Error</th>
+<th style="text-align: right;">StdDev</th>
+<th style="text-align: right;">Gen 0</th>
+<th style="text-align: right;">Gen 1</th>
+<th style="text-align: right;">Gen 2</th>
+<th style="text-align: right;">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WithoutContextPooling</td>
+<td>1</td>
+<td style="text-align: right;">701.6 us</td>
+<td style="text-align: right;">26.62 us</td>
+<td style="text-align: right;">78.48 us</td>
+<td style="text-align: right;">11.7188</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">50.38 KB</td>
+</tr>
+<tr>
+<td>WithContextPooling</td>
+<td>1</td>
+<td style="text-align: right;">350.1 us</td>
+<td style="text-align: right;">6.80 us</td>
+<td style="text-align: right;">14.64 us</td>
+<td style="text-align: right;">0.9766</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">4.63 KB</td>
+</tr>
+</tbody></table>
+<h3><a href="#managing-state-in-pooled-contexts" aria-hidden="true" class="anchor" id="managing-state-in-pooled-contexts"></a>Managing state in pooled contexts</h3>
+<p>Context pooling works by reusing the same context instance across requests; this means that it's effectively registered as a Singleton, and the same instance is reused across multiple requests (or DI scopes). This means that special care must be taken when the context involves any state that may change between requests. Crucially, the context's <code>OnConfiguring</code> is only invoked once - when the instance context is first created - and so cannot be used to set state which needs to vary (e.g. a tenant ID).</p>
+<p>In this article we are going to learn how to use context pooling in ASP.NET.</p>
+<p>Let's assume that your application registers a scoped <code>ITenant</code> service, which wraps the tenant ID and any other tenant-related information:</p>
+<pre><code class="language-csharp">// Below is a minimal tenant resolution strategy, which registers a scoped ITenant service in DI.
+// In this sample, we simply accept the tenant ID as a request query, which means that a client can impersonate any
+// tenant. In a real application, the tenant ID would be set based on secure authentication data.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped&lt;ITenant&gt;(sp =&gt;
+{
+    var tenantIdString = sp.GetRequiredService&lt;IHttpContextAccessor&gt;().HttpContext.Request.Query[&quot;TenantId&quot;];
+
+    return tenantIdString != StringValues.Empty &amp;&amp; int.TryParse(tenantIdString, out var tenantId)
+        ? new Tenant(tenantId)
+        : null;
+});
+</code></pre>
+<p>As written above, pay special attention to where you get the tenant ID from - this is an important aspect of your application's security.</p>
+<p>Once we have our scoped <code>ITenant</code> service, register a pooling context factory as a Singleton service, as usual:</p>
+<pre><code class="language-csharp">builder.Services.AddPooledDbContextFactory&lt;WeatherForecastContext&gt;(
+    o =&gt; o.UseSqlServer(builder.Configuration.GetConnectionString(&quot;WeatherForecastContext&quot;)));
+</code></pre>
+<p>Next, write a custom context factory which gets a pooled context from the Singleton factory we registered, and injects the tenant ID into context instances it hands out:</p>
+<pre><code class="language-csharp">public class WeatherForecastScopedFactory : IDbContextFactory&lt;WeatherForecastContext&gt;
+{
+    private const int DefaultTenantId = -1;
+
+    private readonly IDbContextFactory&lt;WeatherForecastContext&gt; _pooledFactory;
+    private readonly int _tenantId;
+
+    public WeatherForecastScopedFactory(
+        IDbContextFactory&lt;WeatherForecastContext&gt; pooledFactory,
+        ITenant tenant)
+    {
+        _pooledFactory = pooledFactory;
+        _tenantId = tenant?.TenantId ?? DefaultTenantId;
+    }
+
+    public WeatherForecastContext CreateDbContext()
+    {
+        var context = _pooledFactory.CreateDbContext();
+        context.TenantId = _tenantId;
+        return context;
+    }
+}
+</code></pre>
+<p>Once we have our custom context factory, register it as a Scoped service:</p>
+<pre><code class="language-csharp">builder.Services.AddScoped&lt;WeatherForecastScopedFactory&gt;();
+</code></pre>
+<p>Finally, arrange for a context to get injected from our Scoped factory:</p>
+<pre><code class="language-csharp">builder.Services.AddScoped(
+    sp =&gt; sp.GetRequiredService&lt;WeatherForecastScopedFactory&gt;().CreateDbContext());
+</code></pre>
+<p>As this point, your controllers automatically get injected with a context instance that has the right tenant ID, without having to know anything about it.</p>
+<p>The full source code for this sample is available here.</p>
+<blockquote>
+<p class='note'>Note
+Although EF Core takes care of resetting internal state for <code>DbContext</code> and its related services, it generally does not reset state in the underlying database driver, which is outside of EF. For example, if you manually open and use a <code>DbConnection</code> or otherwise manipulate ADO.NET state, it's up to you to restore that state before returning the context instance to the pool, e.g. by closing the connection. Failure to do so may cause state to get leaked across unrelated requests.</p>
+</blockquote>
+<h2><a href="#compiled-queries" aria-hidden="true" class="anchor" id="compiled-queries"></a>Compiled queries</h2>
+<p>The following example shows how to cache a query tree for execution.</p>
+<p>cached queries allow EF to query the database more quickly than if it had to query the database itself.</p>
+<p>EF supports compiled queries, which allow the explicit compilation of a query into a .NET delegate.</p>
+<table><thead>
+<tr>
+<th>Method</th>
+<th>NumBlogs</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">Error</th>
+<th style="text-align: right;">StdDev</th>
+<th style="text-align: right;">Gen 0</th>
+<th style="text-align: right;">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WithCompiledQuery</td>
+<td>1</td>
+<td style="text-align: right;">564.2 us</td>
+<td style="text-align: right;">6.75 us</td>
+<td style="text-align: right;">5.99 us</td>
+<td style="text-align: right;">1.9531</td>
+<td style="text-align: right;">9 KB</td>
+</tr>
+<tr>
+<td>WithoutCompiledQuery</td>
+<td>1</td>
+<td style="text-align: right;">671.6 us</td>
+<td style="text-align: right;">12.72 us</td>
+<td style="text-align: right;">16.54 us</td>
+<td style="text-align: right;">2.9297</td>
+<td style="text-align: right;">13 KB</td>
+</tr>
+<tr>
+<td>WithCompiledQuery</td>
+<td>10</td>
+<td style="text-align: right;">645.3 us</td>
+<td style="text-align: right;">10.00 us</td>
+<td style="text-align: right;">9.35 us</td>
+<td style="text-align: right;">2.9297</td>
+<td style="text-align: right;">13 KB</td>
+</tr>
+<tr>
+<td>WithoutCompiledQuery</td>
+<td>10</td>
+<td style="text-align: right;">709.8 us</td>
+<td style="text-align: right;">25.20 us</td>
+<td style="text-align: right;">73.10 us</td>
+<td style="text-align: right;">3.9063</td>
+<td style="text-align: right;">18 KB</td>
+</tr>
+</tbody></table>
+<p>To use compiled queries, first compile a query with <code>EF.CompileAsyncQuery</code> as follows (use <code>EF.CompileQuery</code> for synchronous queries):</p>
+<pre><code class="language-csharp">private static readonly Func&lt;BloggingContext, int, IAsyncEnumerable&lt;Blog&gt;&gt; _compiledQuery
+    = EF.CompileAsyncQuery(
+        (BloggingContext context, int length) =&gt; context.Blogs.Where(b =&gt; b.Url.StartsWith(&quot;http://&quot;) &amp;&amp; b.Url.Length == length));
+</code></pre>
+<p>In this code sample, we provide EF with a lambda accepting a <code>DbContext</code> instance, and an arbitrary parameter to be passed to the query. You can now invoke that delegate whenever you wish to execute the query:</p>
+<pre><code class="language-csharp">await foreach (var blog in _compiledQuery(context, 8))
+{
+    // Do something with the results
+}
+</code></pre>
+<p class='note'>Note that the delegate is thread-safe, and can be invoked concurrently on different context instances.</p>
+<h3><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h3>
+<ul>
+<li>
+<p>Compiled queries may only be used against a single EF Core model. Different context instances of the same type can sometimes be configured to use different models; running compiled queries in this scenario is not supported.</p>
+</li>
+<li>
+<p>When using parameters in compiled queries, use simple, scalar parameters. More complex parameter expressions - such as member/method accesses on instances - are not supported.</p>
+</li>
+</ul>
+<h2><a href="#query-caching-and-parameterization" aria-hidden="true" class="anchor" id="query-caching-and-parameterization"></a>Query caching and parameterization</h2>
+<p>The following example shows how to cache a query tree for execution.</p>
+<p>Consider the following two queries:</p>
+<pre><code class="language-csharp">var post1 = context.Posts.FirstOrDefault(p =&gt; p.Title == &quot;post1&quot;);
+var post2 = context.Posts.FirstOrDefault(p =&gt; p.Title == &quot;post2&quot;);
+</code></pre>
+<p>This example shows how to query an expression tree using the following syntax: This example shows how to query an expression tree using the following syntax: This example shows how to query an expression tree using the following syntax: This example shows how to query an expression tree using the following syntax:</p>
+<pre><code class="language-sql">SELECT TOP(1) [b].[Id], [b].[Name]
+FROM [Posts] AS [b]
+WHERE [b].[Name] = N'post1'
+
+SELECT TOP(1) [b].[Id], [b].[Name]
+FROM [Posts] AS [b]
+WHERE [b].[Name] = N'post2'
+</code></pre>
+<p>Because the SQL differs, your database server will likely also need to produce a query plan for both queries, rather than reusing the same plan.</p>
+<p>A small modification to your queries can change things considerably:</p>
+<pre><code class="language-csharp">var postTitle = &quot;post1&quot;;
+var post1 = context.Posts.FirstOrDefault(p =&gt; p.Title == postTitle);
+postTitle = &quot;post2&quot;;
+var post2 = context.Posts.FirstOrDefault(p =&gt; p.Title == postTitle);
+</code></pre>
+<p>This example shows how to query two separate blogs using the same query plan.</p>
+<pre><code class="language-sql">SELECT TOP(1) [b].[Id], [b].[Name]
+FROM [Posts] AS [b]
+WHERE [b].[Name] = @__postTitle_0
+</code></pre>
+<p>Here's an example of how to parameterize a query.</p>
+<blockquote>
+<p class='note'>Note
+EF Core's metrics report the Query Cache Hit Rate. In a normal application, this metric reaches 100% soon after program startup, once most queries have executed at least once. If this metric remains stable below 100%, that is an indication that your application may be doing something which defeats the query cache - it's a good idea to investigate that.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+How the database manages caches query plans is database-dependent. For example, SQL Server implicitly maintains an LRU query plan cache, whereas PostgreSQL does not (but prepared statements can produce a very similar end effect). Consult your database documentation for more details.</p>
+</blockquote>
+<h2><a href="#dynamically-constructed-queries" aria-hidden="true" class="anchor" id="dynamically-constructed-queries"></a>Dynamically-constructed queries</h2>
+<p>In this talk, we'll look at some of the performance issues caused by queries.</p>
+<p>The following example uses three techniques to construct a query's <code>Where</code> lambda expression:</p>
+<ul>
+<li>
+<p>Expression API with constant: Dynamically build the expression with the Expression API, using a constant node. This is a frequent mistake when dynamically building expression trees, and causes EF to recompile the query each time it's invoked with a different constant value (it also usually causes plan cache pollution at the database server).</p>
+</li>
+<li>
+<p>Expression API with parameter: A better version, which substitutes the constant with a parameter. This ensures that the query is only compiled once regardless of the value provided, and the same (parameterized) SQL is generated.</p>
+</li>
+<li>
+<p>Simple with parameter: A version which doesn't use the Expression API, for comparison, which creates the same tree as the method above but is much simpler. In many cases, it's possible to dynamically build your expression tree without resorting to the Expression API, which is easy to get wrong.</p>
+</li>
+</ul>
+<p>We add a <code>Where</code> operator to the query only if the given parameter is not null. Note that this isn't a good use case for dynamically constructing a query - but we're using it for simplicity:</p>
+<ul>
+<li>Expression API with constant</li>
+</ul>
+<pre><code class="language-csharp">[Benchmark]
+public int ExpressionApiWithConstant()
+{
+    var url = &quot;blog&quot; + Interlocked.Increment(ref _blogNumber);
+    using var context = new BloggingContext();
+
+    IQueryable&lt;Blog&gt; query = context.Blogs;
+
+    if (_addWhereClause)
+    {
+        var blogParam = Expression.Parameter(typeof(Blog), &quot;b&quot;);
+        var whereLambda = Expression.Lambda&lt;Func&lt;Blog, bool&gt;&gt;(
+            Expression.Equal(
+                Expression.MakeMemberAccess(
+                    blogParam,
+                    typeof(Blog).GetMember(nameof(Blog.Url)).Single()),
+                Expression.Constant(url)),
+            blogParam);
+
+        query = query.Where(whereLambda);
+    }
+
+    return query.Count();
+}
+</code></pre>
+<ul>
+<li>Expression API with parameter</li>
+</ul>
+<pre><code class="language-csharp">[Benchmark]
+public int ExpressionApiWithParameter()
+{
+    var url = &quot;blog&quot; + Interlocked.Increment(ref _blogNumber);
+    using var context = new BloggingContext();
+
+    IQueryable&lt;Blog&gt; query = context.Blogs;
+
+    if (_addWhereClause)
+    {
+        var blogParam = Expression.Parameter(typeof(Blog), &quot;b&quot;);
+
+        // This creates a lambda expression whose body is identical to the url captured closure variable in the non-dynamic query:
+        // blogs.Where(b =&gt; b.Url == url)
+        // This dynamically creates an expression node which EF can properly recognize and parameterize in the database query.
+        // We then extract that body and use it in our dynamically-constructed query.
+        Expression&lt;Func&lt;string&gt;&gt; urlParameterLambda = () =&gt; url;
+        var urlParamExpression = urlParameterLambda.Body;
+
+        var whereLambda = Expression.Lambda&lt;Func&lt;Blog, bool&gt;&gt;(
+            Expression.Equal(
+                Expression.MakeMemberAccess(
+                    blogParam,
+                    typeof(Blog).GetMember(nameof(Blog.Url)).Single()),
+                urlParamExpression),
+            blogParam);
+
+        query = query.Where(whereLambda);
+    }
+
+    return query.Count();
+}
+</code></pre>
+<ul>
+<li>Simple with parameter</li>
+</ul>
+<pre><code class="language-csharp">[Benchmark]
+public int SimpleWithParameter()
+{
+    var url = &quot;blog&quot; + Interlocked.Increment(ref _blogNumber);
+
+    using var context = new BloggingContext();
+
+    IQueryable&lt;Blog&gt; query = context.Blogs;
+
+    if (_addWhereClause)
+    {
+        Expression&lt;Func&lt;Blog, bool&gt;&gt; whereLambda = b =&gt; b.Url == url;
+
+        query = query.Where(whereLambda);
+    }
+
+    return query.Count();
+}
+</code></pre>
+<p>Benchmarking these two techniques gives the following results:</p>
+<table><thead>
+<tr>
+<th>Method</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">Error</th>
+<th style="text-align: right;">StdDev</th>
+<th style="text-align: right;">Gen0</th>
+<th style="text-align: right;">Gen1</th>
+<th style="text-align: right;">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ExpressionApiWithConstant</td>
+<td style="text-align: right;">1,665.8 us</td>
+<td style="text-align: right;">56.99 us</td>
+<td style="text-align: right;">163.5 us</td>
+<td style="text-align: right;">15.6250</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">109.92 KB</td>
+</tr>
+<tr>
+<td>ExpressionApiWithParameter</td>
+<td style="text-align: right;">757.1 us</td>
+<td style="text-align: right;">35.14 us</td>
+<td style="text-align: right;">103.6 us</td>
+<td style="text-align: right;">12.6953</td>
+<td style="text-align: right;">0.9766</td>
+<td style="text-align: right;">54.95 KB</td>
+</tr>
+<tr>
+<td>SimpleWithParameter</td>
+<td style="text-align: right;">760.3 us</td>
+<td style="text-align: right;">37.99 us</td>
+<td style="text-align: right;">112.0 us</td>
+<td style="text-align: right;">12.6953</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">55.03 KB</td>
+</tr>
+</tbody></table>
+<p>If you have a constant version of a query, it's a good idea to keep it that way.</p>
+<blockquote>
+<p class='note'>Note
+Avoid constructing queries with the expression tree API unless you really need to. Aside from the API's complexity, it's very easy to inadvertently cause significant performance issues when using them.</p>
+</blockquote>
+<h2><a href="#compiled-models" aria-hidden="true" class="anchor" id="compiled-models"></a>Compiled models</h2>
+<p>Compiled models can improve EF Core startup time for applications with large models. A large model typically means hundreds to thousands of entity types and relationships. Startup time here is the time to perform the first operation on a <code>DbContext</code> when that <code>DbContext</code> type is used for the first time in the application. Note that just creating a <code>DbContext</code> instance does not cause the EF model to be initialized. Instead, typical first operations that cause the model to be initialized include calling <code>DbContext.Add</code> or executing the first query.</p>
+<p>Compiled models are created using the <code>dotnet ef</code> command-line tool. Ensure that you have installed the latest version of the tool before continuing.</p>
+<p>A new <code>dbcontext optimize</code> command is used to generate the compiled model. For example:</p>
+<pre><code class="language-dotnetcli">dotnet ef dbcontext optimize
+</code></pre>
+<p>The <code>--output-dir</code> and <code>--namespace</code> options can be used to specify the directory and namespace into which the compiled model will be generated. For example:</p>
+<pre><code class="language-dotnetcli">PS C:\dotnet\efdocs\samples\core\Miscellaneous\CompiledModels&gt; dotnet ef dbcontext optimize --output-dir MyCompiledModels --namespace MyCompiledModels
+Build started...
+Build succeeded.
+Successfully generated a compiled model, to use it call 'options.UseModel(MyCompiledModels.BlogsContextModel.Instance)'. Run this command again when the model is modified.
+PS C:\dotnet\efdocs\samples\core\Miscellaneous\CompiledModels&gt;
+</code></pre>
+<ul>
+<li>
+<p>For more information see <code>dotnet ef dbcontext optimize</code>.</p>
+</li>
+<li>
+<p>If you're more comfortable working inside Visual Studio, you can also use Optimize-DbContext</p>
+</li>
+</ul>
+<p>The output from running this command includes a piece of code to copy-and-paste into your <code>DbContext</code> configuration to cause EF Core to use the compiled model. For example:</p>
+<pre><code class="language-csharp">protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    =&gt; optionsBuilder
+        .UseModel(MyCompiledModels.BlogsContextModel.Instance)
+        .UseSqlite(@&quot;Data Source=test.db&quot;);
+</code></pre>
+<h3><a href="#compiled-model-bootstrapping" aria-hidden="true" class="anchor" id="compiled-model-bootstrapping"></a>Compiled model bootstrapping</h3>
+<p>It is typically not necessary to look at the generated bootstrapping code. However, sometimes it can be useful to customize the model or its loading. The bootstrapping code looks something like this:</p>
+<pre><code class="language-csharp">[DbContext(typeof(BlogsContext))]
+partial class BlogsContextModel : RuntimeModel
+{
+    private static BlogsContextModel _instance;
+    public static IModel Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new BlogsContextModel();
+                _instance.Initialize();
+                _instance.Customize();
+            }
+
+            return _instance;
+        }
+    }
+
+    partial void Initialize();
+
+    partial void Customize();
+}
+</code></pre>
+<p>This is a partial class with partial methods that can be implemented to customize the model as needed.</p>
+<p>In addition, multiple compiled models can be generated for <code>DbContext</code> types that may use different models depending on some runtime configuration. These should be placed into different folders and namespaces, as shown above. Runtime information, such as the connection string, can then be examined and the correct model returned as needed. For example:</p>
+<pre><code class="language-csharp">public static class RuntimeModelCache
+{
+    private static readonly ConcurrentDictionary&lt;string, IModel&gt; _runtimeModels
+        = new();
+
+    public static IModel GetOrCreateModel(string connectionString)
+        =&gt; _runtimeModels.GetOrAdd(
+            connectionString, cs =&gt;
+            {
+                if (cs.Contains(&quot;X&quot;))
+                {
+                    return BlogsContextModel1.Instance;
+                }
+
+                if (cs.Contains(&quot;Y&quot;))
+                {
+                    return BlogsContextModel2.Instance;
+                }
+
+                throw new InvalidOperationException(&quot;No appropriate compiled model found.&quot;);
+            });
+}
+</code></pre>
+<h3><a href="#limitations-1" aria-hidden="true" class="anchor" id="limitations-1"></a>Limitations</h3>
+<p>Compiled models have some limitations:</p>
+<ul>
+<li>
+<p>Global query filters are not supported.</p>
+</li>
+<li>
+<p>Lazy loading and change-tracking proxies are not supported.</p>
+</li>
+<li>
+<p>The model must be manually synchronized by regenerating it any time the model definition or configuration change.</p>
+</li>
+<li>
+<p>Custom IModelCacheKeyFactory implementations are not supported. However, you can compile multiple models and load the appropriate one as needed.</p>
+</li>
+</ul>
+<p>Because of these limitations, you should only use compiled models if your EF Core startup time is too slow. Compiling small models is typically not worth it.</p>
+<p>If supporting any of these features is critical to your success, then please vote for the appropriate issues linked above.</p>
+<h2><a href="#reducing-runtime-overhead" aria-hidden="true" class="anchor" id="reducing-runtime-overhead"></a>Reducing runtime overhead</h2>
+<p>In this performance guide, we'll look at how to reduce EF Core overhead in high-performance applications.</p>
+<ul>
+<li>
+<p>Turn on <code>DbContext</code> pooling; our benchmarks show that this feature can have a decisive impact on high-perf, low-latency applications.</p>
+<ul>
+<li>
+<p>Make sure that the <code>maxPoolSize</code> corresponds to your usage scenario; if it is too low, <code>DbContext</code> instances will be constantly created and disposed, degrading performance. Setting it too high may needlessly consume memory as unused <code>DbContext</code> instances are maintained in the pool.</p>
+</li>
+<li>
+<p>For an extra tiny perf boost, consider using <code>PooledDbContextFactory</code> instead of having DI inject context instances directly. DI management of <code>DbContext</code> pooling incurs a slight overhead.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Use precompiled queries for hot queries.</p>
+<ul>
+<li>The more complex the LINQ query - the more operators it contains and the bigger the resulting expression tree - the more gains can be expected from using compiled queries.</li>
+</ul>
+</li>
+<li>
+<p>Consider disabling thread safety checks by setting <code>EnableThreadSafetyChecks</code> to false in your context configuration.</p>
+<ul>
+<li>
+<p>Using the same <code>DbContext</code> instance concurrently from different threads isn't supported. EF Core has a safety feature which detects this programming bug in many cases (but not all), and immediately throws an informative exception. However, this safety feature adds some runtime overhead.</p>
+</li>
+<li>
+<p>WARNING: Only disable thread safety checks after thoroughly testing that your application doesn't contain such concurrency bugs.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/miscellaneous/context-pooling">Advanced Performance Topics</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

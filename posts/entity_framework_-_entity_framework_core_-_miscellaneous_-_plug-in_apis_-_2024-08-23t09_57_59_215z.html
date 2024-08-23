@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Miscellaneous - Plug-in APIs | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='EF Core extensions often require adding logic to core EF and provider components. This usually requires creating a derived component and replacing the original one in the internal service provider. This gets complicated when multiple extensions want to change the same component. In these cases, we provide plug-in APIs to allow multiple extensions to provide additional logic.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Miscellaneous - Plug-in APIs</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>We provide APIs to allow multiple EF Core extensions to provide additional logic.</p>
+<h2><a href="#list-of-services" aria-hidden="true" class="anchor" id="list-of-services"></a>List of services</h2>
+<p>The following is a list of plug-in APIs.</p>
+<table><thead>
+<tr>
+<th>Service</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.storage.itypemappingsourceplugin" class="no-loc" data-linktype="absolute-path">ITypeMappingSourcePlugin</a></td>
+<td>Adds mappings between .NET types and primitive store types.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.storage.irelationaltypemappingsourceplugin" class="no-loc" data-linktype="absolute-path">IRelationalTypeMappingSourcePlugin</a></td>
+<td>Adds mappings between .NET types and primitive relational database types.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.metadata.conventions.infrastructure.iconventionsetplugin" class="no-loc" data-linktype="absolute-path">IConventionSetPlugin</a></td>
+<td>Adds model building conventions.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.query.imembertranslatorplugin" class="no-loc" data-linktype="absolute-path">IMemberTranslatorPlugin</a></td>
+<td>Adds SQL translations for .NET properties.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.query.imethodcalltranslatorplugin" class="no-loc" data-linktype="absolute-path">IMethodCallTranslatorPlugin</a></td>
+<td>Adds SQL translations for .NET methods.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.query.iaggregatemethodcalltranslatorplugin" class="no-loc" data-linktype="absolute-path">IAggregateMethodCallTranslatorPlugin</a></td>
+<td>Adds SQL translations for .NET enumerable methods.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.query.ievaluatableexpressionfilterplugin" class="no-loc" data-linktype="absolute-path">IEvaluatableExpressionFilterPlugin</a></td>
+<td>Forces server-eval of certain expressions.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.entityframeworkcore.scaffolding.iprovidercodegeneratorplugin" class="no-loc" data-linktype="absolute-path">IProviderCodeGeneratorPlugin</a></td>
+<td>Scaffolds provider and DbContext options.</td>
+</tr>
+</tbody></table>
+<h2><a href="#examples" aria-hidden="true" class="anchor" id="examples"></a>Examples</h2>
+<p>Here are some extensions making use of these APIs:</p>
+<table><thead>
+<tr>
+<th>Extension</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/dotnet/efcore/tree/main/src/EFCore.Sqlite.NTS" data-linktype="external">Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite</a></td>
+<td>Adds type mappings and SQL translations for SpatiaLite's types.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/dotnet/efcore/tree/main/src/EFCore.SqlServer.HierarchyId" data-linktype="external">Microsoft.EntityFrameworkCore.SqlServer.HierarchyId</a></td>
+<td>Adds type mappings and SQL translations for SQL Server's hierarchyid type.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/dotnet/efcore/tree/main/src/EFCore.SqlServer.NTS" data-linktype="external">Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite</a></td>
+<td>Adds type mappings and SQL translations for SQL Server's geography and geometry types.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/efcore/EFCore.CheckConstraints" data-linktype="external">EFCore.CheckConstraints</a></td>
+<td>Adds model building conventions for relational database check constraints.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/efcore/EFCore.NamingConventions" data-linktype="external">EFCore.NamingConventions</a></td>
+<td>Adds model building conventions for alternative relational database table, column, and constraint names.</td>
+</tr>
+</tbody></table>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/miscellaneous/plugins">Plug-in APIs</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

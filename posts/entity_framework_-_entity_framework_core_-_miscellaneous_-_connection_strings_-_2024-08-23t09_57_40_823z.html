@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Miscellaneous - Connection strings | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Most database providers require some form of connection string to connect to the database. Sometimes this connection string contains sensitive information that needs to be protected. You may also need to change the connection string as you move your application between environments, such as development, testing, and production.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Miscellaneous - Connection strings</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article describes how to change the connection string between your application and a database.</p>
+<h2><a href="#aspnet-core" aria-hidden="true" class="anchor" id="aspnet-core"></a>ASP.NET Core</h2>
+<p>In ASP.NET Core the configuration system is very flexible, and the connection string could be stored in <code>appsettings.json</code>, an environment variable, the user secret store, or another configuration source. See the Configuration section of the ASP.NET Core documentation for more details.</p>
+<p>For instance, you can use the Secret Manager tool to store your database password and then, in scaffolding, use a connection string that simply consists of <code>Name=&lt;database-alias&gt;</code>.</p>
+<pre><code class="language-dotnetcli">dotnet user-secrets set ConnectionStrings:YourDatabaseAlias &quot;Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=YourDatabase&quot;
+dotnet ef dbcontext scaffold Name=ConnectionStrings:YourDatabaseAlias Microsoft.EntityFrameworkCore.SqlServer
+</code></pre>
+<p>Or the following example shows the connection string stored in <code>appsettings.json</code>.</p>
+<pre><code class="language-json">{
+  &quot;ConnectionStrings&quot;: {
+    &quot;BloggingDatabase&quot;: &quot;Server=(localdb)\\mssqllocaldb;Database=EFGetStarted.ConsoleApp.NewDb;Trusted_Connection=True;&quot;
+  },
+}
+</code></pre>
+<p>Then the context is typically configured in <code>Startup.cs</code> with the connection string being read from configuration. Note the <code>GetConnectionString()</code> method looks for a configuration value whose key is <code>ConnectionStrings:&lt;connection string name&gt;</code>. You need to import the <code>Microsoft.Extensions.Configuration</code> namespace to use this extension method.</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDbContext&lt;BloggingContext&gt;(options =&gt;
+        options.UseSqlServer(Configuration.GetConnectionString(&quot;BloggingDatabase&quot;)));
+}
+</code></pre>
+<h2><a href="#winforms--wpf-applications" aria-hidden="true" class="anchor" id="winforms--wpf-applications"></a>WinForms &amp; WPF Applications</h2>
+<p>This article describes how to add a connection string to your application's configuration file.</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;configuration&gt;
+
+  &lt;connectionStrings&gt;
+    &lt;add name=&quot;BloggingDatabase&quot;
+         connectionString=&quot;Server=(localdb)\mssqllocaldb;Database=Blogging;Trusted_Connection=True;&quot; /&gt;
+  &lt;/connectionStrings&gt;
+&lt;/configuration&gt;
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+The <code>providerName</code> setting is not required on EF Core connection strings stored in App.config because the database provider is configured via code.</p>
+</blockquote>
+<p>You can then read the connection string using the <code>ConfigurationManager</code> API in your context's <code>OnConfiguring</code> method. You may need to add a reference to the <code>System.Configuration</code> framework assembly to be able to use this API.</p>
+<pre><code class="language-csharp">public class BloggingContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+    public DbSet&lt;Post&gt; Posts { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+      optionsBuilder.UseSqlServer(ConfigurationManager.ConnectionStrings[&quot;BloggingDatabase&quot;].ConnectionString);
+    }
+}
+</code></pre>
+<h2><a href="#universal-windows-platform-uwp)" aria-hidden="true" class="anchor" id="universal-windows-platform-uwp)"></a>Universal Windows Platform (UWP)</h2>
+<p>Connection strings in a UWP application are typically a connection that just specifies a local filename.</p>
+<pre><code class="language-csharp">public class BloggingContext : DbContext
+{
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+    public DbSet&lt;Post&gt; Posts { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+            optionsBuilder.UseSqlite(&quot;Data Source=blogging.db&quot;);
+    }
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/miscellaneous/connection-strings">Connection Strings</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

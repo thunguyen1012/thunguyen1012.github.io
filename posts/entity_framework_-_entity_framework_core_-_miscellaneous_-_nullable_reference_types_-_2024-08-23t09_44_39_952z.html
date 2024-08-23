@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Miscellaneous - Nullable reference types | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='C# 8 introduced a new feature called nullable reference types (NRT), allowing reference types to be annotated, indicating whether it is valid for them to contain null or not. If you are new to this feature, it is recommended that make yourself familiar with it by reading the C# docs. Nullable reference types are enabled by default in new project templates, but remain disabled in existing projects unless explicitly opted into.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Miscellaneous - Nullable reference types</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>C# 8 introduced a new feature called nullable reference types (NRT), allowing reference types to be annotated, indicating whether it is valid for them to contain <code>null</code> or not. If you are new to this feature, it is recommended that make yourself familiar with it by reading the C# docs. Nullable reference types are enabled by default in new project templates, but remain disabled in existing projects unless explicitly opted into.</p>
+<p>This page introduces EF Core's support for nullable reference types, and describes best practices for working with them.</p>
+<h2><a href="#required-and-optional-properties" aria-hidden="true" class="anchor" id="required-and-optional-properties"></a>Required and optional properties</h2>
+<p>The main documentation on required and optional properties and their interaction with nullable reference types is the Required and Optional Properties page. It is recommended you start out by reading that page first.</p>
+<blockquote>
+<p class='note'>Note
+Exercise caution when enabling nullable reference types on an existing project: reference type properties which were previously configured as optional will now be configured as required, unless they are explicitly annotated to be nullable. When managing a relational database schema, this may cause migrations to be generated which alter the database column's nullability.</p>
+</blockquote>
+<h2><a href="#non-nullable-properties-and-initialization" aria-hidden="true" class="anchor" id="non-nullable-properties-and-initialization"></a>Non-nullable properties and initialization</h2>
+<p>When nullable reference types are enabled, the C# compiler emits warnings for any uninitialized non-nullable property, as these would contain <code>null</code>. As a result, the following, common way of writing entity types cannot be used:</p>
+<pre><code class="language-csharp">public class Customer
+{
+    public int Id { get; set; }
+
+    // Generates CS8618, uninitialized non-nullable property:
+    public string Name { get; set; }
+}
+</code></pre>
+<p>If you're using C# 11 or above, required members provide the perfect solution to this problem:</p>
+<pre><code class="language-csharp">public required string Name { get; set; }
+</code></pre>
+<p>The compiler now guarantees that when your code instantiates a Customer, it always initializes its Name property. And since the database column mapped to the property is non-nullable, any instances loaded by EF always contain a non-null Name as well.</p>
+<p>If you're using an older version of C#, Constructor binding is an alternative technique to ensure that your non-nullable properties are initialized:</p>
+<pre><code class="language-csharp">public class CustomerWithConstructorBinding
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public CustomerWithConstructorBinding(string name)
+    {
+        Name = name;
+    }
+}
+</code></pre>
+<p>Unfortunately, in some scenarios constructor binding isn't an option; navigation properties, for example, cannot be initialized in this way. In those cases, you can simply initialize the property to <code>null</code> with the help of the <code>null</code>-forgiving operator (but see below for more details):</p>
+<pre><code class="language-csharp">public Product Product { get; set; } = null!;
+</code></pre>
+<h3><a href="#required-navigation-properties" aria-hidden="true" class="anchor" id="required-navigation-properties"></a>Required navigation properties</h3>
+<p>Required navigation properties present an additional difficulty: although a dependent will always exist for a given principal, it may or may not be loaded by a particular query, depending on the needs at that point in the program (see the different patterns for loading data). At the same time, it may be undesirable to make these properties nullable, since that would force all access to them to check for <code>null</code>, even when the navigation is known to be loaded and therefore cannot be <code>null</code>.</p>
+<p>This isn't necessarily a problem! As long as a required dependent is properly loaded (e.g. via <code>Include</code>), accessing its navigation property is guaranteed to always return non-null. On the other hand, the application may choose to check whether or not the relationship is loaded by checking if the navigation is <code>null</code>. In such cases, it is reasonable to make the navigation nullable. This means that required navigations from the dependent to the principal:</p>
+<ul>
+<li>
+<p>Should be non-nullable if it is considered a programmer error to access a navigation when it is not loaded.</p>
+</li>
+<li>
+<p>Should be nullable if it acceptable for application code to check the navigation to determine whether or not the relationship is loaded.</p>
+</li>
+</ul>
+<p>If you'd like a stricter approach, you can have a non-nullable property with a nullable backing field:</p>
+<pre><code class="language-csharp">private Address? _shippingAddress;
+
+public Address ShippingAddress
+{
+    set =&gt; _shippingAddress = value;
+    get =&gt; _shippingAddress
+           ?? throw new InvalidOperationException(&quot;Uninitialized property: &quot; + nameof(ShippingAddress));
+}
+</code></pre>
+<p>As long as the navigation is properly loaded, the dependent will be accessible via the property. If, however, the property is accessed without first properly loading the related entity, an <code>InvalidOperationException</code> is thrown, since the API contract has been used incorrectly.</p>
+<blockquote>
+<p class='note'>Note
+Collection navigations, which contain references to multiple related entities, should always be non-nullable. An empty collection means that no related entities exist, but the list itself should never be <code>null</code>.</p>
+</blockquote>
+<h2><a href="#dbcontext-and-dbset" aria-hidden="true" class="anchor" id="dbcontext-and-dbset"></a>DbContext and DbSet</h2>
+<p>With EF, it's common practice to have uninitialized DbSet properties on context types:</p>
+<pre><code class="language-c#">public class MyContext : DbContext
+{
+    public DbSet&lt;Customer&gt; Customers { get; set;}
+}
+</code></pre>
+<p>Although this generally causes a compiler warning, EF Core 7.0 and above suppress this warning, since EF automatically initializes these properties via reflection.</p>
+<p>On older version of EF Core, you can work around this problem as follows:</p>
+<pre><code class="language-c#">public class MyContext : DbContext
+{
+    public DbSet&lt;Customer&gt; Customers =&gt; Set&lt;Customer&gt;();
+}
+</code></pre>
+<p>Another strategy is to use non-nullable auto-properties, but to initialize them to <code>null</code>, using the <code>null</code>-forgiving operator (!) to silence the compiler warning. The DbContext base constructor ensures that all DbSet properties will get initialized, and <code>null</code> will never be observed on them.</p>
+<h2><a href="#navigating-and-including-nullable-relationships" aria-hidden="true" class="anchor" id="navigating-and-including-nullable-relationships"></a>Navigating and including nullable relationships</h2>
+<p>When dealing with optional relationships, it's possible to encounter compiler warnings where an actual <code>null</code> reference exception would be impossible. When translating and executing your LINQ queries, EF Core guarantees that if an optional related entity does not exist, any navigation to it will simply be ignored, rather than throwing. However, the compiler is unaware of this EF Core guarantee, and produces warnings as if the LINQ query were executed in memory, with LINQ to Objects. As a result, it is necessary to use the <code>null</code>-forgiving operator (!) to inform the compiler that an actual <code>null</code> value isn't possible:</p>
+<pre><code class="language-csharp">var order = context.Orders
+    .Where(o =&gt; o.OptionalInfo!.SomeProperty == &quot;foo&quot;)
+    .ToList();
+</code></pre>
+<p>A similar issue occurs when including multiple levels of relationships across optional navigations:</p>
+<pre><code class="language-csharp">var order = context.Orders
+    .Include(o =&gt; o.OptionalInfo!)
+    .ThenInclude(op =&gt; op.ExtraAdditionalInfo)
+    .Single();
+</code></pre>
+<p>If you find yourself doing this a lot, and the entity types in question are predominantly (or exclusively) used in EF Core queries, consider making the navigation properties non-nullable, and to configure them as optional via the Fluent API or Data Annotations. This will remove all compiler warnings while keeping the relationship optional; however, if your entities are traversed outside of EF Core, you may observe <code>null</code> values although the properties are annotated as non-nullable.</p>
+<h2><a href="#limitations-in-older-versions" aria-hidden="true" class="anchor" id="limitations-in-older-versions"></a>Limitations in older versions</h2>
+<p>Prior to EF Core 6.0, the following limitations applied:</p>
+<ul>
+<li>
+<p>The public API surface wasn't annotated for nullability (the public API was &quot;null-oblivious&quot;), making it sometimes awkward to use when the NRT feature is turned on. This notably includes the async LINQ operators exposed by EF Core, such as FirstOrDefaultAsync. The public API is fully annotated for nullability starting with EF Core 6.0.</p>
+</li>
+<li>
+<p>Reverse engineering did not support C# 8 nullable reference types (NRTs): EF Core always generated C# code that assumed the feature is off. For example, nullable text columns were scaffolded as a property with type <code>string</code> , not <code>string</code>?, with either the Fluent API or Data Annotations used to configure whether a property is required or not. If using an older version of EF Core, you can still edit the scaffolded code and replace these with C# nullability annotations.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/miscellaneous/nullable-reference-types">Working with Nullable Reference Types</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
