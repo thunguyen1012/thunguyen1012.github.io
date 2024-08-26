@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Miscellaneous | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Starting with EF Core 7.0, EF Core saves changes to the database with significantly optimized SQL; unfortunately, this technique is not supported on SQL Server if the target table has database triggers, or certain kinds of computed columns. For more information on this SQL Server limitation, see the documentation on the OUTPUT clause.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Miscellaneous</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#savechanges-database-triggers-and-unsupported-computed-columns" aria-hidden="true" class="anchor" id="savechanges-database-triggers-and-unsupported-computed-columns"></a>SaveChanges, database triggers and unsupported computed columns</h2>
+<p>For more information on how to use EF Core with SQL Server, see the documentation on how to use EF Core with SQL Server.</p>
+<p>You can let EF Core know that the target table has a trigger; doing so will revert to the previous, less efficient technique. This can be done by configuring the corresponding entity type as follows:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .ToTable(tb =&gt; tb.HasTrigger(&quot;SomeTrigger&quot;));
+}
+</code></pre>
+<p>If you want to tell EF Core which triggers are present on the table, you can use the following method.</p>
+<p>If most or all of your tables have triggers, you can opt out of using the newer, efficient technique for all your model's tables by using the following model building convention:</p>
+<pre><code class="language-csharp">public class BlankTriggerAddingConvention : IModelFinalizingConvention
+{
+    public virtual void ProcessModelFinalizing(
+        IConventionModelBuilder modelBuilder,
+        IConventionContext&lt;IConventionModelBuilder&gt; context)
+    {
+        foreach (var entityType in modelBuilder.Metadata.GetEntityTypes())
+        {
+            var table = StoreObjectIdentifier.Create(entityType, StoreObjectType.Table);
+            if (table != null
+                &amp;&amp; entityType.GetDeclaredTriggers().All(t =&gt; t.GetDatabaseName(table.Value) == null)
+                &amp;&amp; (entityType.BaseType == null
+                    || entityType.GetMappingStrategy() != RelationalAnnotationNames.TphMappingStrategy))
+            {
+                entityType.Builder.HasTrigger(table.Value.Name + &quot;_Trigger&quot;);
+            }
+
+            foreach (var fragment in entityType.GetMappingFragments(StoreObjectType.Table))
+            {
+                if (entityType.GetDeclaredTriggers().All(t =&gt; t.GetDatabaseName(fragment.StoreObject) == null))
+                {
+                    entityType.Builder.HasTrigger(fragment.StoreObject.Name + &quot;_Trigger&quot;);
+                }
+            }
+        }
+    }
+}
+</code></pre>
+<p>Use the convention on your <code>DbContext</code> by overriding <code>ConfigureConventions</code>:</p>
+<pre><code class="language-csharp">protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.Conventions.Add(_ =&gt; new BlankTriggerAddingConvention());
+}
+</code></pre>
+<p>This effectively calls <code>HasTrigger</code> on all your model's tables, instead of you having to do it manually for each and every table.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/providers/sql-server/misc">Miscellaneous notes for SQL Server</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

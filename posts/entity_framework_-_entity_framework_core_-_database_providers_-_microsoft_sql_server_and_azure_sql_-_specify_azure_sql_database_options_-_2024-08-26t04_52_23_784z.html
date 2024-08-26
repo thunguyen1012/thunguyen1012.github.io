@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Specify Azure SQL Database options | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Azure SQL Database provides a variety of pricing options that are usually configured through the Azure Portal. However if you are managing the schema using EF Core migrations you can specify the desired options in the model itself.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Specify Azure SQL Database options</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In this article we are going to look at the pricing options available on Azure SQL Database.</p>
+<p>You can specify the service tier of the database (EDITION) using <code>HasServiceTier</code>:</p>
+<pre><code class="language-csharp">modelBuilder.HasServiceTier(&quot;BusinessCritical&quot;);
+</code></pre>
+<p>You can specify the maximum size of the database using <code>HasDatabaseMaxSize</code>:</p>
+<pre><code class="language-csharp">modelBuilder.HasDatabaseMaxSize(&quot;2 GB&quot;);
+</code></pre>
+<p>You can specify the performance level of the database (SERVICE_OBJECTIVE) using <code>HasPerformanceLevel</code>:</p>
+<pre><code class="language-csharp">modelBuilder.HasPerformanceLevel(&quot;BC_Gen4_1&quot;);
+</code></pre>
+<p>Use <code>HasPerformanceLevelSql</code> to configure the elastic pool, since the value is not a string literal:</p>
+<pre><code class="language-csharp">modelBuilder.HasPerformanceLevelSql(&quot;ELASTIC_POOL ( name = myelasticpool )&quot;);
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+You can find all the supported values in the ALTER DATABASE documentation.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/providers/sql-server/azure-sql-database">Specifying Azure SQL Database Options</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

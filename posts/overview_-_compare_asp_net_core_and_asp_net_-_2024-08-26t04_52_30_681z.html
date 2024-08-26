@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Overview - Compare ASP.NET Core and ASP.NET | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='ASP.NET Core is a redesign of ASP.NET 4.x. This article lists the differences between them.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Overview - Compare ASP.NET Core and ASP.NET</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>ASP.NET Core is a redesign of ASP.NET 4.x. This article lists the differences between them.</p>
+<h2><a href="#aspnet-core" aria-hidden="true" class="anchor" id="aspnet-core"></a>ASP.NET Core</h2>
+<p>ASP.NET Core is an open-source, cross-platform framework for building modern, cloud-based web apps on Windows, macOS, or Linux.</p>
+<p>ASP.NET Core provides the following benefits:</p>
+<ul>
+<li>
+<p>A unified story for building web UI and web APIs.</p>
+</li>
+<li>
+<p>Architected for testability.</p>
+</li>
+<li>
+<p>Razor Pages makes coding page-focused scenarios easier and more productive.</p>
+</li>
+<li>
+<p>Blazor lets you use C# in the browser alongside JavaScript. Share server-side and client-side app logic all written with .NET.</p>
+</li>
+<li>
+<p>Ability to develop and run on Windows, macOS, and Linux.</p>
+</li>
+<li>
+<p>Open-source and community-focused.</p>
+</li>
+<li>
+<p>Integration of modern, client-side frameworks and development workflows.</p>
+</li>
+<li>
+<p>Support for hosting Remote Procedure Call (RPC) services using gRPC.</p>
+</li>
+<li>
+<p>A cloud-ready, environment-based configuration system.</p>
+</li>
+<li>
+<p>Built-in dependency injection.</p>
+</li>
+<li>
+<p>A lightweight, high-performance, and modular HTTP request pipeline.</p>
+</li>
+<li>
+<p>Ability to host on the following:</p>
+<ul>
+<li>
+<p>Kestrel</p>
+</li>
+<li>
+<p>IIS</p>
+</li>
+<li>
+<p>HTTP.sys</p>
+</li>
+<li>
+<p>Nginx</p>
+</li>
+<li>
+<p>Docker</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Side-by-side versioning.</p>
+</li>
+<li>
+<p>Tooling that simplifies modern web development.</p>
+</li>
+</ul>
+<h2><a href="#aspnet-4.x" aria-hidden="true" class="anchor" id="aspnet-4.x"></a>ASP.NET 4.x</h2>
+<p>ASP.NET 4.x is a mature framework that provides the services needed to build enterprise-grade, server-based web apps on Windows.</p>
+<h2><a href="#framework-selection" aria-hidden="true" class="anchor" id="framework-selection"></a>Framework selection</h2>
+<p>The following table compares ASP.NET Core to ASP.NET 4.x.</p>
+<table><thead>
+<tr>
+<th>ASP.NET Core</th>
+<th>ASP.NET 4.x</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build for Windows, macOS, or Linux</td>
+<td>Build for Windows</td>
+</tr>
+<tr>
+<td><a href="../razor-pages/?view=aspnetcore-8.0" data-linktype="relative-path">Razor Pages</a> is the recommended approach to create a Web UI as of ASP.NET Core 2.x. See also <a href="../mvc/overview?view=aspnetcore-8.0" data-linktype="relative-path">MVC</a>, <a href="../tutorials/first-web-api?view=aspnetcore-8.0" data-linktype="relative-path">Web API</a>, and <a href="../signalr/introduction?view=aspnetcore-8.0" data-linktype="relative-path">SignalR</a>.</td>
+<td>Use <a href="/en-us/aspnet/web-forms" data-linktype="absolute-path">Web Forms</a>, <a href="/en-us/aspnet/signalr" data-linktype="absolute-path">SignalR</a>, <a href="/en-us/aspnet/mvc" data-linktype="absolute-path">MVC</a>, <a href="/en-us/aspnet/web-api/" data-linktype="absolute-path">Web API</a>, <a href="/en-us/aspnet/webhooks/" data-linktype="absolute-path">WebHooks</a>, or <a href="/en-us/aspnet/web-pages" data-linktype="absolute-path">Web Pages</a></td>
+</tr>
+<tr>
+<td>Multiple versions per machine</td>
+<td>One version per machine</td>
+</tr>
+<tr>
+<td>Develop with <a href="https://visualstudio.microsoft.com/vs/" data-linktype="external">Visual Studio</a>, <a href="https://visualstudio.microsoft.com/vs/mac/" data-linktype="external">Visual Studio for Mac</a>, or <a href="https://code.visualstudio.com/" data-linktype="external">Visual Studio Code</a> using C# or F#</td>
+<td>Develop with <a href="https://visualstudio.microsoft.com/vs/" data-linktype="external">Visual Studio</a> using C#, VB, or F#</td>
+</tr>
+<tr>
+<td>Higher performance than ASP.NET 4.x</td>
+<td>Good performance</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/standard/choosing-core-framework-server" data-linktype="absolute-path">Use .NET Core runtime</a></td>
+<td>Use .NET Framework runtime</td>
+</tr>
+</tbody></table>
+<p>See ASP.NET Core targeting .NET Framework for information on ASP.NET Core 2.x support on .NET Framework.</p>
+<h2><a href="#aspnet-core-scenarios" aria-hidden="true" class="anchor" id="aspnet-core-scenarios"></a>ASP.NET Core scenarios</h2>
+<ul>
+<li>
+<p>Websites</p>
+</li>
+<li>
+<p>APIs</p>
+</li>
+<li>
+<p>Real-time</p>
+</li>
+<li>
+<p>Deploy an ASP.NET Core app to Azure</p>
+</li>
+</ul>
+<h2><a href="#aspnet-4.x-scenarios" aria-hidden="true" class="anchor" id="aspnet-4.x-scenarios"></a>ASP.NET 4.x scenarios</h2>
+<ul>
+<li>
+<p>Websites</p>
+</li>
+<li>
+<p>APIs</p>
+</li>
+<li>
+<p>Real-time</p>
+</li>
+<li>
+<p>Create an ASP.NET 4.x web app in Azure</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Introduction to ASP.NET</p>
+</li>
+<li>
+<p>Introduction to ASP.NET Core</p>
+</li>
+<li>
+<p>Deploy ASP.NET Core apps to Azure App Service</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/choose-aspnet-framework?view=aspnetcore-8.0">Choose between ASP.NET 4.x and ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
