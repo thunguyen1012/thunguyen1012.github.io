@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Hierarchical data | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Azure SQL and SQL Server have a special data type called hierarchyid that is used to store hierarchical data. In this case, "hierarchical data" essentially means data that forms a tree structure, where each item can have a parent and/or children. Examples of such data are:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Hierarchical data</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p class='note'>Note
+This feature was added in EF Core 8.0.</p>
+</blockquote>
+<p>Azure SQL and SQL Server have a special data type called <code>hierarchyid</code> that is used to store hierarchical data. In this case, &quot;hierarchical data&quot; essentially means data that forms a tree structure, where each item can have a parent and/or children. Examples of such data are:</p>
+<ul>
+<li>
+<p>An organizational structure</p>
+</li>
+<li>
+<p>A file system</p>
+</li>
+<li>
+<p>A set of tasks in a project</p>
+</li>
+<li>
+<p>A taxonomy of language terms</p>
+</li>
+<li>
+<p>A graph of links between Web pages</p>
+</li>
+</ul>
+<p>The database is then able to run queries against this data using its hierarchical structure. For example, a query can find ancestors and dependents of given items, or find all items at a certain depth in the hierarchy.</p>
+<h2><a href="#using-hierarchyid-in-net-and-ef-core" aria-hidden="true" class="anchor" id="using-hierarchyid-in-net-and-ef-core"></a>Using <code>HierarchyId</code> in .NET and EF Core</h2>
+<p>At the lowest level, the <code>Microsoft.SqlServer.Types</code> NuGet package includes a type called <code>SqlHierarchyId</code>. While this type supports working <code>hierarchyid</code> values, it is a bit cumbersome to work with in LINQ.</p>
+<p>At the next level, a new <code>Microsoft.EntityFrameworkCore.SqlServer.Abstractions</code> package has been introduced, which includes a higher-level <code>HierarchyId</code> type intended for use in entity types.</p>
+<blockquote>
+<p class='tip'>Tip
+The <code>HierarchyId</code> type is more idiomatic to the norms of .NET than <code>SqlHierarchyId</code>, which is instead modeled after how .NET Framework types are hosted inside the SQL Server database engine.  <code>HierarchyId</code> is designed to work with EF Core, but it can also be used outside of EF Core in other applications. The <code>Microsoft.EntityFrameworkCore.SqlServer.Abstractions</code> package doesn't reference any other packages, and so has minimal impact on deployed application size and dependencies.</p>
+</blockquote>
+<p>Use of <code>HierarchyId</code> for EF Core functionality such as queries and updates requires the <code>Microsoft.EntityFrameworkCore.SqlServer.HierarchyId</code> package. This package brings in <code>Microsoft.EntityFrameworkCore.SqlServer.Abstractions</code> and <code>Microsoft.SqlServer.Types</code> as transitive dependencies, and so is often the only package needed.</p>
+<ul>
+<li>
+<p>.NET Core CLI</p>
+</li>
+<li>
+<p>Visual Studio</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet add package Microsoft.EntityFrameworkCore.SqlServer.HierarchyId
+</code></pre>
+<ul>
+<li>
+<p>Tools &gt; NuGet Package Manager &gt; Package Manager Console</p>
+</li>
+<li>
+<p>Run the following commands:
+Install-Package Microsoft.EntityFrameworkCore.SqlServer.HierarchyId</p>
+</li>
+</ul>
+<pre><code class="language-powershell">Install-Package Microsoft.EntityFrameworkCore.SqlServer.HierarchyId
+</code></pre>
+<p>Once the package is installed, use of <code>HierarchyId</code> is enabled by calling <code>UseHierarchyId</code> as part of the application's call to <code>UseSqlServer</code>. For example:</p>
+<pre><code class="language-csharp">options.UseSqlServer(
+    connectionString,
+    x =&gt; x.UseHierarchyId());
+</code></pre>
+<h4><a href="#modeling-hierarchies" aria-hidden="true" class="anchor" id="modeling-hierarchies"></a>Modeling hierarchies</h4>
+<p>The <code>HierarchyId</code> type can be used for properties of an entity type. For example, assume we want to model the paternal family tree of some fictional halflings. In the entity type for <code>Halfling</code>, a <code>HierarchyId</code> property can be used to locate each halfling in the family tree.</p>
+<pre><code class="language-csharp">public class Halfling
+{
+    public Halfling(HierarchyId pathFromPatriarch, string name, int? yearOfBirth = null)
+    {
+        PathFromPatriarch = pathFromPatriarch;
+        Name = name;
+        YearOfBirth = yearOfBirth;
+    }
+
+    public int Id { get; private set; }
+    public HierarchyId PathFromPatriarch { get; set; }
+    public string Name { get; set; }
+    public int? YearOfBirth { get; set; }
+}
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+The code shown here and in the examples below comes from HierarchyIdSample.cs.</p>
+</blockquote>
+<blockquote>
+<p class='tip'>Tip
+If desired, <code>HierarchyId</code> is suitable for use as a key property type.</p>
+</blockquote>
+<p>In this case, the family tree is rooted with the patriarch of the family. Each halfling can be traced from the patriarch down the tree using its <code>PathFromPatriarch</code> property. SQL Server uses a compact binary format for these paths, but it is common to parse to and from a human-readable string representation when when working with code. In this representation, the position at each level is separated by a / character. For example, consider the family tree in the diagram below:</p>
+<p>In this tree:</p>
+<ul>
+<li>
+<p>Balbo is at the root of the tree, represented by /.</p>
+</li>
+<li>
+<p>Balbo has five children, represented by <code>/1/</code>, <code>/2/</code>, <code>/3/</code>, <code>/4/</code>, and <code>/5/</code>.</p>
+</li>
+<li>
+<p>Balbo's first child, Mungo, also has five children, represented by <code>/1/1/</code>, <code>/1/2/</code>, <code>/1/3/</code>, <code>/1/4/</code>, and <code>/1/5/</code>. Notice that the <code>HierarchyId</code> for Balbo (/1/) is the prefix for all his children.</p>
+</li>
+<li>
+<p>Similarly, Balbo's third child, Ponto, has two children, represented by <code>/3/1/</code> and <code>/3/2/</code>. Again the each of these children is prefixed by the <code>HierarchyId</code> for Ponto, which is represented as <code>/3/</code>.</p>
+</li>
+<li>
+<p>And so on down the tree...</p>
+</li>
+</ul>
+<p>The following code inserts this family tree into a database using EF Core:</p>
+<pre><code class="language-csharp">await AddRangeAsync(
+    new Halfling(HierarchyId.Parse(&quot;/&quot;), &quot;Balbo&quot;, 1167),
+    new Halfling(HierarchyId.Parse(&quot;/1/&quot;), &quot;Mungo&quot;, 1207),
+    new Halfling(HierarchyId.Parse(&quot;/2/&quot;), &quot;Pansy&quot;, 1212),
+    new Halfling(HierarchyId.Parse(&quot;/3/&quot;), &quot;Ponto&quot;, 1216),
+    new Halfling(HierarchyId.Parse(&quot;/4/&quot;), &quot;Largo&quot;, 1220),
+    new Halfling(HierarchyId.Parse(&quot;/5/&quot;), &quot;Lily&quot;, 1222),
+    new Halfling(HierarchyId.Parse(&quot;/1/1/&quot;), &quot;Bungo&quot;, 1246),
+    new Halfling(HierarchyId.Parse(&quot;/1/2/&quot;), &quot;Belba&quot;, 1256),
+    new Halfling(HierarchyId.Parse(&quot;/1/3/&quot;), &quot;Longo&quot;, 1260),
+    new Halfling(HierarchyId.Parse(&quot;/1/4/&quot;), &quot;Linda&quot;, 1262),
+    new Halfling(HierarchyId.Parse(&quot;/1/5/&quot;), &quot;Bingo&quot;, 1264),
+    new Halfling(HierarchyId.Parse(&quot;/3/1/&quot;), &quot;Rosa&quot;, 1256),
+    new Halfling(HierarchyId.Parse(&quot;/3/2/&quot;), &quot;Polo&quot;),
+    new Halfling(HierarchyId.Parse(&quot;/4/1/&quot;), &quot;Fosco&quot;, 1264),
+    new Halfling(HierarchyId.Parse(&quot;/1/1/1/&quot;), &quot;Bilbo&quot;, 1290),
+    new Halfling(HierarchyId.Parse(&quot;/1/3/1/&quot;), &quot;Otho&quot;, 1310),
+    new Halfling(HierarchyId.Parse(&quot;/1/5/1/&quot;), &quot;Falco&quot;, 1303),
+    new Halfling(HierarchyId.Parse(&quot;/3/2/1/&quot;), &quot;Posco&quot;, 1302),
+    new Halfling(HierarchyId.Parse(&quot;/3/2/2/&quot;), &quot;Prisca&quot;, 1306),
+    new Halfling(HierarchyId.Parse(&quot;/4/1/1/&quot;), &quot;Dora&quot;, 1302),
+    new Halfling(HierarchyId.Parse(&quot;/4/1/2/&quot;), &quot;Drogo&quot;, 1308),
+    new Halfling(HierarchyId.Parse(&quot;/4/1/3/&quot;), &quot;Dudo&quot;, 1311),
+    new Halfling(HierarchyId.Parse(&quot;/1/3/1/1/&quot;), &quot;Lotho&quot;, 1310),
+    new Halfling(HierarchyId.Parse(&quot;/1/5/1/1/&quot;), &quot;Poppy&quot;, 1344),
+    new Halfling(HierarchyId.Parse(&quot;/3/2/1/1/&quot;), &quot;Ponto&quot;, 1346),
+    new Halfling(HierarchyId.Parse(&quot;/3/2/1/2/&quot;), &quot;Porto&quot;, 1348),
+    new Halfling(HierarchyId.Parse(&quot;/3/2/1/3/&quot;), &quot;Peony&quot;, 1350),
+    new Halfling(HierarchyId.Parse(&quot;/4/1/2/1/&quot;), &quot;Frodo&quot;, 1368),
+    new Halfling(HierarchyId.Parse(&quot;/4/1/3/1/&quot;), &quot;Daisy&quot;, 1350),
+    new Halfling(HierarchyId.Parse(&quot;/3/2/1/1/1/&quot;), &quot;Angelica&quot;, 1381));
+
+await SaveChangesAsync();
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+If needed, decimal values can be used to create new nodes between two existing nodes. For example, <code>/3/2.5/2/</code> goes between <code>/3/2/2/</code> and <code>/3/3/2/</code>.</p>
+</blockquote>
+<h4><a href="#querying-hierarchies" aria-hidden="true" class="anchor" id="querying-hierarchies"></a>Querying hierarchies</h4>
+<p><code>HierarchyId</code> exposes several methods that can be used in LINQ queries.</p>
+<p><code>&lt;</code>table&gt;<thead></p>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetAncestor(int ```n```)</code></td>
+<td>Gets the node ```<```code>n</code> levels up the hierarchical tree.</td>
+</tr>
+<tr>
+<td><code>GetDescendant(HierarchyId? ```child1```, ```HierarchyId```? ```child2```)</code></td>
+<td>Gets the value of a descendant node that is greater than ```<```code>child1</code> and less than ```<```code>child2</code>.</td>
+</tr>
+<tr>
+<td><code>GetLevel()</code></td>
+<td>Gets the level of this node in the hierarchical tree.</td>
+</tr>
+<tr>
+<td><code>GetReparentedValue(HierarchyId? ```oldRoot```, ```HierarchyId```? ```newRoot```)</code></td>
+<td>Gets a value representing the location of a new node that has a path from ```<```code>newRoot</code> equal to the path from ```<```code>oldRoot</code> to this, effectively moving this to the new location.</td>
+</tr>
+<tr>
+<td><code>IsDescendantOf(HierarchyId? ```parent```)</code></td>
+<td>Gets a value indicating whether this node is a descendant of ```<```code>parent</code>.</td>
+</tr>
+</tbody></table>
+<p>In addition, the operators ==, !=, &lt;, &lt;=, &gt; and &gt;= can be used.</p>
+<p>The following are examples of using these methods in LINQ queries.</p>
+<p>Get entities at a given level in the tree</p>
+<p>The following query uses <code>GetLevel</code> to return all halflings at a given level in the family tree:</p>
+<pre><code class="language-csharp">var generation = await context.Halflings.Where(halfling =&gt; halfling.PathFromPatriarch.GetLevel() == level).ToListAsync();
+</code></pre>
+<p>This translates to the following SQL:</p>
+<pre><code class="language-sql">SELECT [h].[Id], [h].[Name], [h].[PathFromPatriarch], [h].[YearOfBirth]
+FROM [Halflings] AS [h]
+WHERE [h].[PathFromPatriarch].GetLevel() = @__level_0
+</code></pre>
+<p>Running this in a loop we can get the halflings for every generation:</p>
+<pre><code class="language-text">Generation 0: Balbo
+Generation 1: Mungo, Pansy, Ponto, Largo, Lily
+Generation 2: Bungo, Belba, Longo, Linda, Bingo, Rosa, Polo, Fosco
+Generation 3: Bilbo, Otho, Falco, Posco, Prisca, Dora, Drogo, Dudo
+Generation 4: Lotho, Poppy, Ponto, Porto, Peony, Frodo, Daisy
+Generation 5: Angelica
+</code></pre>
+<p>Get the direct ancestor of an entity</p>
+<p>The following query uses <code>GetAncestor</code> to find the direct ancestor of a halfling, given that halfling's name:</p>
+<pre><code class="language-csharp">async Task&lt;Halfling?&gt; FindDirectAncestor(string name)
+    =&gt; await context.Halflings
+        .SingleOrDefaultAsync(
+            ancestor =&gt; ancestor.PathFromPatriarch == context.Halflings
+                .Single(descendent =&gt; descendent.Name == name).PathFromPatriarch
+                .GetAncestor(1));
+</code></pre>
+<p>This translates to the following SQL:</p>
+<pre><code class="language-sql">SELECT TOP(2) [h].[Id], [h].[Name], [h].[PathFromPatriarch], [h].[YearOfBirth]
+FROM [Halflings] AS [h]
+WHERE [h].[PathFromPatriarch] = (
+    SELECT TOP(1) [h0].[PathFromPatriarch]
+    FROM [Halflings] AS [h0]
+    WHERE [h0].[Name] = @__name_0).GetAncestor(1)
+</code></pre>
+<p>Running this query for the halfling &quot;Bilbo&quot; returns &quot;Bungo&quot;.</p>
+<p>Get the direct descendants of an entity</p>
+<p>The following query also uses <code>GetAncestor</code>, but this time to find the direct descendants of a halfling, given that halfling's name:</p>
+<pre><code class="language-csharp">IQueryable&lt;Halfling&gt; FindDirectDescendents(string name)
+    =&gt; context.Halflings.Where(
+        descendent =&gt; descendent.PathFromPatriarch.GetAncestor(1) == context.Halflings
+            .Single(ancestor =&gt; ancestor.Name == name).PathFromPatriarch);
+</code></pre>
+<p>This translates to the following SQL:</p>
+<pre><code class="language-sql">SELECT [h].[Id], [h].[Name], [h].[PathFromPatriarch], [h].[YearOfBirth]
+FROM [Halflings] AS [h]
+WHERE [h].[PathFromPatriarch].GetAncestor(1) = (
+    SELECT TOP(1) [h0].[PathFromPatriarch]
+    FROM [Halflings] AS [h0]
+    WHERE [h0].[Name] = @__name_0)
+</code></pre>
+<p>Running this query for the halfling &quot;Mungo&quot; returns &quot;Bungo&quot;, &quot;Belba&quot;, &quot;Longo&quot;, and &quot;Linda&quot;.</p>
+<p>Get all ancestors of an entity</p>
+<p><code>GetAncestor</code> is useful for searching up or down a single level, or, indeed, a specified number of levels. On the other hand, <code>IsDescendantOf</code> is useful for finding all ancestors or dependents. For example, the following query uses <code>IsDescendantOf</code> to find the all the ancestors of a halfling, given that halfling's name:</p>
+<pre><code class="language-csharp">IQueryable&lt;Halfling&gt; FindAllAncestors(string name)
+    =&gt; context.Halflings.Where(
+            ancestor =&gt; context.Halflings
+                .Single(
+                    descendent =&gt;
+                        descendent.Name == name
+                        &amp;&amp; ancestor.Id != descendent.Id)
+                .PathFromPatriarch.IsDescendantOf(ancestor.PathFromPatriarch))
+        .OrderByDescending(ancestor =&gt; ancestor.PathFromPatriarch.GetLevel());
+</code></pre>
+<blockquote>
+<p class='important'>Important
+IsDescendantOf returns true for itself, which is why it is filtered out in the query above.</p>
+</blockquote>
+<p>This translates to the following SQL:</p>
+<pre><code class="language-sql">SELECT [h].[Id], [h].[Name], [h].[PathFromPatriarch], [h].[YearOfBirth]
+FROM [Halflings] AS [h]
+WHERE (
+    SELECT TOP(1) [h0].[PathFromPatriarch]
+    FROM [Halflings] AS [h0]
+    WHERE [h0].[Name] = @__name_0 AND [h].[Id] &lt;&gt; [h0].[Id]).IsDescendantOf([h].[PathFromPatriarch]) = CAST(1 AS bit)
+ORDER BY [h].[PathFromPatriarch].GetLevel() DESC
+</code></pre>
+<p>Running this query for the halfling &quot;Bilbo&quot; returns &quot;Bungo&quot;, &quot;Mungo&quot;, and &quot;Balbo&quot;.</p>
+<p>Get all descendants of an entity</p>
+<p>The following query also uses <code>IsDescendantOf</code>, but this time to all the descendants of a halfling, given that halfling's name:</p>
+<pre><code class="language-csharp">IQueryable&lt;Halfling&gt; FindAllDescendents(string name)
+    =&gt; context.Halflings.Where(
+            descendent =&gt; descendent.PathFromPatriarch.IsDescendantOf(
+                context.Halflings
+                    .Single(
+                        ancestor =&gt;
+                            ancestor.Name == name
+                            &amp;&amp; descendent.Id != ancestor.Id)
+                    .PathFromPatriarch))
+        .OrderBy(descendent =&gt; descendent.PathFromPatriarch.GetLevel());
+</code></pre>
+<p>This translates to the following SQL:</p>
+<pre><code class="language-sql">SELECT [h].[Id], [h].[Name], [h].[PathFromPatriarch], [h].[YearOfBirth]
+FROM [Halflings] AS [h]
+WHERE [h].[PathFromPatriarch].IsDescendantOf((
+    SELECT TOP(1) [h0].[PathFromPatriarch]
+    FROM [Halflings] AS [h0]
+    WHERE [h0].[Name] = @__name_0 AND [h].[Id] &lt;&gt; [h0].[Id])) = CAST(1 AS bit)
+ORDER BY [h].[PathFromPatriarch].GetLevel()
+</code></pre>
+<p>Running this query for the halfling &quot;Mungo&quot; returns &quot;Bungo&quot;, &quot;Belba&quot;, &quot;Longo&quot;, &quot;Linda&quot;, &quot;Bingo&quot;, &quot;Bilbo&quot;, &quot;Otho&quot;, &quot;Falco&quot;, &quot;Lotho&quot;, and &quot;Poppy&quot;.</p>
+<p>Finding a common ancestor</p>
+<p>One of the most common questions asked about this particular family tree is, &quot;who is the common ancestor of Frodo and Bilbo?&quot; We can use <code>IsDescendantOf</code> to write such a query:</p>
+<pre><code class="language-csharp">async Task&lt;Halfling?&gt; FindCommonAncestor(Halfling first, Halfling second)
+    =&gt; await context.Halflings
+        .Where(
+            ancestor =&gt; first.PathFromPatriarch.IsDescendantOf(ancestor.PathFromPatriarch)
+                        &amp;&amp; second.PathFromPatriarch.IsDescendantOf(ancestor.PathFromPatriarch))
+        .OrderByDescending(ancestor =&gt; ancestor.PathFromPatriarch.GetLevel())
+        .FirstOrDefaultAsync();
+</code></pre>
+<p>This translates to the following SQL:</p>
+<pre><code class="language-sql">SELECT TOP(1) [h].[Id], [h].[Name], [h].[PathFromPatriarch], [h].[YearOfBirth]
+FROM [Halflings] AS [h]
+WHERE @__first_PathFromPatriarch_0.IsDescendantOf([h].[PathFromPatriarch]) = CAST(1 AS bit)
+  AND @__second_PathFromPatriarch_1.IsDescendantOf([h].[PathFromPatriarch]) = CAST(1 AS bit)
+ORDER BY [h].[PathFromPatriarch].GetLevel() DESC
+</code></pre>
+<p>Running this query with &quot;Bilbo&quot; and &quot;Frodo&quot; tells us that their common ancestor is &quot;Balbo&quot;.</p>
+<h4><a href="#updating-hierarchies" aria-hidden="true" class="anchor" id="updating-hierarchies"></a>Updating hierarchies</h4>
+<p>The normal change tracking and SaveChanges mechanisms can be used to update <code>hierarchyid</code> columns.</p>
+<p>Re-parenting a sub-hierarchy</p>
+<p>For example, I'm sure we all remember the scandal of SR 1752 (a.k.a. &quot;LongoGate&quot;) when DNA testing revealed that Longo was not in fact the son of Mungo, but actually the son of Ponto! One fallout from this scandal was that the family tree needed to be re-written. In particular, Longo and all his descendants needed to be re-parented from Mungo to Ponto. <code>GetReparentedValue</code> can be used to do this. For example, first &quot;Longo&quot; and all his descendants are queried:</p>
+<pre><code class="language-csharp">var longoAndDescendents = await context.Halflings.Where(
+        descendent =&gt; descendent.PathFromPatriarch.IsDescendantOf(
+            context.Halflings.Single(ancestor =&gt; ancestor.Name == &quot;Longo&quot;).PathFromPatriarch))
+    .ToListAsync();
+</code></pre>
+<p>Then <code>GetReparentedValue</code> is used to update the <code>HierarchyId</code> for Longo and each descendent, followed by a call to <code>SaveChangesAsync</code>:</p>
+<pre><code class="language-csharp">foreach (var descendent in longoAndDescendents)
+{
+    descendent.PathFromPatriarch
+        = descendent.PathFromPatriarch.GetReparentedValue(
+            mungo.PathFromPatriarch, ponto.PathFromPatriarch)!;
+}
+
+await context.SaveChangesAsync();
+</code></pre>
+<p>This results in the following database update:</p>
+<pre><code class="language-sql">SET NOCOUNT ON;
+UPDATE [Halflings] SET [PathFromPatriarch] = @p0
+OUTPUT 1
+WHERE [Id] = @p1;
+UPDATE [Halflings] SET [PathFromPatriarch] = @p2
+OUTPUT 1
+WHERE [Id] = @p3;
+UPDATE [Halflings] SET [PathFromPatriarch] = @p4
+OUTPUT 1
+WHERE [Id] = @p5;
+</code></pre>
+<p>Using these parameters:</p>
+<pre><code class="language-text">@p1='9',
+ @p0='0x7BC0' (Nullable = false) (Size = 2) (DbType = Object),
+ @p3='16',
+ @p2='0x7BD6' (Nullable = false) (Size = 2) (DbType = Object),
+ @p5='23',
+ @p4='0x7BD6B0' (Nullable = false) (Size = 3) (DbType = Object)
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The parameters values for <code>HierarchyId</code> properties are sent to the database in their compact, binary format.</p>
+</blockquote>
+<p>Following the update, querying for the descendants of &quot;Mungo&quot; returns &quot;Bungo&quot;, &quot;Belba&quot;, &quot;Linda&quot;, &quot;Bingo&quot;, &quot;Bilbo&quot;, &quot;Falco&quot;, and &quot;Poppy&quot;, while querying for the descendants of &quot;Ponto&quot; returns &quot;Longo&quot;, &quot;Rosa&quot;, &quot;Polo&quot;, &quot;Otho&quot;, &quot;Posco&quot;, &quot;Prisca&quot;, &quot;Lotho&quot;, &quot;Ponto&quot;, &quot;Porto&quot;, &quot;Peony&quot;, and &quot;Angelica&quot;.</p>
+<h2><a href="#function-mappings" aria-hidden="true" class="anchor" id="function-mappings"></a>Function mappings</h2>
+<p><code>&lt;</code>table&gt;<thead></p>
+<tr>
+<th>.NET</th>
+<th>SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>hierarchyId.GetAncestor(n)</td>
+<td><span class="no-loc" dir="ltr" lang="en-us">@hierarchyId.GetAncestor(@n)</span></td>
+</tr>
+<tr>
+<td>hierarchyId.GetDescendant(child)</td>
+<td><span class="no-loc" dir="ltr" lang="en-us">@hierarchyId.GetDescendant(@child</span>, NULL)</td>
+</tr>
+<tr>
+<td>hierarchyId.GetDescendant(child1, ```child2```)</td>
+<td><span class="no-loc" dir="ltr" lang="en-us">@hierarchyId.GetDescendant(@child1</span>, ```<```span class="no-loc" dir="ltr" lang="en-us">@child2)</span></td>
+</tr>
+<tr>
+<td>hierarchyId.GetLevel()</td>
+<td><span class="no-loc" dir="ltr" lang="en-us">@hierarchyId.GetLevel()</span></td>
+</tr>
+<tr>
+<td>hierarchyId.GetReparentedValue(oldRoot, ```newRoot```)</td>
+<td><span class="no-loc" dir="ltr" lang="en-us">@hierarchyId.GetReparentedValue(@oldRoot</span>, ```<```span class="no-loc" dir="ltr" lang="en-us">@newRoot)</span></td>
+</tr>
+<tr>
+<td>HierarchyId.GetRoot()</td>
+<td>hierarchyid::GetRoot()</td>
+</tr>
+<tr>
+<td>hierarchyId.IsDescendantOf(parent)</td>
+<td><span class="no-loc" dir="ltr" lang="en-us">@hierarchyId.IsDescendantOf(@parent)</span></td>
+</tr>
+<tr>
+<td>HierarchyId.Parse(input)</td>
+<td>hierarchyid::Parse(@input)</td>
+</tr>
+<tr>
+<td>hierarchyId.ToString()</td>
+<td><span class="no-loc" dir="ltr" lang="en-us">@hierarchyId.ToString()</span></td>
+</tr>
+</tbody></table>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>Hierarchical Data in SQL Server</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/providers/sql-server/hierarchyid">Hierarchical Data in the SQL Server EF Core Provider</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

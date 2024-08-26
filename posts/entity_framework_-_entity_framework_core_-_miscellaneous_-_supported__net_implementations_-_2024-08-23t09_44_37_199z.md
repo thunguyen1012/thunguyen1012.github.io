@@ -6,11 +6,6 @@ tags: Summary, EFCore
 description: We want EF Core to be available to developers on all modern .NET implementations. EF Core's support on .NET for Windows, Linux, and macOS is covered by automated testing and many applications are known to be using it successfully, other platforms that leverage trimming and ahead-of-time (AoT) compilation like iOS, Wasm, and Unity have some limitations that we are working to address.
 image:
 ---
-- Article
-
-  - 03/26/2024
-
-  - 4 contributors
 
 ## In this article
 

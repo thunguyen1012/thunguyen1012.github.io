@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Temporal tables | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='SQL Server temporal tables automatically keep track of all data ever stored in a table, even after that data has been updated or deleted. This is achieved by creating a parallel "history table" into which timestamped historical data is stored whenever a change is made to the main table. This allows historical data to be queried, such as for auditing, or restored, such as for recovery after accidental mutation or deletion.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Temporal tables</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>SQL Server temporal tables automatically keep track of all data ever stored in a table, even after that data has been updated or deleted.</p>
+<p>EF Core supports:</p>
+<ul>
+<li>
+<p>The creation of temporal tables using EF Core Migrations</p>
+</li>
+<li>
+<p>Transformation of existing tables into temporal tables, again using Migrations</p>
+</li>
+<li>
+<p>Querying historical data</p>
+</li>
+<li>
+<p>Restoring data from some point in the past</p>
+</li>
+</ul>
+<h2><a href="#configuring-a-temporal-table" aria-hidden="true" class="anchor" id="configuring-a-temporal-table"></a>Configuring a temporal table</h2>
+<p>The model builder can be used to configure a table as temporal. For example:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Employee&gt;()
+    .ToTable(&quot;Employees&quot;, b =&gt; b.IsTemporal());
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+The code shown here comes from TemporalTablesSample.cs.</p>
+</blockquote>
+<p>When using EF Core to create the database, the new table is configured as a temporal table with the SQL Server defaults for the timestamps and history table. For example, consider an <code>Employee</code> entity type:</p>
+<pre><code class="language-csharp">public class Employee
+{
+    public Guid EmployeeId { get; set; }
+    public string Name { get; set; }
+    public string Position { get; set; }
+    public string Department { get; set; }
+    public string Address { get; set; }
+    public decimal AnnualSalary { get; set; }
+}
+</code></pre>
+<p>The temporal table created looks like this:</p>
+<pre><code class="language-sql">DECLARE @historyTableSchema sysname = SCHEMA_NAME()
+EXEC(N'CREATE TABLE [Employees] (
+    [EmployeeId] uniqueidentifier NOT NULL,
+    [Name] nvarchar(100) NULL,
+    [Position] nvarchar(100) NULL,
+    [Department] nvarchar(100) NULL,
+    [Address] nvarchar(1024) NULL,
+    [AnnualSalary] decimal(10,2) NOT NULL,
+    [PeriodEnd] datetime2 GENERATED ALWAYS AS ROW END NOT NULL,
+    [PeriodStart] datetime2 GENERATED ALWAYS AS ROW START NOT NULL,
+    CONSTRAINT [PK_Employees] PRIMARY KEY ([EmployeeId]),
+    PERIOD FOR SYSTEM_TIME([PeriodStart], [PeriodEnd])
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [' + @historyTableSchema + N'].[EmployeeHistory]))');
+</code></pre>
+<p>Notice that SQL Server creates two hidden <code>datetime2</code> columns called <code>PeriodEnd</code> and <code>PeriodStart</code>. These &quot;period columns&quot; represent the time range during which the data in the row existed. These columns are mapped to shadow properties in the EF Core model, allowing them to be used in queries as shown later.</p>
+<blockquote>
+<p class='important'>Important
+The times in these columns are always UTC time generated by SQL Server. UTC times are used for all operations involving temporal tables, such as in the queries shown below.</p>
+</blockquote>
+<p>Notice also that an associated history table called <code>EmployeeHistory</code> is created automatically. The names of the period columns and history table can be changed with additional configuration to the model builder. For example:</p>
+<pre><code class="language-csharp">modelBuilder
+    .Entity&lt;Employee&gt;()
+    .ToTable(
+        &quot;Employees&quot;,
+        b =&gt; b.IsTemporal(
+            b =&gt;
+            {
+                b.HasPeriodStart(&quot;ValidFrom&quot;);
+                b.HasPeriodEnd(&quot;ValidTo&quot;);
+                b.UseHistoryTable(&quot;EmployeeHistoricalData&quot;);
+            }));
+</code></pre>
+<p>This is reflected in the table created by SQL Server:</p>
+<pre><code class="language-sql">DECLARE @historyTableSchema sysname = SCHEMA_NAME()
+EXEC(N'CREATE TABLE [Employees] (
+    [EmployeeId] uniqueidentifier NOT NULL,
+    [Name] nvarchar(100) NULL,
+    [Position] nvarchar(100) NULL,
+    [Department] nvarchar(100) NULL,
+    [Address] nvarchar(1024) NULL,
+    [AnnualSalary] decimal(10,2) NOT NULL,
+    [ValidFrom] datetime2 GENERATED ALWAYS AS ROW START NOT NULL,
+    [ValidTo] datetime2 GENERATED ALWAYS AS ROW END NOT NULL,
+    CONSTRAINT [PK_Employees] PRIMARY KEY ([EmployeeId]),
+    PERIOD FOR SYSTEM_TIME([ValidFrom], [ValidTo])
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [' + @historyTableSchema + N'].[EmployeeHistoricalData]))');
+</code></pre>
+<h2><a href="#using-temporal-tables" aria-hidden="true" class="anchor" id="using-temporal-tables"></a>Using temporal tables</h2>
+<p>A temporal table is a row-by-row representation of a time period in a database.</p>
+<pre><code class="language-csharp">context.AddRange(
+    new Employee
+    {
+        Name = &quot;Pinky Pie&quot;,
+        Address = &quot;Sugarcube Corner, Ponyville, Equestria&quot;,
+        Department = &quot;DevDiv&quot;,
+        Position = &quot;Party Organizer&quot;,
+        AnnualSalary = 100.0m
+    },
+    new Employee
+    {
+        Name = &quot;Rainbow Dash&quot;,
+        Address = &quot;Cloudominium, Ponyville, Equestria&quot;,
+        Department = &quot;DevDiv&quot;,
+        Position = &quot;Ponyville weather patrol&quot;,
+        AnnualSalary = 900.0m
+    },
+    new Employee
+    {
+        Name = &quot;Fluttershy&quot;,
+        Address = &quot;Everfree Forest, Equestria&quot;,
+        Department = &quot;DevDiv&quot;,
+        Position = &quot;Animal caretaker&quot;,
+        AnnualSalary = 30.0m
+    });
+
+context.SaveChanges();
+</code></pre>
+<p>This data can then be queried, updated, and deleted in the normal way. For example:</p>
+<pre><code class="language-csharp">var employee = context.Employees.Single(e =&gt; e.Name == &quot;Rainbow Dash&quot;);
+context.Remove(employee);
+context.SaveChanges();
+</code></pre>
+<p>Also, after a normal tracking query, the values from the period columns of the current data can be accessed from the tracked entities. For example:</p>
+<pre><code class="language-csharp">var employees = context.Employees.ToList();
+foreach (var employee in employees)
+{
+    var employeeEntry = context.Entry(employee);
+    var validFrom = employeeEntry.Property&lt;DateTime&gt;(&quot;ValidFrom&quot;).CurrentValue;
+    var validTo = employeeEntry.Property&lt;DateTime&gt;(&quot;ValidTo&quot;).CurrentValue;
+
+    Console.WriteLine($&quot;  Employee {employee.Name} valid from {validFrom} to {validTo}&quot;);
+}
+</code></pre>
+<p>This prints:</p>
+<pre><code class="language-none">Starting data:
+  Employee Pinky Pie valid from 8/26/2021 4:38:58 PM to 12/31/9999 11:59:59 PM
+  Employee Rainbow Dash valid from 8/26/2021 4:38:58 PM to 12/31/9999 11:59:59 PM
+  Employee Fluttershy valid from 8/26/2021 4:38:58 PM to 12/31/9999 11:59:59 PM
+</code></pre>
+<p>Notice that the <code>ValidTo</code> column (by default called <code>PeriodEnd</code>) contains the <code>datetime2</code> max value. This is always the case for the current rows in the table. The <code>ValidFrom</code> columns (by default called <code>PeriodStart</code>) contains the UTC time that the row was inserted.</p>
+<h2><a href="#querying-historical-data" aria-hidden="true" class="anchor" id="querying-historical-data"></a>Querying historical data</h2>
+<p>EF Core supports queries that include historical data through several specialized query operators:</p>
+<ul>
+<li>
+<p><code>TemporalAsOf</code>: Returns rows that were active (current) at the given UTC time. This is a single row from the current table or history table for a given primary key.</p>
+</li>
+<li>
+<p><code>TemporalAll</code>: Returns all rows in the historical data. This is typically many rows from the history table and/or the current table for a given primary key.</p>
+</li>
+<li>
+<p><code>TemporalFromTo</code>: Returns all rows that were active between two given UTC times. This may be many rows from the history table and/or the current table for a given primary key.</p>
+</li>
+<li>
+<p><code>TemporalBetween</code>: The same as <code>TemporalFromTo</code>, except that rows are included that became active on the upper boundary.</p>
+</li>
+<li>
+<p><code>TemporalContainedIn</code>: Returns all rows that started being active and ended being active between two given UTC times. This may be many rows from the history table and/or the current table for a given primary key.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+See the SQL Server temporal tables documentation for more information on exactly which rows are included for each of these operators.</p>
+</blockquote>
+<p>For example, after making some updates and deletes to our data, we can run a query using <code>TemporalAll</code> to see the historical data:</p>
+<pre><code class="language-csharp">var history = context
+    .Employees
+    .TemporalAll()
+    .Where(e =&gt; e.Name == &quot;Rainbow Dash&quot;)
+    .OrderBy(e =&gt; EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;))
+    .Select(
+        e =&gt; new
+        {
+            Employee = e,
+            ValidFrom = EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;),
+            ValidTo = EF.Property&lt;DateTime&gt;(e, &quot;ValidTo&quot;)
+        })
+    .ToList();
+
+foreach (var pointInTime in history)
+{
+    Console.WriteLine(
+        $&quot;  Employee {pointInTime.Employee.Name} was '{pointInTime.Employee.Position}' from {pointInTime.ValidFrom} to {pointInTime.ValidTo}&quot;);
+}
+</code></pre>
+<p>Notice how the EF.Property method can be used to access values from the period columns. This is used in the <code>OrderBy</code> clause to sort the data, and then in a projection to include these values in the returned data.</p>
+<p>This query brings back the following data:</p>
+<pre><code class="language-none">Historical data for Rainbow Dash:
+  Employee Rainbow Dash was 'Ponyville weather patrol' from 8/26/2021 4:38:58 PM to 8/26/2021 4:40:29 PM
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:40:29 PM to 8/26/2021 4:41:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Reservist' from 8/26/2021 4:41:59 PM to 8/26/2021 4:43:29 PM
+  Employee Rainbow Dash was 'Wonderbolt' from 8/26/2021 4:43:29 PM to 8/26/2021 4:44:59 PM
+</code></pre>
+<p>The following table displays the latest active rows for Rainbow Dash.</p>
+<p>Similar queries can be written using <code>TemporalFromTo</code>, <code>TemporalBetween</code>, or <code>TemporalContainedIn</code>. For example:</p>
+<pre><code class="language-csharp">var history = context
+    .Employees
+    .TemporalBetween(timeStamp2, timeStamp3)
+    .Where(e =&gt; e.Name == &quot;Rainbow Dash&quot;)
+    .OrderBy(e =&gt; EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;))
+    .Select(
+        e =&gt; new
+        {
+            Employee = e,
+            ValidFrom = EF.Property&lt;DateTime&gt;(e, &quot;ValidFrom&quot;),
+            ValidTo = EF.Property&lt;DateTime&gt;(e, &quot;ValidTo&quot;)
+        })
+    .ToList();
+</code></pre>
+<p>This query returns the following rows:</p>
+<pre><code class="language-none">Historical data for Rainbow Dash between 8/26/2021 4:41:14 PM and 8/26/2021 4:42:44 PM:
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:40:29 PM to 8/26/2021 4:41:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Reservist' from 8/26/2021 4:41:59 PM to 8/26/2021 4:43:29 PM
+</code></pre>
+<h2><a href="#restoring-historical-data" aria-hidden="true" class="anchor" id="restoring-historical-data"></a>Restoring historical data</h2>
+<p>As mentioned above, Rainbow Dash was deleted from the <code>Employees</code> table. This was clearly a mistake, so let's go back to a point-in-time and restore the missing row from that time.</p>
+<pre><code class="language-csharp">var employee = context
+    .Employees
+    .TemporalAsOf(timeStamp2)
+    .Single(e =&gt; e.Name == &quot;Rainbow Dash&quot;);
+
+context.Add(employee);
+context.SaveChanges();
+</code></pre>
+<p>This query returns a single row for Rainbow Dash as it was at the given UTC time. All queries using temporal operators are no-tracking by default, so the returned entity here is not tracked. This makes sense, because it does not currently exist in the main table. To re-insert the entity into the main table, we simply mark it as <code>Added</code> and then call <code>SaveChanges</code>.</p>
+<p>After re-inserting the row Rainbow Dash, querying the historical data shows that the row was restored as it was at the given UTC time:</p>
+<pre><code class="language-none">Historical data for Rainbow Dash:
+  Employee Rainbow Dash was 'Ponyville weather patrol' from 8/26/2021 4:38:58 PM to 8/26/2021 4:40:29 PM
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:40:29 PM to 8/26/2021 4:41:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Reservist' from 8/26/2021 4:41:59 PM to 8/26/2021 4:43:29 PM
+  Employee Rainbow Dash was 'Wonderbolt' from 8/26/2021 4:43:29 PM to 8/26/2021 4:44:59 PM
+  Employee Rainbow Dash was 'Wonderbolt Trainee' from 8/26/2021 4:44:59 PM to 12/31/9999 11:59:59 PM
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/providers/sql-server/temporal-tables">SQL Server/Azure SQL temporal tables</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

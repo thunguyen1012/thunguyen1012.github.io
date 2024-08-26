@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Value generation | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This page details value generation configuration  and patterns that are specific to the SQL Server provider. It's recommended to first read the general page on value generation.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Value generation</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This page details value generation configuration  and patterns that are specific to the SQL Server provider. It's recommended to first read the general page on value generation.</p>
+<h2><a href="#identity-columns" aria-hidden="true" class="anchor" id="identity-columns"></a>IDENTITY columns</h2>
+<p>By convention, numeric columns that are configured to have their values generated on add are set up as SQL Server IDENTITY columns.</p>
+<h3><a href="#seed-and-increment" aria-hidden="true" class="anchor" id="seed-and-increment"></a>Seed and increment</h3>
+<p>By default, IDENTITY columns start off at 1 (the seed), and increment by 1 each time a row is added (the increment). You can configure a different seed and increment as follows:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;()
+        .Property(b =&gt; b.BlogId)
+        .UseIdentityColumn(seed: 10, increment: 10);
+}
+</code></pre>
+<h3><a href="#inserting-explicit-values-into-identity-columns" aria-hidden="true" class="anchor" id="inserting-explicit-values-into-identity-columns"></a>Inserting explicit values into IDENTITY columns</h3>
+<p>By default, SQL Server doesn't allow inserting explicit values into IDENTITY columns. To do so, you must manually enable <code>IDENTITY_INSERT</code> before calling <code>SaveChanges()</code>, as follows:</p>
+<pre><code class="language-csharp">using (var context = new ExplicitIdentityValuesContext())
+{
+    context.Blogs.Add(new Blog { BlogId = 100, Url = &quot;http://blog1.somesite.com&quot; });
+    context.Blogs.Add(new Blog { BlogId = 101, Url = &quot;http://blog2.somesite.com&quot; });
+
+    context.Database.OpenConnection();
+    try
+    {
+        context.Database.ExecuteSqlRaw(&quot;SET IDENTITY_INSERT dbo.Blogs ON&quot;);
+        context.SaveChanges();
+        context.Database.ExecuteSqlRaw(&quot;SET IDENTITY_INSERT dbo.Blogs OFF&quot;);
+    }
+    finally
+    {
+        context.Database.CloseConnection();
+    }
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+We have a feature request on our backlog to do this automatically within the SQL Server provider.</p>
+</blockquote>
+<h2><a href="#sequences" aria-hidden="true" class="anchor" id="sequences"></a>Sequences</h2>
+<p>IDENTITY columns draw their default values from a sequence.</p>
+<p>SQL Server allows you to create sequences and use them as detailed in the general page on sequences. It's up to you to configure your properties to use sequences via <code>HasDefaultValueSql()</code>.</p>
+<h2><a href="#guids" aria-hidden="true" class="anchor" id="guids"></a>GUIDs</h2>
+<p>The provider provides a GUID primary key that can be inserted into a database, and a GUID dependent that references that key.</p>
+<p>To have EF generate the same sequential GUID values for non-key properties, configure them as follows:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;().Property(b =&gt; b.Guid).HasValueGenerator(typeof(SequentialGuidValueGenerator));
+}
+</code></pre>
+<h2><a href="#rowversions" aria-hidden="true" class="anchor" id="rowversions"></a>Rowversions</h2>
+<p>SQL Server has the <code>rowversion</code> data type, which automatically changes whenever the row is updated. This makes it very useful as a concurrency token, for managing cases where the same row is simultaneously updated by multiple transactions.</p>
+<p>To fully understand concurrency tokens and how to use them, read the dedicated page on concurrency conflicts. To map a byte[] property to a <code>rowversion</code> column, configure it as follows:</p>
+<ul>
+<li>
+<p>Data Annotations</p>
+</li>
+<li>
+<p>Fluent API</p>
+</li>
+</ul>
+<pre><code class="language-c#">public class Person
+{
+    public int PersonId { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+
+    [Timestamp]
+    public byte[] Version { get; set; }
+}
+</code></pre>
+<pre><code class="language-c#">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Person&gt;()
+        .Property(p =&gt; p.Version)
+        .IsRowVersion();
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/providers/sql-server/value-generation">SQL Server Value Generation</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

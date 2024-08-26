@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Entity Framework - Entity Framework Core - Miscellaneous - Supported .NET implementations | Sudo's Notes</title>
+    <title>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Memory-optimized tables | Sudo's Notes</title>
     <meta charset="utf-8" />
     <meta http-equiv="content-type" content="text/html;" />
     <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
-    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='We want EF Core to be available to developers on all modern .NET implementations. EF Core's support on .NET for Windows, Linux, and macOS is covered by automated testing and many applications are known to be using it successfully, other platforms that leverage trimming and ahead-of-time (AoT) compilation like iOS, Wasm, and Unity have some limitations that we are working to address.'>
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Memory-Optimized Tables are a feature of SQL Server where the entire table resides in memory. A second copy of the table data is maintained on disk, but only for durability purposes. Data in memory-optimized tables is only read from disk during database recovery. For example, after a server restart.'>
     <meta name="theme-color" content="#ffffff" />
     <meta
       name="google-site-verification"
@@ -85,68 +85,17 @@
     </div>
     <div class="container">
       <div class="main">
-        <h1>Entity Framework - Entity Framework Core - Miscellaneous - Supported .NET implementations</h1>
+        <h1>Entity Framework - Entity Framework Core - Database providers - Microsoft SQL Server and Azure SQL - Memory-optimized tables</h1>
         <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
-<p>EF Core is an open-sourced tool that allows developers to create, deploy, and manage web applications.</p>
-<p>Several older .NET implementations are no longer supported. See the sections below for more guidance.</p>
-<table><thead>
-<tr>
-<th>EF Core</th>
-<th>.NET &amp; .NET Core</th>
-<th>.NET Standard</th>
-<th>.NET Framework</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>8.0</strong></td>
-<td>8.0</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><strong>7.0</strong></td>
-<td>6.0</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><strong>6.0</strong></td>
-<td>6.0</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><del><strong>5.0</strong></del> (EOL)</td>
-<td>5.0</td>
-<td>2.1</td>
-<td></td>
-</tr>
-<tr>
-<td><del><strong>3.1</strong></del> (EOL)</td>
-<td>3.1</td>
-<td>2.0</td>
-<td>4.7.2</td>
-</tr>
-</tbody></table>
-<h2><a href="#net" aria-hidden="true" class="anchor" id="net"></a>.NET</h2>
-<p>EF Core is a .NET runtime library.</p>
-<p>.NET supports multiple platforms including Windows, Linux, macOS, iOS, Android, and Wasm. For more details on which version are supported, see the .NET Supported OS Policy.</p>
-<h2><a href="#net-core" aria-hidden="true" class="anchor" id="net-core"></a>.NET Core</h2>
-<p>Microsoft has announced that .NET Core will no longer be available.</p>
-<h2><a href="#net-standard" aria-hidden="true" class="anchor" id="net-standard"></a>.NET Standard</h2>
-<p>.NET Standard has been superseded by a new approach to uniformity. For more information, see The future of .NET Standard. The last version of EF Core that supported .NET Standard was version 5.0.</p>
-<h2><a href="#net-framework" aria-hidden="true" class="anchor" id="net-framework"></a>.NET Framework</h2>
-<p>EF Core is no longer compatible with the .NET Framework.</p>
-<h2><a href="#xamarin" aria-hidden="true" class="anchor" id="xamarin"></a>Xamarin</h2>
-<p>EF Core is no longer supported by Microsoft.</p>
-<h2><a href="#universal-windows-platform" aria-hidden="true" class="anchor" id="universal-windows-platform"></a>Universal Windows Platform</h2>
-<p>The last version of EF Core that supported UWP was version 3.1. We recommend using .NET and the Windows App SDK instead.</p>
-<h2><a href="#unity" aria-hidden="true" class="anchor" id="unity"></a>Unity</h2>
-<p>EF Core does not support .NET libraries.</p>
-<h2><a href="#tizen" aria-hidden="true" class="anchor" id="tizen"></a>Tizen</h2>
-<p>In this article, we're going to show you how to develop apps for Tizen using .NET. Tizen .NET enables you to develop apps for it using .NET and .NET MAUI.</p>
-<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/miscellaneous/platforms">.NET implementations supported by EF Core</a></p>
+<p>Memoryd tables are a feature of SQL Server where data is stored in memory.</p>
+<h2><a href="#configuring-a-memory-optimized-table" aria-hidden="true" class="anchor" id="configuring-a-memory-optimized-table"></a>Configuring a memory-optimized table</h2>
+<p>A memory table is a set of entities that can be mapped to a database.</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;Blog&gt;().ToTable(b =&gt; b.IsMemoryOptimized());
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/ef/core/providers/sql-server/memory-optimized-tables">Memory-Optimized Tables support in SQL Server EF Core Database Provider</a></p>
  <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/EFCore.html'>EFCore</a></div>
       </div>
     </div>
