@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>What's new - What's new in 7 | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article highlights the most significant changes in ASP.NET Core 7.0 with links to relevant documentation.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>What's new - What's new in 7</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article highlights the most significant changes in ASP.NET Core 7.0 with links to relevant documentation.</p>
+<h2><a href="#rate-limiting-middleware-in-aspnet-core" aria-hidden="true" class="anchor" id="rate-limiting-middleware-in-aspnet-core"></a>Rate limiting middleware in ASP.NET Core</h2>
+<p>The <code>Microsoft.AspNetCore.RateLimiting</code> middleware provides rate limiting middleware. Apps configure rate limiting policies and then attach the policies to endpoints. For more information, see Rate limiting middleware in ASP.NET Core.</p>
+<h2><a href="#authentication-uses-single-scheme-as-defaultscheme" aria-hidden="true" class="anchor" id="authentication-uses-single-scheme-as-defaultscheme"></a>Authentication uses single scheme as DefaultScheme</h2>
+<p>For more information on how to set up a single authentication scheme, see How to set up a single authentication scheme.</p>
+<h2><a href="#mvc-and-razor-pages" aria-hidden="true" class="anchor" id="mvc-and-razor-pages"></a>MVC and Razor pages</h2>
+<h3><a href="#support-for-nullable-models-in-mvc-views-and-razor-pages" aria-hidden="true" class="anchor" id="support-for-nullable-models-in-mvc-views-and-razor-pages"></a>Support for nullable models in MVC views and Razor Pages</h3>
+<p>Nullable page or view models are supported to improve the experience when using null state checking with ASP.NET Core apps:</p>
+<pre><code class="language-csharp">@model Product?
+</code></pre>
+<h3><a href="#bind-with-iparsablet>.tryparse-in-mvc-and-api-controllers" aria-hidden="true" class="anchor" id="bind-with-iparsablet>.tryparse-in-mvc-and-api-controllers"></a>Bind with <code>IParsable&lt;T&gt;.TryParse</code> in MVC and API Controllers</h3>
+<p>The <code>IParsable&lt;TSelf&gt;.TryParse</code> API supports binding controller action parameter values. For more information, see Bind with <code>IParsable&lt;T&gt;.TryParse</code>.</p>
+<h3><a href="#customize-the-cookie-consent-value" aria-hidden="true" class="anchor" id="customize-the-cookie-consent-value"></a>Customize the cookie consent value</h3>
+<p>In ASP.NET Core versions earlier than 7, the cookie consent validation uses the cookie value <code>yes</code> to indicate consent. Now you can specify the value that represents consent. For example, you could use <code>true</code> instead of <code>yes</code>:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.Configure&lt;CookiePolicyOptions&gt;(options =&gt;
+{
+    options.CheckConsentNeeded = context =&gt; true;
+    options.MinimumSameSitePolicy = SameSiteMode.None;
+    options.ConsentCookieValue = &quot;true&quot;;
+});
+
+var app = builder.Build();
+</code></pre>
+<p>For more information, see Customize the cookie consent value.</p>
+<h2><a href="#api-controllers" aria-hidden="true" class="anchor" id="api-controllers"></a>API controllers</h2>
+<h3><a href="#parameter-binding-with-di-in-api-controllers" aria-hidden="true" class="anchor" id="parameter-binding-with-di-in-api-controllers"></a>Parameter binding with DI in API controllers</h3>
+<p>Parameter binding for API controller actions binds parameters through dependency injection when the type is configured as a service. This means it's no longer required to explicitly apply the <code>[FromServices]</code> attribute to a parameter. In the following code, both actions return the time:</p>
+<pre><code class="language-csharp">[Route(&quot;[controller]&quot;)]
+[ApiController]
+public class MyController : ControllerBase
+{
+    public ActionResult GetWithAttribute([FromServices] IDateTime dateTime) 
+                                                        =&gt; Ok(dateTime.Now);
+
+    [Route(&quot;noAttribute&quot;)]
+    public ActionResult Get(IDateTime dateTime) =&gt; Ok(dateTime.Now);
+}
+</code></pre>
+<p>ImplicitFromServicesParameters can be overridden by methods in an API controller action method.</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddSingleton&lt;IDateTime, SystemDateTime&gt;();
+
+builder.Services.Configure&lt;ApiBehaviorOptions&gt;(options =&gt;
+{
+    options.DisableImplicitFromServicesParameters = true;
+});
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<p>In ASP.NET Core 7.0, types in DI are checked at app startup with IServiceProviderIsService to determine if an argument in an API controller action comes from DI or from the other sources.</p>
+<p>The new mechanism to infer binding source of API Controller action parameters uses the following rules:</p>
+<ul>
+<li>
+<p>A previously specified <code>BindingInfo.BindingSource</code> is never overwritten.</p>
+</li>
+<li>
+<p>A complex type parameter, registered in the DI container, is assigned <code>BindingSource.Services</code>.</p>
+</li>
+<li>
+<p>A complex type parameter, not registered in the DI container, is assigned <code>BindingSource.Body</code>.</p>
+</li>
+<li>
+<p>A parameter with a name that appears as a route value in any route template is assigned <code>BindingSource.Path</code>.</p>
+</li>
+<li>
+<p>All other parameters are <code>BindingSource.Query</code>.</p>
+</li>
+</ul>
+<h3><a href="#json-property-names-in-validation-errors" aria-hidden="true" class="anchor" id="json-property-names-in-validation-errors"></a>JSON property names in validation errors</h3>
+<p>By default, when a validation error occurs, model validation produces a ModelStateDictionary with the property name as the error key. Some apps, such as single page apps, benefit from using JSON property names for validation errors generated from Web APIs. The following code configures validation to use the <code>SystemTextJsonValidationMetadataProvider</code> to use JSON property names:</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers(options =&gt;
+{
+    options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider());
+});
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<p>The following code configures validation to use the <code>NewtonsoftJsonValidationMetadataProvider</code> to use JSON property name when using Json.NET:</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc.NewtonsoftJson;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers(options =&gt;
+{
+    options.ModelMetadataDetailsProviders.Add(new NewtonsoftJsonValidationMetadataProvider());
+}).AddNewtonsoftJson();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<p>For more information, see Use JSON property names in validation errors</p>
+<h2><a href="#minimal-apis" aria-hidden="true" class="anchor" id="minimal-apis"></a>Minimal APIs</h2>
+<h3><a href="#filters-in-minimal-api-apps" aria-hidden="true" class="anchor" id="filters-in-minimal-api-apps"></a>Filters in Minimal API apps</h3>
+<p>Minimal API filters allow developers to implement business logic that supports:</p>
+<ul>
+<li>
+<p>Running code before and after the route handler.</p>
+</li>
+<li>
+<p>Inspecting and modifying parameters provided during a route handler invocation.</p>
+</li>
+<li>
+<p>Intercepting the response behavior of a route handler.</p>
+</li>
+</ul>
+<p>Filters can be helpful in the following scenarios:</p>
+<ul>
+<li>
+<p>Validating the request parameters and body that are sent to an endpoint.</p>
+</li>
+<li>
+<p>Logging information about the request and response.</p>
+</li>
+<li>
+<p>Validating that a request is targeting a supported API version.</p>
+</li>
+</ul>
+<p>For more information, see Filters in Minimal API apps</p>
+<h3><a href="#bind-arrays-and-string-values-from-headers-and-query-strings" aria-hidden="true" class="anchor" id="bind-arrays-and-string-values-from-headers-and-query-strings"></a>Bind arrays and string values from headers and query strings</h3>
+<p>In ASP.NET 7, binding query strings to an array of primitive types, string arrays, and StringValues is supported:</p>
+<pre><code class="language-csharp">// Bind query string values to a primitive type array.
+// GET  /tags?q=1&amp;q=2&amp;q=3
+app.MapGet(&quot;/tags&quot;, (int[] q) =&gt;
+                      $&quot;tag1: {q[0]} , tag2: {q[1]}, tag3: {q[2]}&quot;);
+
+// Bind to a string array.
+// GET /tags2?names=john&amp;names=jack&amp;names=jane
+app.MapGet(&quot;/tags2&quot;, (string[] names) =&gt;
+            $&quot;tag1: {names[0]} , tag2: {names[1]}, tag3: {names[2]}&quot;);
+
+// Bind to StringValues.
+// GET /tags3?names=john&amp;names=jack&amp;names=jane
+app.MapGet(&quot;/tags3&quot;, (StringValues names) =&gt;
+            $&quot;tag1: {names[0]} , tag2: {names[1]}, tag3: {names[2]}&quot;);
+</code></pre>
+<p>Binding query strings or header values to an array of complex types is supported when the type has <code>TryParse</code> implemented. For more information, see Bind arrays and string values from headers and query strings.</p>
+<p>For more information, see Add endpoint summary or description.</p>
+<h3><a href="#bind-the-request-body-as-a-stream-or-pipereader" aria-hidden="true" class="anchor" id="bind-the-request-body-as-a-stream-or-pipereader"></a>Bind the request body as a <code>Stream</code> or <code>PipeReader</code></h3>
+<p>The request body can bind as a <code>Stream</code> or <code>PipeReader</code> to efficiently support scenarios where the user has to process data and:</p>
+<ul>
+<li>
+<p>Store the data to blob storage or enqueue the data to a queue provider.</p>
+</li>
+<li>
+<p>Process the stored data with a worker process or cloud function.</p>
+</li>
+</ul>
+<p>For example, the data might be enqueued to Azure Queue storage or stored in Azure Blob storage.</p>
+<p>For more information, see Bind the request body as a <code>Stream</code> or <code>PipeReader</code></p>
+<h3><a href="#new-resultsstream-overloads" aria-hidden="true" class="anchor" id="new-resultsstream-overloads"></a>New <code>Results.Stream</code> overloads</h3>
+<p>We introduced new <code>Results.Stream</code> overloads to accommodate scenarios that need access to the underlying HTTP response stream without buffering. These overloads also improve cases where an API streams data to the HTTP response stream, like from Azure Blob Storage. The following example uses ImageSharp to return a reduced size of the specified image:</p>
+<pre><code class="language-csharp">using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var app = builder.Build();
+
+app.MapGet(&quot;/process-image/{strImage}&quot;, (string strImage, HttpContext http, CancellationToken token) =&gt;
+{
+    http.Response.Headers.CacheControl = $&quot;public,max-age={TimeSpan.FromHours(24).TotalSeconds}&quot;;
+    return Results.Stream(stream =&gt; ResizeImageAsync(strImage, stream, token), &quot;image/jpeg&quot;);
+});
+
+async Task ResizeImageAsync(string strImage, Stream stream, CancellationToken token)
+{
+    var strPath = $&quot;wwwroot/img/{strImage}&quot;;
+    using var image = await Image.LoadAsync(strPath, token);
+    int width = image.Width / 2;
+    int height = image.Height / 2;
+    image.Mutate(x =&gt;x.Resize(width, height));
+    await image.SaveAsync(stream, JpegFormat.Instance, cancellationToken: token);
+}
+</code></pre>
+<p>For more information, see <code>Stream</code> examples</p>
+<h3><a href="#typed-results-for-minimal-apis" aria-hidden="true" class="anchor" id="typed-results-for-minimal-apis"></a>Typed results for minimal APIs</h3>
+<p>In .NET 6, the <code>IResult</code> interface was introduced to represent values returned from minimal APIs that don't utilize the implicit support for JSON serializing the returned object to the HTTP response. The static Results class is used to create varying <code>IResult</code> objects that represent different types of responses. For example, setting the response status code or redirecting to another URL. The <code>IResult</code> implementing framework types returned from these methods were internal however, making it difficult to verify the specific <code>IResult</code> type being returned from methods in a unit test.</p>
+<p>In .NET 7 the types implementing <code>IResult</code> are public, allowing for type assertions when testing. For example:</p>
+<pre><code class="language-csharp">[TestClass()]
+public class WeatherApiTests
+{
+    [TestMethod()]
+    public void MapWeatherApiTest()
+    {
+        var result = WeatherApi.GetAllWeathers();
+        Assert.IsInstanceOfType(result, typeof(Ok&lt;WeatherForecast[]&gt;));
+    }      
+}
+</code></pre>
+<h3><a href="#improved-unit-testability-for-minimal-route-handlers" aria-hidden="true" class="anchor" id="improved-unit-testability-for-minimal-route-handlers"></a>Improved unit testability for minimal route handlers</h3>
+<p><code>IResult</code> implementation types are now publicly available in the <code>Microsoft.AspNetCore.Http.HttpResults</code> namespace. The <code>IResult</code> implementation types can be used to unit test minimal route handlers when using named methods instead of lambdas.</p>
+<p>The following code uses the <code>Ok&lt;TValue&gt;</code> class:</p>
+<pre><code class="language-csharp">[Fact]
+public async Task GetTodoReturnsTodoFromDatabase()
+{
+    // Arrange
+    await using var context = new MockDb().CreateDbContext();
+
+    context.Todos.Add(new Todo
+    {
+        Id = 1,
+        Title = &quot;Test title&quot;,
+        Description = &quot;Test description&quot;,
+        IsDone = false
+    });
+
+    await context.SaveChangesAsync();
+
+    // Act
+    var result = await TodoEndpointsV1.GetTodo(1, context);
+
+    //Assert
+    Assert.IsType&lt;Results&lt;Ok&lt;Todo&gt;, NotFound&gt;&gt;(result);
+
+    var okResult = (Ok&lt;Todo&gt;)result.Result;
+
+    Assert.NotNull(okResult.Value);
+    Assert.Equal(1, okResult.Value.Id);
+}
+</code></pre>
+<p>For more information, see <code>IResult</code> implementation types.</p>
+<h3><a href="#new-httpresult-interfaces" aria-hidden="true" class="anchor" id="new-httpresult-interfaces"></a>New HttpResult interfaces</h3>
+<p>The following interfaces in the <code>Microsoft.AspNetCore.Http</code> namespace provide a way to detect the <code>IResult</code> type at runtime, which is a common pattern in filter implementations:</p>
+<ul>
+<li>
+<p>IContentTypeHttpResult</p>
+</li>
+<li>
+<p>IFileHttpResult</p>
+</li>
+<li>
+<p>INestedHttpResult</p>
+</li>
+<li>
+<p>IStatusCodeHttpResult</p>
+</li>
+<li>
+<p>IValueHttpResult</p>
+</li>
+<li>
+<p>IValueHttpResult<TValue></p>
+</li>
+</ul>
+<p>For more information, see IHttpResult interfaces.</p>
+<h3><a href="#openapi-improvements-for-minimal-apis" aria-hidden="true" class="anchor" id="openapi-improvements-for-minimal-apis"></a>OpenAPI improvements for minimal APIs</h3>
+<h4><a href="#microsoftaspnetcore.openapi-nuget-package" aria-hidden="true" class="anchor" id="microsoftaspnetcore.openapi-nuget-package"></a><code>Microsoft.AspNetCore.OpenApi</code> NuGet package</h4>
+<p>The <code>Microsoft.AspNetCore.OpenApi</code> package allows interactions with OpenAPI specifications for endpoints. The package acts as a link between the OpenAPI models that are defined in the <code>Microsoft.AspNetCore.OpenApi</code> package and the endpoints that are defined in Minimal APIs. The package provides an API that examines an endpoint's parameters, responses, and metadata to construct an OpenAPI annotation type that is used to describe an endpoint.</p>
+<pre><code class="language-csharp">app.MapPost(&quot;/todoitems/{id}&quot;, async (int id, Todo todo, TodoDb db) =&gt;
+{
+    todo.Id = id;
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+})
+.WithOpenApi();
+</code></pre>
+<h4><a href="#call-withopenapi-with-parameters" aria-hidden="true" class="anchor" id="call-withopenapi-with-parameters"></a>Call <code>WithOpenApi</code> with parameters</h4>
+<p>The <code>WithOpenApi</code> method accepts a function that can be used to modify the OpenAPI annotation. For example, in the following code, a description is added to the first parameter of the endpoint:</p>
+<pre><code class="language-csharp">app.MapPost(&quot;/todo2/{id}&quot;, async (int id, Todo todo, TodoDb db) =&gt;
+{
+    todo.Id = id;
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+})
+.WithOpenApi(generatedOperation =&gt;
+{
+    var parameter = generatedOperation.Parameters[0];
+    parameter.Description = &quot;The ID associated with the created Todo&quot;;
+    return generatedOperation;
+});
+</code></pre>
+<h4><a href="#provide-endpoint-descriptions-and-summaries" aria-hidden="true" class="anchor" id="provide-endpoint-descriptions-and-summaries"></a>Provide endpoint descriptions and summaries</h4>
+<p>OpenAPI has released a new version of its Minimal API.</p>
+<p>For more information, see OpenAPI in minimal API apps</p>
+<h3><a href="#file-uploads-using-iformfile-and-iformfilecollection" aria-hidden="true" class="anchor" id="file-uploads-using-iformfile-and-iformfilecollection"></a>File uploads using <code>IFormFile</code> and <code>IFormFileCollection</code></h3>
+<p>Minimal APIs now support file upload with <code>IFormFile</code> and <code>IFormFileCollection</code>. The following code uses <code>IFormFile</code> and <code>IFormFileCollection</code> to upload file:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.MapPost(&quot;/upload&quot;, async (IFormFile file) =&gt;
+{
+    var tempFile = Path.GetTempFileName();
+    app.Logger.LogInformation(tempFile);
+    using var stream = File.OpenWrite(tempFile);
+    await file.CopyToAsync(stream);
+});
+
+app.MapPost(&quot;/upload_many&quot;, async (IFormFileCollection myFiles) =&gt;
+{
+    foreach (var file in myFiles)
+    {
+        var tempFile = Path.GetTempFileName();
+        app.Logger.LogInformation(tempFile);
+        using var stream = File.OpenWrite(tempFile);
+        await file.CopyToAsync(stream);
+    }
+});
+
+app.Run();
+</code></pre>
+<p>Authenticated file upload requests are supported using an <code>Authorization</code> header, a client certificate, or a cookie header.</p>
+<p>There is no built-in support for antiforgery. However, it can be implemented using the <code>IAntiforgery</code> service.</p>
+<h3><a href="#asparameters]-attribute-enables-parameter-binding-for-argument-lists" aria-hidden="true" class="anchor" id="asparameters]-attribute-enables-parameter-binding-for-argument-lists"></a><code>[AsParameters]</code> attribute enables parameter binding for argument lists</h3>
+<p>The <code>[AsParameters]</code> attribute enables parameter binding for argument lists. For more information, see Parameter binding for argument lists with <code>[AsParameters]</code>.</p>
+<h2><a href="#minimal-apis-and-api-controllers" aria-hidden="true" class="anchor" id="minimal-apis-and-api-controllers"></a>Minimal APIs and API controllers</h2>
+<h3><a href="#new-problem-details-service" aria-hidden="true" class="anchor" id="new-problem-details-service"></a>New problem details service</h3>
+<p>The problem details service implements the <code>IProblemDetailsService</code> interface, which supports creating Problem Details for HTTP APIs.</p>
+<p>For more information, see Problem details service.</p>
+<h3><a href="#route-groups" aria-hidden="true" class="anchor" id="route-groups"></a>Route groups</h3>
+<p>The <code>MapGroup</code> extension method helps organize groups of endpoints with a common prefix. It reduces repetitive code and allows for customizing entire groups of endpoints with a single call to methods like <code>RequireAuthorization</code> and <code>WithMetadata</code> which add endpoint metadata.</p>
+<p>For example, the following code creates two similar groups of endpoints:</p>
+<pre><code class="language-csharp">app.MapGroup(&quot;/public/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Public&quot;);
+
+app.MapGroup(&quot;/private/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Private&quot;)
+    .AddEndpointFilterFactory(QueryPrivateTodos)
+    .RequireAuthorization();
+
+
+EndpointFilterDelegate QueryPrivateTodos(EndpointFilterFactoryContext factoryContext, EndpointFilterDelegate next)
+{
+    var dbContextIndex = -1;
+
+    foreach (var argument in factoryContext.MethodInfo.GetParameters())
+    {
+        if (argument.ParameterType == typeof(TodoDb))
+        {
+            dbContextIndex = argument.Position;
+            break;
+        }
+    }
+
+    // Skip filter if the method doesn't have a TodoDb parameter.
+    if (dbContextIndex &lt; 0)
+    {
+        return next;
+    }
+
+    return async invocationContext =&gt;
+    {
+        var dbContext = invocationContext.GetArgument&lt;TodoDb&gt;(dbContextIndex);
+        dbContext.IsPrivate = true;
+
+        try
+        {
+            return await next(invocationContext);
+        }
+        finally
+        {
+            // This should only be relevant if you're pooling or otherwise reusing the DbContext instance.
+            dbContext.IsPrivate = false;
+        }
+    };
+}
+</code></pre>
+<pre><code class="language-csharp">public static RouteGroupBuilder MapTodosApi(this RouteGroupBuilder group)
+{
+    group.MapGet(&quot;/&quot;, GetAllTodos);
+    group.MapGet(&quot;/{id}&quot;, GetTodo);
+    group.MapPost(&quot;/&quot;, CreateTodo);
+    group.MapPut(&quot;/{id}&quot;, UpdateTodo);
+    group.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+    return group;
+}
+</code></pre>
+<p>In this scenario, you can use a relative address for the <code>Location</code> header in the <code>201 Created</code> result:</p>
+<pre><code class="language-csharp">public static async Task&lt;Created&lt;Todo&gt;&gt; CreateTodo(Todo todo, TodoDb database)
+{
+    await database.AddAsync(todo);
+    await database.SaveChangesAsync();
+
+    return TypedResults.Created($&quot;{todo.Id}&quot;, todo);
+}
+</code></pre>
+<p>The first group of endpoints will only match requests prefixed with <code>/public/todos</code> and are accessible without any authentication. The second group of endpoints will only match requests prefixed with <code>/private/todos</code> and require authentication.</p>
+<p>The <code>QueryPrivateTodos</code> endpoint filter factory is a local function that modifies the route handler's <code>TodoDb</code> parameters to allow to access and store private todo data.</p>
+<p>Route groups also support nested groups and complex prefix patterns with route parameters and constraints. In the following example, and route handler mapped to the user group can capture the {org} and {group} route parameters defined in the outer group prefixes.</p>
+<p>The prefix can also be empty. This can be useful for adding endpoint metadata or filters to a group of endpoints without changing the route pattern.</p>
+<pre><code class="language-csharp">var all = app.MapGroup(&quot;&quot;).WithOpenApi();
+var org = all.MapGroup(&quot;{org}&quot;);
+var user = org.MapGroup(&quot;{user}&quot;);
+user.MapGet(&quot;&quot;, (string org, string user) =&gt; $&quot;{org}/{user}&quot;);
+</code></pre>
+<p>Adding filters or metadata to a group behaves the same way as adding them individually to each endpoint before adding any extra filters or metadata to an inner group or specific endpoint.</p>
+<pre><code class="language-csharp">var outer = app.MapGroup(&quot;/outer&quot;);
+var inner = outer.MapGroup(&quot;/inner&quot;);
+
+inner.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/inner group filter&quot;);
+    return next(context);
+});
+
+outer.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/outer group filter&quot;);
+    return next(context);
+});
+
+inner.MapGet(&quot;/&quot;, () =&gt; &quot;Hi!&quot;).AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;MapGet filter&quot;);
+    return next(context);
+});
+</code></pre>
+<p>The order the filters are added does not matter if they are applied to the same group or specific endpoint.</p>
+<p>A request to /outer/inner/ will log the following:</p>
+<pre><code class="language-dotnetcli">/outer group filter
+/inner group filter
+MapGet filter
+</code></pre>
+<h2><a href="#grpc" aria-hidden="true" class="anchor" id="grpc"></a>gRPC</h2>
+<h3><a href="#json-transcoding" aria-hidden="true" class="anchor" id="json-transcoding"></a>JSON transcoding</h3>
+<p>gRPC JSON transcoding is an extension for ASP.NET Core that creates RESTful JSON APIs for gRPC services. gRPC JSON transcoding allows:</p>
+<ul>
+<li>
+<p>Apps to call gRPC services with familiar HTTP concepts.</p>
+</li>
+<li>
+<p>ASP.NET Core gRPC apps to support both gRPC and RESTful JSON APIs without replicating functionality.</p>
+</li>
+<li>
+<p>Experimental support for generating OpenAPI from transcoded RESTful APIs by integrating with Swashbuckle.</p>
+</li>
+</ul>
+<p>For more information, see gRPC JSON transcoding in ASP.NET Core gRPC apps and Use OpenAPI with gRPC JSON transcoding ASP.NET Core apps.</p>
+<h3><a href="#grpc-health-checks-in-aspnet-core" aria-hidden="true" class="anchor" id="grpc-health-checks-in-aspnet-core"></a>gRPC health checks in ASP.NET Core</h3>
+<p>The gRPC health checking protocol is a standard for reporting the health of gRPC server apps.</p>
+<p>gRPC ASP.NET Core has added built-in support for gRPC health checks with the <code>Grpc.AspNetCore.HealthChecks</code> package. Results from .NET health checks are reported to callers.</p>
+<p>For more information, see gRPC health checks in ASP.NET Core.</p>
+<h3><a href="#improved-call-credentials-support" aria-hidden="true" class="anchor" id="improved-call-credentials-support"></a>Improved call credentials support</h3>
+<p>Call credentials are the recommended way to configure a gRPC client to send an auth token to the server. gRPC clients support two new features to make call credentials easier to use:</p>
+<ul>
+<li>
+<p>Support for call credentials with plaintext connections. Previously, a gRPC call only sent call credentials if the connection was secured with TLS. A new setting on <code>GrpcChannelOptions</code>, called <code>UnsafeUseInsecureChannelCallCredentials</code>, allows this behavior to be customized. There are security implications to not securing a connection with TLS.</p>
+</li>
+<li>
+<p>A new method called <code>AddCallCredentials</code> is available with the gRPC client factory. <code>AddCallCredentials</code> is a quick way to configure call credentials for a gRPC client and integrates well with dependency injection (DI).</p>
+</li>
+</ul>
+<p>The following code configures the gRPC client factory to send <code>Authorization</code> metadata:</p>
+<pre><code class="language-csharp">builder.Services
+    .AddGrpcClient&lt;Greeter.GreeterClient&gt;(o =&gt;
+    {
+       o.Address = new Uri(&quot;https://localhost:5001&quot;);
+    })
+    .AddCallCredentials((context, metadata) =&gt;
+    {
+       if (!string.IsNullOrEmpty(_token))
+       {
+          metadata.Add(&quot;Authorization&quot;, $&quot;Bearer {_token}&quot;);
+       }
+       return Task.CompletedTask;
+    });
+</code></pre>
+<p>For more information, see Configure a bearer token with the gRPC client factory.</p>
+<h2><a href="#signalr" aria-hidden="true" class="anchor" id="signalr"></a>SignalR</h2>
+<h3><a href="#client-results" aria-hidden="true" class="anchor" id="client-results"></a>Client results</h3>
+<p>The server now supports requesting a result from a client. This requires the server to use <code>ISingleClientProxy.InvokeAsync</code> and the client to return a result from its <code>.On</code> handler. Strongly-typed hubs can also return values from interface methods.</p>
+<p>For more information, see Client results</p>
+<h3><a href="#dependency-injection-for-signalr-hub-methods" aria-hidden="true" class="anchor" id="dependency-injection-for-signalr-hub-methods"></a>Dependency injection for SignalR hub methods</h3>
+<p>SignalR hub methods now support injecting services through dependency injection (DI).</p>
+<p>Hub constructors can accept services from DI as parameters, which can be stored in properties on the class for use in a hub method. For more information, see Inject services into a hub</p>
+<h2><a href="#blazor" aria-hidden="true" class="anchor" id="blazor"></a>Blazor</h2>
+<h3><a href="#handle-location-changing-events-and-navigation-state" aria-hidden="true" class="anchor" id="handle-location-changing-events-and-navigation-state"></a>Handle location changing events and navigation state</h3>
+<p>In .NET 7, Blazor supports location changing events and maintaining navigation state. This allows you to warn users about unsaved work or to perform related actions when the user performs a page navigation.</p>
+<p>For more information, see the following sections of the Routing and navigation article:</p>
+<ul>
+<li>
+<p>Navigation options</p>
+</li>
+<li>
+<p>Handle/prevent location changes</p>
+</li>
+</ul>
+<h3><a href="#empty-blazor-project-templates" aria-hidden="true" class="anchor" id="empty-blazor-project-templates"></a>Empty Blazor project templates</h3>
+<p>Blazor has two new project templates for starting from a blank slate. The new Blazor Server App Empty and Blazor WebAssembly App Empty project templates are just like their non-empty counterparts but without example code. These empty templates only include a basic home page, and we've removed Bootstrap so that you can start with a different CSS framework.</p>
+<p>For more information, see the following articles:</p>
+<ul>
+<li>
+<p>Tooling for ASP.NET Core Blazor</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor project structure</p>
+</li>
+</ul>
+<h3><a href="#blazor-custom-elements" aria-hidden="true" class="anchor" id="blazor-custom-elements"></a>Blazor custom elements</h3>
+<p>The <code>Microsoft.AspNetCore.Components.CustomElements</code> package enables building standards based custom DOM elements using Blazor.</p>
+<p>For more information, see ASP.NET Core Razor components.</p>
+<h3><a href="#bind-modifiers-@bind:after,-@bind:get,-@bind:set)" aria-hidden="true" class="anchor" id="bind-modifiers-@bind:after,-@bind:get,-@bind:set)"></a>Bind modifiers (@bind:after, <code>@bind:get</code>, <code>@bind:set</code>)</h3>
+<blockquote>
+<p class='important'>Important
+The <code>@bind:after</code>/@bind:get/@bind:set features are receiving further updates at this time. To take advantage of the latest updates, confirm that you've installed the latest SDK.
+Using an event callback parameter ([Parameter] public EventCallback<string> ValueChanged { get; set; }) isn't supported. Instead, pass an Action-returning or Task-returning method to <code>@bind:set</code>/@bind:after.
+For more information, see the following resources:</p>
+</blockquote>
+<p>Blazor <code>@bind:after</code> not working on .NET 7 RTM release (dotnet/aspnetcore #44957)
+BindGetSetAfter701 sample app (javiercn/BindGetSetAfter701 GitHub repository)</p>
+<ul>
+<li>
+<p>Blazor <code>@bind:after</code> not working on .NET 7 RTM release (dotnet/aspnetcore #44957)</p>
+</li>
+<li>
+<p><code>BindGetSetAfter701</code> sample app (javiercn/BindGetSetAfter701 GitHub repository)</p>
+</li>
+</ul>
+<p>In .NET 7, you can run asynchronous logic after a binding event has completed using the new <code>@bind:after</code> modifier. In the following example, the <code>PerformSearch</code> asynchronous method runs automatically after any changes to the search text are detected:</p>
+<pre><code class="language-razor">&lt;input @bind=&quot;searchText&quot; @bind:after=&quot;PerformSearch&quot; /&gt;
+
+@code {
+    private string searchText;
+
+    private async Task PerformSearch()
+    {
+        ...
+    }
+}
+</code></pre>
+<p>In .NET 7, it's also easier to set up binding for component parameters. Components can support two-way data binding by defining a pair of parameters:</p>
+<ul>
+<li>
+<p><code>@bind:get</code>: Specifies the value to bind.</p>
+</li>
+<li>
+<p><code>@bind:set</code>: Specifies a callback for when the value changes.</p>
+</li>
+</ul>
+<p>The <code>@bind:get</code> and <code>@bind:set</code> modifiers are always used together.</p>
+<p>Examples:</p>
+<pre><code class="language-razor">@* Elements *@
+
+&lt;input type=&quot;text&quot; @bind=&quot;text&quot; @bind:after=&quot;() =&gt; { }&quot; /&gt;
+
+&lt;input type=&quot;text&quot; @bind:get=&quot;text&quot; @bind:set=&quot;(value) =&gt; { }&quot; /&gt;
+
+&lt;input type=&quot;text&quot; @bind=&quot;text&quot; @bind:after=&quot;AfterAsync&quot; /&gt;
+
+&lt;input type=&quot;text&quot; @bind:get=&quot;text&quot; @bind:set=&quot;SetAsync&quot; /&gt;
+
+&lt;input type=&quot;text&quot; @bind=&quot;text&quot; @bind:after=&quot;() =&gt; { }&quot; /&gt;
+
+&lt;input type=&quot;text&quot; @bind:get=&quot;text&quot; @bind:set=&quot;(value) =&gt; { }&quot; /&gt;
+
+&lt;input type=&quot;text&quot; @bind=&quot;text&quot; @bind:after=&quot;AfterAsync&quot; /&gt;
+
+&lt;input type=&quot;text&quot; @bind:get=&quot;text&quot; @bind:set=&quot;SetAsync&quot; /&gt;
+
+@* Components *@
+
+&lt;InputText @bind-Value=&quot;text&quot; @bind-Value:after=&quot;() =&gt; { }&quot; /&gt;
+
+&lt;InputText @bind-Value:get=&quot;text&quot; @bind-Value:set=&quot;(value) =&gt; { }&quot; /&gt;
+
+&lt;InputText @bind-Value=&quot;text&quot; @bind-Value:after=&quot;AfterAsync&quot; /&gt;
+
+&lt;InputText @bind-Value:get=&quot;text&quot; @bind-Value:set=&quot;SetAsync&quot; /&gt;
+
+&lt;InputText @bind-Value=&quot;text&quot; @bind-Value:after=&quot;() =&gt; { }&quot; /&gt;
+
+&lt;InputText @bind-Value:get=&quot;text&quot; @bind-Value:set=&quot;(value) =&gt; { }&quot; /&gt;
+
+&lt;InputText @bind-Value=&quot;text&quot; @bind-Value:after=&quot;AfterAsync&quot; /&gt;
+
+&lt;InputText @bind-Value:get=&quot;text&quot; @bind-Value:set=&quot;SetAsync&quot; /&gt;
+
+@code {
+    private string text = &quot;&quot;;
+
+    private void After(){}
+    private void Set() {}
+    private Task AfterAsync() { return Task.CompletedTask; }
+    private Task SetAsync(string value) { return Task.CompletedTask; }
+}
+</code></pre>
+<p>For more information on the <code>InputText</code> component, see ASP.NET Core Blazor input components.</p>
+<h3><a href="#hot-reload-improvements" aria-hidden="true" class="anchor" id="hot-reload-improvements"></a>Hot Reload improvements</h3>
+<p>In .NET 7, Hot Reload support includes the following:</p>
+<ul>
+<li>
+<p>Components reset their parameters to their default values when a value is removed.</p>
+</li>
+<li>
+<p>Blazor WebAssembly:</p>
+<ul>
+<li>
+<p>Add new types.</p>
+</li>
+<li>
+<p>Add nested classes.</p>
+</li>
+<li>
+<p>Add static and instance methods to existing types.</p>
+</li>
+<li>
+<p>Add static fields and methods to existing types.</p>
+</li>
+<li>
+<p>Add static lambdas to existing methods.</p>
+</li>
+<li>
+<p>Add lambdas that capture this to existing methods that already captured this previously.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#dynamic-authentication-requests-with-msal-in-blazor-webassembly" aria-hidden="true" class="anchor" id="dynamic-authentication-requests-with-msal-in-blazor-webassembly"></a>Dynamic authentication requests with MSAL in Blazor WebAssembly</h3>
+<p>New in .NET 7, Blazor WebAssembly supports creating dynamic authentication requests at runtime with custom parameters to handle advanced authentication scenarios.</p>
+<p>For more information, see the following articles:</p>
+<ul>
+<li>
+<p>Secure ASP.NET Core Blazor WebAssembly</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor WebAssembly additional security scenarios</p>
+</li>
+</ul>
+<h3><a href="#blazor-webassembly-debugging-improvements" aria-hidden="true" class="anchor" id="blazor-webassembly-debugging-improvements"></a>Blazor WebAssembly debugging improvements</h3>
+<p>Blazor WebAssembly debugging has the following improvements:</p>
+<ul>
+<li>
+<p>Support for the Just My Code setting to show or hide type members that aren't from user code.</p>
+</li>
+<li>
+<p>Support for inspecting multidimensional arrays.</p>
+</li>
+<li>
+<p>Call Stack now shows the correct name for asynchronous methods.</p>
+</li>
+<li>
+<p>Improved expression evaluation.</p>
+</li>
+<li>
+<p>Correct handling of the new keyword on derived members.</p>
+</li>
+<li>
+<p>Support for debugger-related attributes in <code>System.Diagnostics</code>.</p>
+</li>
+</ul>
+<h3><a href="#systemsecurity.cryptography-support-on-webassembly" aria-hidden="true" class="anchor" id="systemsecurity.cryptography-support-on-webassembly"></a><code>System.Security.Cryptography</code> support on WebAssembly</h3>
+<p>The following algorithms are supported on WebAssembly in .NET 7.</p>
+<ul>
+<li>
+<p>SHA1</p>
+</li>
+<li>
+<p>SHA256</p>
+</li>
+<li>
+<p>SHA384</p>
+</li>
+<li>
+<p>SHA512</p>
+</li>
+<li>
+<p>HMACSHA1</p>
+</li>
+<li>
+<p>HMACSHA256</p>
+</li>
+<li>
+<p>HMACSHA384</p>
+</li>
+<li>
+<p>HMACSHA512</p>
+</li>
+<li>
+<p>AES-CBC</p>
+</li>
+<li>
+<p>PBKDF2</p>
+</li>
+<li>
+<p>HKDF</p>
+</li>
+</ul>
+<p>For more information, see Developers targeting browser-wasm can use Web Crypto APIs (dotnet/runtime #40074).</p>
+<h3><a href="#inject-services-into-custom-validation-attributes" aria-hidden="true" class="anchor" id="inject-services-into-custom-validation-attributes"></a>Inject services into custom validation attributes</h3>
+<p>You can now inject services into custom validation attributes. Blazor sets up the <code>ValidationContext</code> so that it can be used as a service provider.</p>
+<p>For more information, see ASP.NET Core Blazor forms validation.</p>
+<h3><a href="#input-components-outside-of-an-editcontext/editform" aria-hidden="true" class="anchor" id="input-components-outside-of-an-editcontext/editform"></a>Input* components outside of an <code>EditContext</code>/EditForm</h3>
+<p>The built-in input components are now supported outside of a form in Razor component markup.</p>
+<p>For more information, see ASP.NET Core Blazor input components.</p>
+<h3><a href="#project-template-changes" aria-hidden="true" class="anchor" id="project-template-changes"></a>Project template changes</h3>
+<p>When .NET 6 was released last year, the HTML markup of the <code>_Host</code> page (Pages/_Host.chstml) was split between the <code>_Host</code> page and a new <code>_Layout</code> page (Pages/_Layout.chstml) in the .NET 6 Blazor Server project template.</p>
+<p>In .NET 7, the HTML markup has been recombined with the <code>_Host</code> page in project templates.</p>
+<p>This release of ASP.NET Core includes a number of changes to the Blazor project templates.</p>
+<h3><a href="#experimental-quickgrid-component" aria-hidden="true" class="anchor" id="experimental-quickgrid-component"></a>Experimental <code>QuickGrid</code> component</h3>
+<p>The new <code>QuickGrid</code> component provides a convenient data grid component for most common requirements and as a reference architecture and performance baseline for anyone building Blazor data grid components.</p>
+<p>For more information, see ASP.NET Core Blazor <code>QuickGrid</code> component.</p>
+<p>Live demo: <code>QuickGrid</code> for Blazor sample app</p>
+<h3><a href="#virtualization-enhancements" aria-hidden="true" class="anchor" id="virtualization-enhancements"></a>Virtualization enhancements</h3>
+<p>Virtualization enhancements in .NET 7:</p>
+<ul>
+<li>
+<p>The <code>Virtualize</code> component supports using the document itself as the scroll root, as an alternative to having some other element with <code>overflow-y: scroll</code> applied.</p>
+</li>
+<li>
+<p>If the <code>Virtualize</code> component is placed inside an element that requires a specific child tag name, <code>SpacerElement</code> allows you to obtain or set the virtualization spacer tag name.</p>
+</li>
+</ul>
+<p>For more information, see the following sections of the Virtualization article:</p>
+<ul>
+<li>
+<p>Root-level virtualization</p>
+</li>
+<li>
+<p>Control the spacer element tag name</p>
+</li>
+</ul>
+<h3><a href="#mouseeventargs-updates" aria-hidden="true" class="anchor" id="mouseeventargs-updates"></a><code>MouseEventArgs</code> updates</h3>
+<p><code>MovementX</code> and <code>MovementY</code> have been added to <code>MouseEventArgs</code>.</p>
+<p>For more information, see ASP.NET Core Blazor event handling.</p>
+<h3><a href="#new-blazor-loading-page" aria-hidden="true" class="anchor" id="new-blazor-loading-page"></a>New Blazor loading page</h3>
+<p>The Blazor WebAssembly project template has a new loading UI that shows the progress of loading the app.</p>
+<p>For more information, see ASP.NET Core Blazor startup.</p>
+<h3><a href="#improved-diagnostics-for-authentication-in-blazor-webassembly" aria-hidden="true" class="anchor" id="improved-diagnostics-for-authentication-in-blazor-webassembly"></a>Improved diagnostics for authentication in Blazor WebAssembly</h3>
+<p>To help diagnose authentication issues in Blazor WebAssembly apps, detailed logging is available.</p>
+<p>For more information, see ASP.NET Core Blazor logging.</p>
+<h3><a href="#javascript-interop-on-webassembly" aria-hidden="true" class="anchor" id="javascript-interop-on-webassembly"></a>JavaScript interop on WebAssembly</h3>
+<p>JavaScript [JSImport]/[JSExport] interop API is a new low-level mechanism for using .NET in Blazor WebAssembly and JavaScript-based apps. With this new JavaScript interop capability, you can invoke .NET code from JavaScript using the .NET WebAssembly runtime and call into JavaScript functionality from .NET without any dependency on the Blazor UI component model.</p>
+<p>For more information:</p>
+<ul>
+<li>
+<p>JavaScript JSImport/JSExport interop with ASP.NET Core Blazor: Pertains only to Blazor WebAssembly apps.</p>
+</li>
+<li>
+<p>JavaScript <code>[JSImport]</code>/<code>[JSExport]</code> interop in .NET WebAssembly: Pertains only to JavaScript apps that don't depend on the Blazor UI component model.</p>
+</li>
+</ul>
+<h3><a href="#conditional-registration-of-the-authentication-state-provider" aria-hidden="true" class="anchor" id="conditional-registration-of-the-authentication-state-provider"></a>Conditional registration of the authentication state provider</h3>
+<p>Prior to the release of .NET 7, <code>AuthenticationStateProvider</code> was registered in the service container with <code>AddScoped</code>. This made it difficult to debug apps, as it forced a specific order of service registrations when providing a custom implementation. Due to internal framework changes over time, it's no longer necessary to register <code>AuthenticationStateProvider</code> with <code>AddScoped</code>.</p>
+<p>In developer code, make the following change to the authentication state provider service registration:</p>
+<pre><code class="language-diff">- builder.Services.AddScoped&lt;AuthenticationStateProvider, ExternalAuthStateProvider&gt;();
++ builder.Services.TryAddScoped&lt;AuthenticationStateProvider, ExternalAuthStateProvider&gt;();
+</code></pre>
+<p>In the preceding example, <code>ExternalAuthStateProvider</code> is the developer's service implementation.</p>
+<h3><a href="#improvements-to-the-net-webassembly-build-tools" aria-hidden="true" class="anchor" id="improvements-to-the-net-webassembly-build-tools"></a>Improvements to the .NET WebAssembly build tools</h3>
+<p>New features in the <code>wasm-tools</code> workload for .NET 7 that help improve performance and handle exceptions:</p>
+<ul>
+<li>
+<p>WebAssembly Single Instruction, Multiple Data (SIMD) support (only with AOT, not supported by Apple Safari)</p>
+</li>
+<li>
+<p>WebAssembly exception handling support</p>
+</li>
+</ul>
+<p>For more information, see ASP.NET Core Blazor WebAssembly build tools and ahead-of-time (AOT) compilation.</p>
+<h2><a href="#blazor-hybrid" aria-hidden="true" class="anchor" id="blazor-hybrid"></a>Blazor Hybrid</h2>
+<h3><a href="#external-urls" aria-hidden="true" class="anchor" id="external-urls"></a>External URLs</h3>
+<p>An option has been added that permits opening external webpages in the browser.</p>
+<p>For more information, see ASP.NET Core Blazor Hybrid routing and navigation.</p>
+<h3><a href="#security" aria-hidden="true" class="anchor" id="security"></a>Security</h3>
+<p>New guidance is available for Blazor Hybrid security scenarios. For more information, see the following articles:</p>
+<ul>
+<li>
+<p>ASP.NET Core Blazor Hybrid authentication and authorization</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor Hybrid security considerations</p>
+</li>
+</ul>
+<h2><a href="#performance" aria-hidden="true" class="anchor" id="performance"></a>Performance</h2>
+<h3><a href="#output-caching-middleware" aria-hidden="true" class="anchor" id="output-caching-middleware"></a>Output caching middleware</h3>
+<p>Output caching is a new middleware that stores responses from a web app and serves them from a cache rather than computing them every time. Output caching differs from response caching in the following ways:</p>
+<ul>
+<li>
+<p>The caching behavior is configurable on the server.</p>
+</li>
+<li>
+<p>Cache entries can be programmatically invalidated.</p>
+</li>
+<li>
+<p>Resource locking mitigates the risk of cache stampede and thundering herd.</p>
+</li>
+<li>
+<p>Cache revalidation means the server can return a <code>304 Not Modified</code> HTTP status code instead of a cached response body.</p>
+</li>
+<li>
+<p>The cache storage medium is extensible.</p>
+</li>
+</ul>
+<p>For more information, see Overview of caching and Output caching middleware.</p>
+<h3><a href="#http3-improvements" aria-hidden="true" class="anchor" id="http3-improvements"></a>HTTP/3 improvements</h3>
+<p>This release:</p>
+<ul>
+<li>
+<p>Makes HTTP/3 fully supported by ASP.NET Core, it's no longer experimental.</p>
+</li>
+<li>
+<p>Improves Kestrel's support for HTTP/3. The two main areas of improvement are feature parity with HTTP/1.1 and HTTP/2, and performance.</p>
+</li>
+<li>
+<p>Provides full support for UseHttps(ListenOptions, X509Certificate2) with HTTP/3. Kestrel offers advanced options for configuring connection certificates, such as hooking into Server Name Indication (SNI).</p>
+</li>
+<li>
+<p>Adds support for HTTP/3 on HTTP.sys and IIS.</p>
+</li>
+</ul>
+<p>The following example shows how to use an SNI callback to resolve TLS options:</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options =&gt;
+{
+    options.ListenAnyIP(8080, listenOptions =&gt;
+    {
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+        listenOptions.UseHttps(new TlsHandshakeCallbackOptions
+        {
+            OnConnection = context =&gt;
+            {
+                var options = new SslServerAuthenticationOptions
+                {
+                    ServerCertificate = 
+                         MyResolveCertForHost(context.ClientHelloInfo.ServerName)
+                };
+                return new ValueTask&lt;SslServerAuthenticationOptions&gt;(options);
+            },
+        });
+    });
+});
+</code></pre>
+<p>Significant work was done in .NET 7 to reduce HTTP/3 allocations. You can see some of those improvements in the following GitHub PR's:</p>
+<ul>
+<li>
+<p>HTTP/3: Avoid per-request cancellation token allocations</p>
+</li>
+<li>
+<p>HTTP/3: Avoid ConnectionAbortedException allocations</p>
+</li>
+<li>
+<p>HTTP/3: ValueTask pooling</p>
+</li>
+</ul>
+<h3><a href="#http2-performance-improvements" aria-hidden="true" class="anchor" id="http2-performance-improvements"></a>HTTP/2 Performance improvements</h3>
+<p>.NET 7 introduces a significant re-architecture of how Kestrel processes HTTP/2 requests. ASP.NET Core apps with busy HTTP/2 connections will experience reduced CPU usage and higher throughput.</p>
+<p>Apple has released an update to the iOS operating system that makes it easier to multiplex web requests.</p>
+<p>One place where these improvements can be noticed is in gRPC, a popular RPC framework that uses HTTP/2. Kestrel + gRPC benchmarks show a dramatic improvement:</p>
+<p>Changes were made in the HTTP/2 frame writing code that improves performance when there are multiple streams trying to write data on a single HTTP/2 connection. We now dispatch TLS work to the thread pool and more quickly release a write lock that other streams can acquire to write their data. The reduction in wait times can yield significant performance improvements in cases where there is contention for this write lock. A gRPC benchmark with 70 streams on a single connection (with TLS) showed a ~15% improvement in requests per second (RPS) with this change.</p>
+<h3><a href="#http2-websockets-support" aria-hidden="true" class="anchor" id="http2-websockets-support"></a>Http/2 WebSockets support</h3>
+<p>.NET 7 introduces Websockets over HTTP/2 support for Kestrel, the SignalR JavaScript client, and SignalR with Blazor WebAssembly.</p>
+<p>Using WebSockets over HTTP/2 takes advantage of new features such as:</p>
+<ul>
+<li>
+<p>Header compression.</p>
+</li>
+<li>
+<p>Multiplexing, which reduces the time and resources needed when making multiple requests to the server.</p>
+</li>
+</ul>
+<p>These supported features are available in Kestrel on all HTTP/2 enabled platforms. The version negotiation is automatic in browsers and Kestrel, so no new APIs are needed.</p>
+<p>For more information, see Http/2 WebSockets support.</p>
+<h3><a href="#kestrel-performance-improvements-on-high-core-machines" aria-hidden="true" class="anchor" id="kestrel-performance-improvements-on-high-core-machines"></a>Kestrel performance improvements on high core machines</h3>
+<p>Kestrel uses <code>ConcurrentQueue</code><T> for many purposes. One purpose is scheduling I/O operations in Kestrel's default Socket transport. Partitioning the <code>ConcurrentQueue</code> based on the associated socket reduces contention and increases throughput on machines with many CPU cores.</p>
+<p>Profiling on high core machines on .NET 6 showed significant contention in one of Kestrel's other <code>ConcurrentQueue</code> instances, the <code>PinnedMemoryPool</code> that Kestrel uses to cache byte buffers.</p>
+<p>We're seeing significant improvements in performance on ARM64 and AMD virtual machines (VMs) running .NET 7.</p>
+<h3><a href="#serverready-event-to-measure-startup-time" aria-hidden="true" class="anchor" id="serverready-event-to-measure-startup-time"></a><code>ServerReady</code> event to measure startup time</h3>
+<p>Apps using EventSource can measure the startup time to understand and optimize startup performance. The new <code>ServerReady</code> event in Microsoft.AspNetCore.Hosting represents the point where the server is ready to respond to requests.</p>
+<h2><a href="#server" aria-hidden="true" class="anchor" id="server"></a>Server</h2>
+<h3><a href="#new-serverready-event-for-measuring-startup-time" aria-hidden="true" class="anchor" id="new-serverready-event-for-measuring-startup-time"></a>New <code>ServerReady</code> event for measuring startup time</h3>
+<p>The <code>ServerReady</code> event has been added to measure startup time of ASP.NET Core apps.</p>
+<h2><a href="#iis" aria-hidden="true" class="anchor" id="iis"></a>IIS</h2>
+<h3><a href="#shadow-copying-in-iis" aria-hidden="true" class="anchor" id="shadow-copying-in-iis"></a>Shadow copying in IIS</h3>
+<p>Shadow copying app assemblies to the ASP.NET Core Module (ANCM) for IIS can provide a better end user experience than stopping the app by deploying an app offline file.</p>
+<p>For more information, see Shadow copying in IIS.</p>
+<h2><a href="#miscellaneous" aria-hidden="true" class="anchor" id="miscellaneous"></a>Miscellaneous</h2>
+<h3><a href="#kestrel-full-certificate-chain-improvements" aria-hidden="true" class="anchor" id="kestrel-full-certificate-chain-improvements"></a>Kestrel full certificate chain improvements</h3>
+<p>HttpsConnectionAdapterOptions has a new ServerCertificateChain property of type X509Certificate2Collection, which makes it easier to validate certificate chains by allowing a full chain including intermediate certificates to be specified. See dotnet/aspnetcore#21513 for more details.</p>
+<h3><a href="#dotnet-watch" aria-hidden="true" class="anchor" id="dotnet-watch"></a>dotnet watch</h3>
+<h4><a href="#improved-console-output-for-dotnet-watch" aria-hidden="true" class="anchor" id="improved-console-output-for-dotnet-watch"></a>Improved console output for dotnet watch</h4>
+<p>The console output from dotnet watch has been improved to better align with the logging of ASP.NET Core and to stand out with 😮emojis😍.</p>
+<p>Here's an example of what the new output looks like:</p>
+<p>For more information, see this GitHub pull request.</p>
+<h3><a href="#configure-dotnet-watch-to-always-restart-for-rude-edits" aria-hidden="true" class="anchor" id="configure-dotnet-watch-to-always-restart-for-rude-edits"></a>Configure dotnet watch to always restart for rude edits</h3>
+<p>Rude edits are edits that  can't be hot reloaded. To configure dotnet watch to always restart without a prompt for rude edits, set the <code>DOTNET_WATCH_RESTART_ON_RUDE_EDIT</code> environment variable to <code>true</code>.</p>
+<h3><a href="#developer-exception-page-dark-mode" aria-hidden="true" class="anchor" id="developer-exception-page-dark-mode"></a>Developer exception page dark mode</h3>
+<p>Google has added support for dark mode to its Chrome browser.</p>
+<p>In Chrome:</p>
+<h3><a href="#project-template-option-to-use-programmain-method-instead-of-top-level-statements" aria-hidden="true" class="anchor" id="project-template-option-to-use-programmain-method-instead-of-top-level-statements"></a>Project template option to use <code>Program</code>.Main method instead of top-level statements</h3>
+<p>The .NET 7 templates include an option to not use top-level statements and generate a namespace and a <code>Main</code> method declared on a <code>Program</code> class.</p>
+<p>Using the .NET CLI, use the <code>--use-program-main</code> option:</p>
+<pre><code class="language-dotnetcli">dotnet new web --use-program-main
+</code></pre>
+<p>With Visual Studio, select the new Do not use top-level statements checkbox during project creation:</p>
+<h3><a href="#updated-angular-and-react-templates" aria-hidden="true" class="anchor" id="updated-angular-and-react-templates"></a>Updated Angular and React templates</h3>
+<p>The Angular project template has been updated to Angular 14. The React project template has been updated to React 18.2.</p>
+<h3><a href="#manage-json-web-tokens-in-development-with-dotnet-user-jwts" aria-hidden="true" class="anchor" id="manage-json-web-tokens-in-development-with-dotnet-user-jwts"></a>Manage JSON Web Tokens in development with <code>dotnet user-jwts</code></h3>
+<p>The new <code>dotnet user-jwts</code> command line tool can create and manage app specific local JSON Web Tokens (JWTs). For more information, see Manage JSON Web Tokens in development with <code>dotnet user-jwts</code>.</p>
+<h3><a href="#support-for-additional-request-headers-in-w3clogger" aria-hidden="true" class="anchor" id="support-for-additional-request-headers-in-w3clogger"></a>Support for additional request headers in W3CLogger</h3>
+<p>You can now specify additional request headers to log when using the W3C logger by calling AdditionalRequestHeaders() on W3CLoggerOptions:</p>
+<pre><code class="language-csharp">services.AddW3CLogging(logging =&gt;
+{
+    logging.AdditionalRequestHeaders.Add(&quot;x-forwarded-for&quot;);
+    logging.AdditionalRequestHeaders.Add(&quot;x-client-ssl-protocol&quot;);
+});
+</code></pre>
+<p>For more information, see W3CLogger options.</p>
+<h3><a href="#request-decompression" aria-hidden="true" class="anchor" id="request-decompression"></a>Request decompression</h3>
+<p>The new Request decompression middleware:</p>
+<ul>
+<li>
+<p>Enables API endpoints to accept requests with compressed content.</p>
+</li>
+<li>
+<p>Uses the <code>Content-Encoding</code> HTTP header to automatically identify and decompress requests which contain compressed content.</p>
+</li>
+<li>
+<p>Eliminates the need to write code to handle compressed requests.</p>
+</li>
+</ul>
+<p>For more information, see Request decompression middleware.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/release-notes/aspnetcore-7.0?view=aspnetcore-8.0">What's new in ASP.NET Core 7.0</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

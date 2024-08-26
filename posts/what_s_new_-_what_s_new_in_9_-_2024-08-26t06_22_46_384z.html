@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>What's new - What's new in 9 | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article highlights the most significant changes in ASP.NET Core 9.0 with links to relevant documentation.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>What's new - What's new in 9</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article highlights the most significant changes in ASP.NET Core 9.0 with links to relevant documentation.</p>
+<p>This article has been updated for .NET 9 Preview 7.</p>
+<h2><a href="#blazor" aria-hidden="true" class="anchor" id="blazor"></a>Blazor</h2>
+<p>This section describes new features for Blazor.</p>
+<h3><a href="#net-maui-blazor-hybrid-and-web-app-solution-template" aria-hidden="true" class="anchor" id="net-maui-blazor-hybrid-and-web-app-solution-template"></a>.NET MAUI Blazor Hybrid and Web App solution template</h3>
+<p>A new solution template makes it easier to create .NET MAUI native and Blazor web client apps that share the same UI. This template shows how to create client apps that maximize code reuse and target Android, iOS, Mac, Windows, and Web.</p>
+<p>Key features of this template include:</p>
+<ul>
+<li>
+<p>The ability to choose a Blazor interactive render mode for the web app.</p>
+</li>
+<li>
+<p>Automatic creation of the appropriate projects, including a Blazor Web App (global Interactive Auto rendering) and a .NET MAUI Blazor Hybrid app.</p>
+</li>
+<li>
+<p>The created projects use a shared Razor class library (RCL) to maintain the UI's Razor components.</p>
+</li>
+<li>
+<p>Sample code is included that demonstrates how to use dependency injection to provide different interface implementations for the Blazor Hybrid app and the Blazor Web App.</p>
+</li>
+</ul>
+<p>To get started, install the .NET 9 SDK and install the .NET MAUI workload, which contains the template:</p>
+<pre><code class="language-dotnetcli">dotnet workload install maui
+</code></pre>
+<p>Create a solution from the project template in a command shell using the following command:</p>
+<pre><code class="language-dotnetcli">dotnet new maui-blazor-web
+</code></pre>
+<p>The template is also available in Visual Studio.</p>
+<blockquote>
+<p class='note'>Note
+Currently, an exception occurs if Blazor rendering modes are defined at the per-page/component level. For more information, see BlazorWebView needs a way to enable overriding <code>ResolveComponentForRenderMode</code> (dotnet/aspnetcore #51235).</p>
+</blockquote>
+<p>For more information, see Build a .NET MAUI Blazor Hybrid app with a Blazor Web App.</p>
+<h3><a href="#static-asset-delivery-optimization" aria-hidden="true" class="anchor" id="static-asset-delivery-optimization"></a>Static asset delivery optimization</h3>
+<p><code>MapStaticAssets</code> is a new middleware that helps optimize the delivery of static assets in any ASP.NET Core app, including Blazor apps.</p>
+<p>For more information, see either of the following resources:</p>
+<ul>
+<li>
+<p>The Optimizing static web asset delivery section of this article.</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor static files.</p>
+</li>
+</ul>
+<h3><a href="#detect-rendering-location-interactivity,-and-assigned-render-mode-at-runtime" aria-hidden="true" class="anchor" id="detect-rendering-location-interactivity,-and-assigned-render-mode-at-runtime"></a>Detect rendering location, interactivity, and assigned render mode at runtime</h3>
+<p>We've introduced a new API designed to simplify the process of querying component states at runtime. This API provides the following capabilities:</p>
+<ul>
+<li>
+<p>Determine the current execution location of the component: This can be particularly useful for debugging and optimizing component performance.</p>
+</li>
+<li>
+<p>Check if the component is running in an interactive environment: This can be helpful for components that have different behaviors based on the interactivity of their environment.</p>
+</li>
+<li>
+<p>Retrieve the assigned render mode for the component: Understanding the render mode can help in optimizing the rendering process and improving the overall performance of a component.</p>
+</li>
+</ul>
+<p>For more information, see ASP.NET Core Blazor render modes.</p>
+<h3><a href="#improved-server-side-reconnection-experience" aria-hidden="true" class="anchor" id="improved-server-side-reconnection-experience"></a>Improved server-side reconnection experience:</h3>
+<p>The following enhancements have been made to the default server-side reconnection experience:</p>
+<ul>
+<li>
+<p>When the user navigates back to an app with a disconnected circuit, reconnection is attempted immediately rather than waiting for the duration of the next reconnect interval. This improves the user experience when navigating to an app in a browser tab that has gone to sleep.</p>
+</li>
+<li>
+<p>When a reconnection attempt reaches the server but the server has already released the circuit, a page refresh occurs automatically. This prevents the user from having to manually refresh the page if it's likely going to result in a successful reconnection.</p>
+</li>
+<li>
+<p>Reconnect timing uses a computed backoff strategy. By default, the first several reconnection attempts occur in rapid succession without a retry interval before computed delays are introduced between attempts. You can customize the retry interval behavior by specifying a function to compute the retry interval, as the following exponential backoff example demonstrates:</p>
+</li>
+</ul>
+<pre><code class="language-javascript">Blazor.start({
+  circuit: {
+    reconnectionOptions: {
+      retryIntervalMilliseconds: (previousAttempts, maxRetries) =&gt; 
+        previousAttempts &gt;= maxRetries ? null : previousAttempts * 1000
+    },
+  },
+});
+</code></pre>
+<ul>
+<li>The styling of the default reconnect UI has been modernized.</li>
+</ul>
+<p>For more information, see ASP.NET Core Blazor SignalR guidance.</p>
+<h3><a href="#simplified-authentication-state-serialization-for-blazor-web-apps" aria-hidden="true" class="anchor" id="simplified-authentication-state-serialization-for-blazor-web-apps"></a>Simplified authentication state serialization for Blazor Web Apps</h3>
+<p>New APIs make it easier to add authentication to an existing Blazor Web App. When you create a new Blazor Web App with authentication using Individual Accounts and you enable WebAssembly-based interactivity, the project includes a custom <code>AuthenticationStateProvider</code> in both the server and client projects.</p>
+<p>These providers flow the user's authentication state to the browser. Authenticating on the server rather than the client allows the app to access authentication state during prerendering and before the Blazor WebAssembly runtime is initialized.</p>
+<p>The custom <code>AuthenticationStateProvider</code> implementations use the Persistent Component State service (<code>PersistentComponentState</code>) to serialize the authentication state into HTML comments and read it back from WebAssembly to create a new <code>AuthenticationState</code> instance.</p>
+<p>This works well if you've started from the Blazor Web App project template and selected the Individual Accounts option, but it's a lot of code to implement yourself or copy if you're trying to add authentication to an existing project. There are now APIs, which are now part of the Blazor Web App project template, that can be called in the server and client projects to add this functionality:</p>
+<ul>
+<li>
+<p><code>AddAuthenticationStateSerialization</code>: Adds the necessary services to serialize the authentication state on the server.</p>
+</li>
+<li>
+<p><code>AddAuthenticationStateDeserialization</code>: Adds the necessary services to deserialize the authentication state in the browser.</p>
+</li>
+</ul>
+<p>By default, the API only serializes the server-side name and role claims for access in the browser. An option can be passed to <code>AddAuthenticationStateSerialization</code> to include all claims.</p>
+<p>For more information, see the following sections of the ** article:</p>
+<ul>
+<li>
+<p>Blazor Identity UI (Individual Accounts)</p>
+</li>
+<li>
+<p>Manage authentication state in Blazor Web Apps</p>
+</li>
+</ul>
+<h3><a href="#add-static-server-side-rendering-ssr)-pages-to-a-globally-interactive-blazor-web-app" aria-hidden="true" class="anchor" id="add-static-server-side-rendering-ssr)-pages-to-a-globally-interactive-blazor-web-app"></a>Add static server-side rendering (SSR) pages to a globally-interactive Blazor Web App</h3>
+<p>With the release of .NET 9, it's now simpler to add static SSR pages to apps that adopt global interactivity.</p>
+<p>This approach is only useful when the app has specific pages that can't work with interactive Server or WebAssembly rendering. For example, adopt this approach for pages that depend on reading/writing HTTP cookies and can only work in a request/response cycle instead of interactive rendering. For pages that work with interactive rendering, you shouldn't force them to use static SSR rendering, as it's less efficient and less responsive for the end user.</p>
+<p>Mark any Razor component page with the new <code>[ExcludeFromInteractiveRouting]</code> attribute assigned with the <code>@attribute</code> Razor directive:</p>
+<pre><code class="language-razor">@attribute [ExcludeFromInteractiveRouting]
+</code></pre>
+<p>Applying the attribute causes navigation to the page to exit from interactive routing. Inbound navigation is forced to perform a full-page reload instead resolving the page via interactive routing. The full-page reload forces the top-level root component, typically the App component (App.razor), to rerender from the server, allowing the app to switch to a different top-level render mode.</p>
+<p>The <code>HttpContext.AcceptsInteractiveRouting</code> extension method allows the component to detect whether <code>[ExcludeFromInteractiveRouting]</code> is applied to the current page.</p>
+<p>In the App component, use the pattern in the following example:</p>
+<ul>
+<li>
+<p>Pages that aren't annotated with <code>[ExcludeFromInteractiveRouting]</code> default to the <code>InteractiveServer</code> render mode with global interactivity. You can replace <code>InteractiveServer</code> with <code>InteractiveWebAssembly</code> or <code>InteractiveAuto</code> to specify a different default global render mode.</p>
+</li>
+<li>
+<p>Pages annotated with <code>[ExcludeFromInteractiveRouting]</code> adopt static SSR (PageRenderMode is assigned <code>null</code>).</p>
+</li>
+</ul>
+<pre><code class="language-razor">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    ...
+    &lt;HeadOutlet @rendermode=&quot;@PageRenderMode&quot; /&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;Routes @rendermode=&quot;@PageRenderMode&quot; /&gt;
+    ...
+&lt;/body&gt;
+&lt;/html&gt;
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private IComponentRenderMode? PageRenderMode
+        =&gt; HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}
+</code></pre>
+<p>An alternative to using the <code>HttpContext.AcceptsInteractiveRouting</code> extension method is to read endpoint metadata manually using <code>HttpContext.GetEndpoint()?.Metadata</code>.</p>
+<p>This feature is covered by the reference documentation in ASP.NET Core Blazor render modes.</p>
+<h3><a href="#constructor-injection" aria-hidden="true" class="anchor" id="constructor-injection"></a>Constructor injection</h3>
+<p>Razor components support constructor injection.</p>
+<p>In the following example, the partial (code-behind) class injects the <code>NavigationManager</code> service using a primary constructor:</p>
+<pre><code class="language-csharp">public partial class ConstructorInjection(NavigationManager navigation)
+{
+    protected NavigationManager Navigation { get; } = navigation;
+}
+</code></pre>
+<p>For more information, see ASP.NET Core Blazor dependency injection.</p>
+<h3><a href="#websocket-compression-for-interactive-server-components" aria-hidden="true" class="anchor" id="websocket-compression-for-interactive-server-components"></a>Websocket compression for Interactive Server components</h3>
+<p>By default, Interactive Server components enable compression for WebSocket connections and set a <code>frame-ancestors</code> Content Security Policy (CSP) directive set to 'self', which only permits embedding the app in an <code>&lt;iframe&gt;</code> of the origin from which the app is served when compression is enabled or when a configuration for the WebSocket context is provided.</p>
+<p>Compression can be disabled by setting <code>ConfigureWebSocketOptions</code> to <code>null</code>, which reduces the vulnerability of the app to attack but may result in reduced performance:</p>
+<pre><code class="language-csharp">.AddInteractiveServerRenderMode(o =&gt; o.ConfigureWebSocketOptions = null)
+</code></pre>
+<p>Configure a stricter <code>frame-ancestors</code> CSP with a value of 'none' (single quotes <code>required</code>), which allows WebSocket compression but prevents browsers from embedding the app into any <iframe>:</p>
+<pre><code class="language-csharp">.AddInteractiveServerRenderMode(o =&gt; o.ContentSecurityFrameAncestorsPolicy = &quot;'none'&quot;)
+</code></pre>
+<p>For more information, see the following resources:</p>
+<ul>
+<li>
+<p>ASP.NET Core Blazor SignalR guidance</p>
+</li>
+<li>
+<p>Threat mitigation guidance for ASP.NET Core Blazor interactive server-side rendering</p>
+</li>
+</ul>
+<h3><a href="#handle-keyboard-composition-events-in-blazor" aria-hidden="true" class="anchor" id="handle-keyboard-composition-events-in-blazor"></a>Handle keyboard composition events in Blazor</h3>
+<p>The new <code>KeyboardEventArgs.IsComposing</code> property indicates if the keyboard event is part of a composition session. Tracking the composition state of keyboard events is crucial for handling international character input methods.</p>
+<h3><a href="#added-overscancount-parameter-to-quickgrid" aria-hidden="true" class="anchor" id="added-overscancount-parameter-to-quickgrid"></a>Added <code>OverscanCount</code> parameter to <code>QuickGrid</code></h3>
+<p>The <code>QuickGrid</code> component now exposes an <code>OverscanCount</code> property that specifies how many additional rows are rendered before and after the visible region when virtualization is enabled.</p>
+<p>The default <code>OverscanCount</code> is 3. The following example increases the <code>OverscanCount</code> to 4:</p>
+<pre><code class="language-razor">&lt;QuickGrid ItemsProvider=&quot;itemsProvider&quot; Virtualize=&quot;true&quot; OverscanCount=&quot;4&quot;&gt;
+    ...
+&lt;/QuickGrid&gt;
+</code></pre>
+<h2><a href="#signalr" aria-hidden="true" class="anchor" id="signalr"></a>SignalR</h2>
+<p>This section describes new features for SignalR.</p>
+<h3><a href="#polymorphic-type-support-in-signalr-hubs" aria-hidden="true" class="anchor" id="polymorphic-type-support-in-signalr-hubs"></a>Polymorphic type support in SignalR Hubs</h3>
+<p>Hub methods can now accept a base class instead of the derived class to enable polymorphic scenarios. The base type needs to be annotated to allow polymorphism.</p>
+<pre><code class="language-csharp">public class MyHub : Hub
+{
+    public void Method(JsonPerson person)
+    {
+        if (person is JsonPersonExtended)
+        {
+        }
+        else if (person is JsonPersonExtended2)
+        {
+        }
+        else
+        {
+        }
+    }
+}
+
+[JsonPolymorphic]
+[JsonDerivedType(typeof(JsonPersonExtended), nameof(JsonPersonExtended))]
+[JsonDerivedType(typeof(JsonPersonExtended2), nameof(JsonPersonExtended2))]
+private class JsonPerson
+{
+    public string Name { get; set; }
+    public Person Child { get; set; }
+    public Person Parent { get; set; }
+}
+
+private class JsonPersonExtended : JsonPerson
+{
+    public int Age { get; set; }
+}
+
+private class JsonPersonExtended2 : JsonPerson
+{
+    public string Location { get; set; }
+}
+</code></pre>
+<h3><a href="#improved-activities-for-signalr" aria-hidden="true" class="anchor" id="improved-activities-for-signalr"></a>Improved Activities for SignalR</h3>
+<p>SignalR now has an <code>ActivitySource</code> named <code>Microsoft.AspNetCore.SignalR.Server</code> that emits events for hub method calls:</p>
+<ul>
+<li>
+<p>Every method is its own activity, so anything that emits an activity during the hub method call is under the hub method activity.</p>
+</li>
+<li>
+<p>Hub method activities don't have a parent. This means they are not bundled under the long-running SignalR connection.</p>
+</li>
+</ul>
+<p>The following example uses the .NET Aspire dashboard and the OpenTelemetry packages:</p>
+<pre><code class="language-xml">&lt;PackageReference Include=&quot;OpenTelemetry.Exporter.OpenTelemetryProtocol&quot; Version=&quot;1.9.0&quot; /&gt;
+&lt;PackageReference Include=&quot;OpenTelemetry.Extensions.Hosting&quot; Version=&quot;1.9.0&quot; /&gt;
+&lt;PackageReference Include=&quot;OpenTelemetry.Instrumentation.AspNetCore&quot; Version=&quot;1.9.0&quot; /&gt;
+</code></pre>
+<p>Add the following startup code to the <code>Program.cs</code> file:</p>
+<pre><code class="language-csharp">// Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable depending on where your OTEL endpoint is
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddSignalR();
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =&gt;
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            // We want to view all traces in development
+            tracing.SetSampler(new AlwaysOnSampler());
+        }
+
+        tracing.AddAspNetCoreInstrumentation();
+        tracing.AddSource(&quot;Microsoft.AspNetCore.SignalR.Server&quot;);
+    });
+
+builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =&gt; tracing.AddOtlpExporter());
+</code></pre>
+<p>The following is example output from the Aspire Dashboard:</p>
+<h3><a href="#signalr-supports-trimming-and-native-aot" aria-hidden="true" class="anchor" id="signalr-supports-trimming-and-native-aot"></a>SignalR supports trimming and native AOT</h3>
+<p>Continuing the native AOT journey started in .NET 8, we have enabled trimming and native ahead-of-time (AOT) compilation support for both SignalR client and server scenarios. You can now take advantage of the performance benefits of using native AOT in applications that use SignalR for real-time web communications.</p>
+<h4><a href="#getting-started" aria-hidden="true" class="anchor" id="getting-started"></a>Getting started</h4>
+<p>Install the latest .NET 9 SDK.</p>
+<p>Create a solution from the <code>webapiaot</code> template in a command shell using the following command:</p>
+<pre><code class="language-dotnetcli">dotnet new webapiaot -o SignalRChatAOTExample
+</code></pre>
+<p>Replace the contents of the <code>Program.cs</code> file with the following SignalR code:</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.SignalR;
+using System.Text.Json.Serialization;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+
+builder.Services.AddSignalR();
+builder.Services.Configure&lt;JsonHubProtocolOptions&gt;(o =&gt;
+{
+    o.PayloadSerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
+});
+
+var app = builder.Build();
+
+app.MapHub&lt;ChatHub&gt;(&quot;/chatHub&quot;);
+app.MapGet(&quot;/&quot;, () =&gt; Results.Content(&quot;&quot;&quot;
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;SignalR Chat&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;input id=&quot;userInput&quot; placeholder=&quot;Enter your name&quot; /&gt;
+    &lt;input id=&quot;messageInput&quot; placeholder=&quot;Type a message&quot; /&gt;
+    &lt;button onclick=&quot;sendMessage()&quot;&gt;Send&lt;/button&gt;
+    &lt;ul id=&quot;messages&quot;&gt;&lt;/ul&gt;
+
+    &lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script&gt;
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(&quot;/chatHub&quot;)
+            .build();
+
+        connection.on(&quot;ReceiveMessage&quot;, (user, message) =&gt; {
+            const li = document.createElement(&quot;li&quot;);
+            li.textContent = `${user}: ${message}`;
+            document.getElementById(&quot;messages&quot;).appendChild(li);
+        });
+
+        async function sendMessage() {
+            const user = document.getElementById(&quot;userInput&quot;).value;
+            const message = document.getElementById(&quot;messageInput&quot;).value;
+            await connection.invoke(&quot;SendMessage&quot;, user, message);
+        }
+
+        connection.start().catch(err =&gt; console.error(err));
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+&quot;&quot;&quot;, &quot;text/html&quot;));
+
+app.Run();
+
+[JsonSerializable(typeof(string))]
+internal partial class AppJsonSerializerContext : JsonSerializerContext { }
+
+public class ChatHub : Hub
+{
+    public async Task SendMessage(string user, string message)
+    {
+        await Clients.All.SendAsync(&quot;ReceiveMessage&quot;, user, message);
+    }
+}
+</code></pre>
+<p>The preceding example produces a native Windows executable of 10 MB and a Linux executable of 10.9 MB.</p>
+<h4><a href="#limitations" aria-hidden="true" class="anchor" id="limitations"></a>Limitations</h4>
+<ul>
+<li>
+<p>Only the JSON protocol is currently supported:</p>
+<ul>
+<li>
+<p>As shown in the preceding code, apps that use JSON serialization and Native AOT must use the <code>System.Text.Json</code> Source Generator.</p>
+</li>
+<li>
+<p>This follows the same approach as minimal APIs.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>On the SignalR server, Hub method parameters of type <code>IAsyncEnumerable&lt;T&gt;</code> and <code>ChannelReader&lt;T&gt;</code> where <code>T</code> is a ValueType (i.e. <code>struct</code>) aren't supported. Using these types results in a runtime exception at startup in development and in the published app. For more information, see SignalR: Using <code>IAsyncEnumerable&lt;T&gt;</code> and <code>ChannelReader&lt;T&gt;</code> with ValueTypes in native AOT (dotnet/aspnetcore #56179).</p>
+</li>
+<li>
+<p>Strongly typed hubs aren't supported with Native AOT (PublishAot). Using strongly typed hubs with Native AOT will result in warnings during build and publish, and a runtime exception. Using strongly typed hubs with trimming (PublishedTrimmed) is supported.</p>
+</li>
+<li>
+<p>Only <code>Task</code>, <code>Task&lt;T&gt;</code>, <code>ValueTask</code>, or <code>ValueTask&lt;T&gt;</code> are supported for async return types.</p>
+</li>
+</ul>
+<h2><a href="#minimal-apis" aria-hidden="true" class="anchor" id="minimal-apis"></a>Minimal APIs</h2>
+<p>This section describes new features for minimal APIs.</p>
+<h3><a href="#added-internalservererror-and-internalservererrortvalue>-to-typedresults" aria-hidden="true" class="anchor" id="added-internalservererror-and-internalservererrortvalue>-to-typedresults"></a>Added <code>InternalServerError</code> and <code>InternalServerError&lt;TValue&gt;</code> to <code>TypedResults</code></h3>
+<p>The <code>TypedResults</code> class is a helpful vehicle for returning strongly-typed HTTP status code-based responses from a minimal API.  <code>TypedResults</code> now includes factory methods and types for returning &quot;500 Internal Server Error&quot; responses from endpoints. Here's an example that returns a 500 response:</p>
+<pre><code class="language-csharp">var app = WebApplication.Create();
+
+app.MapGet(&quot;/&quot;, () =&gt; TypedResults.InternalServerError(&quot;Something went wrong!&quot;));
+
+app.Run();
+</code></pre>
+<h3><a href="#call-producesproblem-and-producesvalidationproblem-on-route-groups" aria-hidden="true" class="anchor" id="call-producesproblem-and-producesvalidationproblem-on-route-groups"></a>Call <code>ProducesProblem</code> and <code>ProducesValidationProblem</code> on route groups</h3>
+<p>The <code>ProducesProblem</code> and <code>ProducesValidationProblem</code> extension methods have been updated to support their use on route groups. These methods indicate that all endpoints in a route group can return <code>ProblemDetails</code> or <code>ValidationProblemDetails</code> responses for the purposes of OpenAPI metadata.</p>
+<pre><code class="language-csharp">var app = WebApplication.Create();
+
+var todos = app.MapGroup(&quot;/todos&quot;)
+    .ProducesProblem();
+
+todos.MapGet(&quot;/&quot;, () =&gt; new Todo(1, &quot;Create sample app&quot;, false));
+todos.MapPost(&quot;/&quot;, (Todo todo) =&gt; Results.Ok(todo));
+
+app.Run();
+
+record Todo(int Id, string Title, boolean IsCompleted);
+</code></pre>
+<h2><a href="#openapi" aria-hidden="true" class="anchor" id="openapi"></a>OpenAPI</h2>
+<p>This section describes new features for OpenAPI</p>
+<h3><a href="#built-in-support-for-openapi-document-generation" aria-hidden="true" class="anchor" id="built-in-support-for-openapi-document-generation"></a>Built-in support for OpenAPI document generation</h3>
+<p>The OpenAPI specification is a standard for describing HTTP APIs. The standard allows developers to define the shape of APIs that can be plugged into client generators, server generators, testing tools, documentation, and more. In .NET 9 Preview, ASP.NET Core provides built-in support for generating OpenAPI documents representing controller-based or minimal APIs via the <code>Microsoft.AspNetCore.OpenApi</code> package.</p>
+<p>The following highlighted code calls:</p>
+<ul>
+<li>
+<p><code>AddOpenApi</code> to register the <code>required</code> dependencies into the app's DI container.</p>
+</li>
+<li>
+<p><code>MapOpenApi</code> to register the <code>required</code> OpenAPI endpoints in the app's routes.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+
+app.MapOpenApi();
+
+app.MapGet(&quot;/hello/{name}&quot;, (string name) =&gt; $&quot;Hello {name}&quot;!);
+
+app.Run();
+</code></pre>
+<p>Install the <code>Microsoft.AspNetCore.OpenApi</code> package in the project using the following command:</p>
+<pre><code class="language-dotnetcli">dotnet add package Microsoft.AspNetCore.OpenApi --prerelease
+</code></pre>
+<p>Run the app and navigate to <code>openapi/v1.json</code> to view the generated OpenAPI document:</p>
+<p>OpenAPI documents can also be generated at build-time by adding the <code>Microsoft.Extensions.ApiDescription.Server</code> package:</p>
+<pre><code class="language-dotnetcli">dotnet add package Microsoft.Extensions.ApiDescription.Server --prerelease
+</code></pre>
+<p>In the app's project file, add the following:</p>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;OpenApiDocumentsDirectory&gt;$(MSBuildProjectDirectory)&lt;/OpenApiDocumentsDirectory&gt;
+  &lt;OpenApiGenerateDocuments&gt;true&lt;/OpenApiGenerateDocuments&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<p>Run <code>dotnet build</code> and inspect the generated JSON file in the project directory.</p>
+<p>ASP.NET Core's built-in OpenAPI document generation provides support for various customizations and options. It provides document and operation transformers and has the ability to manage multiple OpenAPI documents for the same application.</p>
+<p>To learn more about ASP.NET Core's new OpenAPI document capabilities, see the new <code>Microsoft.AspNetCore.OpenApi</code> docs.</p>
+<h3><a href="#intellisense-completion-enhancements-for-openapi-package" aria-hidden="true" class="anchor" id="intellisense-completion-enhancements-for-openapi-package"></a>Intellisense completion enhancements for OpenAPI package</h3>
+<p>ASP.NET Core's OpenAPI support is now more accessible and user-friendly. The OpenAPI APIs are shipped as an independent package, separate from the shared framework. Until now, this meant that developers didn't have the convenience of code-completion features like Intellisense for OpenAPI APIs.</p>
+<p>Recognizing this gap, we have introduced a new completion provider and code fixer. These tools are designed to facilitate the discovery and use of OpenAPI APIs, making it easier for developers to integrate OpenAPI into their projects. The completion provider offers real-time code suggestions, while the code fixer assists in correcting common mistakes and improving API usage. This enhancement is part of our ongoing commitment to improve the developer experience and streamline API-related workflows.</p>
+<p>When a user types a statement where an OpenAPI-related API is available, the completion provider displays a recommendation for the API. For example, in the following screenshots, completions for <code>AddOpenApi</code> and <code>MapOpenApi</code> are provided when a user is entering an invocation statement on a supported type, such as IEndpointConventionBuilder:</p>
+<p>When the completion is accepted and the <code>Microsoft.AspNetCore.OpenApi</code> package is not installed, a codefixer provides a shortcut for automatically installing the dependency in the project.</p>
+<h3><a href="#support-for-required]-and-[defaultvalue]-attributes-on-parameters-and-properties" aria-hidden="true" class="anchor" id="support-for-required]-and-[defaultvalue]-attributes-on-parameters-and-properties"></a>Support for <code>[Required]</code> and <code>[DefaultValue]</code> attributes on parameters and properties</h3>
+<p>When <code>[Required]</code> and <code>[DefaultValue]</code> attributes are applied on parameters or properties within complex types, the OpenAPI implementation maps these to the <code>required</code> and default properties in the OpenAPI document associated with the parameter or type schema.</p>
+<p>For example, the following API produces the accompanying schema for the <code>Todo</code> type.</p>
+<pre><code class="language-csharp">using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
+var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.MapPost(&quot;/todos&quot;, (Todo todo) =&gt; { });
+
+app.Run();
+
+class Todo
+{
+	public int Id { get; init; }
+	public required string Title { get; init; }
+	[DefaultValue(&quot;A new todo&quot;)]
+	public required string Description { get; init; }
+	[Required]
+	public DateTime CreatedOn { get; init; }
+}
+</code></pre>
+<pre><code class="language-json">{
+	&quot;required&quot;: [
+	  &quot;title&quot;,
+	  &quot;description&quot;,
+	  &quot;createdOn&quot;
+	],
+	&quot;type&quot;: &quot;object&quot;,
+	&quot;properties&quot;: {
+	  &quot;id&quot;: {
+	    &quot;type&quot;: &quot;integer&quot;,
+	    &quot;format&quot;: &quot;int32&quot;
+	  },
+	  &quot;title&quot;: {
+	    &quot;type&quot;: &quot;string&quot;
+	  },
+	  &quot;description&quot;: {
+	    &quot;type&quot;: &quot;string&quot;,
+	    &quot;default&quot;: &quot;A new todo&quot;
+	  },
+	  &quot;createdOn&quot;: {
+	    &quot;type&quot;: &quot;string&quot;,
+	    &quot;format&quot;: &quot;date-time&quot;
+	  }
+	}
+}
+</code></pre>
+<h3><a href="#support-for-schema-transformers-on-openapi-documents" aria-hidden="true" class="anchor" id="support-for-schema-transformers-on-openapi-documents"></a>Support for schema transformers on OpenAPI documents</h3>
+<p>Built-in OpenAPI support now ships with support for schema transformers that can be used to modify schemas generated by <code>System.Text.Json</code> and the OpenAPI implementation. Like document and operation transformers, schema transformers can be registered on the <code>OpenApiOptions</code> object. For example, the following code sample demonstrates using a schema transformer to add an example to a type's schema.</p>
+<pre><code class="language-csharp">using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.OpenApi.Any;
+
+var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddOpenApi(options =&gt;
+{
+    options.UseSchemaTransformer((schema, context, cancellationToken) =&gt;
+    {
+        if (context.Type == typeof(Todo))
+        {
+            schema.Example = new OpenApiObject
+            {
+                [&quot;id&quot;] = new OpenApiInteger(1),
+                [&quot;title&quot;] = new OpenApiString(&quot;A short title&quot;),
+                [&quot;description&quot;] = new OpenApiString(&quot;A long description&quot;),
+                [&quot;createdOn&quot;] = new OpenApiDateTime(DateTime.Now)
+            };
+        }
+        return Task.CompletedTask;
+    });
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.MapPost(&quot;/todos&quot;, (Todo todo) =&gt; { });
+
+app.Run();
+
+class Todo
+{
+	public int Id { get; init; }
+	public required string Title { get; init; }
+	[DefaultValue(&quot;A new todo&quot;)]
+	public required string Description { get; init; }
+	[Required]
+	public DateTime CreatedOn { get; init; }
+}
+</code></pre>
+<h3><a href="#improvements-to-transformer-registration-apis-in-microsoftaspnetcore.openapi" aria-hidden="true" class="anchor" id="improvements-to-transformer-registration-apis-in-microsoftaspnetcore.openapi"></a>Improvements to transformer registration APIs in <code>Microsoft.AspNetCore.OpenApi</code></h3>
+<p>OpenAPI transformers support modifying the OpenAPI document, operations within the document, or schemas associated with types in the API. The APIs for registering transformers on an OpenAPI document provide a variety of options for registering transformers.</p>
+<p>Previously, the following APIs were available for registering transformers:</p>
+<pre><code class="language-csharp">OpenApiOptions UseTransformer(Func&lt;OpenApiDocument, OpenApiDocumentTransformerContext, CancellationToken, Task&gt; transformer)
+OpenApiOptions UseTransformer(IOpenApiDocumentTransformer transformer)
+OpenApiOptions UseTransformer&lt;IOpenApiDocumentTransformer&gt;()
+OpenApiOptions UseSchemaTransformer(Func&lt;OpenApiSchema, OpenApiSchemaTransformerContext, CancellationToken, Task&gt;)
+OpenApiOptions UseOperationTransformer(Func&lt;OpenApiOperation, OpenApiOperationTransformerContext, CancellationToken, Task&gt;)
+</code></pre>
+<p>The new API set is as follows:</p>
+<pre><code class="language-csharp">OpenApiOptions AddDocumentTransformer(Func&lt;OpenApiDocument, OpenApiDocumentTransformerContext, CancellationToken, Task&gt; transformer)
+OpenApiOptions AddDocumentTransformer(IOpenApiDocumentTransformer transformer)
+OpenApiOptions AddDocumentTransformer&lt;IOpenApiDocumentTransformer&gt;()
+
+OpenApiOptions AddSchemaTransformer(Func&lt;OpenApiSchema, OpenApiSchemaTransformerContext, CancellationToken, Task&gt; transformer)
+OpenApiOptions AddSchemaTransformer(IOpenApiSchemaTransformer transformer)
+OpenApiOptions AddSchemaTransformer&lt;IOpenApiSchemaTransformer&gt;()
+
+OpenApiOptions AddOperationTransformer(Func&lt;OpenApiOperation, OpenApiOperationTransformerContext, CancellationToken, Task&gt; transformer)
+OpenApiOptions AddOperationTransformer(IOpenApiOperationTransformer transformer)
+OpenApiOptions AddOperationTransformer&lt;IOpenApiOperationTransformer&gt;()
+</code></pre>
+<h3><a href="#microsoftaspnetcore.openapi-supports-trimming-and-native-aot" aria-hidden="true" class="anchor" id="microsoftaspnetcore.openapi-supports-trimming-and-native-aot"></a><code>Microsoft.AspNetCore.OpenApi</code> supports trimming and Native AOT</h3>
+<p>The new built-in OpenAPI support in ASP.NET Core now also supports trimming and Native AOT.</p>
+<h3><a href="#get-started" aria-hidden="true" class="anchor" id="get-started"></a>Get started</h3>
+<p>Create a new ASP.NET Core Web API (native AOT) project.</p>
+<pre><code class="language-console">dotnet new webapiaot
+</code></pre>
+<p>Add the Microsoft.AspNetCore.OpenAPI package.</p>
+<pre><code class="language-console">dotnet add package Microsoft.AspNetCore.OpenApi --prerelease
+</code></pre>
+<p>For this preview, you also need to add the latest Microsoft.OpenAPI package to avoid trimming warnings.</p>
+<pre><code class="language-console">dotnet add package Microsoft.OpenApi
+</code></pre>
+<p>Update <code>Program.cs</code> to enable generating OpenAPI documents.</p>
+<pre><code class="language-diff">+ builder.Services.AddOpenApi();
+
+var app = builder.Build();
+
++ app.MapOpenApi();
+</code></pre>
+<p>Publish the app.</p>
+<pre><code class="language-console">dotnet publish
+</code></pre>
+<p>The app publishes using Native AOT without warnings.</p>
+<h3><a href="#support-calling-producesproblem-and-producesvalidationproblem-on-route-groups" aria-hidden="true" class="anchor" id="support-calling-producesproblem-and-producesvalidationproblem-on-route-groups"></a>Support calling <code>ProducesProblem</code> and <code>ProducesValidationProblem</code> on route groups</h3>
+<p>The <code>ProducesProblem</code> and <code>ProducesValidationProblem</code> extension methods have been updated for route groups. These methods can be used to indicate that all endpoints in a route group can return <code>ProblemDetails</code> or <code>ValidationProblemDetails</code> responses for the purposes of OpenAPI metadata.</p>
+<pre><code class="language-csharp">var app = WebApplication.Create();
+
+var todos = app.MapGroup(&quot;/todos&quot;)
+    .ProducesProblem(StatusCodes.Status500InternalServerError);
+
+todos.MapGet(&quot;/&quot;, () =&gt; new Todo(1, &quot;Create sample app&quot;, false));
+todos.MapPost(&quot;/&quot;, (Todo todo) =&gt; Results.Ok(todo));
+
+app.Run();
+
+record Todo(int Id, string Title, bool IsCompleted);
+</code></pre>
+<h3><a href="#problem-and-validationproblem-result-types-support-construction-with-ienumerablekeyvaluepair<string,-object?>>-values" aria-hidden="true" class="anchor" id="problem-and-validationproblem-result-types-support-construction-with-ienumerablekeyvaluepair<string,-object?>>-values"></a><code>Problem</code> and <code>ValidationProblem</code> result types support construction with <code>IEnumerable&lt;KeyValuePair&lt;string, object?&gt;&gt;</code> values</h3>
+<p>Prior to .NET 9, constructing <code>Problem</code> and <code>ValidationProblem</code> result types in minimal APIs <code>required</code> that the <code>errors</code> and <code>extensions</code> properties be initialized with an implementation of <code>IDictionary&lt;string, object?&gt;</code>. In this release, these construction APIs support overloads that consume <code>IEnumerable&lt;KeyValuePair&lt;string, object?&gt;&gt;</code>.</p>
+<pre><code class="language-csharp">var app = WebApplication.Create();
+
+app.MapGet(&quot;/&quot;, () =&gt;
+{
+    var extensions = new List&lt;KeyValuePair&lt;string, object?&gt;&gt; { new(&quot;test&quot;, &quot;value&quot;) };
+    return TypedResults.Problem(&quot;This is an error with extensions&quot;,
+                                                       extensions: extensions);
+});
+</code></pre>
+<p>Thanks to GitHub user joegoldman2 for this contribution!</p>
+<h2><a href="#authentication-and-authorization" aria-hidden="true" class="anchor" id="authentication-and-authorization"></a>Authentication and authorization</h2>
+<p>This section describes new features for authentication and authorization.</p>
+<h3><a href="#openidconnecthandler-adds-support-for-pushed-authorization-requests-par)" aria-hidden="true" class="anchor" id="openidconnecthandler-adds-support-for-pushed-authorization-requests-par)"></a>OpenIdConnectHandler adds support for Pushed Authorization Requests (PAR)</h3>
+<p>We'd like to thank Joe DeCock from Duende Software for adding Pushed Authorization Requests (PAR) to ASP.NET Core's OpenIdConnectHandler. Joe described the background and motivation for enabling PAR in his API proposal as follows:</p>
+<ul>
+<li>
+<p>Seeing authorization parameters, which could leak PII.</p>
+</li>
+<li>
+<p>Tampering with those parameters, e.g., the attacker could change the scope of access being requested.</p>
+</li>
+<li>
+<p>Duende IdentityServer</p>
+</li>
+<li>
+<p>Curity</p>
+</li>
+<li>
+<p>Keycloak</p>
+</li>
+<li>
+<p>Authlete</p>
+</li>
+</ul>
+<p>For .NET 9, we have decided to enable PAR by default if the identity provider's discovery document advertises support for PAR, since it should provide enhanced security for providers that support it. The identity provider's discovery document is usually found at <code>.well-known/openid-configuration</code>. If this causes problems, you can disable PAR via OpenIdConnectOptions.PushedAuthorizationBehavior as follows:</p>
+<pre><code class="language-csharp">builder.Services
+    .AddAuthentication(options =&gt;
+    {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+    })
+    .AddCookie()
+    .AddOpenIdConnect(&quot;oidc&quot;, oidcOptions =&gt;
+    {
+        // Other provider-specific configuration goes here.
+
+        // The default value is PushedAuthorizationBehavior.UseIfAvailable.
+
+        // 'OpenIdConnectOptions' does not contain a definition for 'PushedAuthorizationBehavior'
+        // and no accessible extension method 'PushedAuthorizationBehavior' accepting a first argument
+        // of type 'OpenIdConnectOptions' could be found
+        oidcOptions.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
+    });
+</code></pre>
+<p>To ensure that authentication only succeeds if PAR is used, use PushedAuthorizationBehavior.Require instead. This change also introduces a new OnPushAuthorization event to OpenIdConnectEvents which can be used customize the pushed authorization request or handle it manually. See the API proposal for more details.</p>
+<h3><a href="#oidc-and-oauth-parameter-customization" aria-hidden="true" class="anchor" id="oidc-and-oauth-parameter-customization"></a>OIDC and OAuth Parameter Customization</h3>
+<p>The OAuth and OIDC authentication handlers now have an <code>AdditionalAuthorizationParameters</code> option to make it easier to customize authorization message parameters that are usually included as part of the redirect query <code>string</code>. In .NET 8 and earlier, this requires a custom <code>OnRedirectToIdentityProvider</code> callback or overridden <code>BuildChallengeUrl</code> method in a custom handler. Here's an example of .NET 8 code:</p>
+<pre><code class="language-csharp">builder.Services.AddAuthentication().AddOpenIdConnect(options =&gt;
+{
+    options.Events.OnRedirectToIdentityProvider = context =&gt;
+    {
+        context.ProtocolMessage.SetParameter(&quot;prompt&quot;, &quot;login&quot;);
+        context.ProtocolMessage.SetParameter(&quot;audience&quot;, &quot;https://api.example.com&quot;);
+        return Task.CompletedTask;
+    };
+});
+</code></pre>
+<p>The preceding example can now be simplified to the following code:</p>
+<pre><code class="language-csharp">builder.Services.AddAuthentication().AddOpenIdConnect(options =&gt;
+{
+    options.AdditionalAuthorizationParameters.Add(&quot;prompt&quot;, &quot;login&quot;);
+    options.AdditionalAuthorizationParameters.Add(&quot;audience&quot;, &quot;https://api.example.com&quot;);
+});
+</code></pre>
+<h3><a href="#configure-httpsys-extended-authentication-flags" aria-hidden="true" class="anchor" id="configure-httpsys-extended-authentication-flags"></a>Configure HTTP.sys extended authentication flags</h3>
+<p>You can now configure the <code>HTTP_AUTH_EX_FLAG_ENABLE_KERBEROS_CREDENTIAL_CACHING</code> and <code>HTTP_AUTH_EX_FLAG_CAPTURE_CREDENTIAL</code> HTTP.sys flags by using the new <code>EnableKerberosCredentialCaching</code> and <code>CaptureCredentials</code> properties on the HTTP.sys <code>AuthenticationManager</code> to optimize how Windows authentication is handled. For example:</p>
+<pre><code class="language-csharp">webBuilder.UseHttpSys(options =&gt;
+{
+    options.Authentication.Schemes = AuthenticationSchemes.Negotiate;
+    options.Authentication.EnableKerberosCredentialCaching = true;
+    options.Authentication.CaptureCredentials = true;
+});
+</code></pre>
+<h2><a href="#miscellaneous" aria-hidden="true" class="anchor" id="miscellaneous"></a>Miscellaneous</h2>
+<p>The following sections describe miscellaneous new features.</p>
+<h3><a href="#new-hybridcache-library" aria-hidden="true" class="anchor" id="new-hybridcache-library"></a>New <code>HybridCache</code> library</h3>
+<p>The <code>HybridCache</code> API bridges some gaps in the existing <code>IDistributedCache</code> and <code>IMemoryCache</code> APIs. It also adds new capabilities, such as:</p>
+<ul>
+<li>
+<p>&quot;Stampede&quot; protection to prevent parallel fetches of the same work.</p>
+</li>
+<li>
+<p>Configurable serialization.</p>
+</li>
+</ul>
+<p><code>HybridCache</code> is designed to be a drop-in replacement for existing <code>IDistributedCache</code> and <code>IMemoryCache</code> usage, and it provides a simple API for adding new caching code. It provides a unified API for both in-process and out-of-process caching.</p>
+<p>To see how the <code>HybridCache</code> API is simplified, compare it to code that uses <code>IDistributedCache</code>. Here's an example of what using <code>IDistributedCache</code> looks like:</p>
+<pre><code class="language-csharp">public class SomeService(IDistributedCache cache)
+{
+    public async Task&lt;SomeInformation&gt; GetSomeInformationAsync
+        (string name, int id, CancellationToken token = default)
+    {
+        var key = $&quot;someinfo:{name}:{id}&quot;; // Unique key for this combination.
+        var bytes = await cache.GetAsync(key, token); // Try to get from cache.
+        SomeInformation info;
+        if (bytes is null)
+        {
+            // Cache miss; get the data from the real source.
+            info = await SomeExpensiveOperationAsync(name, id, token);
+
+            // Serialize and cache it.
+            bytes = SomeSerializer.Serialize(info);
+            await cache.SetAsync(key, bytes, token);
+        }
+        else
+        {
+            // Cache hit; deserialize it.
+            info = SomeSerializer.Deserialize&lt;SomeInformation&gt;(bytes);
+        }
+        return info;
+    }
+
+    // This is the work we're trying to cache.
+    private async Task&lt;SomeInformation&gt; SomeExpensiveOperationAsync(string name, int id,
+        CancellationToken token = default)
+    { /* ... */ }
+}
+</code></pre>
+<p>That's a lot of work to get right each time, including things like serialization. And in the cache miss scenario, you could end up with multiple concurrent threads, all getting a cache miss, all fetching the underlying data, all serializing it, and all sending that data to the cache.</p>
+<p>To simplify and improve this code with <code>HybridCache</code>, we first need to add the new library <code>Microsoft.Extensions.Caching.Hybrid</code>:</p>
+<pre><code class="language-xml">&lt;PackageReference Include=&quot;Microsoft.Extensions.Caching.Hybrid&quot; Version=&quot;9.0.0&quot; /&gt;
+</code></pre>
+<p>Register the <code>HybridCache</code> service, like you would register an <code>IDistributedCache</code> implementation:</p>
+<pre><code class="language-csharp">services.AddHybridCache(); // Not shown: optional configuration API.
+</code></pre>
+<p>Now most caching concerns can be offloaded to <code>HybridCache</code>:</p>
+<pre><code class="language-csharp">public class SomeService(HybridCache cache)
+{
+    public async Task&lt;SomeInformation&gt; GetSomeInformationAsync
+        (string name, int id, CancellationToken token = default)
+    {
+        return await cache.GetOrCreateAsync(
+            $&quot;someinfo:{name}:{id}&quot;, // Unique key for this combination.
+            async cancel =&gt; await SomeExpensiveOperationAsync(name, id, cancel),
+            token: token
+        );
+    }
+}
+</code></pre>
+<p>We provide a concrete implementation of the <code>HybridCache</code> abstract class via dependency injection, but it's intended that developers can provide custom implementations of the API. The <code>HybridCache</code> implementation deals with everything related to caching, including concurrent operation handling. The cancel token here represents the combined cancellation of all concurrent callers—not just the cancellation of the caller we can see (that is, <code>token</code>).</p>
+<p>High throughput scenarios can be further optimized by using the <code>TState</code> pattern, to avoid some overhead from captured variables and per-instance callbacks:</p>
+<pre><code class="language-csharp">public class SomeService(HybridCache cache)
+{
+    public async Task&lt;SomeInformation&gt; GetSomeInformationAsync(string name, int id, CancellationToken token = default)
+    {
+        return await cache.GetOrCreateAsync(
+            $&quot;someinfo:{name}:{id}&quot;, // unique key for this combination
+            (name, id), // all of the state we need for the final call, if needed
+            static async (state, token) =&gt;
+                await SomeExpensiveOperationAsync(state.name, state.id, token),
+            token: token
+        );
+    }
+}
+</code></pre>
+<p><code>HybridCache</code> uses the configured <code>IDistributedCache</code> implementation, if any, for secondary out-of-process caching, for example, using
+Redis. But even without an <code>IDistributedCache</code>, the <code>HybridCache</code> service will still provide in-process caching and &quot;stampede&quot; protection.</p>
+<h4><a href="#a-note-on-object-reuse" aria-hidden="true" class="anchor" id="a-note-on-object-reuse"></a>A note on object reuse</h4>
+<p>In typical existing code that uses <code>IDistributedCache</code>, every retrieval of an object from the cache results in deserialization. This behavior means that each concurrent caller gets a separate instance of the object, which cannot interact with other instances. The result is thread safety, as there's no risk of concurrent modifications to the same object instance.</p>
+<p>Because a lot of <code>HybridCache</code> usage will be adapted from existing <code>IDistributedCache</code> code, <code>HybridCache</code> preserves this behavior by default to avoid introducing concurrency bugs. However, a given use case is inherently thread-safe:</p>
+<ul>
+<li>
+<p>If the types being cached are immutable.</p>
+</li>
+<li>
+<p>If the code doesn't modify them.</p>
+</li>
+</ul>
+<p>In such cases, inform <code>HybridCache</code> that it's safe to reuse instances by:</p>
+<ul>
+<li>
+<p>Marking the type as <code>sealed</code>. The <code>sealed</code> keyword in C# means that the class can't be inherited.</p>
+</li>
+<li>
+<p>Applying the <code>[ImmutableObject(true)]</code> attribute to it. The <code>[ImmutableObject(true)]</code> attribute indicates that the object's state can't be changed after it's created.</p>
+</li>
+</ul>
+<p>By reusing instances, <code>HybridCache</code> can reduce the overhead of CPU and object allocations associated with per-call deserialization. This can lead to performance improvements in scenarios where the cached objects are large or accessed frequently.</p>
+<h4><a href="#other-hybridcache-features" aria-hidden="true" class="anchor" id="other-hybridcache-features"></a>Other <code>HybridCache</code> features</h4>
+<p>Like <code>IDistributedCache</code>, <code>HybridCache</code> supports removal by key with a <code>RemoveKeyAsync</code> method.</p>
+<p><code>HybridCache</code> also provides optional APIs for <code>IDistributedCache</code> implementations, to avoid <code>byte[]</code> allocations. This feature is implemented
+by the preview versions of the <code>Microsoft.Extensions.Caching.StackExchangeRedis</code> and <code>Microsoft.Extensions.Caching.SqlServer</code> packages.</p>
+<p>Serialization is configured as part of registering the service, with support for type-specific and generalized serializers via the
+WithSerializer and <code>.WithSerializerFactory</code> methods, chained from the <code>AddHybridCache</code> call. By default, the library
+handles <code>string</code> and <code>byte[]</code> internally, and uses <code>System.Text.Json</code> for everything else, but you can use protobuf, xml, or anything
+else.</p>
+<p><code>HybridCache</code> supports older .NET runtimes, down to .NET Framework 4.7.2 and .NET Standard 2.0.</p>
+<p>For more information about <code>HybridCache</code>, see <code>HybridCache</code> library in ASP.NET Core</p>
+<h3><a href="#developer-exception-page-improvements" aria-hidden="true" class="anchor" id="developer-exception-page-improvements"></a>Developer exception page improvements</h3>
+<p>The ASP.NET Core developer exception page is displayed when an app throws an unhandled exception during development. The developer exception page provides detailed information about the exception and request.</p>
+<p>Preview 3 added endpoint metadata to the developer exception page. ASP.NET Core uses endpoint metadata to control endpoint behavior, such as routing, response caching, rate limiting, OpenAPI generation, and more. The following image shows the new metadata information in the <code>Routing</code> section of the developer exception page:</p>
+<p>While testing the developer exception page, small quality of life improvements were identified. They shipped in Preview 4:</p>
+<ul>
+<li>
+<p>Better text wrapping. Long cookies, query <code>string</code> values, and method names no longer add horizontal browser scroll bars.</p>
+</li>
+<li>
+<p>Bigger text which is found in modern designs.</p>
+</li>
+<li>
+<p>More consistent table sizes.</p>
+</li>
+</ul>
+<p>The following animated image shows the new developer exception page:</p>
+<h3><a href="#dictionary-debugging-improvements" aria-hidden="true" class="anchor" id="dictionary-debugging-improvements"></a>Dictionary debugging improvements</h3>
+<p>The debugging display of dictionaries and other key-value collections has an improved layout. The key is displayed in the debugger's key column instead of being concatenated with the value. The following images show the old and new display of a dictionary in the debugger.</p>
+<p>Before:</p>
+<p>After:</p>
+<p>ASP.NET Core has many key-value collections. This improved debugging experience applies to:</p>
+<ul>
+<li>
+<p>HTTP headers</p>
+</li>
+<li>
+<p>Query strings</p>
+</li>
+<li>
+<p>Forms</p>
+</li>
+<li>
+<p>Cookies</p>
+</li>
+<li>
+<p>View data</p>
+</li>
+<li>
+<p>Route data</p>
+</li>
+<li>
+<p>Features</p>
+</li>
+</ul>
+<h3><a href="#fix-for-503s-during-app-recycle-in-iis" aria-hidden="true" class="anchor" id="fix-for-503s-during-app-recycle-in-iis"></a>Fix for 503's during app recycle in IIS</h3>
+<p>By default there is now a 1 second delay between when IIS is notified of a recycle or shutdown and when ANCM tells the managed server to start shutting down. The delay is configurable via the <code>ANCM_shutdownDelay</code> environment variable or by setting the <code>shutdownDelay</code> handler setting. Both values are in milliseconds. The delay is mainly to reduce the likelihood of a race where:</p>
+<ul>
+<li>
+<p>IIS hasn't started queuing requests to go to the new app.</p>
+</li>
+<li>
+<p>ANCM starts rejecting new requests that come into the old app.</p>
+</li>
+</ul>
+<p>Slower machines or machines with heavier CPU usage may want to adjust this value to reduce 503 likelihood.</p>
+<p>Example of setting <code>shutdownDelay</code>:</p>
+<pre><code class="language-xml">&lt;aspNetCore processPath=&quot;dotnet&quot; arguments=&quot;myapp.dll&quot; stdoutLogEnabled=&quot;false&quot; stdoutLogFile=&quot;.logsstdout&quot;&gt;
+  &lt;handlerSettings&gt;
+    &lt;!-- Milliseconds to delay shutdown by.
+    this doesn't mean incoming requests will be delayed by this amount,
+    but the old app instance will start shutting down after this timeout occurs --&gt;
+    &lt;handlerSetting name=&quot;shutdownDelay&quot; value=&quot;5000&quot; /&gt;
+  &lt;/handlerSettings&gt;
+&lt;/aspNetCore&gt;
+</code></pre>
+<p>The fix is in the globally installed ANCM module that comes from the hosting bundle.</p>
+<h3><a href="#optimizing-static-web-asset-delivery" aria-hidden="true" class="anchor" id="optimizing-static-web-asset-delivery"></a>Optimizing static web asset delivery</h3>
+<p>Following production best practices for serving static assets requires a significant amount of work and technical expertise. Without optimizations like compression, caching, and fingerprints:</p>
+<ul>
+<li>
+<p>The browser has to make additional requests on every page load.</p>
+</li>
+<li>
+<p>More bytes than necessary are transferred through the network.</p>
+</li>
+<li>
+<p>Sometimes stale versions of files are served to clients.</p>
+</li>
+</ul>
+<p>Creating performant web apps requires optimizing asset delivery to the browser. Possible optimizations include:</p>
+<ul>
+<li>
+<p>Serve a given asset once until the file changes or the browser clears its cache. Set the ETag header.</p>
+</li>
+<li>
+<p>Prevent the browser from using old or stale assets after an app is updated. Set the Last-Modified header.</p>
+</li>
+<li>
+<p>Set up proper caching headers.</p>
+</li>
+<li>
+<p>Use caching middleware.</p>
+</li>
+<li>
+<p>Serve compressed versions of the assets when possible.</p>
+</li>
+<li>
+<p>Use a CDN to serve the assets closer to the user.</p>
+</li>
+<li>
+<p>Minimize the size of assets served to the browser. This optimization doesn't include minification.</p>
+</li>
+</ul>
+<p><code>MapStaticAssets</code> is a new middleware that helps optimize the delivery of static assets in an app. It's designed to work with all UI frameworks, including Blazor, Razor Pages, and MVC. It's typically a drop-in replacement for <code>UseStaticFiles</code>:</p>
+<pre><code class="language-diff">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
++app.MapStaticAssets();
+-app.UseStaticFiles();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<p><code>MapStaticAssets</code> operates by combining build and publish-time processes to collect information about all the static resources in an app. This information is then utilized by the runtime library to efficiently serve these files to the browser.</p>
+<p><code>MapStaticAssets</code> can replace <code>UseStaticFiles</code> in most situations, however, it's optimized for serving the assets that the app has knowledge of at build and publish time. If the app serves assets from other locations, such as disk or embedded resources, <code>UseStaticFiles</code> should be used.</p>
+<p><code>MapStaticAssets</code> provides the following benefits not found with <code>UseStaticFiles</code>:</p>
+<ul>
+<li>
+<p>Build time compression for all the assets in the app:</p>
+<ul>
+<li>
+<p><code>gzip</code> during development and <code>gzip + brotli</code> during publish.</p>
+</li>
+<li>
+<p>All assets are compressed with the goal of reducing the size of the assets to the minimum.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Content based <code>ETags</code>: The <code>Etags</code> for each resource are the Base64 encoded <code>string</code> of the SHA-256 hash of the content. This ensures that the browser only redownloads a file if its contents have changed.</p>
+</li>
+</ul>
+<p>The following table shows the original and compressed sizes of the CSS and JS files in the default Razor Pages template:</p>
+<table><thead>
+<tr>
+<th>File</th>
+<th>Original</th>
+<th>Compressed</th>
+<th>% Reduction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bootstrap.min.css</td>
+<td>163</td>
+<td>17.5</td>
+<td>89.26%</td>
+</tr>
+<tr>
+<td>jquery.js</td>
+<td>89.6</td>
+<td>28</td>
+<td>68.75%</td>
+</tr>
+<tr>
+<td>bootstrap.min.js</td>
+<td>78.5</td>
+<td>20</td>
+<td>74.52%</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td>331.1</td>
+<td>65.5</td>
+<td>80.20%</td>
+</tr>
+</tbody></table>
+<p>The following table shows the original and compressed sizes using the Fluent UI Blazor components library:</p>
+<table><thead>
+<tr>
+<th>File</th>
+<th>Original</th>
+<th>Compressed</th>
+<th>% Reduction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fluent.js</td>
+<td>384</td>
+<td>73</td>
+<td>80.99%</td>
+</tr>
+<tr>
+<td>fluent.css</td>
+<td>94</td>
+<td>11</td>
+<td>88.30%</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td>478</td>
+<td>84</td>
+<td>82.43%</td>
+</tr>
+</tbody></table>
+<p>For a total of 478 KB uncompressed to 84 KB compressed.</p>
+<p>The following table shows the original and compressed sizes using the MudBlazor Blazor components library:</p>
+<table><thead>
+<tr>
+<th>File</th>
+<th>Original</th>
+<th>Compressed</th>
+<th>Reduction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MudBlazor.min.css</td>
+<td>541</td>
+<td>37.5</td>
+<td>93.07%</td>
+</tr>
+<tr>
+<td>MudBlazor.min.js</td>
+<td>47.4</td>
+<td>9.2</td>
+<td>80.59%</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td>588.4</td>
+<td>46.7</td>
+<td>92.07%</td>
+</tr>
+</tbody></table>
+<p>Optimization happens automatically when using <code>MapStaticAssets</code>. When a library is added or updated, for example with new JavaScript or CSS, the assets are optimized as part of the build. Optimization is especially beneficial to mobile environments that can have a lower bandwidth or an unreliable connections.</p>
+<p>For more information on the new file delivery features, see the following resources:</p>
+<ul>
+<li>
+<p>Static files in ASP.NET Core</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor static files</p>
+</li>
+</ul>
+<h3><a href="#enabling-dynamic-compression-on-the-server-vs-using-mapstaticassets" aria-hidden="true" class="anchor" id="enabling-dynamic-compression-on-the-server-vs-using-mapstaticassets"></a>Enabling dynamic compression on the server vs using <code>MapStaticAssets</code></h3>
+<p><code>MapStaticAssets</code> has the following advantages over dynamic compression on the server:</p>
+<ul>
+<li>
+<p>Is simpler because there is no server specific configuration.</p>
+</li>
+<li>
+<p>Is more performant because the assets are compressed at build time.</p>
+</li>
+<li>
+<p>Allows the developer to spend extra time during the build process to ensure that the assets are the minimum size.</p>
+</li>
+</ul>
+<p>Consider the following table comparing MudBlazor compression with IIS dynamic compression and <code>MapStaticAssets</code>:</p>
+<table><thead>
+<tr>
+<th>IIS ```gzip```</th>
+<th>MapStaticAssets</th>
+<th>MapStaticAssets Reduction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>≅ 90</td>
+<td>37.5</td>
+<td>59%</td>
+</tr>
+</tbody></table>
+<h3><a href="#asp0026-analyzer-to-warn-when-[authorize]-is-overridden-by-[allowanonymous]-from-"farther-away"" aria-hidden="true" class="anchor" id="asp0026-analyzer-to-warn-when-[authorize]-is-overridden-by-[allowanonymous]-from-"farther-away""></a>ASP0026: Analyzer to warn when <code>[Authorize]</code> is overridden by <code>[AllowAnonymous]</code> from &quot;farther away&quot;</h3>
+<p>It seems intuitive that an <code>[Authorize]</code> attribute placed &quot;closer&quot; to an MVC action than an <code>[AllowAnonymous]</code> attribute would override the <code>[AllowAnonymous]</code> attribute and force authorization. However, this is not necessarily the case. What does matter is the relative order of the attributes.</p>
+<p>The following code shows examples where a closer <code>[Authorize]</code> attribute gets overridden by an <code>[AllowAnonymous]</code> attribute that is farther away.</p>
+<pre><code class="language-csharp">[AllowAnonymous]
+public class MyController
+{
+    [Authorize] // Overridden by the [AllowAnonymous] attribute on the class
+    public IActionResult Private() =&gt; null;
+}
+</code></pre>
+<pre><code class="language-csharp">[AllowAnonymous]
+public class MyControllerAnon : ControllerBase
+{
+}
+
+[Authorize] // Overridden by the [AllowAnonymous] attribute on MyControllerAnon
+public class MyControllerInherited : MyControllerAnon
+{
+}
+
+public class MyControllerInherited2 : MyControllerAnon
+{
+    [Authorize] // Overridden by the [AllowAnonymous] attribute on MyControllerAnon
+    public IActionResult Private() =&gt; null;
+}
+</code></pre>
+<pre><code class="language-csharp">[AllowAnonymous]
+[Authorize] // Overridden by the preceding [AllowAnonymous]
+public class MyControllerMultiple : ControllerBase
+{
+}
+</code></pre>
+<p>In .NET 9 Preview 6, we've introduced an analyzer that will highlight instances like these where a closer <code>[Authorize]</code> attribute gets overridden by an <code>[AllowAnonymous]</code> attribute that is farther away from an MVC action. The warning points to the overridden <code>[Authorize]</code> attribute with the following message:</p>
+<p>The correct action to take if you see this warning depends on the intention behind the attributes. The farther away <code>[AllowAnonymous]</code> attribute should be removed if it's unintentionally exposing the endpoint to anonymous users. If the <code>[AllowAnonymous]</code> attribute was intended to override a closer <code>[Authorize]</code> attribute, you can repeat the <code>[AllowAnonymous]</code> attribute after the <code>[Authorize]</code> attribute to clarify the intent.</p>
+<pre><code class="language-csharp">[AllowAnonymous]
+public class MyController
+{
+    // This produces no warning because the second, &quot;closer&quot; [AllowAnonymous]
+    // clarifies that [Authorize] is intentionally overridden.
+    // Specifying AuthenticationSchemes can still be useful
+    // for endpoints that allow but don't require authenticated users.
+    [Authorize(AuthenticationSchemes = &quot;Cookies&quot;)]
+    [AllowAnonymous]
+    public IActionResult Privacy() =&gt; null;
+}
+</code></pre>
+<h3><a href="#improved-kestrel-connection-metrics" aria-hidden="true" class="anchor" id="improved-kestrel-connection-metrics"></a>Improved Kestrel connection metrics</h3>
+<p>We've made a significant improvement to Kestrel's connection metrics by including metadata about why a connection failed. The <code>kestrel.connection.duration</code> metric now includes the connection close reason in the <code>error.type</code> attribute.</p>
+<p>Here is a small sample of the <code>error.type</code> values:</p>
+<ul>
+<li>
+<p><code>tls_handshake_failed</code> - The connection requires TLS, and the TLS handshake failed.</p>
+</li>
+<li>
+<p><code>connection_reset</code> - The connection was unexpectedly closed by the client while requests were in progress.</p>
+</li>
+<li>
+<p><code>request_headers_timeout</code> - Kestrel closed the connection because it didn't receive request headers in time.</p>
+</li>
+<li>
+<p><code>max_request_body_size_exceeded</code> - Kestrel closed the connection because uploaded data exceeded max size.</p>
+</li>
+</ul>
+<p>Previously, diagnosing Kestrel connection issues <code>required</code> a server to record detailed, low-level logging. However, logs can be expensive to generate and store, and it can be difficult to find the right information among the noise.</p>
+<p>Metrics are a much cheaper alternative that can be left on in a production environment with minimal impact.</p>
+<p>We expect improved connection metrics to be useful in many scenarios:</p>
+<ul>
+<li>
+<p>Investigating performance issues caused by short connection lifetimes.</p>
+</li>
+<li>
+<p>Observing ongoing external attacks on Kestrel that impact performance and stability.</p>
+</li>
+<li>
+<p>Recording attempted external attacks on Kestrel that Kestrel's built-in security hardening prevented.</p>
+</li>
+</ul>
+<p>For more information, see ASP.NET Core metrics.</p>
+<h3><a href="#customize-kestrel-named-pipe-endpoints" aria-hidden="true" class="anchor" id="customize-kestrel-named-pipe-endpoints"></a>Customize Kestrel named pipe endpoints</h3>
+<p>Kestrel's named pipe support has been improved with advanced customization options. The new <code>CreateNamedPipeServerStream</code> method on the named pipe options allows pipes to be customized per-endpoint.</p>
+<p>An example of where this is useful is a Kestrel app that requires two pipe endpoints with different access security. The <code>CreateNamedPipeServerStream</code> option can be used to create pipes with custom security settings, depending on the pipe name.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder();
+
+builder.WebHost.ConfigureKestrel(options =&gt;
+{
+    options.ListenNamedPipe(&quot;pipe1&quot;);
+    options.ListenNamedPipe(&quot;pipe2&quot;);
+});
+
+builder.WebHost.UseNamedPipes(options =&gt;
+{
+    options.CreateNamedPipeServerStream = (context) =&gt;
+    {
+        var pipeSecurity = CreatePipeSecurity(context.NamedPipeEndpoint.PipeName);
+
+        return NamedPipeServerStreamAcl.Create(context.NamedPipeEndPoint.PipeName, PipeDirection.InOut,
+            NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte,
+            context.PipeOptions, inBufferSize: 0, outBufferSize: 0, pipeSecurity);
+    };
+});
+</code></pre>
+<h3><a href="#exceptionhandlermiddleware-option-to-choose-the-status-code-based-on-the-exception-type" aria-hidden="true" class="anchor" id="exceptionhandlermiddleware-option-to-choose-the-status-code-based-on-the-exception-type"></a><code>ExceptionHandlerMiddleware</code> option to choose the status code based on the exception type</h3>
+<p>A new option when configuring the <code>ExceptionHandlerMiddleware</code> enables app developers to choose what status code to return when an exception occurs during request handling. The new option changes the status code being set in the <code>ProblemDetails</code> response from the <code>ExceptionHandlerMiddleware</code>.</p>
+<pre><code class="language-csharp">app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    StatusCodeSelector = ex =&gt; ex is TimeoutException
+        ? StatusCodes.Status503ServiceUnavailable
+        : StatusCodes.Status500InternalServerError,
+});
+</code></pre>
+<h3><a href="#opt-out-of-http-metrics-on-certain-endpoints-and-requests" aria-hidden="true" class="anchor" id="opt-out-of-http-metrics-on-certain-endpoints-and-requests"></a>Opt-out of HTTP metrics on certain endpoints and requests</h3>
+<p>.NET 9 introduces the ability to opt-out of HTTP metrics for specific endpoints and requests. Opting out of recording metrics is beneficial for endpoints frequently called by automated systems, such as health checks. Recording metrics for these requests is generally unnecessary.</p>
+<p>HTTP requests to an endpoint can be excluded from metrics by adding metadata. Either:</p>
+<ul>
+<li>
+<p>Add the <code>[DisableHttpMetrics]</code> attribute to the Web API controller, SignalR hub or gRPC service.</p>
+</li>
+<li>
+<p>Call DisableHttpMetrics when mapping endpoints in app startup:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHealthChecks();
+
+var app = builder.Build();
+app.MapHealthChecks(&quot;/healthz&quot;).DisableHttpMetrics();
+app.Run();
+</code></pre>
+<p>The <code>MetricsDisabled</code> property has been added to <code>IHttpMetricsTagsFeature</code> for:</p>
+<ul>
+<li>
+<p>Advanced scenarios where a request doesn't map to an endpoint.</p>
+</li>
+<li>
+<p>Dynamically disabling metrics collection for specific HTTP requests.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">// Middleware that conditionally opts-out HTTP requests.
+app.Use(async (context, next) =&gt;
+{
+    var metricsFeature = context.Features.Get&lt;IHttpMetricsTagsFeature&gt;();
+    if (metricsFeature != null &amp;&amp;
+        context.Request.Headers.ContainsKey(&quot;x-disable-metrics&quot;))
+    {
+        metricsFeature.MetricsDisabled = true;
+    }
+
+    await next(context);
+});
+</code></pre>
+<h3><a href="#data-protection-support-for-deleting-keys" aria-hidden="true" class="anchor" id="data-protection-support-for-deleting-keys"></a>Data Protection support for deleting keys</h3>
+<p>Prior to .NET 9, data protection keys were not deletable by design, to prevent data loss. Deleting a key renders its protected data irretrievable. Given their small size, the accumulation of these keys generally posed minimal impact. However, to accommodate extremely long-running services, we have introduced the option to delete keys. Generally, only old keys should be deleted. Only delete keys when you can accept the risk of data loss in exchange for storage savings. We recommend data protection keys should not be deleted.</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.DataProtection.KeyManagement;
+
+var services = new ServiceCollection();
+services.AddDataProtection();
+
+var serviceProvider = services.BuildServiceProvider();
+
+var keyManager = serviceProvider.GetService&lt;IKeyManager&gt;();
+
+if (keyManager is IDeletableKeyManager deletableKeyManager)
+{
+    var utcNow = DateTimeOffset.UtcNow;
+    var yearAgo = utcNow.AddYears(-1);
+
+    if (!deletableKeyManager.DeleteKeys(key =&gt; key.ExpirationDate &lt; yearAgo))
+    {
+        Console.WriteLine(&quot;Failed to delete keys.&quot;);
+    }
+    else
+    {
+        Console.WriteLine(&quot;Old keys deleted successfully.&quot;);
+    }
+}
+else
+{
+    Console.WriteLine(&quot;Key manager does not support deletion.&quot;);
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/release-notes/aspnetcore-9.0?view=aspnetcore-8.0">What's new in ASP.NET Core 9.0</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
