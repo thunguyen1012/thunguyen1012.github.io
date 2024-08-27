@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Configuration | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Configuration</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Settings files, such as <code>appsettings.json</code></p>
+</li>
+<li>
+<p>Environment variables</p>
+</li>
+<li>
+<p>Azure Key Vault</p>
+</li>
+<li>
+<p>Azure App Configuration</p>
+</li>
+<li>
+<p>Command-line arguments</p>
+</li>
+<li>
+<p>Custom providers, installed or created</p>
+</li>
+<li>
+<p>Directory files</p>
+</li>
+<li>
+<p>In-memory .NET objects</p>
+</li>
+</ul>
+<h2><a href="#application-and-host-configuration" aria-hidden="true" class="anchor" id="application-and-host-configuration"></a>Application and Host Configuration</h2>
+<h3><a href="#default-application-configuration-sources" aria-hidden="true" class="anchor" id="default-application-configuration-sources"></a>Default application configuration sources</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+</code></pre>
+<ul>
+<li>
+<p>Command-line arguments using the Command-line configuration provider.</p>
+</li>
+<li>
+<p>Non-prefixed environment variables using the Non-prefixed environment variables configuration provider.</p>
+</li>
+<li>
+<p>User secrets when the app runs in the <code>Development</code> environment.</p>
+</li>
+<li>
+<p><code>appsettings.{Environment}.json</code> using the JSON configuration provider. For example, <code>appsettings.Production.json</code> and <code>appsettings.Development.json</code>.</p>
+</li>
+<li>
+<p><code>appsettings.json</code> using the JSON configuration provider.</p>
+</li>
+<li>
+<p>A fallback to the host configuration described in the next section.</p>
+</li>
+</ul>
+<h3><a href="#default-host-configuration-sources" aria-hidden="true" class="anchor" id="default-host-configuration-sources"></a>Default host configuration sources</h3>
+<ul>
+<li>
+<p>Command-line arguments using the Command-line configuration provider</p>
+</li>
+<li>
+<p><code>DOTNET_</code>-prefixed environment variables using the Environment variables configuration provider.</p>
+</li>
+<li>
+<p><code>ASPNETCORE_</code>-prefixed environment variables using the Environment variables configuration provider.</p>
+</li>
+<li>
+<p><code>ASPNETCORE_</code>-prefixed environment variables using the Environment variables configuration provider.</p>
+</li>
+<li>
+<p>Command-line arguments using the Command-line configuration provider</p>
+</li>
+<li>
+<p><code>DOTNET_</code>-prefixed environment variables using the Environment variables configuration provider.</p>
+</li>
+</ul>
+<h3><a href="#host-variables" aria-hidden="true" class="anchor" id="host-variables"></a>Host variables</h3>
+<ul>
+<li>
+<p>Application <code>name</code></p>
+</li>
+<li>
+<p>Environment <code>name</code>, for example <code>Development</code>, <code>Production</code>, and <code>Staging</code></p>
+</li>
+<li>
+<p>Content root</p>
+</li>
+<li>
+<p>Web root</p>
+</li>
+<li>
+<p>Whether to scan for hosting startup assemblies and which assemblies to scan for.</p>
+</li>
+<li>
+<p>Variables read by app and library code from <code>HostBuilderContext.Configuration</code> in <code>IHostBuilder.ConfigureAppConfiguration</code> callbacks.</p>
+</li>
+</ul>
+<h2><a href="#application-configuration-providers" aria-hidden="true" class="anchor" id="application-configuration-providers"></a>Application configuration providers</h2>
+<pre><code class="language-csharp">public class Index2Model : PageModel
+{
+    private IConfigurationRoot ConfigRoot;
+
+    public Index2Model(IConfiguration configRoot)
+    {
+        ConfigRoot = (IConfigurationRoot)configRoot;
+    }
+
+    public ContentResult OnGet()
+    {           
+        string str = &quot;&quot;;
+        foreach (var provider in ConfigRoot.Providers.ToList())
+        {
+            str += provider.ToString() + &quot;\n&quot;;
+        }
+
+        return Content(str);
+    }
+}
+</code></pre>
+<h3><a href="#appsettingsjson" aria-hidden="true" class="anchor" id="appsettingsjson"></a><code>appsettings.json</code></h3>
+<pre><code class="language-json">{
+  &quot;Position&quot;: {
+    &quot;Title&quot;: &quot;Editor&quot;,
+    &quot;Name&quot;: &quot;Joe Smith&quot;
+  },
+  &quot;MyKey&quot;: &quot;My appsettings.json Value&quot;,
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft&quot;: &quot;Warning&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Information&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;
+}
+</code></pre>
+<pre><code class="language-csharp">public class TestModel : PageModel
+{
+    // requires using Microsoft.Extensions.Configuration;
+    private readonly IConfiguration Configuration;
+
+    public TestModel(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var myKeyValue = Configuration[&quot;MyKey&quot;];
+        var title = Configuration[&quot;Position:Title&quot;];
+        var name = Configuration[&quot;Position:Name&quot;];
+        var defaultLogLevel = Configuration[&quot;Logging:LogLevel:Default&quot;];
+
+
+        return Content($&quot;MyKey value: {myKeyValue} \n&quot; +
+                       $&quot;Title: {title} \n&quot; +
+                       $&quot;Name: {name} \n&quot; +
+                       $&quot;Default Log Level: {defaultLogLevel}&quot;);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>appsettings.json</code></p>
+</li>
+<li>
+<p><code>appsettings.{Environment}.json</code> : For example, the <code>appsettings.Production.json</code> and <code>appsettings.Development.json</code> files. The environment version of the file is loaded based on the <code>IHostingEnvironment.EnvironmentName</code>. For more information, see Use multiple environments in ASP.NET Core.</p>
+</li>
+<li>
+<p>In development, <code>appsettings.Development.json</code> configuration overwrites values found in <code>appsettings.json</code>.</p>
+</li>
+<li>
+<p>In production, <code>appsettings.Production.json</code> configuration overwrites values found in <code>appsettings.json</code>. For example, when deploying the app to Azure.</p>
+</li>
+</ul>
+<h3><a href="#comments-in-appsettingsjson" aria-hidden="true" class="anchor" id="comments-in-appsettingsjson"></a>Comments in <code>appsettings.json</code></h3>
+<h3><a href="#bind-hierarchical-configuration-data-using-the-options-pattern" aria-hidden="true" class="anchor" id="bind-hierarchical-configuration-data-using-the-options-pattern"></a>Bind hierarchical configuration data using the options pattern</h3>
+<pre><code class="language-json">&quot;Position&quot;: {
+    &quot;Title&quot;: &quot;Editor&quot;,
+    &quot;Name&quot;: &quot;Joe Smith&quot;
+  }
+</code></pre>
+<pre><code class="language-csharp">public class PositionOptions
+{
+    public const string Position = &quot;Position&quot;;
+
+    public string Title { get; set; } = String.Empty;
+    public string Name { get; set; } = String.Empty;
+}
+</code></pre>
+<ul>
+<li>
+<p>Must be non-abstract with a public parameterless constructor.</p>
+</li>
+<li>
+<p>All public read-write properties of the type are bound.</p>
+</li>
+<li>
+<p>Fields are not bound. In the preceding code, <code>Position</code> is not bound. The <code>Position</code> field is used so the string &quot;Position&quot; doesn't need to be hard coded in the app when binding the class to a configuration provider.</p>
+</li>
+<li>
+<p>Calls <code>ConfigurationBinder.Bind</code> to bind the <code>PositionOptions</code> class to the <code>Position</code> section.</p>
+</li>
+<li>
+<p>Displays the <code>Position</code> configuration data.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Test22Model : PageModel
+{
+    private readonly IConfiguration Configuration;
+
+    public Test22Model(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var positionOptions = new PositionOptions();
+        Configuration.GetSection(PositionOptions.Position).Bind(positionOptions);
+
+        return Content($&quot;Title: {positionOptions.Title} \n&quot; +
+                       $&quot;Name: {positionOptions.Name}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class Test21Model : PageModel
+{
+    private readonly IConfiguration Configuration;
+    public PositionOptions? positionOptions { get; private set; }
+
+    public Test21Model(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {            
+        positionOptions = Configuration.GetSection(PositionOptions.Position)
+                                                     .Get&lt;PositionOptions&gt;();
+
+        return Content($&quot;Title: {positionOptions.Title} \n&quot; +
+                       $&quot;Name: {positionOptions.Name}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using ConfigSample.Options;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;PositionOptions&gt;(
+    builder.Configuration.GetSection(PositionOptions.Position));
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class Test2Model : PageModel
+{
+    private readonly PositionOptions _options;
+
+    public Test2Model(IOptions&lt;PositionOptions&gt; options)
+    {
+        _options = options.Value;
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content($&quot;Title: {_options.Title} \n&quot; +
+                       $&quot;Name: {_options.Name}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#combining-service-collection" aria-hidden="true" class="anchor" id="combining-service-collection"></a>Combining service collection</h2>
+<pre><code class="language-csharp">using ConfigSample.Options;
+using Microsoft.Extensions.DependencyInjection.ConfigSample.Options;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;PositionOptions&gt;(
+    builder.Configuration.GetSection(PositionOptions.Position));
+builder.Services.Configure&lt;ColorOptions&gt;(
+    builder.Configuration.GetSection(ColorOptions.Color));
+
+builder.Services.AddScoped&lt;IMyDependency, MyDependency&gt;();
+builder.Services.AddScoped&lt;IMyDependency2, MyDependency2&gt;();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">using ConfigSample.Options;
+using Microsoft.Extensions.Configuration;
+
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public static class MyConfigServiceCollectionExtensions
+    {
+        public static IServiceCollection AddConfig(
+             this IServiceCollection services, IConfiguration config)
+        {
+            services.Configure&lt;PositionOptions&gt;(
+                config.GetSection(PositionOptions.Position));
+            services.Configure&lt;ColorOptions&gt;(
+                config.GetSection(ColorOptions.Color));
+
+            return services;
+        }
+
+        public static IServiceCollection AddMyDependencyGroup(
+             this IServiceCollection services)
+        {
+            services.AddScoped&lt;IMyDependency, MyDependency&gt;();
+            services.AddScoped&lt;IMyDependency2, MyDependency2&gt;();
+
+            return services;
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.Extensions.DependencyInjection.ConfigSample.Options;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddConfig(builder.Configuration)
+    .AddMyDependencyGroup();
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#security-and-user-secrets" aria-hidden="true" class="anchor" id="security-and-user-secrets"></a>Security and user secrets</h2>
+<ul>
+<li>
+<p>Never store passwords or other sensitive data in configuration provider code or in plain text configuration files. The Secret Manager tool can be used to store secrets in development.</p>
+</li>
+<li>
+<p>Don't use production secrets in development or test environments.</p>
+</li>
+<li>
+<p>Specify secrets outside of the project so that they can't be accidentally committed to a source code repository.</p>
+</li>
+<li>
+<p>Use multiple environments in ASP.NET Core</p>
+</li>
+<li>
+<p>Safe storage of app secrets in development in ASP.NET Core: Includes advice on using environment variables to store sensitive data. The Secret Manager tool uses the File configuration provider to store user secrets in a JSON file on the local system.</p>
+</li>
+</ul>
+<h2><a href="#non-prefixed-environment-variables" aria-hidden="true" class="anchor" id="non-prefixed-environment-variables"></a>Non-prefixed environment variables</h2>
+<ul>
+<li>
+<p>List of highest to lowest priority default configuration sources including non-prefixed, <code>ASPNETCORE_</code>-prefixed and <code>DOTNETCORE_</code>-prefixed environment variables.</p>
+</li>
+<li>
+<p><code>DOTNET_</code> environment variables used outside of Microsoft.Extensions.Hosting.</p>
+</li>
+<li>
+<p>Supported by all platforms. For example, the : separator is not supported by Bash, but <code>__</code> is.</p>
+</li>
+<li>
+<p>Automatically replaced by a :</p>
+</li>
+<li>
+<p>Set the environment keys and values of the preceding example on Windows.</p>
+</li>
+<li>
+<p>Test the settings when using the sample download. The <code>dotnet run</code> command must be run in the project directory.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">set MyKey=&quot;My key from Environment&quot;
+set Position__Title=Environment_Editor
+set Position__Name=Environment_Rick
+dotnet run
+</code></pre>
+<ul>
+<li>
+<p>Are only set in processes launched from the command window they were set in.</p>
+</li>
+<li>
+<p>Won't be read by browsers launched with Visual Studio.</p>
+</li>
+</ul>
+<pre><code class="language-console">setx MyKey &quot;My key from setx Environment&quot; /M
+setx Position__Title Environment_Editor /M
+setx Position__Name Environment_Rick /M
+</code></pre>
+<ul>
+<li>
+<p>With Visual Studio: Exit and restart Visual Studio.</p>
+</li>
+<li>
+<p>With the CLI: Start a new command window and enter <code>dotnet run</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Configuration.AddEnvironmentVariables(prefix: &quot;MyCustomPrefix_&quot;);
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p><code>builder</code>.Configuration.AddEnvironmentVariables(prefix: &quot;MyCustomPrefix_&quot;) is added after the default configuration providers. For an example of ordering the configuration providers, see JSON configuration provider.</p>
+</li>
+<li>
+<p>Environment variables set with the <code>MyCustomPrefix_</code> prefix override the default configuration providers. This includes environment variables without the prefix.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">set MyCustomPrefix_MyKey=&quot;My key with MyCustomPrefix_ Environment&quot;
+set MyCustomPrefix_Position__Title=Editor_with_customPrefix
+set MyCustomPrefix_Position__Name=Environment_Rick_cp
+dotnet run
+</code></pre>
+<ul>
+<li>
+<p>Encrypted at rest and transmitted over an encrypted channel.</p>
+</li>
+<li>
+<p>Exposed as environment variables.</p>
+</li>
+</ul>
+<h3><a href="#naming-of-environment-variables" aria-hidden="true" class="anchor" id="naming-of-environment-variables"></a>Naming of environment variables</h3>
+<pre><code class="language-json">{
+    &quot;SmtpServer&quot;: &quot;smtp.example.com&quot;,
+    &quot;Logging&quot;: [
+        {
+            &quot;Name&quot;: &quot;ToEmail&quot;,
+            &quot;Level&quot;: &quot;Critical&quot;,
+            &quot;Args&quot;: {
+                &quot;FromAddress&quot;: &quot;MySystem@example.com&quot;,
+                &quot;ToAddress&quot;: &quot;SRE@example.com&quot;
+            }
+        },
+        {
+            &quot;Name&quot;: &quot;ToConsole&quot;,
+            &quot;Level&quot;: &quot;Information&quot;
+        }
+    ]
+}
+</code></pre>
+<pre><code class="language-console">setx SmtpServer smtp.example.com
+setx Logging__0__Name ToEmail
+setx Logging__0__Level Critical
+setx Logging__0__Args__FromAddress MySystem@example.com
+setx Logging__0__Args__ToAddress SRE@example.com
+setx Logging__1__Name ToConsole
+setx Logging__1__Level Information
+</code></pre>
+<h3><a href="#environment-variables-set-in-generated-launchsettingsjson" aria-hidden="true" class="anchor" id="environment-variables-set-in-generated-launchsettingsjson"></a>Environment variables set in generated <code>launchSettings.json</code></h3>
+<pre><code class="language-json">&quot;applicationUrl&quot;: &quot;https://localhost:5001;http://localhost:5000&quot;
+</code></pre>
+<h3><a href="#escape-environment-variables-on-linux" aria-hidden="true" class="anchor" id="escape-environment-variables-on-linux"></a>Escape environment variables on Linux</h3>
+<pre><code class="language-cmd">groot@terminus:~$ systemd-escape http://localhost:5001
+http:--localhost:5001
+</code></pre>
+<h3><a href="#display-environment-variables" aria-hidden="true" class="anchor" id="display-environment-variables"></a>Display environment variables</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+foreach (var c in builder.Configuration.AsEnumerable())
+{
+    Console.WriteLine(c.Key + &quot; = &quot; + c.Value);
+}
+</code></pre>
+<h2><a href="#command-line" aria-hidden="true" class="anchor" id="command-line"></a>Command-line</h2>
+<ul>
+<li>
+<p><code>appsettings.json</code> and <code>appsettings.{Environment}.json</code> files.</p>
+</li>
+<li>
+<p>App secrets in the <code>Development</code> environment.</p>
+</li>
+<li>
+<p>Environment variables.</p>
+</li>
+</ul>
+<h3><a href="#command-line-arguments" aria-hidden="true" class="anchor" id="command-line-arguments"></a>Command-line arguments</h3>
+<pre><code class="language-dotnetcli">dotnet run MyKey=&quot;Using =&quot; Position:Title=Cmd Position:Name=Cmd_Rick
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet run /MyKey &quot;Using /&quot; /Position:Title=Cmd /Position:Name=Cmd_Rick
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet run --MyKey &quot;Using --&quot; --Position:Title=Cmd --Position:Name=Cmd_Rick
+</code></pre>
+<ul>
+<li>
+<p>Must follow <code>=</code>, or the key must have a prefix of <code>--</code> or <code>/</code> when the <code>value</code> follows a space.</p>
+</li>
+<li>
+<p>Isn't required if <code>=</code> is used. For example, MySetting=.</p>
+</li>
+</ul>
+<h3><a href="#switch-mappings" aria-hidden="true" class="anchor" id="switch-mappings"></a>Switch mappings</h3>
+<ul>
+<li>
+<p>Switches must start with <code>-</code> or <code>--</code>.</p>
+</li>
+<li>
+<p>The switch mappings dictionary must not contain duplicate keys.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+var switchMappings = new Dictionary&lt;string, string&gt;()
+         {
+             { &quot;-k1&quot;, &quot;key1&quot; },
+             { &quot;-k2&quot;, &quot;key2&quot; },
+             { &quot;--alt3&quot;, &quot;key3&quot; },
+             { &quot;--alt4&quot;, &quot;key4&quot; },
+             { &quot;--alt5&quot;, &quot;key5&quot; },
+             { &quot;--alt6&quot;, &quot;key6&quot; },
+         };
+
+builder.Configuration.AddCommandLine(args, switchMappings);
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet run -k1 value1 -k2 value2 --alt3=value2 /alt4=value3 --alt5 value5 /alt6 value6
+</code></pre>
+<pre><code class="language-csharp">public class Test3Model : PageModel
+{
+    private readonly IConfiguration Config;
+
+    public Test3Model(IConfiguration configuration)
+    {
+        Config = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content(
+                $&quot;Key1: '{Config[&quot;Key1&quot;]}'\n&quot; +
+                $&quot;Key2: '{Config[&quot;Key2&quot;]}'\n&quot; +
+                $&quot;Key3: '{Config[&quot;Key3&quot;]}'\n&quot; +
+                $&quot;Key4: '{Config[&quot;Key4&quot;]}'\n&quot; +
+                $&quot;Key5: '{Config[&quot;Key5&quot;]}'\n&quot; +
+                $&quot;Key6: '{Config[&quot;Key6&quot;]}'&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#set-environment-and-command-line-arguments-with-visual-studio" aria-hidden="true" class="anchor" id="set-environment-and-command-line-arguments-with-visual-studio"></a>Set environment and command-line arguments with Visual Studio</h2>
+<ul>
+<li>
+<p>In Solution Explorer, right click the project and select Properties.</p>
+</li>
+<li>
+<p>Select the Debug &gt; General tab and select Open debug launch profiles UI.</p>
+</li>
+</ul>
+<h2><a href="#hierarchical-configuration-data" aria-hidden="true" class="anchor" id="hierarchical-configuration-data"></a>Hierarchical configuration data</h2>
+<pre><code class="language-json">{
+  &quot;Position&quot;: {
+    &quot;Title&quot;: &quot;Editor&quot;,
+    &quot;Name&quot;: &quot;Joe Smith&quot;
+  },
+  &quot;MyKey&quot;: &quot;My appsettings.json Value&quot;,
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft&quot;: &quot;Warning&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Information&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;
+}
+</code></pre>
+<pre><code class="language-csharp">public class TestModel : PageModel
+{
+    // requires using Microsoft.Extensions.Configuration;
+    private readonly IConfiguration Configuration;
+
+    public TestModel(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var myKeyValue = Configuration[&quot;MyKey&quot;];
+        var title = Configuration[&quot;Position:Title&quot;];
+        var name = Configuration[&quot;Position:Name&quot;];
+        var defaultLogLevel = Configuration[&quot;Logging:LogLevel:Default&quot;];
+
+
+        return Content($&quot;MyKey value: {myKeyValue} \n&quot; +
+                       $&quot;Title: {title} \n&quot; +
+                       $&quot;Name: {name} \n&quot; +
+                       $&quot;Default Log Level: {defaultLogLevel}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#configuration-keys-and-values" aria-hidden="true" class="anchor" id="configuration-keys-and-values"></a>Configuration keys and values</h2>
+<ul>
+<li>
+<p>Are case-insensitive. For example, <code>ConnectionString</code> and <code>connectionstring</code> are treated as equivalent keys.</p>
+</li>
+<li>
+<p>If a key and <code>value</code> is set in more than one configuration provider, the <code>value</code> from the last provider added is used. For more information, see Default configuration.</p>
+</li>
+<li>
+<p>Hierarchical keys</p>
+<ul>
+<li>
+<p>Within the Configuration API, a colon separator (:) works on all platforms.</p>
+</li>
+<li>
+<p>In environment variables, a colon separator may not work on all platforms. A double underscore, <code>__</code>, is supported by all platforms and is automatically converted into a colon :.</p>
+</li>
+<li>
+<p>In Azure Key Vault, hierarchical keys use <code>--</code> as a separator. The Azure Key Vault configuration provider automatically replaces -- with a : when the secrets are loaded into the app's configuration.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>The ConfigurationBinder supports binding arrays to objects using array indices in configuration keys. Array binding is described in the Bind an array to a class section.</p>
+</li>
+<li>
+<p>Are strings.</p>
+</li>
+<li>
+<p>Null values can't be stored in configuration or bound to objects.</p>
+</li>
+</ul>
+<h2><a href="#configuration-providers" aria-hidden="true" class="anchor" id="configuration-providers"></a>Configuration providers</h2>
+<table><thead>
+<tr>
+<th>Provider</th>
+<th>Provides configuration from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../security/key-vault-configuration?view=aspnetcore-8.0" data-linktype="relative-path">Azure Key Vault configuration provider</a></td>
+<td>Azure Key Vault</td>
+</tr>
+<tr>
+<td><a href="/en-us/azure/azure-app-configuration/quickstart-aspnet-core-app" data-linktype="absolute-path">Azure App configuration provider</a></td>
+<td>Azure App Configuration</td>
+</tr>
+<tr>
+<td><a href="#clcp" data-linktype="self-bookmark">Command-line configuration provider</a></td>
+<td>Command-line parameters</td>
+</tr>
+<tr>
+<td><a href="#custom-configuration-provider" data-linktype="self-bookmark">Custom configuration provider</a></td>
+<td>Custom source</td>
+</tr>
+<tr>
+<td><a href="#evcp" data-linktype="self-bookmark">Environment Variables configuration provider</a></td>
+<td>Environment variables</td>
+</tr>
+<tr>
+<td><a href="#file-configuration-provider" data-linktype="self-bookmark">File configuration provider</a></td>
+<td>INI, JSON, and XML files</td>
+</tr>
+<tr>
+<td><a href="#key-per-file-configuration-provider" data-linktype="self-bookmark">Key-per-file configuration provider</a></td>
+<td>Directory files</td>
+</tr>
+<tr>
+<td><a href="#memory-configuration-provider" data-linktype="self-bookmark">Memory configuration provider</a></td>
+<td>In-memory collections</td>
+</tr>
+<tr>
+<td><a href="../../security/app-secrets?view=aspnetcore-8.0" data-linktype="relative-path">User secrets</a></td>
+<td>File in the user profile directory</td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p><code>appsettings.json</code></p>
+</li>
+<li>
+<p><code>appsettings.{Environment}.json</code></p>
+</li>
+<li>
+<p>User secrets</p>
+</li>
+<li>
+<p>Environment variables using the Environment Variables configuration provider.</p>
+</li>
+<li>
+<p>Command-line arguments using the Command-line configuration provider.</p>
+</li>
+</ul>
+<h3><a href="#connection-string-prefixes" aria-hidden="true" class="anchor" id="connection-string-prefixes"></a>Connection string prefixes</h3>
+<table><thead>
+<tr>
+<th>Connection string prefix</th>
+<th>Provider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CUSTOMCONNSTR_</code></td>
+<td>Custom provider</td>
+</tr>
+<tr>
+<td><code>MYSQLCONNSTR_</code></td>
+<td><a href="https://www.mysql.com/" data-linktype="external">MySQL</a></td>
+</tr>
+<tr>
+<td><code>SQLAZURECONNSTR_</code></td>
+<td><a href="https://azure.microsoft.com/services/sql-database/" data-linktype="external">Azure SQL Database</a></td>
+</tr>
+<tr>
+<td><code>SQLCONNSTR_</code></td>
+<td><a href="https://www.microsoft.com/sql-server/" data-linktype="external">SQL Server</a></td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p>The configuration key is created by removing the environment variable prefix and adding a configuration key section (ConnectionStrings).</p>
+</li>
+<li>
+<p>A new configuration key-value pair is created that represents the database connection provider (except for <code>CUSTOMCONNSTR_</code>, which has no stated provider).</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Environment variable key</th>
+<th>Converted configuration key</th>
+<th>Provider configuration entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CUSTOMCONNSTR_{KEY}</code></td>
+<td><code>ConnectionStrings:{KEY}</code></td>
+<td>Configuration entry not created.</td>
+</tr>
+<tr>
+<td><code>MYSQLCONNSTR_{KEY}</code></td>
+<td><code>ConnectionStrings:{KEY}</code></td>
+<td>Key: <code>ConnectionStrings:{KEY}_ProviderName</code>:<br>Value: <code>MySql.Data.MySqlClient</code></td>
+</tr>
+<tr>
+<td><code>SQLAZURECONNSTR_{KEY}</code></td>
+<td><code>ConnectionStrings:{KEY}</code></td>
+<td>Key: <code>ConnectionStrings:{KEY}_ProviderName</code>:<br>Value: <code>System.Data.SqlClient</code></td>
+</tr>
+<tr>
+<td><code>SQLCONNSTR_{KEY}</code></td>
+<td><code>ConnectionStrings:{KEY}</code></td>
+<td>Key: <code>ConnectionStrings:{KEY}_ProviderName</code>:<br>Value: <code>System.Data.SqlClient</code></td>
+</tr>
+</tbody></table>
+<h2><a href="#file-configuration-provider" aria-hidden="true" class="anchor" id="file-configuration-provider"></a>File configuration provider</h2>
+<ul>
+<li>
+<p>INI configuration provider</p>
+</li>
+<li>
+<p>JSON configuration provider</p>
+</li>
+<li>
+<p>XML configuration provider</p>
+</li>
+</ul>
+<h3><a href="#ini-configuration-provider" aria-hidden="true" class="anchor" id="ini-configuration-provider"></a>INI configuration provider</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration
+    .AddIniFile(&quot;MyIniConfig.ini&quot;, optional: true, reloadOnChange: true)
+    .AddIniFile($&quot;MyIniConfig.{builder.Environment.EnvironmentName}.ini&quot;,
+                optional: true, reloadOnChange: true);
+
+builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddCommandLine(args);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>Environment variables configuration provider</p>
+</li>
+<li>
+<p>Command-line configuration provider.</p>
+</li>
+</ul>
+<pre><code class="language-ini">MyKey=&quot;MyIniConfig.ini Value&quot;
+
+[Position]
+Title=&quot;My INI Config title&quot;
+Name=&quot;My INI Config name&quot;
+
+[Logging:LogLevel]
+Default=Information
+Microsoft=Warning
+</code></pre>
+<pre><code class="language-csharp">public class TestModel : PageModel
+{
+    // requires using Microsoft.Extensions.Configuration;
+    private readonly IConfiguration Configuration;
+
+    public TestModel(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var myKeyValue = Configuration[&quot;MyKey&quot;];
+        var title = Configuration[&quot;Position:Title&quot;];
+        var name = Configuration[&quot;Position:Name&quot;];
+        var defaultLogLevel = Configuration[&quot;Logging:LogLevel:Default&quot;];
+
+
+        return Content($&quot;MyKey value: {myKeyValue} \n&quot; +
+                       $&quot;Title: {title} \n&quot; +
+                       $&quot;Name: {name} \n&quot; +
+                       $&quot;Default Log Level: {defaultLogLevel}&quot;);
+    }
+}
+</code></pre>
+<h3><a href="#json-configuration-provider" aria-hidden="true" class="anchor" id="json-configuration-provider"></a>JSON configuration provider</h3>
+<ul>
+<li>
+<p>Whether the file is optional.</p>
+</li>
+<li>
+<p>Whether the configuration is reloaded if the file changes.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.Extensions.DependencyInjection.ConfigSample.Options;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddJsonFile(&quot;MyConfig.json&quot;,
+        optional: true,
+        reloadOnChange: true);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>Configures the JSON configuration provider to load the <code>MyConfig.json</code> file with the following options:</p>
+<ul>
+<li>
+<p><code>optional:</code>true``````: The file is optional.</p>
+</li>
+<li>
+<p><code>reloadOnChange:</code>true`````` : The file is reloaded when changes are saved.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Reads the default configuration providers before the <code>MyConfig.json</code> file. Settings in the <code>MyConfig.json</code> file override setting in the default configuration providers, including the Environment variables configuration provider and the Command-line configuration provider.</p>
+</li>
+</ul>
+<h3><a href="#xml-configuration-provider" aria-hidden="true" class="anchor" id="xml-configuration-provider"></a>XML configuration provider</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration
+    .AddXmlFile(&quot;MyXMLFile.xml&quot;, optional: true, reloadOnChange: true)
+    .AddXmlFile($&quot;MyXMLFile.{builder.Environment.EnvironmentName}.xml&quot;,
+                optional: true, reloadOnChange: true);
+
+builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddCommandLine(args);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>Environment variables configuration provider</p>
+</li>
+<li>
+<p>Command-line configuration provider.</p>
+</li>
+</ul>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+&lt;configuration&gt;
+  &lt;MyKey&gt;MyXMLFile Value&lt;/MyKey&gt;
+  &lt;Position&gt;
+    &lt;Title&gt;Title from  MyXMLFile&lt;/Title&gt;
+    &lt;Name&gt;Name from MyXMLFile&lt;/Name&gt;
+  &lt;/Position&gt;
+  &lt;Logging&gt;
+    &lt;LogLevel&gt;
+      &lt;Default&gt;Information&lt;/Default&gt;
+      &lt;Microsoft&gt;Warning&lt;/Microsoft&gt;
+    &lt;/LogLevel&gt;
+  &lt;/Logging&gt;
+&lt;/configuration&gt;
+</code></pre>
+<pre><code class="language-csharp">public class TestModel : PageModel
+{
+    // requires using Microsoft.Extensions.Configuration;
+    private readonly IConfiguration Configuration;
+
+    public TestModel(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var myKeyValue = Configuration[&quot;MyKey&quot;];
+        var title = Configuration[&quot;Position:Title&quot;];
+        var name = Configuration[&quot;Position:Name&quot;];
+        var defaultLogLevel = Configuration[&quot;Logging:LogLevel:Default&quot;];
+
+
+        return Content($&quot;MyKey value: {myKeyValue} \n&quot; +
+                       $&quot;Title: {title} \n&quot; +
+                       $&quot;Name: {name} \n&quot; +
+                       $&quot;Default Log Level: {defaultLogLevel}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;configuration&gt;
+  &lt;section name=&quot;section0&quot;&gt;
+    &lt;key name=&quot;key0&quot;&gt;value 00&lt;/key&gt;
+    &lt;key name=&quot;key1&quot;&gt;value 01&lt;/key&gt;
+  &lt;/section&gt;
+  &lt;section name=&quot;section1&quot;&gt;
+    &lt;key name=&quot;key0&quot;&gt;value 10&lt;/key&gt;
+    &lt;key name=&quot;key1&quot;&gt;value 11&lt;/key&gt;
+  &lt;/section&gt;
+&lt;/configuration&gt;
+</code></pre>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    private readonly IConfiguration Configuration;
+
+    public IndexModel(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var key00 = &quot;section:section0:key:key0&quot;;
+        var key01 = &quot;section:section0:key:key1&quot;;
+        var key10 = &quot;section:section1:key:key0&quot;;
+        var key11 = &quot;section:section1:key:key1&quot;;
+
+        var val00 = Configuration[key00];
+        var val01 = Configuration[key01];
+        var val10 = Configuration[key10];
+        var val11 = Configuration[key11];
+
+        return Content($&quot;{key00} value: {val00} \n&quot; +
+                       $&quot;{key01} value: {val01} \n&quot; +
+                       $&quot;{key10} value: {val10} \n&quot; +
+                       $&quot;{key10} value: {val11} \n&quot;
+                       );
+    }
+}
+</code></pre>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;configuration&gt;
+  &lt;key attribute=&quot;value&quot; /&gt;
+  &lt;section&gt;
+    &lt;key attribute=&quot;value&quot; /&gt;
+  &lt;/section&gt;
+&lt;/configuration&gt;
+</code></pre>
+<ul>
+<li>
+<p>key:attribute</p>
+</li>
+<li>
+<p>section:key:attribute</p>
+</li>
+</ul>
+<h2><a href="#key-per-file-configuration-provider" aria-hidden="true" class="anchor" id="key-per-file-configuration-provider"></a>Key-per-file configuration provider</h2>
+<ul>
+<li>
+<p>An <code>Action&lt;KeyPerFileConfigurationSource&gt;</code> delegate that configures the source.</p>
+</li>
+<li>
+<p>Whether the directory is optional and the path to the directory.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">.ConfigureAppConfiguration((hostingContext, config) =&gt;
+{
+    var path = Path.Combine(
+        Directory.GetCurrentDirectory(), &quot;path/to/files&quot;);
+    config.AddKeyPerFile(directoryPath: path, optional: true);
+})
+</code></pre>
+<h2><a href="#memory-configuration-provider" aria-hidden="true" class="anchor" id="memory-configuration-provider"></a>Memory configuration provider</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var Dict = new Dictionary&lt;string, string&gt;
+        {
+           {&quot;MyKey&quot;, &quot;Dictionary MyKey Value&quot;},
+           {&quot;Position:Title&quot;, &quot;Dictionary_Title&quot;},
+           {&quot;Position:Name&quot;, &quot;Dictionary_Name&quot; },
+           {&quot;Logging:LogLevel:Default&quot;, &quot;Warning&quot;}
+        };
+
+builder.Configuration.AddInMemoryCollection(Dict);
+builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddCommandLine(args);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class TestModel : PageModel
+{
+    // requires using Microsoft.Extensions.Configuration;
+    private readonly IConfiguration Configuration;
+
+    public TestModel(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var myKeyValue = Configuration[&quot;MyKey&quot;];
+        var title = Configuration[&quot;Position:Title&quot;];
+        var name = Configuration[&quot;Position:Name&quot;];
+        var defaultLogLevel = Configuration[&quot;Logging:LogLevel:Default&quot;];
+
+
+        return Content($&quot;MyKey value: {myKeyValue} \n&quot; +
+                       $&quot;Title: {title} \n&quot; +
+                       $&quot;Name: {name} \n&quot; +
+                       $&quot;Default Log Level: {defaultLogLevel}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#kestrel-endpoint-configuration" aria-hidden="true" class="anchor" id="kestrel-endpoint-configuration"></a>Kestrel endpoint configuration</h2>
+<ul>
+<li>
+<p>UseUrls</p>
+</li>
+<li>
+<p><code>--urls</code> on the command line</p>
+</li>
+<li>
+<p>The environment variable <code>ASPNETCORE_URLS</code></p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;Endpoints&quot;: {
+      &quot;Https&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:9999&quot;
+      }
+    }
+  },
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft&quot;: &quot;Warning&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Information&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;
+}
+</code></pre>
+<h2><a href="#getvalue" aria-hidden="true" class="anchor" id="getvalue"></a>GetValue</h2>
+<pre><code class="language-csharp">public class TestNumModel : PageModel
+{
+    private readonly IConfiguration Configuration;
+
+    public TestNumModel(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var number = Configuration.GetValue&lt;int&gt;(&quot;NumberKey&quot;, 99);
+        return Content($&quot;{number}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#getsection-getchildren,-and-exists" aria-hidden="true" class="anchor" id="getsection-getchildren,-and-exists"></a><code>GetSection</code>, GetChildren, and Exists</h2>
+<pre><code class="language-json">{
+  &quot;section0&quot;: {
+    &quot;key0&quot;: &quot;value00&quot;,
+    &quot;key1&quot;: &quot;value01&quot;
+  },
+  &quot;section1&quot;: {
+    &quot;key0&quot;: &quot;value10&quot;,
+    &quot;key1&quot;: &quot;value11&quot;
+  },
+  &quot;section2&quot;: {
+    &quot;subsection0&quot;: {
+      &quot;key0&quot;: &quot;value200&quot;,
+      &quot;key1&quot;: &quot;value201&quot;
+    },
+    &quot;subsection1&quot;: {
+      &quot;key0&quot;: &quot;value210&quot;,
+      &quot;key1&quot;: &quot;value211&quot;
+    }
+  }
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration
+    .AddJsonFile(&quot;MySubsection.json&quot;,
+                 optional: true,
+                 reloadOnChange: true);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#getsection" aria-hidden="true" class="anchor" id="getsection"></a><code>GetSection</code></h3>
+<pre><code class="language-csharp">public class TestSectionModel : PageModel
+{
+    private readonly IConfiguration Config;
+
+    public TestSectionModel(IConfiguration configuration)
+    {
+        Config = configuration.GetSection(&quot;section1&quot;);
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content(
+                $&quot;section1:key0: '{Config[&quot;key0&quot;]}'\n&quot; +
+                $&quot;section1:key1: '{Config[&quot;key1&quot;]}'&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class TestSection2Model : PageModel
+{
+    private readonly IConfiguration Config;
+
+    public TestSection2Model(IConfiguration configuration)
+    {
+        Config = configuration.GetSection(&quot;section2:subsection0&quot;);
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content(
+                $&quot;section2:subsection0:key0 '{Config[&quot;key0&quot;]}'\n&quot; +
+                $&quot;section2:subsection0:key1:'{Config[&quot;key1&quot;]}'&quot;);
+    }
+}
+</code></pre>
+<h3><a href="#getchildren-and-exists" aria-hidden="true" class="anchor" id="getchildren-and-exists"></a>GetChildren and Exists</h3>
+<pre><code class="language-csharp">public class TestSection4Model : PageModel
+{
+    private readonly IConfiguration Config;
+
+    public TestSection4Model(IConfiguration configuration)
+    {
+        Config = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        string s = &quot;&quot;;
+        var selection = Config.GetSection(&quot;section2&quot;);
+        if (!selection.Exists())
+        {
+            throw new Exception(&quot;section2 does not exist.&quot;);
+        }
+        var children = selection.GetChildren();
+
+        foreach (var subSection in children)
+        {
+            int i = 0;
+            var key1 = subSection.Key + &quot;:key&quot; + i++.ToString();
+            var key2 = subSection.Key + &quot;:key&quot; + i.ToString();
+            s += key1 + &quot; value: &quot; + selection[key1] + &quot;\n&quot;;
+            s += key2 + &quot; value: &quot; + selection[key2] + &quot;\n&quot;;
+        }
+        return Content(s);
+    }
+}
+</code></pre>
+<h2><a href="#bind-an-array" aria-hidden="true" class="anchor" id="bind-an-array"></a>Bind an array</h2>
+<pre><code class="language-json">{
+  &quot;array&quot;: {
+    &quot;entries&quot;: {
+      &quot;0&quot;: &quot;value00&quot;,
+      &quot;1&quot;: &quot;value10&quot;,
+      &quot;2&quot;: &quot;value20&quot;,
+      &quot;4&quot;: &quot;value40&quot;,
+      &quot;5&quot;: &quot;value50&quot;
+    }
+  }
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration
+    .AddJsonFile(&quot;MyArray.json&quot;,
+                 optional: true,
+                 reloadOnChange: true);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class ArrayModel : PageModel
+{
+    private readonly IConfiguration Config;
+    public ArrayExample? _array { get; private set; }
+
+    public ArrayModel(IConfiguration config)
+    {
+        Config = config;
+    }
+
+    public ContentResult OnGet()
+    {
+       _array = Config.GetSection(&quot;array&quot;).Get&lt;ArrayExample&gt;();
+        if (_array == null)
+        {
+            throw new ArgumentNullException(nameof(_array));
+        }
+        string s = String.Empty;
+
+        for (int j = 0; j &lt; _array.Entries.Length; j++)
+        {
+            s += $&quot;Index: {j}  Value:  {_array.Entries[j]} \n&quot;;
+        }
+
+        return Content(s);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class ArrayExample
+{
+    public string[]? Entries { get; set; } 
+}
+</code></pre>
+<pre><code class="language-text">Index: 0  Value: value00
+Index: 1  Value: value10
+Index: 2  Value: value20
+Index: 3  Value: value40
+Index: 4  Value: value50
+</code></pre>
+<h2><a href="#custom-configuration-provider" aria-hidden="true" class="anchor" id="custom-configuration-provider"></a>Custom configuration provider</h2>
+<ul>
+<li>
+<p>The EF in-memory database is used for demonstration purposes. To use a database that requires a connection string, implement a secondary <code>ConfigurationBuilder</code> to supply the connection string from another configuration provider.</p>
+</li>
+<li>
+<p>The provider reads a database table into configuration at startup. The provider doesn't query the database on a per-key basis.</p>
+</li>
+<li>
+<p>Reload-on-change isn't implemented, so updating the database after the app starts has no effect on the app's configuration.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class EFConfigurationValue
+{
+    public string Id { get; set; } = String.Empty;
+    public string Value { get; set; } = String.Empty;
+}
+</code></pre>
+<pre><code class="language-csharp">public class EFConfigurationContext : DbContext
+{
+    public EFConfigurationContext(DbContextOptions&lt;EFConfigurationContext&gt; options) : base(options)
+    {
+    }
+
+    public DbSet&lt;EFConfigurationValue&gt; Values =&gt; Set&lt;EFConfigurationValue&gt;();
+}
+</code></pre>
+<pre><code class="language-csharp">public class EFConfigurationSource : IConfigurationSource
+{
+    private readonly Action&lt;DbContextOptionsBuilder&gt; _optionsAction;
+
+    public EFConfigurationSource(Action&lt;DbContextOptionsBuilder&gt; optionsAction) =&gt; _optionsAction = optionsAction;
+
+    public IConfigurationProvider Build(IConfigurationBuilder builder) =&gt; new EFConfigurationProvider(_optionsAction);
+}
+</code></pre>
+<pre><code class="language-csharp">public class EFConfigurationProvider : ConfigurationProvider
+{
+    public EFConfigurationProvider(Action&lt;DbContextOptionsBuilder&gt; optionsAction)
+    {
+        OptionsAction = optionsAction;
+    }
+
+    Action&lt;DbContextOptionsBuilder&gt; OptionsAction { get; }
+
+    public override void Load()
+    {
+        var builder = new DbContextOptionsBuilder&lt;EFConfigurationContext&gt;();
+
+        OptionsAction(builder);
+
+        using (var dbContext = new EFConfigurationContext(builder.Options))
+        {
+            if (dbContext == null || dbContext.Values == null)
+            {
+                throw new Exception(&quot;Null DB context&quot;);
+            }
+            dbContext.Database.EnsureCreated();
+
+            Data = !dbContext.Values.Any()
+                ? CreateAndSaveDefaultValues(dbContext)
+                : dbContext.Values.ToDictionary(c =&gt; c.Id, c =&gt; c.Value);
+        }
+    }
+
+    private static IDictionary&lt;string, string&gt; CreateAndSaveDefaultValues(
+        EFConfigurationContext dbContext)
+    {
+        // Quotes (c)2005 Universal Pictures: Serenity
+        // https://www.uphe.com/movies/serenity-2005
+        var configValues =
+            new Dictionary&lt;string, string&gt;(StringComparer.OrdinalIgnoreCase)
+            {
+                    { &quot;quote1&quot;, &quot;I aim to misbehave.&quot; },
+                    { &quot;quote2&quot;, &quot;I swallowed a bug.&quot; },
+                    { &quot;quote3&quot;, &quot;You can't stop the signal, Mal.&quot; }
+            };
+
+        if (dbContext == null || dbContext.Values == null)
+        {
+            throw new Exception(&quot;Null DB context&quot;);
+        }
+
+        dbContext.Values.AddRange(configValues
+            .Select(kvp =&gt; new EFConfigurationValue
+            {
+                Id = kvp.Key,
+                Value = kvp.Value
+            })
+            .ToArray());
+
+        dbContext.SaveChanges();
+
+        return configValues;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public static class EntityFrameworkExtensions
+{
+    public static IConfigurationBuilder AddEFConfiguration(
+               this IConfigurationBuilder builder,
+               Action&lt;DbContextOptionsBuilder&gt; optionsAction)
+    {
+        return builder.Add(new EFConfigurationSource(optionsAction));
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">//using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddEFConfiguration(
+    opt =&gt; opt.UseInMemoryDatabase(&quot;InMemoryDb&quot;));
+
+var app = builder.Build();
+
+app.Run();
+</code></pre>
+<h2><a href="#access-configuration-with-dependency-injection-di)" aria-hidden="true" class="anchor" id="access-configuration-with-dependency-injection-di)"></a>Access configuration with Dependency Injection (DI)</h2>
+<pre><code class="language-csharp">public class Service
+{
+    private readonly IConfiguration _config;
+
+    public Service(IConfiguration config) =&gt;
+        _config = config;
+
+    public void DoSomething()
+    {
+        var configSettingValue = _config[&quot;ConfigSetting&quot;];
+
+        // ...
+    }
+}
+</code></pre>
+<h2><a href="#access-configuration-in-razor-pages" aria-hidden="true" class="anchor" id="access-configuration-in-razor-pages"></a>Access configuration in Razor Pages</h2>
+<pre><code class="language-cshtml">@page
+@model Test5Model
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
+Configuration value for 'MyKey': @Configuration[&quot;MyKey&quot;]
+</code></pre>
+<pre><code class="language-csharp">using SampleApp.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;MyOptions&gt;(
+    builder.Configuration.GetSection(&quot;MyOptions&quot;));
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model SampleApp.Pages.Test3Model
+@using Microsoft.Extensions.Options
+@using SampleApp.Models
+@inject IOptions&lt;MyOptions&gt; optionsAccessor
+
+
+&lt;p&gt;&lt;b&gt;Option1:&lt;/b&gt; @optionsAccessor.Value.Option1&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;Option2:&lt;/b&gt; @optionsAccessor.Value.Option2&lt;/p&gt;
+</code></pre>
+<h2><a href="#access-configuration-in-a-mvc-view-file" aria-hidden="true" class="anchor" id="access-configuration-in-a-mvc-view-file"></a>Access configuration in a MVC view file</h2>
+<pre><code class="language-cshtml">@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
+Configuration value for 'MyKey': @Configuration[&quot;MyKey&quot;]
+</code></pre>
+<h2><a href="#access-configuration-in-programcs" aria-hidden="true" class="anchor" id="access-configuration-in-programcs"></a>Access configuration in <code>Program.cs</code></h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var key1 = builder.Configuration.GetValue&lt;string&gt;(&quot;KeyOne&quot;);
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+var key2 = app.Configuration.GetValue&lt;int&gt;(&quot;KeyTwo&quot;);
+var key3 = app.Configuration.GetValue&lt;bool&gt;(&quot;KeyThree&quot;);
+
+app.Logger.LogInformation(&quot;KeyOne: {KeyOne}&quot;, key1);
+app.Logger.LogInformation(&quot;KeyTwo: {KeyTwo}&quot;, key2);
+app.Logger.LogInformation(&quot;KeyThree: {KeyThree}&quot;, key3);
+
+app.Run();
+</code></pre>
+<pre><code class="language-json">{
+  ...
+  &quot;KeyOne&quot;: &quot;Key One Value&quot;,
+  &quot;KeyTwo&quot;: 1999,
+  &quot;KeyThree&quot;: true
+}
+</code></pre>
+<h2><a href="#configure-options-with-a-delegate" aria-hidden="true" class="anchor" id="configure-options-with-a-delegate"></a>Configure options with a delegate</h2>
+<pre><code class="language-csharp">using SampleApp.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;MyOptions&gt;(myOptions =&gt;
+{
+    myOptions.Option1 = &quot;Value configured in delegate&quot;;
+    myOptions.Option2 = 500;
+});
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class Test2Model : PageModel
+{
+    private readonly IOptions&lt;MyOptions&gt; _optionsDelegate;
+
+    public Test2Model(IOptions&lt;MyOptions&gt; optionsDelegate )
+    {
+        _optionsDelegate = optionsDelegate;
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content($&quot;Option1: {_optionsDelegate.Value.Option1} \n&quot; +
+                       $&quot;Option2: {_optionsDelegate.Value.Option2}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#host-versus-app-configuration" aria-hidden="true" class="anchor" id="host-versus-app-configuration"></a>Host versus app configuration</h2>
+<h2><a href="#default-host-configuration" aria-hidden="true" class="anchor" id="default-host-configuration"></a>Default host configuration</h2>
+<ul>
+<li>
+<p>Host configuration is provided from:</p>
+<ul>
+<li>
+<p>Environment variables prefixed with <code>DOTNET_</code> (for example, <code>DOTNET_ENVIRONMENT</code>) using the Environment Variables configuration provider. The prefix (DOTNET_) is stripped when the configuration key-value pairs are loaded.</p>
+</li>
+<li>
+<p>Command-line arguments using the Command-line configuration provider.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Web Host default configuration is established (ConfigureWebHostDefaults):</p>
+<ul>
+<li>
+<p>Kestrel is used as the web server and configured using the app's configuration providers.</p>
+</li>
+<li>
+<p>Add Host Filtering Middleware.</p>
+</li>
+<li>
+<p>Add Forwarded Headers Middleware if the <code>ASPNETCORE_FORWARDEDHEADERS_ENABLED</code> environment variable is set to <code>true</code>.</p>
+</li>
+<li>
+<p>Enable IIS integration.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#other-configuration" aria-hidden="true" class="anchor" id="other-configuration"></a>Other configuration</h2>
+<ul>
+<li>
+<p><code>launch.json</code>/launchSettings.json are tooling configuration files for the <code>Development</code> environment, described:</p>
+<ul>
+<li>
+<p>In Use multiple environments in ASP.NET Core.</p>
+</li>
+<li>
+<p>Across the documentation set where the files are used to configure ASP.NET Core apps for <code>Development</code> scenarios.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>web.config</code> is a server configuration file, described in the following topics:</p>
+<ul>
+<li>
+<p>Host ASP.NET Core on Windows with IIS</p>
+</li>
+<li>
+<p>ASP.NET Core Module (ANCM) for IIS</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#add-configuration-from-an-external-assembly" aria-hidden="true" class="anchor" id="add-configuration-from-an-external-assembly"></a>Add configuration from an external assembly</h2>
+<h2><a href="#configuration-binding-source-generator" aria-hidden="true" class="anchor" id="configuration-binding-source-generator"></a>Configuration-binding source generator</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Configuration source code</p>
+</li>
+<li>
+<p><code>WebApplicationBuilder</code> source code</p>
+</li>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Options pattern in ASP.NET Core</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor configuration</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-8.0">Configuration in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

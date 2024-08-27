@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Dependency injection (services) | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Dependency injection (services)</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#overview-of-dependency-injection" aria-hidden="true" class="anchor" id="overview-of-dependency-injection"></a>Overview of dependency injection</h2>
+<pre><code class="language-csharp">public class MyDependency
+{
+    public void WriteMessage(string message)
+    {
+        Console.WriteLine($&quot;MyDependency.WriteMessage called. Message: {message}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    private readonly MyDependency _dependency = new MyDependency();
+
+    public void OnGet()
+    {
+        _dependency.WriteMessage(&quot;IndexModel.OnGet&quot;);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>To replace <code>MyDependency</code> with a different implementation, the <code>IndexModel</code> class must be modified.</p>
+</li>
+<li>
+<p>If <code>MyDependency</code> has dependencies, they must also be configured by the <code>IndexModel</code> class. In a large project with multiple classes depending on <code>MyDependency</code>, the configuration code becomes scattered across the app.</p>
+</li>
+<li>
+<p>This implementation is difficult to unit test.</p>
+</li>
+<li>
+<p>The use of an interface or base class to abstract the dependency implementation.</p>
+</li>
+<li>
+<p>Registration of the dependency in a service container. ASP.NET Core provides a built-in service container, <code>IServiceProvider</code>. Services are typically registered in the app's <code>Program.cs</code> file.</p>
+</li>
+<li>
+<p>Injection of the service into the constructor of the class where it's used. The framework takes on the responsibility of creating an instance of the dependency and disposing of it when it's no longer needed.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public interface IMyDependency
+{
+    void WriteMessage(string message);
+}
+</code></pre>
+<pre><code class="language-csharp">public class MyDependency : IMyDependency
+{
+    public void WriteMessage(string message)
+    {
+        Console.WriteLine($&quot;MyDependency.WriteMessage Message: {message}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using DependencyInjectionSample.Interfaces;
+using DependencyInjectionSample.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddScoped&lt;IMyDependency, MyDependency&gt;();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class Index2Model : PageModel
+{
+    private readonly IMyDependency _myDependency;
+
+    public Index2Model(IMyDependency myDependency)
+    {
+        _myDependency = myDependency;            
+    }
+
+    public void OnGet()
+    {
+        _myDependency.WriteMessage(&quot;Index2Model.OnGet&quot;);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Doesn't use the concrete type <code>MyDependency</code>, only the <code>IMyDependency</code> interface it implements. That makes it easy to change the implementation without modifying the controller or Razor Page.</p>
+</li>
+<li>
+<p>Doesn't create an instance of <code>MyDependency</code>, it's created by the DI container.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class MyDependency2 : IMyDependency
+{
+    private readonly ILogger&lt;MyDependency2&gt; _logger;
+
+    public MyDependency2(ILogger&lt;MyDependency2&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public void WriteMessage(string message)
+    {
+        _logger.LogInformation( $&quot;MyDependency2.WriteMessage Message: {message}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using DependencyInjectionSample.Interfaces;
+using DependencyInjectionSample.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddScoped&lt;IMyDependency, MyDependency2&gt;();
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>Is typically an object that provides a service to other objects, such as the <code>IMyDependency</code> service.</p>
+</li>
+<li>
+<p>Is not related to a web service, although the service may use a web service.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class AboutModel : PageModel
+{
+    private readonly ILogger _logger;
+
+    public AboutModel(ILogger&lt;AboutModel&gt; logger)
+    {
+        _logger = logger;
+    }
+    
+    public string Message { get; set; } = string.Empty;
+
+    public void OnGet()
+    {
+        Message = $&quot;About page visited at {DateTime.UtcNow.ToLongTimeString()}&quot;;
+        _logger.LogInformation(Message);
+    }
+}
+</code></pre>
+<h2><a href="#register-groups-of-services-with-extension-methods" aria-hidden="true" class="anchor" id="register-groups-of-services-with-extension-methods"></a>Register groups of services with extension methods</h2>
+<pre><code class="language-csharp">using DependencyInjectionSample.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">using ConfigSample.Options;
+using Microsoft.Extensions.DependencyInjection.ConfigSample.Options;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;PositionOptions&gt;(
+    builder.Configuration.GetSection(PositionOptions.Position));
+builder.Services.Configure&lt;ColorOptions&gt;(
+    builder.Configuration.GetSection(ColorOptions.Color));
+
+builder.Services.AddScoped&lt;IMyDependency, MyDependency&gt;();
+builder.Services.AddScoped&lt;IMyDependency2, MyDependency2&gt;();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">using ConfigSample.Options;
+using Microsoft.Extensions.Configuration;
+
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public static class MyConfigServiceCollectionExtensions
+    {
+        public static IServiceCollection AddConfig(
+             this IServiceCollection services, IConfiguration config)
+        {
+            services.Configure&lt;PositionOptions&gt;(
+                config.GetSection(PositionOptions.Position));
+            services.Configure&lt;ColorOptions&gt;(
+                config.GetSection(ColorOptions.Color));
+
+            return services;
+        }
+
+        public static IServiceCollection AddMyDependencyGroup(
+             this IServiceCollection services)
+        {
+            services.AddScoped&lt;IMyDependency, MyDependency&gt;();
+            services.AddScoped&lt;IMyDependency2, MyDependency2&gt;();
+
+            return services;
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.Extensions.DependencyInjection.ConfigSample.Options;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddConfig(builder.Configuration)
+    .AddMyDependencyGroup();
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#service-lifetimes" aria-hidden="true" class="anchor" id="service-lifetimes"></a>Service lifetimes</h2>
+<ul>
+<li>
+<p>Inject the service into the middleware's <code>Invoke</code> or <code>InvokeAsync</code> method. Using constructor injection throws a runtime exception because it forces the scoped service to behave like a singleton. The sample in the Lifetime and registration options section demonstrates the <code>InvokeAsync</code> approach.</p>
+</li>
+<li>
+<p>Use Factory-based middleware. Middleware registered using this approach is activated per client request (connection), which allows scoped services to be injected into the middleware's constructor.</p>
+</li>
+</ul>
+<h2><a href="#service-registration-methods" aria-hidden="true" class="anchor" id="service-registration-methods"></a>Service registration methods</h2>
+<pre><code class="language-csharp">services.AddSingleton&lt;IMyDependency, MyDependency&gt;();
+services.AddSingleton&lt;IMyDependency, DifferentDependency&gt;();
+
+public class MyService
+{
+    public MyService(IMyDependency myDependency, 
+       IEnumerable&lt;IMyDependency&gt; myDependencies)
+    {
+        Trace.Assert(myDependency is DifferentDependency);
+
+        var dependencyArray = myDependencies.ToArray();
+        Trace.Assert(dependencyArray[0] is MyDependency);
+        Trace.Assert(dependencyArray[1] is DifferentDependency);
+    }
+}
+</code></pre>
+<h3><a href="#keyed-services" aria-hidden="true" class="anchor" id="keyed-services"></a>Keyed services</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddKeyedSingleton&lt;ICache, BigCache&gt;(&quot;big&quot;);
+builder.Services.AddKeyedSingleton&lt;ICache, SmallCache&gt;(&quot;small&quot;);
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/big&quot;, ([FromKeyedServices(&quot;big&quot;)] ICache bigCache) =&gt; bigCache.Get(&quot;date&quot;));
+app.MapGet(&quot;/small&quot;, ([FromKeyedServices(&quot;small&quot;)] ICache smallCache) =&gt;
+                                                               smallCache.Get(&quot;date&quot;));
+
+app.MapControllers();
+
+app.Run();
+
+public interface ICache
+{
+    object Get(string key);
+}
+public class BigCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from big cache.&quot;;
+}
+
+public class SmallCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from small cache.&quot;;
+}
+
+[ApiController]
+[Route(&quot;/cache&quot;)]
+public class CustomServicesApiController : Controller
+{
+    [HttpGet(&quot;big-cache&quot;)]
+    public ActionResult&lt;object&gt; GetOk([FromKeyedServices(&quot;big&quot;)] ICache cache)
+    {
+        return cache.Get(&quot;data-mvc&quot;);
+    }
+}
+
+public class MyHub : Hub
+{
+    public void Method([FromKeyedServices(&quot;small&quot;)] ICache cache)
+    {
+        Console.WriteLine(cache.Get(&quot;signalr&quot;));
+    }
+}
+</code></pre>
+<h2><a href="#constructor-injection-behavior" aria-hidden="true" class="anchor" id="constructor-injection-behavior"></a>Constructor injection behavior</h2>
+<h2><a href="#entity-framework-contexts" aria-hidden="true" class="anchor" id="entity-framework-contexts"></a>Entity Framework contexts</h2>
+<h2><a href="#lifetime-and-registration-options" aria-hidden="true" class="anchor" id="lifetime-and-registration-options"></a>Lifetime and registration options</h2>
+<pre><code class="language-csharp">public interface IOperation
+{
+    string OperationId { get; }
+}
+
+public interface IOperationTransient : IOperation { }
+public interface IOperationScoped : IOperation { }
+public interface IOperationSingleton : IOperation { }
+</code></pre>
+<pre><code class="language-csharp">public class Operation : IOperationTransient, IOperationScoped, IOperationSingleton
+{
+    public Operation()
+    {
+        OperationId = Guid.NewGuid().ToString()[^4..];
+    }
+
+    public string OperationId { get; }
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddTransient&lt;IOperationTransient, Operation&gt;();
+builder.Services.AddScoped&lt;IOperationScoped, Operation&gt;();
+builder.Services.AddSingleton&lt;IOperationSingleton, Operation&gt;();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseMyMiddleware();
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    private readonly ILogger _logger;
+    private readonly IOperationTransient _transientOperation;
+    private readonly IOperationSingleton _singletonOperation;
+    private readonly IOperationScoped _scopedOperation;
+
+    public IndexModel(ILogger&lt;IndexModel&gt; logger,
+                      IOperationTransient transientOperation,
+                      IOperationScoped scopedOperation,
+                      IOperationSingleton singletonOperation)
+    {
+        _logger = logger;
+        _transientOperation = transientOperation;
+        _scopedOperation    = scopedOperation;
+        _singletonOperation = singletonOperation;
+    }
+
+    public void  OnGet()
+    {
+        _logger.LogInformation(&quot;Transient: &quot; + _transientOperation.OperationId);
+        _logger.LogInformation(&quot;Scoped: &quot;    + _scopedOperation.OperationId);
+        _logger.LogInformation(&quot;Singleton: &quot; + _singletonOperation.OperationId);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class MyMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger _logger;
+
+    private readonly IOperationSingleton _singletonOperation;
+
+    public MyMiddleware(RequestDelegate next, ILogger&lt;MyMiddleware&gt; logger,
+        IOperationSingleton singletonOperation)
+    {
+        _logger = logger;
+        _singletonOperation = singletonOperation;
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context,
+        IOperationTransient transientOperation, IOperationScoped scopedOperation)
+    {
+        _logger.LogInformation(&quot;Transient: &quot; + transientOperation.OperationId);
+        _logger.LogInformation(&quot;Scoped: &quot; + scopedOperation.OperationId);
+        _logger.LogInformation(&quot;Singleton: &quot; + _singletonOperation.OperationId);
+
+        await _next(context);
+    }
+}
+
+public static class MyMiddlewareExtensions
+{
+    public static IApplicationBuilder UseMyMiddleware(this IApplicationBuilder builder)
+    {
+        return builder.UseMiddleware&lt;MyMiddleware&gt;();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public async Task InvokeAsync(HttpContext context,
+    IOperationTransient transientOperation, IOperationScoped scopedOperation)
+{
+    _logger.LogInformation(&quot;Transient: &quot; + transientOperation.OperationId);
+    _logger.LogInformation(&quot;Scoped: &quot; + scopedOperation.OperationId);
+    _logger.LogInformation(&quot;Singleton: &quot; + _singletonOperation.OperationId);
+
+    await _next(context);
+}
+</code></pre>
+<ul>
+<li>
+<p>Transient objects are always different. The transient <code>OperationId</code> value is different in the <code>IndexModel</code> and in the middleware.</p>
+</li>
+<li>
+<p>Scoped objects are the same for a given request but differ across each new request.</p>
+</li>
+<li>
+<p>Singleton objects are the same for every request.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;MyKey&quot;: &quot;MyKey from appsettings.Developement.json&quot;,
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;System&quot;: &quot;Debug&quot;,
+      &quot;Microsoft&quot;: &quot;Error&quot;
+    }
+  }
+}
+</code></pre>
+<h2><a href="#resolve-a-service-at-app-start-up" aria-hidden="true" class="anchor" id="resolve-a-service-at-app-start-up"></a>Resolve a service at app start up</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped&lt;IMyDependency, MyDependency&gt;();
+
+var app = builder.Build();
+
+using (var serviceScope = app.Services.CreateScope())
+{
+    var services = serviceScope.ServiceProvider;
+
+    var myDependency = services.GetRequiredService&lt;IMyDependency&gt;();
+    myDependency.WriteMessage(&quot;Call services from main&quot;);
+}
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h2><a href="#scope-validation" aria-hidden="true" class="anchor" id="scope-validation"></a>Scope validation</h2>
+<h2><a href="#request-services" aria-hidden="true" class="anchor" id="request-services"></a>Request Services</h2>
+<blockquote>
+<p class='note'>Note
+Prefer requesting dependencies as constructor parameters over resolving services from <code>RequestServices</code>. Requesting dependencies as constructor parameters yields classes that are easier to test.</p>
+</blockquote>
+<h2><a href="#design-services-for-dependency-injection" aria-hidden="true" class="anchor" id="design-services-for-dependency-injection"></a>Design services for dependency injection</h2>
+<ul>
+<li>
+<p>Avoid stateful, static classes and members. Avoid creating global state by designing apps to use singleton services instead.</p>
+</li>
+<li>
+<p>Avoid direct instantiation of dependent classes within services. Direct instantiation couples the code to a particular implementation.</p>
+</li>
+<li>
+<p>Make services small, well-factored, and easily tested.</p>
+</li>
+</ul>
+<h3><a href="#disposal-of-services" aria-hidden="true" class="anchor" id="disposal-of-services"></a>Disposal of services</h3>
+<pre><code class="language-csharp">public class Service1 : IDisposable
+{
+    private bool _disposed;
+
+    public void Write(string message)
+    {
+        Console.WriteLine($&quot;Service1: {message}&quot;);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        Console.WriteLine(&quot;Service1.Dispose&quot;);
+        _disposed = true;
+    }
+}
+
+public class Service2 : IDisposable
+{
+    private bool _disposed;
+
+    public void Write(string message)
+    {
+        Console.WriteLine($&quot;Service2: {message}&quot;);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        Console.WriteLine(&quot;Service2.Dispose&quot;);
+        _disposed = true;
+    }
+}
+
+public interface IService3
+{
+    public void Write(string message);
+}
+
+public class Service3 : IService3, IDisposable
+{
+    private bool _disposed;
+
+    public Service3(string myKey)
+    {
+        MyKey = myKey;
+    }
+
+    public string MyKey { get; }
+
+    public void Write(string message)
+    {
+        Console.WriteLine($&quot;Service3: {message}, MyKey = {MyKey}&quot;);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        Console.WriteLine(&quot;Service3.Dispose&quot;);
+        _disposed = true;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using DIsample2.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddScoped&lt;Service1&gt;();
+builder.Services.AddSingleton&lt;Service2&gt;();
+
+var myKey = builder.Configuration[&quot;MyKey&quot;];
+builder.Services.AddSingleton&lt;IService3&gt;(sp =&gt; new Service3(myKey));
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    private readonly Service1 _service1;
+    private readonly Service2 _service2;
+    private readonly IService3 _service3;
+
+    public IndexModel(Service1 service1, Service2 service2, IService3 service3)
+    {
+        _service1 = service1;
+        _service2 = service2;
+        _service3 = service3;
+    }
+
+    public void OnGet()
+    {
+        _service1.Write(&quot;IndexModel.OnGet&quot;);
+        _service2.Write(&quot;IndexModel.OnGet&quot;);
+        _service3.Write(&quot;IndexModel.OnGet&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-console">Service1: IndexModel.OnGet
+Service2: IndexModel.OnGet
+Service3: IndexModel.OnGet, MyKey = MyKey from appsettings.Developement.json
+Service1.Dispose
+</code></pre>
+<h3><a href="#services-not-created-by-the-service-container" aria-hidden="true" class="anchor" id="services-not-created-by-the-service-container"></a>Services not created by the service container</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddSingleton(new Service1());
+builder.Services.AddSingleton(new Service2());
+</code></pre>
+<ul>
+<li>
+<p>The service instances aren't created by the service container.</p>
+</li>
+<li>
+<p>The framework doesn't dispose of the services automatically.</p>
+</li>
+<li>
+<p>The developer is responsible for disposing the services.</p>
+</li>
+</ul>
+<h3><a href="#idisposable-guidance-for-transient-and-shared-instances" aria-hidden="true" class="anchor" id="idisposable-guidance-for-transient-and-shared-instances"></a>IDisposable guidance for Transient and shared instances</h3>
+<h2><a href="#default-service-container-replacement" aria-hidden="true" class="anchor" id="default-service-container-replacement"></a>Default service container replacement</h2>
+<h2><a href="#recommendations" aria-hidden="true" class="anchor" id="recommendations"></a>Recommendations</h2>
+<ul>
+<li>Avoid using the service locator pattern. For example, don't invoke <code>GetService</code> to obtain a service instance when you can use DI instead:
+Incorrect:</li>
+</ul>
+<p>Correct:
+public class MyClass
+{
+private readonly IOptionsMonitor<MyOptions> _optionsMonitor;</p>
+<pre><code>public MyClass(IOptionsMonitor&lt;MyOptions&gt; optionsMonitor)
+{
+    _optionsMonitor = optionsMonitor;
+}
+
+public void MyMethod()
+{
+    var option = _optionsMonitor.CurrentValue.Option;
+
+    ...
+}
+</code></pre>
+<p>}</p>
+<pre><code class="language-csharp">public class MyClass
+{
+    private readonly IOptionsMonitor&lt;MyOptions&gt; _optionsMonitor;
+
+    public MyClass(IOptionsMonitor&lt;MyOptions&gt; optionsMonitor)
+    {
+        _optionsMonitor = optionsMonitor;
+    }
+
+    public void MyMethod()
+    {
+        var option = _optionsMonitor.CurrentValue.Option;
+
+        ...
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Another service locator variation to avoid is injecting a factory that resolves dependencies at runtime. Both of these practices mix Inversion of Control strategies.</p>
+</li>
+<li>
+<p>Avoid static access to <code>HttpContext</code> (for example, <code>IHttpContextAccessor.HttpContext</code>).</p>
+</li>
+</ul>
+<h2><a href="#recommended-patterns-for-multi-tenancy-in-di" aria-hidden="true" class="anchor" id="recommended-patterns-for-multi-tenancy-in-di"></a>Recommended patterns for multi-tenancy in DI</h2>
+<h2><a href="#framework-provided-services" aria-hidden="true" class="anchor" id="framework-provided-services"></a>Framework-provided services</h2>
+<table><thead>
+<tr>
+<th>Service Type</th>
+<th>Lifetime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.hosting.builder.iapplicationbuilderfactory" class="no-loc" data-linktype="absolute-path">Microsoft.AspNetCore.Hosting.Builder.IApplicationBuilderFactory</a></td>
+<td>Transient</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.hosting.ihostapplicationlifetime" class="no-loc" data-linktype="absolute-path">IHostApplicationLifetime</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.hosting.iwebhostenvironment" class="no-loc" data-linktype="absolute-path">IWebHostEnvironment</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.hosting.istartup" class="no-loc" data-linktype="absolute-path">Microsoft.AspNetCore.Hosting.IStartup</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.hosting.istartupfilter" class="no-loc" data-linktype="absolute-path">Microsoft.AspNetCore.Hosting.IStartupFilter</a></td>
+<td>Transient</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.hosting.server.iserver" class="no-loc" data-linktype="absolute-path">Microsoft.AspNetCore.Hosting.Server.IServer</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.ihttpcontextfactory" class="no-loc" data-linktype="absolute-path">Microsoft.AspNetCore.Http.IHttpContextFactory</a></td>
+<td>Transient</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.ilogger-1" class="no-loc" data-linktype="absolute-path">Microsoft.Extensions.Logging.ILogger&lt;TCategoryName&gt;</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.iloggerfactory" class="no-loc" data-linktype="absolute-path">Microsoft.Extensions.Logging.ILoggerFactory</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.objectpool.objectpoolprovider" class="no-loc" data-linktype="absolute-path">Microsoft.Extensions.ObjectPool.ObjectPoolProvider</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.options.iconfigureoptions-1" class="no-loc" data-linktype="absolute-path">Microsoft.Extensions.Options.IConfigureOptions&lt;TOptions&gt;</a></td>
+<td>Transient</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.options.ioptions-1" class="no-loc" data-linktype="absolute-path">Microsoft.Extensions.Options.IOptions&lt;TOptions&gt;</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/system.diagnostics.diagnosticsource" class="no-loc" data-linktype="absolute-path">System.Diagnostics.DiagnosticSource</a></td>
+<td>Singleton</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/system.diagnostics.diagnosticlistener" class="no-loc" data-linktype="absolute-path">System.Diagnostics.DiagnosticListener</a></td>
+<td>Singleton</td>
+</tr>
+</tbody></table>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Dependency injection into views in ASP.NET Core</p>
+</li>
+<li>
+<p>Dependency injection into controllers in ASP.NET Core</p>
+</li>
+<li>
+<p>Dependency injection in requirement handlers in ASP.NET Core</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor dependency injection</p>
+</li>
+<li>
+<p>NDC Conference Patterns for DI app development</p>
+</li>
+<li>
+<p>App startup in ASP.NET Core</p>
+</li>
+<li>
+<p>Factory-based middleware activation in ASP.NET Core</p>
+</li>
+<li>
+<p>Understand dependency injection basics in .NET</p>
+</li>
+<li>
+<p>Dependency injection guidelines</p>
+</li>
+<li>
+<p>Tutorial: Use dependency injection in .NET</p>
+</li>
+<li>
+<p>.NET dependency injection</p>
+</li>
+<li>
+<p>ASP.NET CORE DEPENDENCY INJECTION: WHAT IS THE ISERVICECOLLECTION?</p>
+</li>
+<li>
+<p>Four ways to dispose IDisposables in ASP.NET Core</p>
+</li>
+<li>
+<p>Writing Clean Code in ASP.NET Core with Dependency Injection (MSDN)</p>
+</li>
+<li>
+<p>Explicit Dependencies Principle</p>
+</li>
+<li>
+<p>Inversion of Control Containers and the Dependency Injection Pattern (Martin Fowler)</p>
+</li>
+<li>
+<p>How to register a service with multiple interfaces in ASP.NET Core DI</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection?view=aspnetcore-8.0">Dependency injection in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

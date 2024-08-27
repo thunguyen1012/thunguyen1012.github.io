@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Host - Web Host | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Host - Web Host</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#set-up-a-host" aria-hidden="true" class="anchor" id="set-up-a-host"></a>Set up a host</h2>
+<pre><code class="language-csharp">public class Program
+{
+    public static void Main(string[] args)
+    {
+        CreateWebHostBuilder(args).Build().Run();
+    }
+
+    public static IWebHostBuilder CreateWebHostBuilder(string[] args) =&gt;
+        WebHost.CreateDefaultBuilder(args)
+            .UseStartup&lt;Startup&gt;();
+}
+</code></pre>
+<ul>
+<li>
+<p>Configures Kestrel server as the web server using the app's hosting configuration providers. For the Kestrel server's default options, see <code>Configure</code> options for the ASP.NET Core Kestrel web server.</p>
+</li>
+<li>
+<p>Sets the content root to the path returned by <code>Directory.GetCurrentDirectory</code>.</p>
+</li>
+<li>
+<p>Loads host configuration from:</p>
+<ul>
+<li>
+<p>Environment variables prefixed with <code>ASPNETCORE_</code> (for example, <code>ASPNETCORE_ENVIRONMENT</code>).</p>
+</li>
+<li>
+<p>Command-line arguments.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Loads app configuration in the following order from:</p>
+<ul>
+<li>
+<p><code>appsettings.json</code>.</p>
+</li>
+<li>
+<p><code>appsettings.{Environment}.json</code>.</p>
+</li>
+<li>
+<p>User secrets when the app runs in the <code>Development</code> environment using the entry assembly.</p>
+</li>
+<li>
+<p>Environment variables.</p>
+</li>
+<li>
+<p>Command-line arguments.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Configures logging for console and debug output. Logging includes log filtering rules specified in a Logging configuration section of an <code>appsettings.json</code> or <code>appsettings.{Environment}.json</code> file.</p>
+</li>
+<li>
+<p>When running behind IIS with the ASP.NET Core Module, <code>CreateDefaultBuilder</code> enables IIS Integration, which configures the app's base address and port. IIS Integration also configures the app to capture startup errors. For the IIS default options, see Host ASP.NET Core on Windows with IIS.</p>
+</li>
+<li>
+<p>Sets ServiceProviderOptions.ValidateScopes to <code>true</code> if the app's environment is <code>Development</code>. For more information, see Scope validation.</p>
+</li>
+<li>
+<p><code>ConfigureAppConfiguration</code> is used to specify additional <code>IConfiguration</code> for the app. The following <code>ConfigureAppConfiguration</code> call adds a delegate to include app configuration in the <code>appsettings.xml</code> file. <code>ConfigureAppConfiguration</code> may be called multiple times. Note that this configuration doesn't apply to the host (for example, server URLs or environment). See the Host configuration values section.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .ConfigureAppConfiguration((hostingContext, config) =&gt;
+    {
+        config.AddXmlFile(&quot;appsettings.xml&quot;, optional: true, reloadOnChange: true);
+    })
+    ...
+</code></pre>
+<ul>
+<li>The following <code>ConfigureLogging</code> call adds a delegate to configure the minimum logging level (SetMinimumLevel) to <code>LogLevel.Warning</code>. This setting overrides the settings in <code>appsettings.Development.json</code> (LogLevel.Debug) and <code>appsettings.Production.json</code> (LogLevel.Error) configured by <code>CreateDefaultBuilder</code>. <code>ConfigureLogging</code> may be called multiple times.</li>
+</ul>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .ConfigureLogging(logging =&gt; 
+    {
+        logging.SetMinimumLevel(LogLevel.Warning);
+    })
+    ...
+</code></pre>
+<ul>
+<li>The following call to <code>ConfigureKestrel</code> overrides the default <code>Limits.MaxRequestBodySize</code> of 30,000,000 bytes established when Kestrel was configured by <code>CreateDefaultBuilder</code>:</li>
+</ul>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .ConfigureKestrel((context, options) =&gt;
+    {
+        options.Limits.MaxRequestBodySize = 20000000;
+    });
+</code></pre>
+<blockquote>
+<p class='note'>Note
+As an alternative to using the static <code>CreateDefaultBuilder</code> method, creating a host from <code>WebHostBuilder</code> is a supported approach with ASP.NET Core 2.x.</p>
+</blockquote>
+<h2><a href="#host-configuration-values" aria-hidden="true" class="anchor" id="host-configuration-values"></a>Host configuration values</h2>
+<ul>
+<li>
+<p>Host builder configuration, which includes environment variables with the format <code>ASPNETCORE_</code>{configurationKey}. For example, <code>ASPNETCORE_ENVIRONMENT</code>.</p>
+</li>
+<li>
+<p>Extensions such as <code>UseContentRoot</code> and UseConfiguration (see the Override configuration section).</p>
+</li>
+<li>
+<p><code>UseSetting</code> and the associated key. When setting a value with <code>UseSetting</code>, the value is set as a <code>string</code> regardless of the type.</p>
+</li>
+</ul>
+<h3><a href="#application-key-name)" aria-hidden="true" class="anchor" id="application-key-name)"></a>Application Key (Name)</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseSetting(WebHostDefaults.ApplicationKey, &quot;CustomApplicationName&quot;)
+</code></pre>
+<h3><a href="#capture-startup-errors" aria-hidden="true" class="anchor" id="capture-startup-errors"></a>Capture <code>Startup</code> Errors</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .CaptureStartupErrors(true)
+</code></pre>
+<h3><a href="#content-root" aria-hidden="true" class="anchor" id="content-root"></a>Content root</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseContentRoot(&quot;c:\\&lt;content-root&gt;&quot;)
+</code></pre>
+<ul>
+<li>
+<p>Fundamentals: Content root</p>
+</li>
+<li>
+<p>Web root</p>
+</li>
+</ul>
+<h3><a href="#detailed-errors" aria-hidden="true" class="anchor" id="detailed-errors"></a>Detailed Errors</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseSetting(WebHostDefaults.DetailedErrorsKey, &quot;true&quot;)
+</code></pre>
+<h3><a href="#environment" aria-hidden="true" class="anchor" id="environment"></a>Environment</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseEnvironment(EnvironmentName.Development)
+</code></pre>
+<h3><a href="#hosting-startup-assemblies" aria-hidden="true" class="anchor" id="hosting-startup-assemblies"></a>Hosting <code>Startup</code> Assemblies</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseSetting(WebHostDefaults.HostingStartupAssembliesKey, &quot;assembly1;assembly2&quot;)
+</code></pre>
+<h3><a href="#https-port" aria-hidden="true" class="anchor" id="https-port"></a>HTTPS Port</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseSetting(&quot;https_port&quot;, &quot;8080&quot;)
+</code></pre>
+<h3><a href="#hosting-startup-exclude-assemblies" aria-hidden="true" class="anchor" id="hosting-startup-exclude-assemblies"></a>Hosting <code>Startup</code> Exclude Assemblies</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseSetting(WebHostDefaults.HostingStartupExcludeAssembliesKey, &quot;assembly1;assembly2&quot;)
+</code></pre>
+<h3><a href="#prefer-hosting-urls" aria-hidden="true" class="anchor" id="prefer-hosting-urls"></a>Prefer Hosting URLs</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .PreferHostingUrls(true)
+</code></pre>
+<h3><a href="#prevent-hosting-startup" aria-hidden="true" class="anchor" id="prevent-hosting-startup"></a>Prevent Hosting <code>Startup</code></h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseSetting(WebHostDefaults.PreventHostingStartupKey, &quot;true&quot;)
+</code></pre>
+<h3><a href="#server-urls" aria-hidden="true" class="anchor" id="server-urls"></a>Server URLs</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseUrls(&quot;http://*:5000;http://localhost:5001;https://hostname:5002&quot;)
+</code></pre>
+<h3><a href="#shutdown-timeout" aria-hidden="true" class="anchor" id="shutdown-timeout"></a><code>Shutdown</code> Timeout</h3>
+<ul>
+<li>
+<p>Triggers IApplicationLifetime.ApplicationStopping.</p>
+</li>
+<li>
+<p>Attempts to stop hosted services, logging any errors for services that fail to stop.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseShutdownTimeout(TimeSpan.FromSeconds(10))
+</code></pre>
+<h3><a href="#startup-assembly" aria-hidden="true" class="anchor" id="startup-assembly"></a><code>Startup</code> Assembly</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseStartup(&quot;StartupAssemblyName&quot;)
+</code></pre>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseStartup&lt;TStartup&gt;()
+</code></pre>
+<h3><a href="#web-root" aria-hidden="true" class="anchor" id="web-root"></a>Web root</h3>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseWebRoot(&quot;public&quot;)
+</code></pre>
+<ul>
+<li>
+<p>Fundamentals: Web root</p>
+</li>
+<li>
+<p>Content root</p>
+</li>
+</ul>
+<h2><a href="#override-configuration" aria-hidden="true" class="anchor" id="override-configuration"></a>Override configuration</h2>
+<pre><code class="language-csharp">public class Program
+{
+    public static void Main(string[] args)
+    {
+        CreateWebHostBuilder(args).Build().Run();
+    }
+
+    public static IWebHostBuilder CreateWebHostBuilder(string[] args)
+    {
+        var config = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile(&quot;hostsettings.json&quot;, optional: true)
+            .AddCommandLine(args)
+            .Build();
+
+        return WebHost.CreateDefaultBuilder(args)
+            .UseUrls(&quot;http://*:5000&quot;)
+            .UseConfiguration(config)
+            .Configure(app =&gt;
+            {
+                app.Run(context =&gt; 
+                    context.Response.WriteAsync(&quot;Hello, World!&quot;));
+            });
+    }
+}
+</code></pre>
+<pre><code class="language-json">{
+    urls: &quot;http://*:5005&quot;
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+UseConfiguration only copies keys from the provided <code>IConfiguration</code> to the host builder configuration. Therefore, setting <code>reloadOnChange:</code>true`````` for JSON, INI, and XML settings files has no effect.</p>
+</blockquote>
+<pre><code class="language-dotnetcli">dotnet run --urls &quot;http://*:8080&quot;
+</code></pre>
+<h2><a href="#manage-the-host" aria-hidden="true" class="anchor" id="manage-the-host"></a>Manage the host</h2>
+<pre><code class="language-csharp">host.Run();
+</code></pre>
+<pre><code class="language-csharp">using (host)
+{
+    host.Start();
+    Console.ReadLine();
+}
+</code></pre>
+<pre><code class="language-csharp">var urls = new List&lt;string&gt;()
+{
+    &quot;http://*:5000&quot;,
+    &quot;http://localhost:5001&quot;
+};
+
+var host = new WebHostBuilder()
+    .UseKestrel()
+    .UseStartup&lt;Startup&gt;()
+    .Start(urls.ToArray());
+
+using (host)
+{
+    Console.ReadLine();
+}
+</code></pre>
+<pre><code class="language-csharp">using (var host = WebHost.Start(app =&gt; app.Response.WriteAsync(&quot;Hello, World!&quot;)))
+{
+    Console.WriteLine(&quot;Use Ctrl-C to shutdown the host...&quot;);
+    host.WaitForShutdown();
+}
+</code></pre>
+<pre><code class="language-csharp">using (var host = WebHost.Start(&quot;http://localhost:8080&quot;, app =&gt; app.Response.WriteAsync(&quot;Hello, World!&quot;)))
+{
+    Console.WriteLine(&quot;Use Ctrl-C to shutdown the host...&quot;);
+    host.WaitForShutdown();
+}
+</code></pre>
+<pre><code class="language-csharp">using (var host = WebHost.Start(router =&gt; router
+    .MapGet(&quot;hello/{name}&quot;, (req, res, data) =&gt; 
+        res.WriteAsync($&quot;Hello, {data.Values[&quot;name&quot;]}!&quot;))
+    .MapGet(&quot;buenosdias/{name}&quot;, (req, res, data) =&gt; 
+        res.WriteAsync($&quot;Buenos dias, {data.Values[&quot;name&quot;]}!&quot;))
+    .MapGet(&quot;throw/{message?}&quot;, (req, res, data) =&gt; 
+        throw new Exception((string)data.Values[&quot;message&quot;] ?? &quot;Uh oh!&quot;))
+    .MapGet(&quot;{greeting}/{name}&quot;, (req, res, data) =&gt; 
+        res.WriteAsync($&quot;{data.Values[&quot;greeting&quot;]}, {data.Values[&quot;name&quot;]}!&quot;))
+    .MapGet(&quot;&quot;, (req, res, data) =&gt; res.WriteAsync(&quot;Hello, World!&quot;))))
+{
+    Console.WriteLine(&quot;Use Ctrl-C to shutdown the host...&quot;);
+    host.WaitForShutdown();
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>http://localhost:5000/hello/Martin</code></td>
+<td>Hello, Martin!</td>
+</tr>
+<tr>
+<td><code>http://localhost:5000/buenosdias/Catrina</code></td>
+<td>Buenos dias, Catrina!</td>
+</tr>
+<tr>
+<td><code>http://localhost:5000/throw/ooops!</code></td>
+<td>Throws an exception with ```string``` "ooops!"</td>
+</tr>
+<tr>
+<td><code>http://localhost:5000/throw</code></td>
+<td>Throws an exception with ```string``` "Uh oh!"</td>
+</tr>
+<tr>
+<td><code>http://localhost:5000/Sante/Kevin</code></td>
+<td>Sante, Kevin!</td>
+</tr>
+<tr>
+<td><code>http://localhost:5000</code></td>
+<td>Hello World!</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">using (var host = WebHost.Start(&quot;http://localhost:8080&quot;, router =&gt; router
+    .MapGet(&quot;hello/{name}&quot;, (req, res, data) =&gt; 
+        res.WriteAsync($&quot;Hello, {data.Values[&quot;name&quot;]}!&quot;))
+    .MapGet(&quot;buenosdias/{name}&quot;, (req, res, data) =&gt; 
+        res.WriteAsync($&quot;Buenos dias, {data.Values[&quot;name&quot;]}!&quot;))
+    .MapGet(&quot;throw/{message?}&quot;, (req, res, data) =&gt; 
+        throw new Exception((string)data.Values[&quot;message&quot;] ?? &quot;Uh oh!&quot;))
+    .MapGet(&quot;{greeting}/{name}&quot;, (req, res, data) =&gt; 
+        res.WriteAsync($&quot;{data.Values[&quot;greeting&quot;]}, {data.Values[&quot;name&quot;]}!&quot;))
+    .MapGet(&quot;&quot;, (req, res, data) =&gt; res.WriteAsync(&quot;Hello, World!&quot;))))
+{
+    Console.WriteLine(&quot;Use Ctrl-C to shut down the host...&quot;);
+    host.WaitForShutdown();
+}
+</code></pre>
+<pre><code class="language-csharp">using (var host = WebHost.StartWith(app =&gt; 
+    app.Use(next =&gt; 
+    {
+        return async context =&gt; 
+        {
+            await context.Response.WriteAsync(&quot;Hello World!&quot;);
+        };
+    })))
+{
+    Console.WriteLine(&quot;Use Ctrl-C to shut down the host...&quot;);
+    host.WaitForShutdown();
+}
+</code></pre>
+<pre><code class="language-csharp">using (var host = WebHost.StartWith(&quot;http://localhost:8080&quot;, app =&gt; 
+    app.Use(next =&gt; 
+    {
+        return async context =&gt; 
+        {
+            await context.Response.WriteAsync(&quot;Hello World!&quot;);
+        };
+    })))
+{
+    Console.WriteLine(&quot;Use Ctrl-C to shut down the host...&quot;);
+    host.WaitForShutdown();
+}
+</code></pre>
+<h2><a href="#iwebhostenvironment-interface" aria-hidden="true" class="anchor" id="iwebhostenvironment-interface"></a><code>IWebHostEnvironment</code> interface</h2>
+<pre><code class="language-csharp">public class CustomFileReader
+{
+    private readonly IWebHostEnvironment _env;
+
+    public CustomFileReader(IWebHostEnvironment env)
+    {
+        _env = env;
+    }
+
+    public string ReadFile(string filePath)
+    {
+        var fileProvider = _env.WebRootFileProvider;
+        // Process the file here
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class Startup
+{
+    public Startup(IWebHostEnvironment env)
+    {
+        HostingEnvironment = env;
+    }
+
+    public IWebHostEnvironment HostingEnvironment { get; }
+
+    public void ConfigureServices(IServiceCollection services)
+    {
+        if (HostingEnvironment.IsDevelopment())
+        {
+            // Development configuration
+        }
+        else
+        {
+            // Staging/Production configuration
+        }
+
+        var contentRootPath = HostingEnvironment.ContentRootPath;
+    }
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+In addition to the <code>IsDevelopment</code> extension method, <code>IWebHostEnvironment</code> offers <code>IsStaging</code>, <code>IsProduction</code>, and <code>IsEnvironment(string environmentName)</code> methods. For more information, see Use multiple environments in ASP.NET Core.</p>
+</blockquote>
+<pre><code class="language-csharp">public async Task Invoke(HttpContext context, IWebHostEnvironment env)
+{
+    if (env.IsDevelopment())
+    {
+        // Configure middleware for Development
+    }
+    else
+    {
+        // Configure middleware for Staging/Production
+    }
+
+    var contentRootPath = env.ContentRootPath;
+}
+</code></pre>
+<h2><a href="#ihostapplicationlifetime-interface" aria-hidden="true" class="anchor" id="ihostapplicationlifetime-interface"></a><code>IHostApplicationLifetime</code> interface</h2>
+<table><thead>
+<tr>
+<th>Cancellation Token</th>
+<th>Triggered when…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ApplicationStarted</code></td>
+<td>The host has fully started.</td>
+</tr>
+<tr>
+<td><code>ApplicationStopped</code></td>
+<td>The host is completing a graceful shutdown. All requests should be processed. ```Shutdown``` blocks until this event completes.</td>
+</tr>
+<tr>
+<td><code>ApplicationStopping</code></td>
+<td>The host is performing a graceful shutdown. Requests may still be processing. ```Shutdown``` blocks until this event completes.</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">public class Startup
+{
+    public void Configure(IApplicationBuilder app, IHostApplicationLifetime appLifetime)
+    {
+        appLifetime.ApplicationStarted.Register(OnStarted);
+        appLifetime.ApplicationStopping.Register(OnStopping);
+        appLifetime.ApplicationStopped.Register(OnStopped);
+
+        Console.CancelKeyPress += (sender, eventArgs) =&gt;
+        {
+            appLifetime.StopApplication();
+            // Don't terminate the process immediately, wait for the Main thread to exit gracefully.
+            eventArgs.Cancel = true;
+        };
+    }
+
+    private void OnStarted()
+    {
+        // Perform post-startup activities here
+    }
+
+    private void OnStopping()
+    {
+        // Perform on-stopping activities here
+    }
+
+    private void OnStopped()
+    {
+        // Perform post-stopped activities here
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class MyClass
+{
+    private readonly IHostApplicationLifetime _appLifetime;
+
+    public MyClass(IHostApplicationLifetime appLifetime)
+    {
+        _appLifetime = appLifetime;
+    }
+
+    public void Shutdown()
+    {
+        _appLifetime.StopApplication();
+    }
+}
+</code></pre>
+<h2><a href="#scope-validation" aria-hidden="true" class="anchor" id="scope-validation"></a>Scope validation</h2>
+<ul>
+<li>
+<p>Scoped services aren't directly or indirectly resolved from the root service provider.</p>
+</li>
+<li>
+<p>Scoped services aren't directly or indirectly injected into singletons.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">WebHost.CreateDefaultBuilder(args)
+    .UseDefaultServiceProvider((context, options) =&gt; {
+        options.ValidateScopes = true;
+    })
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Host ASP.NET Core on Windows with IIS</p>
+</li>
+<li>
+<p>Host ASP.NET Core on Linux with Nginx</p>
+</li>
+<li>
+<p>Host ASP.NET Core in a Windows Service</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/web-host?view=aspnetcore-8.0">ASP.NET Core Web Host</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

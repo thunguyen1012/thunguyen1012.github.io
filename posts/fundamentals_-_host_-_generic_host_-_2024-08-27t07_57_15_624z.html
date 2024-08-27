@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Host - Generic Host | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Host - Generic Host</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#host-definition" aria-hidden="true" class="anchor" id="host-definition"></a>Host definition</h2>
+<ul>
+<li>
+<p>Dependency injection (DI)</p>
+</li>
+<li>
+<p>Logging</p>
+</li>
+<li>
+<p>Configuration</p>
+</li>
+<li>
+<p><code>IHostedService</code> implementations</p>
+</li>
+</ul>
+<h2><a href="#set-up-a-host" aria-hidden="true" class="anchor" id="set-up-a-host"></a>Set up a host</h2>
+<pre><code class="language-csharp">await Host.CreateDefaultBuilder(args)
+    .ConfigureServices(services =&gt;
+    {
+        services.AddHostedService&lt;SampleHostedService&gt;();
+    })
+    .Build()
+    .RunAsync();
+</code></pre>
+<pre><code class="language-csharp">await Host.CreateDefaultBuilder(args)
+    .ConfigureWebHostDefaults(webBuilder =&gt;
+    {
+        webBuilder.UseStartup&lt;Startup&gt;();
+    })
+    .Build()
+    .RunAsync();
+</code></pre>
+<h2><a href="#default-builder-settings" aria-hidden="true" class="anchor" id="default-builder-settings"></a>Default builder settings</h2>
+<ul>
+<li>
+<p>Sets the content root to the path returned by <code>GetCurrentDirectory</code>.</p>
+</li>
+<li>
+<p>Loads host configuration from:</p>
+<ul>
+<li>
+<p>Environment variables prefixed with <code>DOTNET_</code>.</p>
+</li>
+<li>
+<p>Command-line arguments.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Loads app configuration from:</p>
+<ul>
+<li>
+<p><code>appsettings.json</code>.</p>
+</li>
+<li>
+<p><code>appsettings.{Environment}.json</code>.</p>
+</li>
+<li>
+<p>User secrets when the app runs in the <code>Development</code> <code>environment</code>.</p>
+</li>
+<li>
+<p>Environment variables.</p>
+</li>
+<li>
+<p>Command-line arguments.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Adds the following logging providers:</p>
+<ul>
+<li>
+<p>Console</p>
+</li>
+<li>
+<p>Debug</p>
+</li>
+<li>
+<p>EventSource</p>
+</li>
+<li>
+<p>EventLog (only when running on Windows)</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Enables scope validation and dependency validation when the <code>environment</code> is <code>Development</code>.</p>
+</li>
+<li>
+<p>Loads host configuration from <code>environment</code> variables prefixed with <code>ASPNETCORE_</code>.</p>
+</li>
+<li>
+<p>Sets Kestrel server as the web server and configures it using the app's hosting configuration providers. For the Kestrel server's default options, see Configure options for the ASP.NET Core Kestrel web server.</p>
+</li>
+<li>
+<p>Adds Host Filtering middleware.</p>
+</li>
+<li>
+<p>Adds Forwarded Headers middleware if <code>ASPNETCORE_FORWARDEDHEADERS_ENABLED</code> equals <code>true</code>.</p>
+</li>
+<li>
+<p>Enables IIS integration. For the IIS default options, see Host ASP.NET Core on Windows with IIS.</p>
+</li>
+</ul>
+<h2><a href="#framework-provided-services" aria-hidden="true" class="anchor" id="framework-provided-services"></a>Framework-provided services</h2>
+<ul>
+<li>
+<p><code>IHostApplicationLifetime</code></p>
+</li>
+<li>
+<p><code>IHostLifetime</code></p>
+</li>
+<li>
+<p><code>IHostEnvironment</code> / <code>IWebHostEnvironment</code></p>
+</li>
+</ul>
+<h2><a href="#ihostapplicationlifetime" aria-hidden="true" class="anchor" id="ihostapplicationlifetime"></a><code>IHostApplicationLifetime</code></h2>
+<ul>
+<li>
+<p>Triggers the ApplicationStopping event handlers, which allows the app to run logic before the shutdown process begins.</p>
+</li>
+<li>
+<p>Stops the server, which disables new connections. The server waits for requests on existing connections to complete, for as long as the shutdown timeout allows. The server sends the connection close header for further requests on existing connections.</p>
+</li>
+<li>
+<p>Triggers the <code>ApplicationStopped</code> event handlers, which allows the app to run logic after the application has shutdown.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class HostApplicationLifetimeEventsHostedService : IHostedService
+{
+    private readonly IHostApplicationLifetime _hostApplicationLifetime;
+
+    public HostApplicationLifetimeEventsHostedService(
+        IHostApplicationLifetime hostApplicationLifetime)
+        =&gt; _hostApplicationLifetime = hostApplicationLifetime;
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _hostApplicationLifetime.ApplicationStarted.Register(OnStarted);
+        _hostApplicationLifetime.ApplicationStopping.Register(OnStopping);
+        _hostApplicationLifetime.ApplicationStopped.Register(OnStopped);
+
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+        =&gt; Task.CompletedTask;
+
+    private void OnStarted()
+    {
+        // ...
+    }
+
+    private void OnStopping()
+    {
+        // ...
+    }
+
+    private void OnStopped()
+    {
+        // ...
+    }
+}
+</code></pre>
+<h2><a href="#ihostlifetime" aria-hidden="true" class="anchor" id="ihostlifetime"></a><code>IHostLifetime</code></h2>
+<ul>
+<li>
+<p>Listens for Ctrl+C/SIGINT (Windows), ⌘+C (macOS), or SIGTERM and calls <code>StopApplication</code> to start the shutdown process.</p>
+</li>
+<li>
+<p>Unblocks extensions such as <code>RunAsync</code> and <code>WaitForShutdownAsync</code>.</p>
+</li>
+</ul>
+<h2><a href="#ihostenvironment" aria-hidden="true" class="anchor" id="ihostenvironment"></a><code>IHostEnvironment</code></h2>
+<ul>
+<li>
+<p>ApplicationName</p>
+</li>
+<li>
+<p>EnvironmentName</p>
+</li>
+<li>
+<p>ContentRootPath</p>
+</li>
+</ul>
+<h2><a href="#host-configuration" aria-hidden="true" class="anchor" id="host-configuration"></a>Host configuration</h2>
+<pre><code class="language-csharp">Host.CreateDefaultBuilder(args)
+    .ConfigureHostConfiguration(hostConfig =&gt;
+    {
+        hostConfig.SetBasePath(Directory.GetCurrentDirectory());
+        hostConfig.AddJsonFile(&quot;hostsettings.json&quot;, optional: true);
+        hostConfig.AddEnvironmentVariables(prefix: &quot;PREFIX_&quot;);
+        hostConfig.AddCommandLine(args);
+    });
+</code></pre>
+<h2><a href="#app-configuration" aria-hidden="true" class="anchor" id="app-configuration"></a>App configuration</h2>
+<h2><a href="#settings-for-all-app-types" aria-hidden="true" class="anchor" id="settings-for-all-app-types"></a>Settings for all app types</h2>
+<h3><a href="#applicationname" aria-hidden="true" class="anchor" id="applicationname"></a>ApplicationName</h3>
+<h3><a href="#contentroot" aria-hidden="true" class="anchor" id="contentroot"></a>ContentRoot</h3>
+<pre><code class="language-csharp">Host.CreateDefaultBuilder(args)
+    .UseContentRoot(&quot;/path/to/content/root&quot;)
+    // ...
+</code></pre>
+<ul>
+<li>
+<p>Fundamentals: Content root</p>
+</li>
+<li>
+<p>WebRoot</p>
+</li>
+</ul>
+<h3><a href="#environmentname" aria-hidden="true" class="anchor" id="environmentname"></a>EnvironmentName</h3>
+<pre><code class="language-csharp">Host.CreateDefaultBuilder(args)
+    .UseEnvironment(&quot;Development&quot;)
+    // ...
+</code></pre>
+<h3><a href="#shutdowntimeout" aria-hidden="true" class="anchor" id="shutdowntimeout"></a>ShutdownTimeout</h3>
+<ul>
+<li>
+<p>Triggers <code>IHostApplicationLifetime.ApplicationStopping</code>.</p>
+</li>
+<li>
+<p>Attempts to stop hosted services, logging errors for services that fail to stop.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">Host.CreateDefaultBuilder(args)
+    .ConfigureServices((hostContext, services) =&gt;
+    {
+        services.Configure&lt;HostOptions&gt;(options =&gt;
+        {
+            options.ShutdownTimeout = TimeSpan.FromSeconds(20);
+        });
+    });
+</code></pre>
+<h3><a href="#disable-app-configuration-reload-on-change" aria-hidden="true" class="anchor" id="disable-app-configuration-reload-on-change"></a>Disable app configuration reload on change</h3>
+<blockquote>
+<p class='warning'>Warning
+The colon (:) separator doesn't work with <code>environment</code> variable hierarchical keys on all platforms. For more information, see Environment variables.</p>
+</blockquote>
+<h2><a href="#settings-for-web-apps" aria-hidden="true" class="anchor" id="settings-for-web-apps"></a>Settings for web apps</h2>
+<pre><code class="language-csharp">Host.CreateDefaultBuilder(args)
+    .ConfigureWebHostDefaults(webBuilder =&gt;
+    {
+        // ...
+    });
+</code></pre>
+<h3><a href="#capturestartuperrors" aria-hidden="true" class="anchor" id="capturestartuperrors"></a><code>CaptureStartupErrors</code></h3>
+<pre><code class="language-csharp">webBuilder.CaptureStartupErrors(true);
+</code></pre>
+<h3><a href="#detailederrors" aria-hidden="true" class="anchor" id="detailederrors"></a>DetailedErrors</h3>
+<pre><code class="language-csharp">webBuilder.UseSetting(WebHostDefaults.DetailedErrorsKey, &quot;true&quot;);
+</code></pre>
+<h3><a href="#hostingstartupassemblies" aria-hidden="true" class="anchor" id="hostingstartupassemblies"></a>HostingStartupAssemblies</h3>
+<pre><code class="language-csharp">webBuilder.UseSetting(
+    WebHostDefaults.HostingStartupAssembliesKey, &quot;assembly1;assembly2&quot;);
+</code></pre>
+<h3><a href="#hostingstartupexcludeassemblies" aria-hidden="true" class="anchor" id="hostingstartupexcludeassemblies"></a>HostingStartupExcludeAssemblies</h3>
+<pre><code class="language-csharp">webBuilder.UseSetting(
+    WebHostDefaults.HostingStartupExcludeAssembliesKey, &quot;assembly1;assembly2&quot;);
+</code></pre>
+<h3><a href="#https_port" aria-hidden="true" class="anchor" id="https_port"></a>HTTPS_Port</h3>
+<pre><code class="language-csharp">webBuilder.UseSetting(&quot;https_port&quot;, &quot;8080&quot;);
+</code></pre>
+<h3><a href="#preferhostingurls" aria-hidden="true" class="anchor" id="preferhostingurls"></a><code>PreferHostingUrls</code></h3>
+<pre><code class="language-csharp">webBuilder.PreferHostingUrls(true);
+</code></pre>
+<h3><a href="#preventhostingstartup" aria-hidden="true" class="anchor" id="preventhostingstartup"></a>PreventHostingStartup</h3>
+<pre><code class="language-csharp">webBuilder.UseSetting(WebHostDefaults.PreventHostingStartupKey, &quot;true&quot;);
+</code></pre>
+<h3><a href="#startupassembly" aria-hidden="true" class="anchor" id="startupassembly"></a>StartupAssembly</h3>
+<pre><code class="language-csharp">webBuilder.UseStartup(&quot;StartupAssemblyName&quot;);
+</code></pre>
+<pre><code class="language-csharp">webBuilder.UseStartup&lt;Startup&gt;();
+</code></pre>
+<h3><a href="#suppressstatusmessages" aria-hidden="true" class="anchor" id="suppressstatusmessages"></a>SuppressStatusMessages</h3>
+<pre><code class="language-csharp">webBuilder.UseSetting(WebHostDefaults.SuppressStatusMessagesKey, &quot;true&quot;);
+</code></pre>
+<h3><a href="#urls" aria-hidden="true" class="anchor" id="urls"></a>URLs</h3>
+<pre><code class="language-csharp">webBuilder.UseUrls(&quot;http://*:5000;http://localhost:5001;https://hostname:5002&quot;);
+</code></pre>
+<h3><a href="#webroot" aria-hidden="true" class="anchor" id="webroot"></a>WebRoot</h3>
+<pre><code class="language-csharp">webBuilder.UseWebRoot(&quot;public&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Fundamentals: Web root</p>
+</li>
+<li>
+<p>ContentRoot</p>
+</li>
+</ul>
+<h2><a href="#manage-the-host-lifetime" aria-hidden="true" class="anchor" id="manage-the-host-lifetime"></a>Manage the host lifetime</h2>
+<h3><a href="#run" aria-hidden="true" class="anchor" id="run"></a>Run</h3>
+<h3><a href="#runasync" aria-hidden="true" class="anchor" id="runasync"></a>RunAsync</h3>
+<h3><a href="#runconsoleasync" aria-hidden="true" class="anchor" id="runconsoleasync"></a>RunConsoleAsync</h3>
+<h3><a href="#start" aria-hidden="true" class="anchor" id="start"></a>Start</h3>
+<h3><a href="#startasync" aria-hidden="true" class="anchor" id="startasync"></a><code>StartAsync</code></h3>
+<h3><a href="#stopasync" aria-hidden="true" class="anchor" id="stopasync"></a>StopAsync</h3>
+<h3><a href="#waitforshutdown" aria-hidden="true" class="anchor" id="waitforshutdown"></a>WaitForShutdown</h3>
+<h3><a href="#waitforshutdownasync" aria-hidden="true" class="anchor" id="waitforshutdownasync"></a>WaitForShutdownAsync</h3>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Background tasks with hosted services in ASP.NET Core</p>
+</li>
+<li>
+<p>GitHub link to Generic Host source</p>
+</li>
+</ul>
+<p class='note'>Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).</p>
+<blockquote>
+<p class='note'>Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/generic-host?view=aspnetcore-8.0">.NET Generic Host in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

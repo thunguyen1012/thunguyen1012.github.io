@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Middleware - Middleware overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Middleware - Middleware overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Chooses whether to pass the request to the <code>next</code> component in the pipeline.</p>
+</li>
+<li>
+<p>Can perform work before and after the <code>next</code> component in the pipeline.</p>
+</li>
+</ul>
+<h2><a href="#middleware-code-analysis" aria-hidden="true" class="anchor" id="middleware-code-analysis"></a>Middleware code analysis</h2>
+<h2><a href="#create-a-middleware-pipeline-with-webapplication" aria-hidden="true" class="anchor" id="create-a-middleware-pipeline-with-webapplication"></a>Create a middleware pipeline with <code>WebApplication</code></h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.Run(async context =&gt;
+{
+    await context.Response.WriteAsync(&quot;Hello world!&quot;);
+});
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.Use(async (context, next) =&gt;
+{
+    // Do work that can write to the Response.
+    await next.Invoke();
+    // Do logging or other work that doesn't write to the Response.
+});
+
+app.Run(async context =&gt;
+{
+    await context.Response.WriteAsync(&quot;Hello from 2nd delegate.&quot;);
+});
+
+app.Run();
+</code></pre>
+<h3><a href="#short-circuiting-the-request-pipeline" aria-hidden="true" class="anchor" id="short-circuiting-the-request-pipeline"></a>Short-circuiting the request pipeline</h3>
+<blockquote>
+<p class='warning'>Warning
+Don't call <code>next.Invoke</code> during or after the response has been sent to the client. After an HttpResponse has started, changes result in an exception. For example, setting headers and a status code throw an exception after the response starts. Writing to the response body after calling <code>next</code>:</p>
+</blockquote>
+<p>May cause a protocol violation, such as writing more than the stated <code>Content-Length</code>.
+May corrupt the body format, such as writing an HTML footer to a CSS file.</p>
+<p>HasStarted is a useful hint to indicate if headers have been sent or the body has been written to.</p>
+<ul>
+<li>
+<p>May cause a protocol violation, such as writing more than the stated <code>Content-Length</code>.</p>
+</li>
+<li>
+<p>May corrupt the body format, such as writing an HTML footer to a CSS file.</p>
+</li>
+</ul>
+<h3><a href="#run-delegates" aria-hidden="true" class="anchor" id="run-delegates"></a><code>Run</code> delegates</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.Use(async (context, next) =&gt;
+{
+    // Do work that can write to the Response.
+    await next.Invoke();
+    // Do logging or other work that doesn't write to the Response.
+});
+
+app.Run(async context =&gt;
+{
+    await context.Response.WriteAsync(&quot;Hello from 2nd delegate.&quot;);
+});
+
+app.Run();
+</code></pre>
+<h3><a href="#prefer-appuse-overload-that-requires-passing-the-context-to-next" aria-hidden="true" class="anchor" id="prefer-appuse-overload-that-requires-passing-the-context-to-next"></a>Prefer app.Use overload that requires passing the context to <code>next</code></h3>
+<ul>
+<li>
+<p>Requires passing the context to <code>next</code>.</p>
+</li>
+<li>
+<p>Saves two internal per-request allocations that are required when using the other overload.</p>
+</li>
+</ul>
+<h2><a href="#middleware-order" aria-hidden="true" class="anchor" id="middleware-order"></a>Middleware order</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using WebMiddleware.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;)
+    ?? throw new InvalidOperationException(&quot;Connection string 'DefaultConnection' not found.&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+// app.UseCookiePolicy();
+
+app.UseRouting();
+// app.UseRateLimiter();
+// app.UseRequestLocalization();
+// app.UseCors();
+
+app.UseAuthentication();
+app.UseAuthorization();
+// app.UseSession();
+// app.UseResponseCompression();
+// app.UseResponseCaching();
+
+app.MapRazorPages();
+app.MapDefaultControllerRoute();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Middleware that is not added when creating a new web app with individual users accounts is commented out.</p>
+</li>
+<li>
+<p>Not every middleware appears in this exact order, but many do. For example:</p>
+<ul>
+<li>
+<p><code>UseCors</code>, <code>UseAuthentication</code>, and <code>UseAuthorization</code> must appear in the order shown.</p>
+</li>
+<li>
+<p><code>UseCors</code> currently must appear before <code>UseResponseCaching</code>. This requirement is explained in GitHub issue dotnet/aspnetcore #23218.</p>
+</li>
+<li>
+<p><code>UseRequestLocalization</code> must appear before any middleware that might check the request culture, for example, <code>app.UseStaticFiles()</code>.</p>
+</li>
+<li>
+<p><code>UseRateLimiter</code> must be called after <code>UseRouting</code> when rate limiting endpoint specific APIs are used. For example, if the <code>[EnableRateLimiting]</code> attribute is used, <code>UseRateLimiter</code> must be called after <code>UseRouting</code>. When calling only global limiters, <code>UseRateLimiter</code> can be called before <code>UseRouting</code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">app.UseResponseCaching();
+app.UseResponseCompression();
+</code></pre>
+<pre><code class="language-csharp">app.UseResponseCaching();
+app.UseResponseCompression();
+app.UseStaticFiles();
+</code></pre>
+<ul>
+<li>
+<p>Exception/error handling</p>
+<ul>
+<li>
+<p>When the app runs in the Development environment:</p>
+<ul>
+<li>
+<p>Developer Exception Page Middleware (UseDeveloperExceptionPage) reports app runtime errors.</p>
+</li>
+<li>
+<p>Database Error Page Middleware (UseDatabaseErrorPage) reports database runtime errors.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>When the app runs in the Production environment:</p>
+<ul>
+<li>
+<p>Exception Handler Middleware (UseExceptionHandler) catches exceptions thrown in the following middlewares.</p>
+</li>
+<li>
+<p>HTTP Strict Transport Security Protocol (HSTS) Middleware (UseHsts) adds the <code>Strict-Transport-Security</code> header.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>HTTPS Redirection Middleware (UseHttpsRedirection) redirects HTTP requests to HTTPS.</p>
+</li>
+<li>
+<p>Static File Middleware (UseStaticFiles) returns static files and short-circuits further request processing.</p>
+</li>
+<li>
+<p>Cookie Policy Middleware (UseCookiePolicy) conforms the app to the EU General Data Protection Regulation (GDPR) regulations.</p>
+</li>
+<li>
+<p>Routing Middleware (UseRouting) to route requests.</p>
+</li>
+<li>
+<p>Authentication Middleware (UseAuthentication) attempts to authenticate the user before they're allowed access to <code>secure</code> resources.</p>
+</li>
+<li>
+<p>Authorization Middleware (UseAuthorization) authorizes a user to access <code>secure</code> resources.</p>
+</li>
+<li>
+<p>Session Middleware (UseSession) establishes and maintains session state. If the app uses session state, call Session Middleware after Cookie Policy Middleware and before MVC Middleware.</p>
+</li>
+<li>
+<p>Endpoint Routing Middleware (UseEndpoints with MapRazorPages) to add Razor Pages endpoints to the request pipeline.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">if (env.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+    app.UseDatabaseErrorPage();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseCookiePolicy();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseSession();
+app.MapRazorPages();
+</code></pre>
+<pre><code class="language-csharp">// Static files aren't compressed by Static File Middleware.
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseResponseCompression();
+
+app.MapRazorPages();
+</code></pre>
+<h2><a href="#usecors-and-usestaticfiles-order" aria-hidden="true" class="anchor" id="usecors-and-usestaticfiles-order"></a><code>UseCors</code> and <code>UseStaticFiles</code> order</h2>
+<h3><a href="#forwarded-headers-middleware-order" aria-hidden="true" class="anchor" id="forwarded-headers-middleware-order"></a>Forwarded Headers Middleware order</h3>
+<h2><a href="#branch-the-middleware-pipeline" aria-hidden="true" class="anchor" id="branch-the-middleware-pipeline"></a>Branch the middleware pipeline</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.Map(&quot;/map1&quot;, HandleMapTest1);
+
+app.Map(&quot;/map2&quot;, HandleMapTest2);
+
+app.Run(async context =&gt;
+{
+    await context.Response.WriteAsync(&quot;Hello from non-Map delegate.&quot;);
+});
+
+app.Run();
+
+static void HandleMapTest1(IApplicationBuilder app)
+{
+    app.Run(async context =&gt;
+    {
+        await context.Response.WriteAsync(&quot;Map Test 1&quot;);
+    });
+}
+
+static void HandleMapTest2(IApplicationBuilder app)
+{
+    app.Run(async context =&gt;
+    {
+        await context.Response.WriteAsync(&quot;Map Test 2&quot;);
+    });
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>localhost:1234</td>
+<td>Hello from non-Map delegate.</td>
+</tr>
+<tr>
+<td>localhost:1234/map1</td>
+<td>Map Test 1</td>
+</tr>
+<tr>
+<td>localhost:1234/map2</td>
+<td>Map Test 2</td>
+</tr>
+<tr>
+<td>localhost:1234/map3</td>
+<td>Hello from non-Map delegate.</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">app.Map(&quot;/level1&quot;, level1App =&gt; {
+    level1App.Map(&quot;/level2a&quot;, level2AApp =&gt; {
+        // &quot;/level1/level2a&quot; processing
+    });
+    level1App.Map(&quot;/level2b&quot;, level2BApp =&gt; {
+        // &quot;/level1/level2b&quot; processing
+    });
+});
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.Map(&quot;/map1/seg1&quot;, HandleMultiSeg);
+
+app.Run(async context =&gt;
+{
+    await context.Response.WriteAsync(&quot;Hello from non-Map delegate.&quot;);
+});
+
+app.Run();
+
+static void HandleMultiSeg(IApplicationBuilder app)
+{
+    app.Run(async context =&gt;
+    {
+        await context.Response.WriteAsync(&quot;Map Test 1&quot;);
+    });
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapWhen(context =&gt; context.Request.Query.ContainsKey(&quot;branch&quot;), HandleBranch);
+
+app.Run(async context =&gt;
+{
+    await context.Response.WriteAsync(&quot;Hello from non-Map delegate.&quot;);
+});
+
+app.Run();
+
+static void HandleBranch(IApplicationBuilder app)
+{
+    app.Run(async context =&gt;
+    {
+        var branchVer = context.Request.Query[&quot;branch&quot;];
+        await context.Response.WriteAsync($&quot;Branch used = {branchVer}&quot;);
+    });
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>localhost:1234</code></td>
+<td><code>Hello from non-Map delegate.</code></td>
+</tr>
+<tr>
+<td><code>localhost:1234/?branch=main</code></td>
+<td><code>Branch used = main</code></td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.UseWhen(context =&gt; context.Request.Query.ContainsKey(&quot;branch&quot;),
+    appBuilder =&gt; HandleBranchAndRejoin(appBuilder));
+
+app.Run(async context =&gt;
+{
+    await context.Response.WriteAsync(&quot;Hello from non-Map delegate.&quot;);
+});
+
+app.Run();
+
+void HandleBranchAndRejoin(IApplicationBuilder app)
+{
+    var logger = app.ApplicationServices.GetRequiredService&lt;ILogger&lt;Program&gt;&gt;(); 
+
+    app.Use(async (context, next) =&gt;
+    {
+        var branchVer = context.Request.Query[&quot;branch&quot;];
+        logger.LogInformation(&quot;Branch used = {branchVer}&quot;, branchVer);
+
+        // Do work that doesn't write to the Response.
+        await next();
+        // Do other work that doesn't write to the Response.
+    });
+}
+</code></pre>
+<h2><a href="#built-in-middleware" aria-hidden="true" class="anchor" id="built-in-middleware"></a>Built-in middleware</h2>
+<table><thead>
+<tr>
+<th>Middleware</th>
+<th>Description</th>
+<th>Order</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../security/authentication/identity?view=aspnetcore-8.0" data-linktype="relative-path">Authentication</a></td>
+<td>Provides authentication support.</td>
+<td>Before <code>HttpContext.User</code> is needed. Terminal for OAuth callbacks.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.authorizationappbuilderextensions.useauthorization" data-linktype="absolute-path">Authorization</a></td>
+<td>Provides authorization support.</td>
+<td>Immediately after the Authentication Middleware.</td>
+</tr>
+<tr>
+<td><a href="../../security/gdpr?view=aspnetcore-8.0" data-linktype="relative-path">Cookie Policy</a></td>
+<td>Tracks consent from users for storing personal information and enforces minimum standards for cookie fields, such as <code>secure</code> and <code>SameSite</code>.</td>
+<td>Before middleware that issues cookies. Examples: Authentication, Session, MVC (TempData).</td>
+</tr>
+<tr>
+<td><a href="../../security/cors?view=aspnetcore-8.0" data-linktype="relative-path">CORS</a></td>
+<td>Configures Cross-Origin Resource Sharing.</td>
+<td>Before components that use CORS. <code>UseCors</code> currently must go before <code>UseResponseCaching</code> due to <a href="https://github.com/dotnet/aspnetcore/issues/23218" data-linktype="external">this bug</a>.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.diagnostics.developerexceptionpagemiddleware" data-linktype="absolute-path">DeveloperExceptionPage</a></td>
+<td>Generates a page with error information that is intended for use only in the Development environment.</td>
+<td>Before components that generate errors. The project templates automatically register this middleware as the first middleware in the pipeline when the environment is Development.</td>
+</tr>
+<tr>
+<td><a href="../error-handling?view=aspnetcore-8.0" data-linktype="relative-path">Diagnostics</a></td>
+<td>Several separate middlewares that provide a developer exception page, exception handling, status code pages, and the default web page for new apps.</td>
+<td>Before components that generate errors. Terminal for exceptions or serving the default web page for new apps.</td>
+</tr>
+<tr>
+<td><a href="../../host-and-deploy/proxy-load-balancer?view=aspnetcore-8.0" data-linktype="relative-path">Forwarded Headers</a></td>
+<td>Forwards proxied headers onto the current request.</td>
+<td>Before components that consume the updated fields. Examples: scheme, host, client IP, method.</td>
+</tr>
+<tr>
+<td><a href="../../host-and-deploy/health-checks?view=aspnetcore-8.0" data-linktype="relative-path">Health Check</a></td>
+<td>Checks the health of an ASP.NET Core app and its dependencies, such as checking database availability.</td>
+<td>Terminal if a request matches a health check endpoint.</td>
+</tr>
+<tr>
+<td><a href="../http-requests?view=aspnetcore-8.0#header-propagation-middleware" data-linktype="relative-path">Header Propagation</a></td>
+<td>Propagates HTTP headers from the incoming request to the outgoing HTTP Client requests.</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="../http-logging/?view=aspnetcore-8.0" data-linktype="relative-path">HTTP Logging</a></td>
+<td>Logs HTTP Requests and Responses.</td>
+<td>At the beginning of the middleware pipeline.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.httpmethodoverrideextensions" data-linktype="absolute-path">HTTP Method Override</a></td>
+<td>Allows an incoming POST request to override the method.</td>
+<td>Before components that consume the updated method.</td>
+</tr>
+<tr>
+<td><a href="../../security/enforcing-ssl?view=aspnetcore-8.0#require-https" data-linktype="relative-path">HTTPS Redirection</a></td>
+<td>Redirect all HTTP requests to HTTPS.</td>
+<td>Before components that consume the URL.</td>
+</tr>
+<tr>
+<td><a href="../../security/enforcing-ssl?view=aspnetcore-8.0#http-strict-transport-security-protocol-hsts" data-linktype="relative-path">HTTP Strict Transport Security (HSTS)</a></td>
+<td>Security enhancement middleware that adds a special response header.</td>
+<td>Before responses are sent and after components that modify requests. Examples: Forwarded Headers, URL Rewriting.</td>
+</tr>
+<tr>
+<td><a href="../../mvc/overview?view=aspnetcore-8.0" data-linktype="relative-path">MVC</a></td>
+<td>Processes requests with MVC/Razor Pages.</td>
+<td>Terminal if a request matches a route.</td>
+</tr>
+<tr>
+<td><a href="../owin?view=aspnetcore-8.0" data-linktype="relative-path">OWIN</a></td>
+<td>Interop with OWIN-based apps, servers, and middleware.</td>
+<td>Terminal if the OWIN Middleware fully processes the request.</td>
+</tr>
+<tr>
+<td><a href="../../performance/caching/output?view=aspnetcore-8.0" data-linktype="relative-path">Output Caching</a></td>
+<td>Provides support for caching responses based on configuration.</td>
+<td>Before components that require caching. <code>UseRouting</code> must come before <code>UseOutputCaching</code>. <code>UseCORS</code> must come before <code>UseOutputCaching</code>.</td>
+</tr>
+<tr>
+<td><a href="../../performance/caching/middleware?view=aspnetcore-8.0" data-linktype="relative-path">Response Caching</a></td>
+<td>Provides support for caching responses. This requires client participation to work. ```Use``` output caching for complete server control.</td>
+<td>Before components that require caching. <code>UseCORS</code> must come before <code>UseResponseCaching</code>. Is typically not beneficial for UI apps such as Razor Pages because browsers generally set request headers that prevent caching. <a href="../../performance/caching/output?view=aspnetcore-8.0" data-linktype="relative-path">Output caching</a> benefits UI apps.</td>
+</tr>
+<tr>
+<td><a href="request-decompression?view=aspnetcore-8.0" data-linktype="relative-path">Request Decompression</a></td>
+<td>Provides support for decompressing requests.</td>
+<td>Before components that read the request body.</td>
+</tr>
+<tr>
+<td><a href="../../performance/response-compression?view=aspnetcore-8.0" data-linktype="relative-path">Response Compression</a></td>
+<td>Provides support for compressing responses.</td>
+<td>Before components that require compression.</td>
+</tr>
+<tr>
+<td><a href="../localization?view=aspnetcore-8.0" data-linktype="relative-path">Request Localization</a></td>
+<td>Provides localization support.</td>
+<td>Before localization sensitive components. Must appear after Routing Middleware when using <a href="/en-us/dotnet/api/microsoft.aspnetcore.localization.routing.routedatarequestcultureprovider" class="no-loc" data-linktype="absolute-path">RouteDataRequestCultureProvider</a>.</td>
+</tr>
+<tr>
+<td><a href="../../performance/timeouts?view=aspnetcore-8.0" data-linktype="relative-path">Request Timeouts</a></td>
+<td>Provides support for configuring request timeouts, global and per endpoint.</td>
+<td><code>UseRequestTimeouts</code> must come after <code>UseExceptionHandler</code>, <code>UseDeveloperExceptionPage</code>, and <code>UseRouting</code>.</td>
+</tr>
+<tr>
+<td><a href="../routing?view=aspnetcore-8.0" data-linktype="relative-path">Endpoint Routing</a></td>
+<td>Defines and constrains request routes.</td>
+<td>Terminal for matching routes.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.spaapplicationbuilderextensions.usespa" data-linktype="absolute-path">SPA</a></td>
+<td>Handles all requests from this point in the middleware chain by returning the default page for the Single Page Application (SPA)</td>
+<td>Late in the chain, so that other middleware for serving static files, MVC actions, etc., takes precedence.</td>
+</tr>
+<tr>
+<td><a href="../app-state?view=aspnetcore-8.0" data-linktype="relative-path">Session</a></td>
+<td>Provides support for managing user sessions.</td>
+<td>Before components that require Session.</td>
+</tr>
+<tr>
+<td><a href="../static-files?view=aspnetcore-8.0" data-linktype="relative-path">Static Files</a></td>
+<td>Provides support for serving static files and directory browsing.</td>
+<td>Terminal if a request matches a file.</td>
+</tr>
+<tr>
+<td><a href="../url-rewriting?view=aspnetcore-8.0" data-linktype="relative-path">URL Rewrite</a></td>
+<td>Provides support for rewriting URLs and redirecting requests.</td>
+<td>Before components that consume the URL.</td>
+</tr>
+<tr>
+<td><a href="../w3c-logger/?view=aspnetcore-8.0" data-linktype="relative-path">W3CLogging</a></td>
+<td>Generates server access logs in the <a href="https://www.w3.org/TR/WD-logfile.html" data-linktype="external">W3C Extended Log File Format</a>.</td>
+<td>At the beginning of the middleware pipeline.</td>
+</tr>
+<tr>
+<td><a href="../websockets?view=aspnetcore-8.0" data-linktype="relative-path">WebSockets</a></td>
+<td>Enables the WebSockets protocol.</td>
+<td>Before components that are required to accept WebSocket requests.</td>
+</tr>
+</tbody></table>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Lifetime and registration options contains a complete sample of middleware with scoped, transient, and singleton lifetime services.</p>
+</li>
+<li>
+<p>Write custom ASP.NET Core middleware</p>
+</li>
+<li>
+<p>Test ASP.NET Core middleware</p>
+</li>
+<li>
+<p>Configure gRPC-Web in ASP.NET Core</p>
+</li>
+<li>
+<p>Migrate HTTP handlers and modules to ASP.NET Core middleware</p>
+</li>
+<li>
+<p>App startup in ASP.NET Core</p>
+</li>
+<li>
+<p>Request Features in ASP.NET Core</p>
+</li>
+<li>
+<p>Factory-based middleware activation in ASP.NET Core</p>
+</li>
+<li>
+<p>Middleware activation with a third-party container in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-8.0">ASP.NET Core Middleware</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

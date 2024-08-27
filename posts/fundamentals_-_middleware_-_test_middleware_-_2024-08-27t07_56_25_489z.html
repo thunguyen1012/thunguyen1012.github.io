@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Middleware - Test middleware | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Middleware - Test middleware</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Middleware can be tested in isolation with TestServer. It allows you to:</p>
+<ul>
+<li>
+<p>Instantiate an app pipeline containing only the components that you need to test.</p>
+</li>
+<li>
+<p>Send custom requests to verify middleware behavior.</p>
+</li>
+</ul>
+<p>Advantages:</p>
+<ul>
+<li>
+<p>Requests are sent in-memory rather than being serialized over the network.</p>
+</li>
+<li>
+<p>This avoids additional concerns, such as port management and HTTPS certificates.</p>
+</li>
+<li>
+<p>Exceptions in the middleware can flow directly back to the calling test.</p>
+</li>
+<li>
+<p>It's possible to customize server data structures, such as HttpContext, directly in the test.</p>
+</li>
+</ul>
+<h2><a href="#set-up-the-testserver" aria-hidden="true" class="anchor" id="set-up-the-testserver"></a>Set up the TestServer</h2>
+<p>In the test project, create a test:</p>
+<ul>
+<li>
+<p>Build and start a host that uses TestServer.</p>
+</li>
+<li>
+<p>Add any required services that the middleware uses.</p>
+</li>
+<li>
+<p>Add a package reference to the project for the <code>Microsoft.AspNetCore.TestHost</code> NuGet package.</p>
+</li>
+<li>
+<p>Configure the processing pipeline to use the middleware for the test.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Fact]
+public async Task MiddlewareTest_ReturnsNotFoundForRequest()
+{
+    using var host = await new HostBuilder()
+        .ConfigureWebHost(webBuilder =&gt;
+        {
+            webBuilder
+                .UseTestServer()
+                .ConfigureServices(services =&gt;
+                {
+                    services.AddMyServices();
+                })
+                .Configure(app =&gt;
+                {
+                    app.UseMiddleware&lt;MyMiddleware&gt;();
+                });
+        })
+        .StartAsync();
+
+    ...
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+For guidance on adding packages to .NET apps, see the articles under Install and manage packages at Package consumption workflow (NuGet documentation). Confirm correct package versions at NuGet.org.</p>
+</blockquote>
+<h2><a href="#send-requests-with-httpclient" aria-hidden="true" class="anchor" id="send-requests-with-httpclient"></a>Send requests with <code>HttpClient</code></h2>
+<p>Send a request using <code>HttpClient</code>:</p>
+<pre><code class="language-csharp">[Fact]
+public async Task MiddlewareTest_ReturnsNotFoundForRequest()
+{
+    using var host = await new HostBuilder()
+        .ConfigureWebHost(webBuilder =&gt;
+        {
+            webBuilder
+                .UseTestServer()
+                .ConfigureServices(services =&gt;
+                {
+                    services.AddMyServices();
+                })
+                .Configure(app =&gt;
+                {
+                    app.UseMiddleware&lt;MyMiddleware&gt;();
+                });
+        })
+        .StartAsync();
+
+    var response = await host.GetTestClient().GetAsync(&quot;/&quot;);
+
+    ...
+}
+</code></pre>
+<p><code>Assert</code> the result. First, make an assertion the opposite of the result that you expect. An initial run with a false positive assertion confirms that the test fails when the middleware is performing correctly. Run the test and confirm that the test fails.</p>
+<p>In the following example, the middleware should return a 404 status code (Not Found) when the root endpoint is requested. Make the first test run with <code>Assert</code>.NotEqual( ... );, which should fail:</p>
+<pre><code class="language-csharp">[Fact]
+public async Task MiddlewareTest_ReturnsNotFoundForRequest()
+{
+    using var host = await new HostBuilder()
+        .ConfigureWebHost(webBuilder =&gt;
+        {
+            webBuilder
+                .UseTestServer()
+                .ConfigureServices(services =&gt;
+                {
+                    services.AddMyServices();
+                })
+                .Configure(app =&gt;
+                {
+                    app.UseMiddleware&lt;MyMiddleware&gt;();
+                });
+        })
+        .StartAsync();
+
+    var response = await host.GetTestClient().GetAsync(&quot;/&quot;);
+
+    Assert.NotEqual(HttpStatusCode.NotFound, response.StatusCode);
+}
+</code></pre>
+<p>Change the assertion to test the middleware under normal operating conditions. The final test uses <code>Assert.Equal( ... );</code>. Run the test again to confirm that it passes.</p>
+<pre><code class="language-csharp">[Fact]
+public async Task MiddlewareTest_ReturnsNotFoundForRequest()
+{
+    using var host = await new HostBuilder()
+        .ConfigureWebHost(webBuilder =&gt;
+        {
+            webBuilder
+                .UseTestServer()
+                .ConfigureServices(services =&gt;
+                {
+                    services.AddMyServices();
+                })
+                .Configure(app =&gt;
+                {
+                    app.UseMiddleware&lt;MyMiddleware&gt;();
+                });
+        })
+        .StartAsync();
+
+    var response = await host.GetTestClient().GetAsync(&quot;/&quot;);
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+}
+</code></pre>
+<h2><a href="#send-requests-with-httpcontext" aria-hidden="true" class="anchor" id="send-requests-with-httpcontext"></a>Send requests with HttpContext</h2>
+<p>A test app can also send a request using <code>SendAsync(Action&lt;HttpContext&gt;, CancellationToken)</code>. In the following example, several checks are made when <code>https://example.com/A/Path/?and=query</code> is processed by the middleware:</p>
+<pre><code class="language-csharp">[Fact]
+public async Task TestMiddleware_ExpectedResponse()
+{
+    using var host = await new HostBuilder()
+        .ConfigureWebHost(webBuilder =&gt;
+        {
+            webBuilder
+                .UseTestServer()
+                .ConfigureServices(services =&gt;
+                {
+                    services.AddMyServices();
+                })
+                .Configure(app =&gt;
+                {
+                    app.UseMiddleware&lt;MyMiddleware&gt;();
+                });
+        })
+        .StartAsync();
+
+    var server = host.GetTestServer();
+    server.BaseAddress = new Uri(&quot;https://example.com/A/Path/&quot;);
+
+    var context = await server.SendAsync(c =&gt;
+    {
+        c.Request.Method = HttpMethods.Post;
+        c.Request.Path = &quot;/and/file.txt&quot;;
+        c.Request.QueryString = new QueryString(&quot;?and=query&quot;);
+    });
+
+    Assert.True(context.RequestAborted.CanBeCanceled);
+    Assert.Equal(HttpProtocol.Http11, context.Request.Protocol);
+    Assert.Equal(&quot;POST&quot;, context.Request.Method);
+    Assert.Equal(&quot;https&quot;, context.Request.Scheme);
+    Assert.Equal(&quot;example.com&quot;, context.Request.Host.Value);
+    Assert.Equal(&quot;/A/Path&quot;, context.Request.PathBase.Value);
+    Assert.Equal(&quot;/and/file.txt&quot;, context.Request.Path.Value);
+    Assert.Equal(&quot;?and=query&quot;, context.Request.QueryString.Value);
+    Assert.NotNull(context.Request.Body);
+    Assert.NotNull(context.Request.Headers);
+    Assert.NotNull(context.Response.Headers);
+    Assert.NotNull(context.Response.Body);
+    Assert.Equal(404, context.Response.StatusCode);
+    Assert.Null(context.Features.Get&lt;IHttpResponseFeature&gt;().ReasonPhrase);
+}
+</code></pre>
+<p><code>SendAsync</code> permits direct configuration of an HttpContext object rather than using the <code>HttpClient</code> abstractions. Use SendAsync to manipulate structures only available on the server, such as <code>HttpContext.Items</code> or <code>HttpContext.Features</code>.</p>
+<p>As with the earlier example that tested for a 404 - Not Found response, check the opposite for each <code>Assert</code> statement in the preceding test. The check confirms that the test fails correctly when the middleware is operating normally. After you've confirmed that the false positive test works, set the final <code>Assert</code> statements for the expected conditions and values of the test. Run it again to confirm that the test passes.</p>
+<h2><a href="#add-request-routes" aria-hidden="true" class="anchor" id="add-request-routes"></a>Add request routes</h2>
+<p>Additional routes can be added by configuration using the test <code>HttpClient</code>:</p>
+<pre><code class="language-csharp">[Fact]
+	public async Task TestWithEndpoint_ExpectedResponse ()
+	{
+		using var host = await new HostBuilder()
+			.ConfigureWebHost(webBuilder =&gt;
+			{
+				webBuilder
+					.UseTestServer()
+					.ConfigureServices(services =&gt;
+					{
+						services.AddRouting();
+					})
+					.Configure(app =&gt;
+					{
+						app.UseRouting();
+						app.UseMiddleware&lt;MyMiddleware&gt;();
+						app.UseEndpoints(endpoints =&gt;
+						{
+							endpoints.MapGet(&quot;/hello&quot;, () =&gt;
+								TypedResults.Text(&quot;Hello Tests&quot;));
+						});
+					});
+			})
+			.StartAsync();
+
+		var client = host.GetTestClient();
+
+		var response = await client.GetAsync(&quot;/hello&quot;);
+
+		Assert.True(response.IsSuccessStatusCode);
+		var responseBody = await response.Content.ReadAsStringAsync();
+		Assert.Equal(&quot;Hello Tests&quot;, responseBody);
+</code></pre>
+<p>Additional routes can also be added using the approach <code>server.SendAsync</code>.</p>
+<h2><a href="#testserver-limitations" aria-hidden="true" class="anchor" id="testserver-limitations"></a>TestServer limitations</h2>
+<p>TestServer:</p>
+<ul>
+<li>
+<p>Was created to replicate server behaviors to test middleware.</p>
+</li>
+<li>
+<p>Does not try to replicate all <code>HttpClient</code> behaviors.</p>
+</li>
+<li>
+<p>Attempts to give the client access to as much control over the server as possible, and with as much visibility into what's happening on the server as possible. For example it may throw exceptions not normally thrown by <code>HttpClient</code> in order to directly communicate server state.</p>
+</li>
+<li>
+<p>Doesn't set some transport specific headers by default as those aren't usually relevant to middleware. For more information, see the next section.</p>
+</li>
+<li>
+<p>Ignores the <code>Stream</code> position passed through StreamContent. <code>HttpClient</code> sends the entire stream from the start position, even when positioning is set. For more information, see this GitHub issue.</p>
+</li>
+</ul>
+<h3><a href="#content-length-and-transfer-encoding-headers" aria-hidden="true" class="anchor" id="content-length-and-transfer-encoding-headers"></a><code>Content-Length</code> and <code>Transfer-Encoding</code> headers</h3>
+<p>TestServer does not set transport related request or response headers such as <code>Content-Length</code> or <code>Transfer-Encoding</code>. Applications should avoid depending on these headers because their usage varies by client, scenario, and protocol. If <code>Content-Length</code> and <code>Transfer-Encoding</code> are necessary to test a specific scenario, they can be specified in the test when composing the HttpRequestMessage or HttpContext. For more information, see the following GitHub issues:</p>
+<ul>
+<li>
+<p>dotnet/aspnetcore#21677</p>
+</li>
+<li>
+<p>dotnet/aspnetcore#18463</p>
+</li>
+<li>
+<p>dotnet/aspnetcore#13273</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/test/middleware?view=aspnetcore-8.0">Test ASP.NET Core middleware</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

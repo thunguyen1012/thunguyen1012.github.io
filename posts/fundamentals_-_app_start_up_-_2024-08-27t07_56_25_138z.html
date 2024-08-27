@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - App start up | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - App start up</h1>
+        <ul>
+<li>
+<p>Razor Pages</p>
+</li>
+<li>
+<p>MVC controllers with views</p>
+</li>
+<li>
+<p>Web API with controllers</p>
+</li>
+<li>
+<p>Minimal APIs</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthorization();
+
+app.MapGet(&quot;/hi&quot;, () =&gt; &quot;Hello!&quot;);
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h2><a href="#extend-startup-with-startup-filters" aria-hidden="true" class="anchor" id="extend-startup-with-startup-filters"></a>Extend Startup with startup filters</h2>
+<ul>
+<li>
+<p>To configure middleware at the beginning or end of an app's middleware pipeline without an explicit call to <code>Use{Middleware}</code>. Use <code>IStartupFilter</code> to add defaults to the beginning of the pipeline without explicitly registering the default middleware. <code>IStartupFilter</code> allows a different component to call <code>Use{Middleware}</code> on behalf of the app author.</p>
+</li>
+<li>
+<p>To create a pipeline of <code>Configure</code> methods. <code>IStartupFilter</code>.Configure can set a middleware to run before or after middleware added by libraries.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class RequestSetOptionsMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public RequestSetOptionsMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    // Test with https://localhost:5001/Privacy/?option=Hello
+    public async Task Invoke(HttpContext httpContext)
+    {
+        var option = httpContext.Request.Query[&quot;option&quot;];
+
+        if (!string.IsNullOrWhiteSpace(option))
+        {
+            httpContext.Items[&quot;option&quot;] = WebUtility.HtmlEncode(option);
+        }
+
+        await _next(httpContext);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">namespace WebStartup.Middleware;
+// &lt;snippet1&gt;
+public class RequestSetOptionsStartupFilter : IStartupFilter
+{
+    public Action&lt;IApplicationBuilder&gt; Configure(Action&lt;IApplicationBuilder&gt; next)
+    {
+        return builder =&gt;
+        {
+            builder.UseMiddleware&lt;RequestSetOptionsMiddleware&gt;();
+            next(builder);
+        };
+    }
+}
+// &lt;/snippet1&gt;
+</code></pre>
+<pre><code class="language-csharp">using WebStartup.Middleware;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddTransient&lt;IStartupFilter,
+                      RequestSetOptionsStartupFilter&gt;();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model PrivacyModel
+@{
+    ViewData[&quot;Title&quot;] = &quot;Privacy Policy&quot;;
+}
+&lt;h1&gt;@ViewData[&quot;Title&quot;]&lt;/h1&gt;
+
+&lt;p&gt; Append query string ?option=hello&lt;/p&gt;
+Option String: @HttpContext.Items[&quot;option&quot;];
+</code></pre>
+<ul>
+<li>
+<p>Multiple <code>IStartupFilter</code> implementations may interact with the same objects. If ordering is important, order their <code>IStartupFilter</code> service registrations to match the order that their middlewares should run.</p>
+</li>
+<li>
+<p>Libraries may add middleware with one or more <code>IStartupFilter</code> implementations that run before or after other app middleware registered with <code>IStartupFilter</code>. To invoke an <code>IStartupFilter</code> middleware before a middleware added by a library's <code>IStartupFilter</code>:</p>
+<ul>
+<li>
+<p>Position the service registration before the library is added to the service container.</p>
+</li>
+<li>
+<p>To invoke afterward, position the service registration after the library is added.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#add-configuration-at-startup-from-an-external-assembly" aria-hidden="true" class="anchor" id="add-configuration-at-startup-from-an-external-assembly"></a>Add configuration at startup from an external assembly</h2>
+<h2><a href="#startup-configureservices,-and-configure" aria-hidden="true" class="anchor" id="startup-configureservices,-and-configure"></a>Startup, ConfigureServices, and <code>Configure</code></h2>
+<ul>
+<li>
+<p>Use Startup with the minimal hosting model</p>
+</li>
+<li>
+<p>The ASP.NET Core 5.0 version of this article:</p>
+<ul>
+<li>
+<p>The ConfigureServices method</p>
+</li>
+<li>
+<p>The <code>Configure</code> method</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/startup?view=aspnetcore-8.0">App startup in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

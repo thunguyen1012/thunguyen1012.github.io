@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Middleware - Rate limiting middleware | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Middleware - Rate limiting middleware</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#rate-limiter-algorithms" aria-hidden="true" class="anchor" id="rate-limiter-algorithms"></a>Rate limiter algorithms</h2>
+<ul>
+<li>
+<p>Fixed window</p>
+</li>
+<li>
+<p>Sliding window</p>
+</li>
+<li>
+<p>Token bucket</p>
+</li>
+<li>
+<p>Concurrency</p>
+</li>
+</ul>
+<h3><a href="#fixed-window-limiter" aria-hidden="true" class="anchor" id="fixed-window-limiter"></a>Fixed window limiter</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddFixedWindowLimiter(policyName: &quot;fixed&quot;, options =&gt;
+    {
+        options.PermitLimit = 4;
+        options.Window = TimeSpan.FromSeconds(12);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 2;
+    }));
+
+var app = builder.Build();
+
+app.UseRateLimiter();
+
+static string GetTicks() =&gt; (DateTime.Now.Ticks &amp; 0x11111).ToString(&quot;00000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok($&quot;Hello {GetTicks()}&quot;))
+                           .RequireRateLimiting(&quot;fixed&quot;);
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Calls AddRateLimiter to add a rate limiting service to the service collection.</p>
+</li>
+<li>
+<p>Calls <code>AddFixedWindowLimiter</code> to create a fixed window limiter with a policy name of &quot;fixed&quot; and sets:</p>
+</li>
+<li>
+<p><code>PermitLimit</code> to 4 and the time Window to 12. A maximum of 4 requests per each 12-second window are allowed.</p>
+</li>
+<li>
+<p><code>QueueProcessingOrder</code> to <code>OldestFirst</code>.</p>
+</li>
+<li>
+<p>QueueLimit to 2.</p>
+</li>
+<li>
+<p>Calls <code>UseRateLimiter</code> to enable rate limiting.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure&lt;MyRateLimitOptions&gt;(
+    builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit));
+
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+var fixedPolicy = &quot;fixed&quot;;
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddFixedWindowLimiter(policyName: fixedPolicy, options =&gt;
+    {
+        options.PermitLimit = myOptions.PermitLimit;
+        options.Window = TimeSpan.FromSeconds(myOptions.Window);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
+
+var app = builder.Build();
+
+app.UseRateLimiter();
+
+static string GetTicks() =&gt; (DateTime.Now.Ticks &amp; 0x11111).ToString(&quot;00000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok($&quot;Fixed Window Limiter {GetTicks()}&quot;))
+                           .RequireRateLimiting(fixedPolicy);
+
+app.Run();
+</code></pre>
+<h3><a href="#sliding-window-limiter" aria-hidden="true" class="anchor" id="sliding-window-limiter"></a>Sliding window limiter</h3>
+<ul>
+<li>
+<p>Is similar to the fixed window limiter but adds segments per window. The window slides one segment each segment interval. The segment interval is (window time)/(segments per window).</p>
+</li>
+<li>
+<p>Limits the requests for a window to <code>permitLimit</code> requests.</p>
+</li>
+<li>
+<p>Each time window is divided in <code>n</code> segments per window.</p>
+</li>
+<li>
+<p>Requests taken from the expired time segment one window back (n segments prior to the current segment) are added to the current segment. We refer to the most expired time segment one window back as the expired segment.</p>
+</li>
+<li>
+<p>The top row and first column shows the time segment.</p>
+</li>
+<li>
+<p>The second row shows the remaining requests available. The remaining requests are calculated as the available requests minus the processed requests plus the recycled requests.</p>
+</li>
+<li>
+<p>Requests at each time moves along the diagonal blue line.</p>
+</li>
+<li>
+<p>From time 30 on, the request taken from the expired time segment are added back to the request limit, as shown in the red lines.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th style="text-align: center;">Time</th>
+<th style="text-align: center;">Available</th>
+<th style="text-align: center;">Taken</th>
+<th style="text-align: center;">Recycled from expired</th>
+<th style="text-align: center;">Carry over</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">80</td>
+</tr>
+<tr>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">80</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">50</td>
+</tr>
+<tr>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">10</td>
+</tr>
+<tr>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">20</td>
+</tr>
+<tr>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">50</td>
+</tr>
+<tr>
+<td style="text-align: center;">60</td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">35</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">45</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+var slidingPolicy = &quot;sliding&quot;;
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddSlidingWindowLimiter(policyName: slidingPolicy, options =&gt;
+    {
+        options.PermitLimit = myOptions.PermitLimit;
+        options.Window = TimeSpan.FromSeconds(myOptions.Window);
+        options.SegmentsPerWindow = myOptions.SegmentsPerWindow;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
+
+var app = builder.Build();
+
+app.UseRateLimiter();
+
+static string GetTicks() =&gt; (DateTime.Now.Ticks &amp; 0x11111).ToString(&quot;00000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok($&quot;Sliding Window Limiter {GetTicks()}&quot;))
+                           .RequireRateLimiting(slidingPolicy);
+
+app.Run();
+</code></pre>
+<h3><a href="#token-bucket-limiter" aria-hidden="true" class="anchor" id="token-bucket-limiter"></a>Token bucket limiter</h3>
+<table><thead>
+<tr>
+<th style="text-align: center;">Time</th>
+<th style="text-align: center;">Available</th>
+<th style="text-align: center;">Taken</th>
+<th style="text-align: center;">Added</th>
+<th style="text-align: center;">Carry over</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">80</td>
+</tr>
+<tr>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">80</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">90</td>
+</tr>
+<tr>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">90</td>
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">15</td>
+<td style="text-align: center;">100</td>
+</tr>
+<tr>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">90</td>
+</tr>
+<tr>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">90</td>
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">100</td>
+</tr>
+<tr>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">80</td>
+</tr>
+<tr>
+<td style="text-align: center;">60</td>
+<td style="text-align: center;">80</td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">50</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var tokenPolicy = &quot;token&quot;;
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddTokenBucketLimiter(policyName: tokenPolicy, options =&gt;
+    {
+        options.TokenLimit = myOptions.TokenLimit;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+        options.ReplenishmentPeriod = TimeSpan.FromSeconds(myOptions.ReplenishmentPeriod);
+        options.TokensPerPeriod = myOptions.TokensPerPeriod;
+        options.AutoReplenishment = myOptions.AutoReplenishment;
+    }));
+
+var app = builder.Build();
+
+app.UseRateLimiter();
+
+static string GetTicks() =&gt; (DateTime.Now.Ticks &amp; 0x11111).ToString(&quot;00000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok($&quot;Token Limiter {GetTicks()}&quot;))
+                           .RequireRateLimiting(tokenPolicy);
+
+app.Run();
+</code></pre>
+<h3><a href="#concurrency-limiter" aria-hidden="true" class="anchor" id="concurrency-limiter"></a>Concurrency limiter</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var concurrencyPolicy = &quot;Concurrency&quot;;
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddConcurrencyLimiter(policyName: concurrencyPolicy, options =&gt;
+    {
+        options.PermitLimit = myOptions.PermitLimit;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
+
+var app = builder.Build();
+
+app.UseRateLimiter();
+
+static string GetTicks() =&gt; (DateTime.Now.Ticks &amp; 0x11111).ToString(&quot;00000&quot;);
+
+app.MapGet(&quot;/&quot;, async () =&gt;
+{
+    await Task.Delay(500);
+    return Results.Ok($&quot;Concurrency Limiter {GetTicks()}&quot;);
+                              
+}).RequireRateLimiting(concurrencyPolicy);
+
+app.Run();
+</code></pre>
+<h3><a href="#create-chained-limiters" aria-hidden="true" class="anchor" id="create-chained-limiters"></a>Create chained limiters</h3>
+<pre><code class="language-csharp">using System.Globalization;
+using System.Threading.RateLimiting;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRateLimiter(_ =&gt;
+{
+    _.OnRejected = (context, _) =&gt;
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int) retryAfter.TotalSeconds).ToString(NumberFormatInfo.InvariantInfo);
+        }
+
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.WriteAsync(&quot;Too many requests. Please try again later.&quot;);
+
+        return new ValueTask();
+    };
+    _.GlobalLimiter = PartitionedRateLimiter.CreateChained(
+        PartitionedRateLimiter.Create&lt;HttpContext, string&gt;(httpContext =&gt;
+        {
+            var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+
+            return RateLimitPartition.GetFixedWindowLimiter
+            (userAgent, _ =&gt;
+                new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 4,
+                    Window = TimeSpan.FromSeconds(2)
+                });
+        }),
+        PartitionedRateLimiter.Create&lt;HttpContext, string&gt;(httpContext =&gt;
+        {
+            var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+            
+            return RateLimitPartition.GetFixedWindowLimiter
+            (userAgent, _ =&gt;
+                new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 20,    
+                    Window = TimeSpan.FromSeconds(30)
+                });
+        }));
+});
+
+var app = builder.Build();
+app.UseRateLimiter();
+
+static string GetTicks() =&gt; (DateTime.Now.Ticks &amp; 0x11111).ToString(&quot;00000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok($&quot;Hello {GetTicks()}&quot;));
+
+app.Run();
+</code></pre>
+<h2><a href="#enableratelimiting-and-disableratelimiting-attributes" aria-hidden="true" class="anchor" id="enableratelimiting-and-disableratelimiting-attributes"></a><code>EnableRateLimiting</code> and <code>DisableRateLimiting</code> attributes</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.Configure&lt;MyRateLimitOptions&gt;(
+    builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit));
+
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+var fixedPolicy = &quot;fixed&quot;;
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddFixedWindowLimiter(policyName: fixedPolicy, options =&gt;
+    {
+        options.PermitLimit = myOptions.PermitLimit;
+        options.Window = TimeSpan.FromSeconds(myOptions.Window);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
+
+var slidingPolicy = &quot;sliding&quot;;
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddSlidingWindowLimiter(policyName: slidingPolicy, options =&gt;
+    {
+        options.PermitLimit = myOptions.SlidingPermitLimit;
+        options.Window = TimeSpan.FromSeconds(myOptions.Window);
+        options.SegmentsPerWindow = myOptions.SegmentsPerWindow;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
+
+var app = builder.Build();
+app.UseRateLimiter();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.MapRazorPages().RequireRateLimiting(slidingPolicy);
+app.MapDefaultControllerRoute().RequireRateLimiting(fixedPolicy);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[EnableRateLimiting(&quot;fixed&quot;)]
+public class Home2Controller : Controller
+{
+    private readonly ILogger&lt;Home2Controller&gt; _logger;
+
+    public Home2Controller(ILogger&lt;Home2Controller&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public ActionResult Index()
+    {
+        return View();
+    }
+
+    [EnableRateLimiting(&quot;sliding&quot;)]
+    public ActionResult Privacy()
+    {
+        return View();
+    }
+
+    [DisableRateLimiting]
+    public ActionResult NoLimit()
+    {
+        return View();
+    }
+
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.Configure&lt;MyRateLimitOptions&gt;(
+    builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit));
+
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+var fixedPolicy = &quot;fixed&quot;;
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddFixedWindowLimiter(policyName: fixedPolicy, options =&gt;
+    {
+        options.PermitLimit = myOptions.PermitLimit;
+        options.Window = TimeSpan.FromSeconds(myOptions.Window);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
+
+var slidingPolicy = &quot;sliding&quot;;
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddSlidingWindowLimiter(policyName: slidingPolicy, options =&gt;
+    {
+        options.PermitLimit = myOptions.SlidingPermitLimit;
+        options.Window = TimeSpan.FromSeconds(myOptions.Window);
+        options.SegmentsPerWindow = myOptions.SegmentsPerWindow;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
+
+var app = builder.Build();
+
+app.UseRateLimiter();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.MapRazorPages();
+app.MapDefaultControllerRoute();  // RequireRateLimiting not called
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[EnableRateLimiting(&quot;fixed&quot;)]
+public class Home2Controller : Controller
+{
+    private readonly ILogger&lt;Home2Controller&gt; _logger;
+
+    public Home2Controller(ILogger&lt;Home2Controller&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public ActionResult Index()
+    {
+        return View();
+    }
+
+    [EnableRateLimiting(&quot;sliding&quot;)]
+    public ActionResult Privacy()
+    {
+        return View();
+    }
+
+    [DisableRateLimiting]
+    public ActionResult NoLimit()
+    {
+        return View();
+    }
+
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>The &quot;fixed&quot; policy rate limiter is applied to all action methods that don't have <code>EnableRateLimiting</code> and <code>DisableRateLimiting</code> attributes.</p>
+</li>
+<li>
+<p>The &quot;sliding&quot; policy rate limiter is applied to the <code>Privacy</code> action.</p>
+</li>
+<li>
+<p>Rate limiting is disabled on the <code>NoLimit</code> action method.</p>
+</li>
+</ul>
+<h3><a href="#applying-attributes-to-razor-pages" aria-hidden="true" class="anchor" id="applying-attributes-to-razor-pages"></a>Applying attributes to Razor Pages</h3>
+<h2><a href="#limiter-algorithm-comparison" aria-hidden="true" class="anchor" id="limiter-algorithm-comparison"></a>Limiter algorithm comparison</h2>
+<h2><a href="#rate-limiter-samples" aria-hidden="true" class="anchor" id="rate-limiter-samples"></a>Rate limiter samples</h2>
+<h3><a href="#limiter-with-onrejected-retryafter,-and-globallimiter" aria-hidden="true" class="anchor" id="limiter-with-onrejected-retryafter,-and-globallimiter"></a>Limiter with <code>OnRejected</code>, <code>RetryAfter</code>, and <code>GlobalLimiter</code></h3>
+<ul>
+<li>
+<p>Creates a RateLimiterOptions.OnRejected callback that is called when a request exceeds the specified limit. <code>retryAfter</code> can be used with the <code>TokenBucketRateLimiter</code>, <code>FixedWindowLimiter</code>, and <code>SlidingWindowLimiter</code> because these algorithms are able to estimate when more permits will be added. The <code>ConcurrencyLimiter</code> has no way of calculating when permits will be available.</p>
+</li>
+<li>
+<p>Adds the following limiters:</p>
+<ul>
+<li>
+<p>A <code>SampleRateLimiterPolicy</code> which implements the <code>IRateLimiterPolicy&lt;TPartitionKey&gt;</code> interface. The <code>SampleRateLimiterPolicy</code> class is shown later in this article.</p>
+</li>
+<li>
+<p>A <code>SlidingWindowLimiter</code>:</p>
+<ul>
+<li>
+<p>With a partition for each authenticated user.</p>
+</li>
+<li>
+<p>One shared partition for all anonymous users.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>A <code>GlobalLimiter</code> that is applied to all requests. The global limiter will be executed first, followed by the endpoint-specific limiter, if one exists. The <code>GlobalLimiter</code> creates a partition for each IPAddress.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">// Preceding code removed for brevity.
+using System.Globalization;
+using System.Net;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using WebRateLimitAuth;
+using WebRateLimitAuth.Data;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;) ??
+    throw new InvalidOperationException(&quot;Connection string 'DefaultConnection' not found.&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+builder.Services.Configure&lt;MyRateLimitOptions&gt;(
+    builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit));
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var userPolicyName = &quot;user&quot;;
+var helloPolicy = &quot;hello&quot;;
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+
+builder.Services.AddRateLimiter(limiterOptions =&gt;
+{
+    limiterOptions.OnRejected = (context, cancellationToken) =&gt;
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int) retryAfter.TotalSeconds).ToString(NumberFormatInfo.InvariantInfo);
+        }
+
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.RequestServices.GetService&lt;ILoggerFactory&gt;()?
+            .CreateLogger(&quot;Microsoft.AspNetCore.RateLimitingMiddleware&quot;)
+            .LogWarning(&quot;OnRejected: {GetUserEndPoint}&quot;, GetUserEndPoint(context.HttpContext));
+
+        return new ValueTask();
+    };
+
+    limiterOptions.AddPolicy&lt;string, SampleRateLimiterPolicy&gt;(helloPolicy);
+    limiterOptions.AddPolicy(userPolicyName, context =&gt;
+    {
+        var username = &quot;anonymous user&quot;;
+        if (context.User.Identity?.IsAuthenticated is true)
+        {
+            username = context.User.ToString()!;
+        }
+
+        return RateLimitPartition.GetSlidingWindowLimiter(username,
+            _ =&gt; new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = myOptions.PermitLimit,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = myOptions.QueueLimit,
+                Window = TimeSpan.FromSeconds(myOptions.Window),
+                SegmentsPerWindow = myOptions.SegmentsPerWindow
+            });
+
+    });
+    
+    limiterOptions.GlobalLimiter = PartitionedRateLimiter.Create&lt;HttpContext, IPAddress&gt;(context =&gt;
+    {
+        IPAddress? remoteIpAddress = context.Connection.RemoteIpAddress;
+
+        if (!IPAddress.IsLoopback(remoteIpAddress!))
+        {
+            return RateLimitPartition.GetTokenBucketLimiter
+            (remoteIpAddress!, _ =&gt;
+                new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = myOptions.TokenLimit2,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = myOptions.QueueLimit,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(myOptions.ReplenishmentPeriod),
+                    TokensPerPeriod = myOptions.TokensPerPeriod,
+                    AutoReplenishment = myOptions.AutoReplenishment
+                });
+        }
+
+        return RateLimitPartition.GetNoLimiter(IPAddress.Loopback);
+    });
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+app.UseRateLimiter();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages().RequireRateLimiting(userPolicyName);
+app.MapDefaultControllerRoute();
+
+static string GetUserEndPoint(HttpContext context) =&gt;
+   $&quot;User {context.User.Identity?.Name ?? &quot;Anonymous&quot;} endpoint:{context.Request.Path}&quot;
+   + $&quot; {context.Connection.RemoteIpAddress}&quot;;
+static string GetTicks() =&gt; (DateTime.Now.Ticks &amp; 0x11111).ToString(&quot;00000&quot;);
+
+app.MapGet(&quot;/a&quot;, (HttpContext context) =&gt; $&quot;{GetUserEndPoint(context)} {GetTicks()}&quot;)
+    .RequireRateLimiting(userPolicyName);
+
+app.MapGet(&quot;/b&quot;, (HttpContext context) =&gt; $&quot;{GetUserEndPoint(context)} {GetTicks()}&quot;)
+    .RequireRateLimiting(helloPolicy);
+
+app.MapGet(&quot;/c&quot;, (HttpContext context) =&gt; $&quot;{GetUserEndPoint(context)} {GetTicks()}&quot;);
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Creating partitions on client IP addresses makes the app vulnerable to Denial of Service Attacks which employ IP Source Address Spoofing. For more information, see BCP 38 RFC 2827 Network Ingress Filtering: Defeating Denial of Service Attacks which employ IP Source Address Spoofing.</p>
+</blockquote>
+<pre><code class="language-csharp">using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+using WebRateLimitAuth.Models;
+
+namespace WebRateLimitAuth;
+
+public class SampleRateLimiterPolicy : IRateLimiterPolicy&lt;string&gt;
+{
+    private Func&lt;OnRejectedContext, CancellationToken, ValueTask&gt;? _onRejected;
+    private readonly MyRateLimitOptions _options;
+
+    public SampleRateLimiterPolicy(ILogger&lt;SampleRateLimiterPolicy&gt; logger,
+                                   IOptions&lt;MyRateLimitOptions&gt; options)
+    {
+        _onRejected = (ctx, token) =&gt;
+        {
+            ctx.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            logger.LogWarning($&quot;Request rejected by {nameof(SampleRateLimiterPolicy)}&quot;);
+            return ValueTask.CompletedTask;
+        };
+        _options = options.Value;
+    }
+
+    public Func&lt;OnRejectedContext, CancellationToken, ValueTask&gt;? OnRejected =&gt; _onRejected;
+
+    public RateLimitPartition&lt;string&gt; GetPartition(HttpContext httpContext)
+    {
+        return RateLimitPartition.GetSlidingWindowLimiter(string.Empty,
+            _ =&gt; new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = _options.PermitLimit,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = _options.QueueLimit,
+                Window = TimeSpan.FromSeconds(_options.Window),
+                SegmentsPerWindow = _options.SegmentsPerWindow
+            });
+    }
+}
+</code></pre>
+<h3><a href="#limiter-with-authorization" aria-hidden="true" class="anchor" id="limiter-with-authorization"></a>Limiter with authorization</h3>
+<pre><code class="language-csharp">using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Primitives;
+using WebRateLimitAuth.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(&quot;Bearer&quot;).AddJwtBearer();
+
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+var jwtPolicyName = &quot;jwt&quot;;
+
+builder.Services.AddRateLimiter(limiterOptions =&gt;
+{
+    limiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    limiterOptions.AddPolicy(policyName: jwtPolicyName, partitioner: httpContext =&gt;
+    {
+        var accessToken = httpContext.Features.Get&lt;IAuthenticateResultFeature&gt;()?
+                              .AuthenticateResult?.Properties?.GetTokenValue(&quot;access_token&quot;)?.ToString()
+                          ?? string.Empty;
+
+        if (!StringValues.IsNullOrEmpty(accessToken))
+        {
+            return RateLimitPartition.GetTokenBucketLimiter(accessToken, _ =&gt;
+                new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = myOptions.TokenLimit2,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = myOptions.QueueLimit,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(myOptions.ReplenishmentPeriod),
+                    TokensPerPeriod = myOptions.TokensPerPeriod,
+                    AutoReplenishment = myOptions.AutoReplenishment
+                });
+        }
+
+        return RateLimitPartition.GetTokenBucketLimiter(&quot;Anon&quot;, _ =&gt;
+            new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = myOptions.TokenLimit,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = myOptions.QueueLimit,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(myOptions.ReplenishmentPeriod),
+                TokensPerPeriod = myOptions.TokensPerPeriod,
+                AutoReplenishment = true
+            });
+    });
+});
+
+var app = builder.Build();
+
+app.UseAuthorization();
+app.UseRateLimiter();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello, World!&quot;);
+
+app.MapGet(&quot;/jwt&quot;, (HttpContext context) =&gt; $&quot;Hello {GetUserEndPointMethod(context)}&quot;)
+    .RequireRateLimiting(jwtPolicyName)
+    .RequireAuthorization();
+
+app.MapPost(&quot;/post&quot;, (HttpContext context) =&gt; $&quot;Hello {GetUserEndPointMethod(context)}&quot;)
+    .RequireRateLimiting(jwtPolicyName)
+    .RequireAuthorization();
+
+app.Run();
+
+static string GetUserEndPointMethod(HttpContext context) =&gt;
+    $&quot;Hello {context.User.Identity?.Name ?? &quot;Anonymous&quot;} &quot; +
+    $&quot;Endpoint:{context.Request.Path} Method: {context.Request.Method}&quot;;
+</code></pre>
+<h3><a href="#limiter-with-concurrencylimiter-tokenbucketratelimiter,-and-authorization" aria-hidden="true" class="anchor" id="limiter-with-concurrencylimiter-tokenbucketratelimiter,-and-authorization"></a>Limiter with <code>ConcurrencyLimiter</code>, <code>TokenBucketRateLimiter</code>, and authorization</h3>
+<ul>
+<li>
+<p>Adds a <code>ConcurrencyLimiter</code> with a policy name of &quot;get&quot; that is used on the Razor Pages.</p>
+</li>
+<li>
+<p>Adds a <code>TokenBucketRateLimiter</code> with a partition for each authorized user and a partition for all anonymous users.</p>
+</li>
+<li>
+<p>Sets <code>RateLimiterOptions.RejectionStatusCode</code> to 429 Too Many Requests.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var getPolicyName = &quot;get&quot;;
+var postPolicyName = &quot;post&quot;;
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+
+builder.Services.AddRateLimiter(_ =&gt; _
+    .AddConcurrencyLimiter(policyName: getPolicyName, options =&gt;
+    {
+        options.PermitLimit = myOptions.PermitLimit;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    })
+    .AddPolicy(policyName: postPolicyName, partitioner: httpContext =&gt;
+    {
+        string userName = httpContext.User.Identity?.Name ?? string.Empty;
+
+        if (!StringValues.IsNullOrEmpty(userName))
+        {
+            return RateLimitPartition.GetTokenBucketLimiter(userName, _ =&gt;
+                new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = myOptions.TokenLimit2,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = myOptions.QueueLimit,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(myOptions.ReplenishmentPeriod),
+                    TokensPerPeriod = myOptions.TokensPerPeriod,
+                    AutoReplenishment = myOptions.AutoReplenishment
+                });
+        }
+
+        return RateLimitPartition.GetTokenBucketLimiter(&quot;Anon&quot;, _ =&gt;
+            new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = myOptions.TokenLimit,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = myOptions.QueueLimit,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(myOptions.ReplenishmentPeriod),
+                TokensPerPeriod = myOptions.TokensPerPeriod,
+                AutoReplenishment = true
+            });
+    }));
+</code></pre>
+<h2><a href="#testing-endpoints-with-rate-limiting" aria-hidden="true" class="anchor" id="testing-endpoints-with-rate-limiting"></a>Testing endpoints with rate limiting</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Rate limiting middleware by Maarten Balliauw provides an excellent introduction and overview to rate limiting.</p>
+</li>
+<li>
+<p>Rate limit an HTTP handler in .NET</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/rate-limit?view=aspnetcore-8.0">Rate limiting middleware in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
