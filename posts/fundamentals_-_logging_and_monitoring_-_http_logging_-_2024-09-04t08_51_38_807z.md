@@ -6,11 +6,6 @@ tags: Summary, AspNetCore
 description: 
 image:
 ---
-- Article
-
-  - 06/17/2024
-
-  - 13 contributors
 
 ## In this article
 
@@ -479,7 +474,7 @@ info: Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware[8]
 
  - Global configuration from HttpLoggingOptions, set by calling ```AddHttpLogging```.
 
- - Endpoint-specific configuration from the [HttpLogging] attribute or the WithHttpLogging extension method overrides global configuration.
+ - Endpoint-specific configuration from the `[HttpLogging]` attribute or the WithHttpLogging extension method overrides global configuration.
 
  - ```IHttpLoggingInterceptor``` is called with the results and can further modify the configuration per request.
 

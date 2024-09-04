@@ -6,11 +6,6 @@ tags: Summary, AspNetCore
 description: 
 image:
 ---
-- Article
-
-  - 07/26/2024
-
-  - 5 contributors
 
 ## In this article
 
