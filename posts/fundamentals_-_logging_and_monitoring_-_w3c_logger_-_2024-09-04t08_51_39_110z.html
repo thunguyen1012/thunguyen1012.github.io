@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Logging and monitoring - W3C logger | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Logging and monitoring - W3C logger</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>07/26/2024</p>
+</li>
+<li>
+<p>5 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>HTTP request information</p>
+</li>
+<li>
+<p>Common properties</p>
+</li>
+<li>
+<p>Headers</p>
+</li>
+<li>
+<p>HTTP response information</p>
+</li>
+<li>
+<p>Metadata about the request/response pair (date/time started, time taken)</p>
+</li>
+<li>
+<p>Record information about incoming requests and responses.</p>
+</li>
+<li>
+<p>Filter which parts of the request and response are logged.</p>
+</li>
+<li>
+<p>Filter which headers to log.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+W3CLogger can potentially log personally identifiable information (PII). Consider the risk and avoid logging sensitive information. By default, fields that could contain PII aren't logged.</p>
+</blockquote>
+<h2><a href="#enable-w3clogger" aria-hidden="true" class="anchor" id="enable-w3clogger"></a>Enable W3CLogger</h2>
+<pre><code class="language-csharp">var app = builder.Build();
+
+app.UseW3CLogging();
+
+app.UseRouting();
+</code></pre>
+<h2><a href="#w3clogger-options" aria-hidden="true" class="anchor" id="w3clogger-options"></a>W3CLogger options</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddW3CLogging(logging =&gt;
+{
+    // Log all W3C fields
+    logging.LoggingFields = W3CLoggingFields.All;
+
+    logging.AdditionalRequestHeaders.Add(&quot;x-forwarded-for&quot;);
+    logging.AdditionalRequestHeaders.Add(&quot;x-client-ssl-protocol&quot;);
+    logging.FileSizeLimit = 5 * 1024 * 1024;
+    logging.RetainedFileCountLimit = 2;
+    logging.FileName = &quot;MyLogFile&quot;;
+    logging.LogDirectory = @&quot;C:\logs&quot;;
+    logging.FlushInterval = TimeSpan.FromSeconds(2);
+});
+</code></pre>
+<h3><a href="#loggingfields" aria-hidden="true" class="anchor" id="loggingfields"></a><code>LoggingFields</code></h3>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/w3c-logger/?view=aspnetcore-8.0">W3CLogger in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Logging and monitoring - Logging | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Logging and monitoring - Logging</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#logging-providers" aria-hidden="true" class="anchor" id="logging-providers"></a><code>Logging</code> providers</h2>
+<ul>
+<li>
+<p><code>Console</code></p>
+</li>
+<li>
+<p><code>Debug</code></p>
+</li>
+<li>
+<p><code>EventSource</code></p>
+</li>
+<li>
+<p><code>EventLog</code>: Windows only</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder();
+builder.Host.ConfigureLogging(logging =&gt;
+{
+    logging.ClearProviders();
+    logging.AddConsole();
+});
+</code></pre>
+<ul>
+<li>
+<p>Built-in logging providers</p>
+</li>
+<li>
+<p>Third-party logging providers.</p>
+</li>
+</ul>
+<h2><a href="#create-logs" aria-hidden="true" class="anchor" id="create-logs"></a>Create logs</h2>
+<ul>
+<li>
+<p>Creates a logger, <code>ILogger&lt;AboutModel&gt;</code>, which uses a log category of the fully qualified name of the type <code>AboutModel</code>. The log category is a string that is associated with each log.</p>
+</li>
+<li>
+<p>Calls LogInformation to log at the <code>Information</code> level. The <code>Log</code> level indicates the severity of the logged event.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class AboutModel : PageModel
+{
+    private readonly ILogger _logger;
+
+    public AboutModel(ILogger&lt;AboutModel&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public void OnGet()
+    {
+        _logger.LogInformation(&quot;About page visited at {DT}&quot;, 
+            DateTime.UtcNow.ToLongTimeString());
+    }
+}
+</code></pre>
+<h2><a href="#configure-logging" aria-hidden="true" class="anchor" id="configure-logging"></a>Configure logging</h2>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  }
+}
+</code></pre>
+<ul>
+<li>
+<p>The &quot;Default&quot; and &quot;Microsoft.AspNetCore&quot; categories are specified.</p>
+</li>
+<li>
+<p>The &quot;Microsoft.AspNetCore&quot; category applies to all categories that start with &quot;Microsoft.AspNetCore&quot;. For example, this setting applies to the &quot;Microsoft.AspNetCore.Routing.EndpointMiddleware&quot; category.</p>
+</li>
+<li>
+<p>The &quot;Microsoft.AspNetCore&quot; category logs at log level <code>Warning</code> and higher.</p>
+</li>
+<li>
+<p>A specific log provider is not specified, so <code>LogLevel</code> applies to all the enabled logging providers except for the Windows <code>EventLog</code>.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: { // All providers, LogLevel applies to all the enabled providers.
+      &quot;Default&quot;: &quot;Error&quot;, // Default logging, Error and higher.
+      &quot;Microsoft&quot;: &quot;Warning&quot; // All Microsoft* categories, Warning and higher.
+    },
+    &quot;Debug&quot;: { // Debug provider.
+      &quot;LogLevel&quot;: {
+        &quot;Default&quot;: &quot;Information&quot;, // Overrides preceding LogLevel:Default setting.
+        &quot;Microsoft.Hosting&quot;: &quot;Trace&quot; // Debug:Microsoft.Hosting category.
+      }
+    },
+    &quot;EventSource&quot;: { // EventSource provider
+      &quot;LogLevel&quot;: {
+        &quot;Default&quot;: &quot;Warning&quot; // All categories of EventSource provider.
+      }
+    }
+  }
+}
+</code></pre>
+<ul>
+<li>
+<p>Specific providers: For example, <code>Logging:EventSource:LogLevel:Default:Information</code></p>
+</li>
+<li>
+<p>Specific categories: For example, <code>Logging:LogLevel:Microsoft:Warning</code></p>
+</li>
+<li>
+<p>All providers and all categories: <code>Logging:LogLevel:Default:Warning</code></p>
+</li>
+<li>
+<p>Passed to the provider.</p>
+</li>
+<li>
+<p>Logged or displayed.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: { // No provider, LogLevel applies to all the enabled providers.
+      &quot;Default&quot;: &quot;Error&quot;,
+      &quot;Microsoft&quot;: &quot;Warning&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Warning&quot;
+    },
+    &quot;Debug&quot;: { // Debug provider.
+      &quot;LogLevel&quot;: {
+        &quot;Default&quot;: &quot;Information&quot; // Overrides preceding LogLevel:Default setting.
+      }
+    },
+    &quot;Console&quot;: {
+      &quot;IncludeScopes&quot;: true,
+      &quot;LogLevel&quot;: {
+        &quot;Microsoft.AspNetCore.Mvc.Razor.Internal&quot;: &quot;Warning&quot;,
+        &quot;Microsoft.AspNetCore.Mvc.Razor.Razor&quot;: &quot;Debug&quot;,
+        &quot;Microsoft.AspNetCore.Mvc.Razor&quot;: &quot;Error&quot;,
+        &quot;Default&quot;: &quot;Information&quot;
+      }
+    },
+    &quot;EventSource&quot;: {
+      &quot;LogLevel&quot;: {
+        &quot;Microsoft&quot;: &quot;Information&quot;
+      }
+    },
+    &quot;EventLog&quot;: {
+      &quot;LogLevel&quot;: {
+        &quot;Microsoft&quot;: &quot;Information&quot;
+      }
+    },
+    &quot;AzureAppServicesFile&quot;: {
+      &quot;IncludeScopes&quot;: true,
+      &quot;LogLevel&quot;: {
+        &quot;Default&quot;: &quot;Warning&quot;
+      }
+    },
+    &quot;AzureAppServicesBlob&quot;: {
+      &quot;IncludeScopes&quot;: true,
+      &quot;LogLevel&quot;: {
+        &quot;Microsoft&quot;: &quot;Information&quot;
+      }
+    },
+    &quot;ApplicationInsights&quot;: {
+      &quot;LogLevel&quot;: {
+        &quot;Default&quot;: &quot;Information&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<ul>
+<li>
+<p>The categories and levels aren't suggested values. The sample is provided to show all of the default providers.</p>
+</li>
+<li>
+<p>Settings in <code>Logging.{PROVIDER NAME}.LogLevel</code> override settings in <code>Logging.LogLevel</code>, where the {PROVIDER NAME} placeholder is the provider name. For example, the level in <code>Debug.LogLevel.Default</code> overrides the level in <code>LogLevel.Default</code>.</p>
+</li>
+<li>
+<p>Each default provider alias is used. Each provider defines an alias that can be used in configuration in place of the fully qualified type name. The built-in providers aliases are:</p>
+<ul>
+<li>
+<p><code>Console</code></p>
+</li>
+<li>
+<p><code>Debug</code></p>
+</li>
+<li>
+<p><code>EventSource</code></p>
+</li>
+<li>
+<p><code>EventLog</code></p>
+</li>
+<li>
+<p><code>AzureAppServicesFile</code></p>
+</li>
+<li>
+<p><code>AzureAppServicesBlob</code></p>
+</li>
+<li>
+<p><code>ApplicationInsights</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#log-in-programcs" aria-hidden="true" class="anchor" id="log-in-programcs"></a><code>Log</code> in <code>Program.cs</code></h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+app.Logger.LogInformation(&quot;Adding Routes&quot;);
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+app.Logger.LogInformation(&quot;Starting the app&quot;);
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.AddConsole();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.MapGet(&quot;/Test&quot;, async (ILogger&lt;Program&gt; logger, HttpResponse response) =&gt;
+{
+    logger.LogInformation(&quot;Testing logging in Program.cs&quot;);
+    await response.WriteAsync(&quot;Testing&quot;);
+});
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.Extensions.Logging.Console;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.AddSimpleConsole(i =&gt; i.ColorBehavior = LoggerColorBehavior.Disabled);
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.MapGet(&quot;/Test&quot;, async (ILogger&lt;Program&gt; logger, HttpResponse response) =&gt;
+{
+    logger.LogInformation(&quot;Testing logging in Program.cs&quot;);
+    await response.WriteAsync(&quot;Testing&quot;);
+});
+
+app.Run();
+</code></pre>
+<h2><a href="#set-log-level-by-command-line-environment-variables,-and-other-configuration" aria-hidden="true" class="anchor" id="set-log-level-by-command-line-environment-variables,-and-other-configuration"></a>Set log level by command line, environment variables, and other configuration</h2>
+<ul>
+<li>
+<p>Supported by all platforms.</p>
+</li>
+<li>
+<p>Automatically replaced by a colon, :.</p>
+</li>
+<li>
+<p>Set the environment key <code>Logging:LogLevel:Microsoft</code> to a value of <code>Information</code> on Windows.</p>
+</li>
+<li>
+<p>Test the settings when using an app created with the ASP.NET Core web application templates. The <code>dotnet run</code> command must be run in the project directory after using set.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">set Logging__LogLevel__Microsoft=Information
+dotnet run
+</code></pre>
+<ul>
+<li>
+<p>Is only set in processes launched from the command window they were set in.</p>
+</li>
+<li>
+<p>Isn't read by browsers launched with Visual Studio.</p>
+</li>
+</ul>
+<pre><code class="language-console">setx Logging__LogLevel__Microsoft Information /M
+</code></pre>
+<pre><code class="language-json">&quot;Logging&quot;: {
+  &quot;Console&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Trace&quot;
+    }
+  }
+}
+</code></pre>
+<pre><code class="language-console">setx Logging__Console__LogLevel__Microsoft.Hosting.Lifetime Trace /M
+</code></pre>
+<blockquote>
+<p class='note'>Note
+When configuring environment variables with names that contain . (periods) in macOS and Linux, consider the &quot;Exporting a variable with a dot (.) in it&quot; question on Stack Exchange and its corresponding accepted answer.</p>
+</blockquote>
+<ul>
+<li>
+<p>Encrypted at rest and transmitted over an encrypted channel.</p>
+</li>
+<li>
+<p>Exposed as environment variables.</p>
+</li>
+</ul>
+<h2><a href="#how-filtering-rules-are-applied" aria-hidden="true" class="anchor" id="how-filtering-rules-are-applied"></a>How filtering rules are applied</h2>
+<ul>
+<li>
+<p>Select all rules that match the provider or its alias. If no match is found, select all rules with an empty provider.</p>
+</li>
+<li>
+<p>From the result of the preceding step, select rules with longest matching category prefix. If no match is found, select all rules that don't specify a category.</p>
+</li>
+<li>
+<p>If multiple rules are selected, take the last one.</p>
+</li>
+<li>
+<p>If no rules are selected, use <code>MinimumLevel</code>.</p>
+</li>
+</ul>
+<h2><a href="#logging-output-from-dotnet-run-and-visual-studio" aria-hidden="true" class="anchor" id="logging-output-from-dotnet-run-and-visual-studio"></a><code>Logging</code> output from <code>dotnet run</code> and Visual Studio</h2>
+<ul>
+<li>
+<p>In Visual Studio</p>
+<ul>
+<li>
+<p>In the <code>Debug</code> output window when debugging.</p>
+</li>
+<li>
+<p>In the ASP.NET Core Web Server window.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>In the console window when the app is run with <code>dotnet run</code>.</p>
+</li>
+</ul>
+<h2><a href="#log-category" aria-hidden="true" class="anchor" id="log-category"></a><code>Log</code> category</h2>
+<pre><code class="language-csharp">public class PrivacyModel : PageModel
+{
+    private readonly ILogger&lt;PrivacyModel&gt; _logger;
+
+    public PrivacyModel(ILogger&lt;PrivacyModel&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public void OnGet()
+    {
+        _logger.LogInformation(&quot;GET Pages.PrivacyModel called.&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class ContactModel : PageModel
+{
+    private readonly ILogger _logger;
+
+    public ContactModel(ILoggerFactory logger)
+    {
+        _logger = logger.CreateLogger(&quot;TodoApi.Pages.ContactModel.MyCategory&quot;);
+    }
+
+    public void OnGet()
+    {
+        _logger.LogInformation(&quot;GET Pages.ContactModel called.&quot;);
+    }
+</code></pre>
+<h2><a href="#log-level" aria-hidden="true" class="anchor" id="log-level"></a><code>Log</code> level</h2>
+<table><thead>
+<tr>
+<th>LogLevel</th>
+<th>Value</th>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loglevel#microsoft-extensions-logging-loglevel-trace" class="no-loc" data-linktype="absolute-path">Trace</a></td>
+<td>0</td>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.logtrace" class="no-loc" data-linktype="absolute-path">LogTrace</a></td>
+<td>Contain the most detailed messages. These messages may contain sensitive app data. These messages are disabled by default and should <em><strong>not</strong></em> be enabled in production.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loglevel#microsoft-extensions-logging-loglevel-debug" class="no-loc" data-linktype="absolute-path">Debug</a></td>
+<td>1</td>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.logdebug" class="no-loc" data-linktype="absolute-path">LogDebug</a></td>
+<td>For debugging and development. Use with caution in production due to the high volume.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loglevel#microsoft-extensions-logging-loglevel-information" class="no-loc" data-linktype="absolute-path">Information</a></td>
+<td>2</td>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.loginformation" class="no-loc" data-linktype="absolute-path">LogInformation</a></td>
+<td>Tracks the general flow of the app. May have long-term value.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loglevel#microsoft-extensions-logging-loglevel-warning" class="no-loc" data-linktype="absolute-path">Warning</a></td>
+<td>3</td>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.logwarning" class="no-loc" data-linktype="absolute-path">LogWarning</a></td>
+<td>For abnormal or unexpected events. Typically includes errors or conditions that don't cause the app to fail.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loglevel#microsoft-extensions-logging-loglevel-error" class="no-loc" data-linktype="absolute-path">Error</a></td>
+<td>4</td>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.logerror" class="no-loc" data-linktype="absolute-path">LogError</a></td>
+<td>For errors and exceptions that cannot be handled. These messages indicate a failure in the current operation or request, not an app-wide failure.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loglevel#microsoft-extensions-logging-loglevel-critical" class="no-loc" data-linktype="absolute-path">Critical</a></td>
+<td>5</td>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.logcritical" class="no-loc" data-linktype="absolute-path">LogCritical</a></td>
+<td>For failures that require immediate attention. Examples: data loss scenarios, out of disk space.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.logging.loglevel#microsoft-extensions-logging-loglevel-none" class="no-loc" data-linktype="absolute-path">None</a></td>
+<td>6</td>
+<td></td>
+<td>Specifies that a logging category shouldn't write messages.</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">[HttpGet]
+public IActionResult Test1(int id)
+{
+    var routeInfo = ControllerContext.ToCtxString(id);
+
+    _logger.Log(LogLevel.Information, MyLogEvents.TestItem, routeInfo);
+    _logger.LogInformation(MyLogEvents.TestItem, routeInfo);
+
+    return ControllerContext.MyDisplayRouteInfo();
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public async Task&lt;ActionResult&lt;TodoItemDTO&gt;&gt; GetTodoItem(long id)
+{
+    _logger.LogInformation(MyLogEvents.GetItem, &quot;Getting item {Id}&quot;, id);
+
+    var todoItem = await _context.TodoItems.FindAsync(id);
+
+    if (todoItem == null)
+    {
+        _logger.LogWarning(MyLogEvents.GetItemNotFound, &quot;Get({Id}) NOT FOUND&quot;, id);
+        return NotFound();
+    }
+
+    return ItemToDTO(todoItem);
+}
+</code></pre>
+<ul>
+<li>
+<p>In production:</p>
+<ul>
+<li>
+<p><code>Logging</code> at the <code>Trace</code>, <code>Debug</code>, or <code>Information</code> levels produces a high-volume of detailed log messages. To control costs and not exceed data storage limits, log <code>Trace</code>, <code>Debug</code>, or <code>Information</code> level messages to a high-volume, low-cost data store. Consider limiting <code>Trace</code>, <code>Debug</code>, or <code>Information</code> to specific categories.</p>
+</li>
+<li>
+<p><code>Logging</code> at <code>Warning</code> through <code>Critical</code> levels should produce few log messages.</p>
+<ul>
+<li>
+<p>Costs and storage limits usually aren't a concern.</p>
+</li>
+<li>
+<p>Few logs allow more flexibility in data store choices.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>In development:</p>
+<ul>
+<li>
+<p>Set to <code>Warning</code>.</p>
+</li>
+<li>
+<p>Add <code>Trace</code>, <code>Debug</code>, or <code>Information</code> messages when troubleshooting. To limit output, set <code>Trace</code>, <code>Debug</code>, or <code>Information</code> only for the categories under investigation.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>A Razor Pages app created with the ASP.NET Core templates.</p>
+</li>
+<li>
+<p><code>Logging</code> set to <code>Logging:Console:LogLevel:Microsoft:Information</code>.</p>
+</li>
+<li>
+<p>Navigation to the Privacy page:</p>
+</li>
+</ul>
+<pre><code class="language-console">info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 GET https://localhost:5001/Privacy
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint '/Privacy'
+info: Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker[3]
+      Route matched with {page = &quot;/Privacy&quot;}. Executing page /Privacy
+info: Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker[101]
+      Executing handler method DefaultRP.Pages.PrivacyModel.OnGet - ModelState is Valid
+info: Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker[102]
+      Executed handler method OnGet, returned result .
+info: Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker[103]
+      Executing an implicit handler method - ModelState is Valid
+info: Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker[104]
+      Executed an implicit handler method, returned result Microsoft.AspNetCore.Mvc.RazorPages.PageResult.
+info: Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker[4]
+      Executed page /Privacy in 74.5188ms
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint '/Privacy'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished in 149.3023ms 200 text/html; charset=utf-8
+</code></pre>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {      // Default, all providers.
+    &quot;LogLevel&quot;: {
+      &quot;Microsoft&quot;: &quot;Warning&quot;
+    },
+    &quot;Console&quot;: { // Console provider.
+      &quot;LogLevel&quot;: {
+        &quot;Microsoft&quot;: &quot;Information&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h2><a href="#log-event-id" aria-hidden="true" class="anchor" id="log-event-id"></a><code>Log</code> event <code>ID</code></h2>
+<pre><code class="language-csharp">public class MyLogEvents
+{
+    public const int GenerateItems = 1000;
+    public const int ListItems     = 1001;
+    public const int GetItem       = 1002;
+    public const int InsertItem    = 1003;
+    public const int UpdateItem    = 1004;
+    public const int DeleteItem    = 1005;
+
+    public const int TestItem      = 3000;
+
+    public const int GetItemNotFound    = 4000;
+    public const int UpdateItemNotFound = 4001;
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public async Task&lt;ActionResult&lt;TodoItemDTO&gt;&gt; GetTodoItem(long id)
+{
+    _logger.LogInformation(MyLogEvents.GetItem, &quot;Getting item {Id}&quot;, id);
+
+    var todoItem = await _context.TodoItems.FindAsync(id);
+
+    if (todoItem == null)
+    {
+        _logger.LogWarning(MyLogEvents.GetItemNotFound, &quot;Get({Id}) NOT FOUND&quot;, id);
+        return NotFound();
+    }
+
+    return ItemToDTO(todoItem);
+}
+</code></pre>
+<pre><code class="language-console">info: TodoApi.Controllers.TodoItemsController[1002]
+      Getting item 1
+warn: TodoApi.Controllers.TodoItemsController[4000]
+      Get(1) NOT FOUND
+</code></pre>
+<h2><a href="#log-message-template" aria-hidden="true" class="anchor" id="log-message-template"></a><code>Log</code> message template</h2>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public async Task&lt;ActionResult&lt;TodoItemDTO&gt;&gt; GetTodoItem(long id)
+{
+    _logger.LogInformation(MyLogEvents.GetItem, &quot;Getting item {Id}&quot;, id);
+
+    var todoItem = await _context.TodoItems.FindAsync(id);
+
+    if (todoItem == null)
+    {
+        _logger.LogWarning(MyLogEvents.GetItemNotFound, &quot;Get({Id}) NOT FOUND&quot;, id);
+        return NotFound();
+    }
+
+    return ItemToDTO(todoItem);
+}
+</code></pre>
+<pre><code class="language-csharp">var apples = 1;
+var pears = 2;
+var bananas = 3;
+
+_logger.LogInformation(&quot;Parameters: {Pears}, {Bananas}, {Apples}&quot;, apples, pears, bananas);
+</code></pre>
+<pre><code class="language-text">Parameters: 1, 2, 3
+</code></pre>
+<pre><code class="language-csharp">_logger.LogInformation(&quot;Getting item {Id} at {RequestTime}&quot;, id, DateTime.Now);
+</code></pre>
+<ul>
+<li>
+<p>Each Azure Table entity can have <code>ID</code> and <code>RequestTime</code> properties.</p>
+</li>
+<li>
+<p>Tables with properties simplify queries on logged data. For example, a query can find all logs within a particular <code>RequestTime</code> range without having to parse the time out of the text message.</p>
+</li>
+</ul>
+<h2><a href="#log-exceptions" aria-hidden="true" class="anchor" id="log-exceptions"></a><code>Log</code> exceptions</h2>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public IActionResult TestExp(int id)
+{
+    var routeInfo = ControllerContext.ToCtxString(id);
+    _logger.LogInformation(MyLogEvents.TestItem, routeInfo);
+
+    try
+    {
+        if (id == 3)
+        {
+            throw new Exception(&quot;Test exception&quot;);
+        }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(MyLogEvents.GetItemNotFound, ex, &quot;TestExp({Id})&quot;, id);
+        return NotFound();
+    }
+
+    return ControllerContext.MyDisplayRouteInfo();
+}
+</code></pre>
+<h3><a href="#default-log-level" aria-hidden="true" class="anchor" id="default-log-level"></a><code>Default</code> log level</h3>
+<ul>
+<li>
+<p>Created with the ASP.NET web app templates.</p>
+</li>
+<li>
+<p><code>appsettings.json</code> and <code>appsettings.Development.json</code> deleted or renamed.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder();
+builder.Logging.SetMinimumLevel(LogLevel.Warning);
+</code></pre>
+<h3><a href="#filter-function" aria-hidden="true" class="anchor" id="filter-function"></a>Filter function</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder();
+builder.Logging.AddFilter((provider, category, logLevel) =&gt;
+{
+    if (provider.Contains(&quot;ConsoleLoggerProvider&quot;)
+        &amp;&amp; category.Contains(&quot;Controller&quot;)
+        &amp;&amp; logLevel &gt;= LogLevel.Information)
+    {
+        return true;
+    }
+    else if (provider.Contains(&quot;ConsoleLoggerProvider&quot;)
+        &amp;&amp; category.Contains(&quot;Microsoft&quot;)
+        &amp;&amp; logLevel &gt;= LogLevel.Information)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+});
+</code></pre>
+<h2><a href="#aspnet-core-categories" aria-hidden="true" class="anchor" id="aspnet-core-categories"></a>ASP.NET Core categories</h2>
+<table><thead>
+<tr>
+<th>Category</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Microsoft.AspNetCore</code></td>
+<td>General ASP.NET Core diagnostics.</td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.DataProtection</code></td>
+<td>Which keys were considered, found, and used.</td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.HostFiltering</code></td>
+<td>Hosts allowed.</td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Hosting</code></td>
+<td>How long HTTP requests took to complete and what time they started. Which hosting startup assemblies were loaded.</td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Mvc</code></td>
+<td>MVC and Razor diagnostics. Model binding, filter execution, view compilation, action selection.</td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Routing</code></td>
+<td>Route matching information.</td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Server</code></td>
+<td>Connection start, stop, and keep alive responses. HTTPS certificate information.</td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.StaticFiles</code></td>
+<td>Files served.</td>
+</tr>
+</tbody></table>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft&quot;: &quot;Trace&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Information&quot;
+    }
+  }
+}
+</code></pre>
+<h2><a href="#log-scopes" aria-hidden="true" class="anchor" id="log-scopes"></a><code>Log</code> scopes</h2>
+<ul>
+<li>
+<p>Is an IDisposable type that's returned by the BeginScope method.</p>
+</li>
+<li>
+<p>Lasts until it's disposed.</p>
+</li>
+<li>
+<p><code>Console</code></p>
+</li>
+<li>
+<p><code>AzureAppServicesFile</code> and <code>AzureAppServicesBlob</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public async Task&lt;ActionResult&lt;TodoItemDTO&gt;&gt; GetTodoItem(long id)
+{
+    TodoItem todoItem;
+    var transactionId = Guid.NewGuid().ToString();
+    using (_logger.BeginScope(new List&lt;KeyValuePair&lt;string, object&gt;&gt;
+        {
+            new KeyValuePair&lt;string, object&gt;(&quot;TransactionId&quot;, transactionId),
+        }))
+    {
+        _logger.LogInformation(MyLogEvents.GetItem, &quot;Getting item {Id}&quot;, id);
+
+        todoItem = await _context.TodoItems.FindAsync(id);
+
+        if (todoItem == null)
+        {
+            _logger.LogWarning(MyLogEvents.GetItemNotFound, 
+                &quot;Get({Id}) NOT FOUND&quot;, id);
+            return NotFound();
+        }
+    }
+
+    return ItemToDTO(todoItem);
+}
+</code></pre>
+<h2><a href="#built-in-logging-providers" aria-hidden="true" class="anchor" id="built-in-logging-providers"></a>Built-in logging providers</h2>
+<ul>
+<li>
+<p><code>Console</code></p>
+</li>
+<li>
+<p><code>Debug</code></p>
+</li>
+<li>
+<p><code>EventSource</code></p>
+</li>
+<li>
+<p><code>EventLog</code></p>
+</li>
+<li>
+<p><code>AzureAppServicesFile</code> and <code>AzureAppServicesBlob</code></p>
+</li>
+<li>
+<p><code>ApplicationInsights</code></p>
+</li>
+</ul>
+<h3><a href="#console" aria-hidden="true" class="anchor" id="console"></a><code>Console</code></h3>
+<h3><a href="#debug" aria-hidden="true" class="anchor" id="debug"></a><code>Debug</code></h3>
+<ul>
+<li>
+<p><code>/var/log/message</code></p>
+</li>
+<li>
+<p><code>/var/log/syslog</code></p>
+</li>
+</ul>
+<h3><a href="#event-source" aria-hidden="true" class="anchor" id="event-source"></a>Event Source</h3>
+<h4><a href="#dotnet-trace-tooling" aria-hidden="true" class="anchor" id="dotnet-trace-tooling"></a><code>dotnet-trace</code> tooling</h4>
+<ul>
+<li>
+<p>Run the app with the <code>dotnet run</code> command.</p>
+</li>
+<li>
+<p>Determine the process identifier (PID) of the <code>.</code>NET Core app:
+dotnet-trace ps</p>
+</li>
+</ul>
+<p>Find the PID for the process that has the same name as the app's assembly.</p>
+<pre><code class="language-dotnetcli">dotnet-trace ps
+</code></pre>
+<ul>
+<li>Execute the <code>dotnet-trace</code> command.
+General command syntax:
+dotnet-trace collect -p {PID}
+<code>--providers</code> <code>Microsoft-Extensions-Logging</code>:{Keyword}:{Provider Level}
+<code>:</code>FilterSpecs=&quot;
+{Logger Category 1}:{Category Level 1};
+{Logger Category <code>2</code>}:{Category Level <code>2</code>};
+...
+{Logger Category N}:{Category Level N}&quot;</li>
+</ul>
+<p>When using a PowerShell command shell, enclose the <code>--providers</code> value in single quotes ('):
+dotnet-trace collect -p {PID}
+<code>--providers</code> <code>'</code>Microsoft-Extensions-Logging:{Keyword}:{Provider Level}
+<code>:</code>FilterSpecs=&quot;
+{Logger Category 1}:{Category Level 1};
+{Logger Category <code>2</code>}:{Category Level <code>2</code>};
+...
+{Logger Category N}:{Category Level N}&quot;'</p>
+<p>On non-Windows platforms, add the <code>-f speedscope</code> option to change the format of the output trace file to <code>speedscope</code>.
+The following table defines the Keyword:</p>
+<table>
+<thead>
+<tr>
+<th>Keyword</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Log meta events about the <code>LoggingEventSource</code>. Doesn't log events from <code>ILogger</code>.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Turns on the <code>Message</code> event when <code>ILogger</code>.Log() is called. Provides information in a programmatic (not formatted) way.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Turns on the <code>FormatMessage</code> event when <code>ILogger</code>.Log() is called. Provides the formatted string version of the information.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Turns on the <code>MessageJson</code> event when <code>ILogger</code>.Log() is called. Provides a JSON representation of the arguments.</td>
+</tr></tbody></table>
+<p>The following table lists the provider levels:
+| Provider Level | Description |
+| -------------- | ----------- |
+| 0              | LogAlways   |
+| 1              | Critical |
+| 2              | Error |
+| 3              | Warning |
+| 4              | Informational |
+| 5              | Verbose |</p>
+<p>The parsing for a category level can be either a string or a number:</p>
+<table>
+<thead>
+<tr>
+<th>Category named value</th>
+<th>Numeric value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trace</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Debug</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Information</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Warning</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Error</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Critical</td>
+<td>5</td>
+</tr></tbody></table>
+<p>The provider level and category level:</p>
+<p>If no <code>FilterSpecs</code> are specified then the <code>EventSourceLogger</code> implementation attempts to convert the provider level to a category level and applies it to all categories.</p>
+<table>
+<thead>
+<tr>
+<th>Provider Level</th>
+<th>Category Level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Verbose(5)</td>
+<td>Debug(1)</td>
+</tr>
+<tr>
+<td>Informational(4)</td>
+<td>Information(2)</td>
+</tr>
+<tr>
+<td>Warning(3)</td>
+<td>Warning(3)</td>
+</tr>
+<tr>
+<td>Error(2)</td>
+<td>Error(4)</td>
+</tr>
+<tr>
+<td>Critical(1)</td>
+<td>Critical(5)</td>
+</tr></tbody></table>
+<p>If <code>FilterSpecs</code> are provided, any category that is included in the list uses the category level encoded there, all other categories are filtered out.
+The following examples assume:</p>
+<p>Consider the following command:
+<code>dotnet-trace collect -p %PID% --providers Microsoft-Extensions-Logging:4:5</code></p>
+<p>The preceding command:</p>
+<p>Consider the following command:
+<code>dotnet-trace collect -p %PID% --providers Microsoft-Extensions-Logging:4:5:\&quot;FilterSpecs=*:5\&quot;</code></p>
+<p>The preceding command:</p>
+<p>The following command captures debug messages because category level 1 specifies <code>Debug</code>.
+<code>dotnet-trace collect -p %PID% --providers Microsoft-Extensions-Logging:4:5:\&quot;FilterSpecs=*:1\&quot;</code></p>
+<p>The following command captures debug messages because category specifies <code>Debug</code>.
+<code>dotnet-trace collect -p %PID% --providers Microsoft-Extensions-Logging:4:5:\&quot;FilterSpecs=*:Debug\&quot;</code></p>
+<p>FilterSpecs entries for {Logger Category} and {Category Level} represent additional log filtering conditions. Separate <code>FilterSpecs</code> entries with the ; semicolon character.
+Example using a Windows command shell:
+<code>dotnet-trace collect -p %PID% --providers Microsoft-Extensions-Logging:4:2:FilterSpecs=\&quot;Microsoft.AspNetCore.Hosting*:4\&quot;</code></p>
+<p>The preceding command activates:</p>
+<pre><code class="language-dotnetcli">dotnet-trace collect -p {PID} 
+    --providers Microsoft-Extensions-Logging:{Keyword}:{Provider Level}
+        :FilterSpecs=\&quot;
+            {Logger Category 1}:{Category Level 1};
+            {Logger Category 2}:{Category Level 2};
+            ...
+            {Logger Category N}:{Category Level N}\&quot;
+</code></pre>
+<table><thead>
+<tr>
+<th style="text-align: center;">Keyword</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">1</td>
+<td>Log meta events about the <code>LoggingEventSource</code>. Doesn't log events from <code>ILogger</code>.</td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td>Turns on the <code>Message</code> event when <code>ILogger.Log()</code> is called. Provides information in a programmatic (not formatted) way.</td>
+</tr>
+<tr>
+<td style="text-align: center;">4</td>
+<td>Turns on the <code>FormatMessage</code> event when <code>ILogger.Log()</code> is called. Provides the formatted string version of the information.</td>
+</tr>
+<tr>
+<td style="text-align: center;">8</td>
+<td>Turns on the <code>MessageJson</code> event when <code>ILogger.Log()</code> is called. Provides a JSON representation of the arguments.</td>
+</tr>
+</tbody></table>
+<table><thead>
+<tr>
+<th style="text-align: center;">Provider Level</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">0</td>
+<td><code>LogAlways</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">1</td>
+<td><code>Critical</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td><code>Error</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">3</td>
+<td><code>Warning</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">4</td>
+<td><code>Informational</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">5</td>
+<td><code>Verbose</code></td>
+</tr>
+</tbody></table>
+<table><thead>
+<tr>
+<th style="text-align: center;">Category named value</th>
+<th>Numeric value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>Trace</code></td>
+<td>0</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Debug</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Information</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Warning</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Error</code></td>
+<td>4</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Critical</code></td>
+<td>5</td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p>Are in reverse order.</p>
+</li>
+<li>
+<p>The string constants aren't all identical.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th style="text-align: center;">Provider Level</th>
+<th>Category Level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>Verbose</code>(5)</td>
+<td><code>Debug</code>(1)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Informational</code>(4)</td>
+<td><code>Information</code>(2)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Warning</code>(3)</td>
+<td><code>Warning</code>(3)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Error</code>(2)</td>
+<td><code>Error</code>(4)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>Critical</code>(1)</td>
+<td><code>Critical</code>(5)</td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p>An app is running and calling logger.LogDebug(&quot;12345&quot;).</p>
+</li>
+<li>
+<p>The process <code>I (PID)D</code> has been set via <code>set PID=12345</code>, where <code>12345</code> is the actual PID.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet-trace collect -p %PID% --providers Microsoft-Extensions-Logging:4:5
+</code></pre>
+<ul>
+<li>
+<p>Captures debug messages.</p>
+</li>
+<li>
+<p>Doesn't apply a <code>FilterSpecs</code>.</p>
+</li>
+<li>
+<p>Specifies level 5 which maps category <code>Debug</code>.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet-trace collect -p %PID%  --providers Microsoft-Extensions-Logging:4:5:\&quot;FilterSpecs=*:5\&quot;
+</code></pre>
+<ul>
+<li>
+<p>Doesn't capture debug messages because the category level 5 is <code>Critical</code>.</p>
+</li>
+<li>
+<p>Provides a <code>FilterSpecs</code>.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet-trace collect -p %PID%  --providers Microsoft-Extensions-Logging:4:5:\&quot;FilterSpecs=*:1\&quot;
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet-trace collect -p %PID%  --providers Microsoft-Extensions-Logging:4:5:\&quot;FilterSpecs=*:Debug\&quot;
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet-trace collect -p %PID% --providers Microsoft-Extensions-Logging:4:2:FilterSpecs=\&quot;Microsoft.AspNetCore.Hosting*:4\&quot;
+</code></pre>
+<ul>
+<li>
+<p>The Event Source logger to produce formatted strings (4) for errors (2).</p>
+</li>
+<li>
+<p><code>Microsoft.AspNetCore.Hosting</code> logging at the <code>Informational</code> logging level (4).</p>
+</li>
+<li>
+<p>Stop the <code>dotnet-trace</code> tooling by pressing the Enter key or Ctrl+C.
+The trace is saved with the name <code>trace.nettrace</code> in the folder where the <code>dotnet-trace</code> command is executed.</p>
+</li>
+<li>
+<p>Open the trace with Perfview. Open the <code>trace.nettrace</code> file and explore the trace events.</p>
+</li>
+<li>
+<p><code>Trace</code> for performance analysis utility (dotnet-trace) (.NET Core documentation)</p>
+</li>
+<li>
+<p><code>Trace</code> for performance analysis utility (dotnet-trace) (dotnet/diagnostics GitHub repository documentation)</p>
+</li>
+<li>
+<p><code>LoggingEventSource</code></p>
+</li>
+<li>
+<p>EventLevel</p>
+</li>
+<li>
+<p>Perfview: Useful for viewing Event Source traces.</p>
+</li>
+</ul>
+<h4><a href="#perfview" aria-hidden="true" class="anchor" id="perfview"></a>Perfview</h4>
+<h3><a href="#windows-eventlog" aria-hidden="true" class="anchor" id="windows-eventlog"></a>Windows <code>EventLog</code></h3>
+<pre><code class="language-json">&quot;Logging&quot;: {
+  &quot;EventLog&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;
+    }
+  }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>LogName</code>: &quot;Application&quot;</p>
+</li>
+<li>
+<p><code>SourceName</code>: &quot;.NET Runtime&quot;</p>
+</li>
+<li>
+<p><code>MachineName</code>: The local machine name is used.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder();
+builder.Logging.AddEventLog(eventLogSettings =&gt;
+{
+    eventLogSettings.SourceName = &quot;MyLogs&quot;;
+});
+</code></pre>
+<h3><a href="#azure-app-service" aria-hidden="true" class="anchor" id="azure-app-service"></a>Azure App Service</h3>
+<pre><code class="language-csharp">using Microsoft.Extensions.Logging.AzureAppServices;
+
+var builder = WebApplication.CreateBuilder();
+builder.Logging.AddAzureWebAppDiagnostics();
+builder.Services.Configure&lt;AzureFileLoggerOptions&gt;(options =&gt;
+{
+    options.FileName = &quot;azure-diagnostics-&quot;;
+    options.FileSizeLimit = 50 * 1024;
+    options.RetainedFileCountLimit = 5;
+});
+builder.Services.Configure&lt;AzureBlobLoggerOptions&gt;(options =&gt;
+{
+    options.BlobName = &quot;log.txt&quot;;
+});
+</code></pre>
+<ul>
+<li>
+<p>Application <code>Logging</code> (Filesystem)</p>
+</li>
+<li>
+<p>Application <code>Logging</code> (Blob)</p>
+</li>
+</ul>
+<h4><a href="#azure-log-streaming" aria-hidden="true" class="anchor" id="azure-log-streaming"></a>Azure log streaming</h4>
+<ul>
+<li>
+<p>The app server</p>
+</li>
+<li>
+<p>The web server</p>
+</li>
+<li>
+<p>Failed request tracing</p>
+</li>
+<li>
+<p>Navigate to the App Service logs page from the app's portal page.</p>
+</li>
+<li>
+<p>Set Application <code>Logging</code> (Filesystem) to On.</p>
+</li>
+<li>
+<p>Choose the log Level. This setting only applies to Azure log streaming.</p>
+</li>
+</ul>
+<h3><a href="#azure-application-insights" aria-hidden="true" class="anchor" id="azure-application-insights"></a>Azure Application Insights</h3>
+<ul>
+<li>
+<p>Application Insights overview</p>
+</li>
+<li>
+<p>Application Insights for ASP.NET Core applications: Start here if you want to implement the full range of Application Insights telemetry along with logging.</p>
+</li>
+<li>
+<p>ApplicationInsightsLoggerProvider for .NET Core <code>ILogger</code> logs: Start here if you want to implement the logging provider without the rest of Application Insights telemetry.</p>
+</li>
+<li>
+<p>Application Insights logging adapters</p>
+</li>
+<li>
+<p>Install, configure, and initialize the Application Insights SDK interactive tutorial.</p>
+</li>
+</ul>
+<h2><a href="#third-party-logging-providers" aria-hidden="true" class="anchor" id="third-party-logging-providers"></a>Third-party logging providers</h2>
+<ul>
+<li>
+<p>elmah.io (GitHub repo)</p>
+</li>
+<li>
+<p>Gelf (GitHub repo)</p>
+</li>
+<li>
+<p>JSNLog (GitHub repo)</p>
+</li>
+<li>
+<p>KissLog.net (GitHub repo)</p>
+</li>
+<li>
+<p>Log4Net (GitHub repo)</p>
+</li>
+<li>
+<p>NLog (GitHub repo)</p>
+</li>
+<li>
+<p>PLogger (GitHub repo)</p>
+</li>
+<li>
+<p>Sentry (GitHub repo)</p>
+</li>
+<li>
+<p>Serilog (GitHub repo)</p>
+</li>
+<li>
+<p>Stackdriver (Github repo)</p>
+</li>
+<li>
+<p>Add a NuGet package to your project.</p>
+</li>
+<li>
+<p>Call an <code>ILoggerFactory</code> extension method provided by the logging framework.</p>
+</li>
+</ul>
+<h3><a href="#no-asynchronous-logger-methods" aria-hidden="true" class="anchor" id="no-asynchronous-logger-methods"></a>No asynchronous logger methods</h3>
+<h2><a href="#change-log-levels-in-a-running-app" aria-hidden="true" class="anchor" id="change-log-levels-in-a-running-app"></a>Change log levels in a running app</h2>
+<h2><a href="#ilogger-and-iloggerfactory" aria-hidden="true" class="anchor" id="ilogger-and-iloggerfactory"></a><code>ILogger</code> and <code>ILoggerFactory</code></h2>
+<ul>
+<li>
+<p>The interfaces are in <code>Microsoft.Extensions.Logging.Abstractions</code>.</p>
+</li>
+<li>
+<p>The default implementations are in <code>Microsoft.Extensions.Logging</code>.</p>
+</li>
+</ul>
+<h2><a href="#apply-log-filter-rules-in-code" aria-hidden="true" class="anchor" id="apply-log-filter-rules-in-code"></a>Apply log filter rules in code</h2>
+<pre><code class="language-csharp">using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.Logging.Debug;
+
+var builder = WebApplication.CreateBuilder();
+builder.Logging.AddFilter(&quot;System&quot;, LogLevel.Debug);
+builder.Logging.AddFilter&lt;DebugLoggerProvider&gt;(&quot;Microsoft&quot;, LogLevel.Information);
+builder.Logging.AddFilter&lt;ConsoleLoggerProvider&gt;(&quot;Microsoft&quot;, LogLevel.Trace);
+</code></pre>
+<ul>
+<li>
+<p>The <code>Debug</code> logging provider.</p>
+</li>
+<li>
+<p><code>Log</code> level <code>Information</code> and higher.</p>
+</li>
+<li>
+<p>All categories starting with &quot;Microsoft&quot;.</p>
+</li>
+</ul>
+<h2><a href="#automatically-log-scope-with-spanid-traceid,-parentid,-baggage,-and-tags." aria-hidden="true" class="anchor" id="automatically-log-scope-with-spanid-traceid,-parentid,-baggage,-and-tags."></a>Automatically log scope with <code>SpanId</code>, <code>TraceId</code>, <code>ParentId</code>, <code>Baggage</code>, and <code>Tags</code>.</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.AddSimpleConsole(options =&gt;
+{
+    options.IncludeScopes = true;
+});
+
+builder.Logging.Configure(options =&gt;
+{
+    options.ActivityTrackingOptions = ActivityTrackingOptions.SpanId
+                                       | ActivityTrackingOptions.TraceId
+                                       | ActivityTrackingOptions.ParentId
+                                       | ActivityTrackingOptions.Baggage
+                                       | ActivityTrackingOptions.Tags;
+});
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h2><a href="#create-a-custom-logger" aria-hidden="true" class="anchor" id="create-a-custom-logger"></a>Create a custom logger</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Improving logging performance with source generators</p>
+</li>
+<li>
+<p>Behind [LogProperties] and the new telemetry logging source generator</p>
+</li>
+<li>
+<p><code>Microsoft.Extensions.Logging</code> source on GitHub</p>
+</li>
+<li>
+<p>View or download sample code (how to download).</p>
+</li>
+<li>
+<p>High performance logging</p>
+</li>
+<li>
+<p><code>Logging</code> bugs should be created in the <code>dotnet/runtime</code> GitHub repository.</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor logging</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-8.0">Logging in <code>.</code>NET Core and ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Logging and monitoring - HTTP logging | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Logging and monitoring - HTTP logging</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>06/17/2024</p>
+</li>
+<li>
+<p>13 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>HTTP request information</p>
+</li>
+<li>
+<p>Common properties</p>
+</li>
+<li>
+<p>Headers</p>
+</li>
+<li>
+<p>Body</p>
+</li>
+<li>
+<p>HTTP response information</p>
+</li>
+<li>
+<p>Log all requests and responses or only requests and responses that meet certain criteria.</p>
+</li>
+<li>
+<p>Select which parts of the request and response are logged.</p>
+</li>
+<li>
+<p>Allow you to redact sensitive information from the logs.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+HTTP logging can potentially log personally identifiable information (PII). Consider the risk and avoid logging sensitive information.</p>
+</blockquote>
+<h2><a href="#enable-http-logging" aria-hidden="true" class="anchor" id="enable-http-logging"></a>Enable HTTP logging</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(o =&gt; { });
+
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+}
+app.UseStaticFiles();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-json">&quot;Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware&quot;: &quot;Information&quot;
+</code></pre>
+<pre><code class="language-output">info: Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware[1]
+      Request:
+      Protocol: HTTP/2
+      Method: GET
+      Scheme: https
+      PathBase:
+      Path: /
+      Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+      Host: localhost:52941
+      User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36 Edg/118.0.2088.61
+      Accept-Encoding: gzip, deflate, br
+      Accept-Language: en-US,en;q=0.9
+      Upgrade-Insecure-Requests: [Redacted]
+      sec-ch-ua: [Redacted]
+      sec-ch-ua-mobile: [Redacted]
+      sec-ch-ua-platform: [Redacted]
+      sec-fetch-site: [Redacted]
+      sec-fetch-mode: [Redacted]
+      sec-fetch-user: [Redacted]
+      sec-fetch-dest: [Redacted]
+info: Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware[2]
+      Response:
+      StatusCode: 200
+      Content-Type: text/plain; charset=utf-8
+      Date: Tue, 24 Oct 2023 02:03:53 GMT
+      Server: Kestrel
+</code></pre>
+<h2><a href="#http-logging-options" aria-hidden="true" class="anchor" id="http-logging-options"></a>HTTP logging options</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.HttpLogging;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(logging =&gt;
+{
+    logging.LoggingFields = HttpLoggingFields.All;
+    logging.RequestHeaders.Add(&quot;sec-ch-ua&quot;);
+    logging.ResponseHeaders.Add(&quot;MyResponseHeader&quot;);
+    logging.MediaTypeOptions.AddText(&quot;application/javascript&quot;);
+    logging.RequestBodyLogLimit = 4096;
+    logging.ResponseBodyLogLimit = 4096;
+    logging.CombineLogs = true;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+}
+
+app.UseStaticFiles();
+
+app.UseHttpLogging(); 
+
+app.Use(async (context, next) =&gt;
+{
+    context.Response.Headers[&quot;MyResponseHeader&quot;] =
+        new string[] { &quot;My Response Header Value&quot; };
+
+    await next();
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='note'>Note
+In the preceding sample and following samples, <code>UseHttpLogging</code> is called after <code>UseStaticFiles</code>, so HTTP logging is not enabled for static files. To enable static file HTTP logging, call <code>UseHttpLogging</code> before <code>UseStaticFiles</code>.</p>
+</blockquote>
+<h3><a href="#loggingfields" aria-hidden="true" class="anchor" id="loggingfields"></a><code>LoggingFields</code></h3>
+<h3><a href="#requestheaders-and-responseheaders" aria-hidden="true" class="anchor" id="requestheaders-and-responseheaders"></a><code>RequestHeaders</code> and <code>ResponseHeaders</code></h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.HttpLogging;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(logging =&gt;
+{
+    logging.LoggingFields = HttpLoggingFields.All;
+    logging.RequestHeaders.Add(&quot;sec-ch-ua&quot;);
+    logging.ResponseHeaders.Add(&quot;MyResponseHeader&quot;);
+    logging.MediaTypeOptions.AddText(&quot;application/javascript&quot;);
+    logging.RequestBodyLogLimit = 4096;
+    logging.ResponseBodyLogLimit = 4096;
+    logging.CombineLogs = true;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+}
+
+app.UseStaticFiles();
+
+app.UseHttpLogging(); 
+
+app.Use(async (context, next) =&gt;
+{
+    context.Response.Headers[&quot;MyResponseHeader&quot;] =
+        new string[] { &quot;My Response Header Value&quot; };
+
+    await next();
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#mediatypeoptions" aria-hidden="true" class="anchor" id="mediatypeoptions"></a><code>MediaTypeOptions</code></h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.HttpLogging;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(logging =&gt;
+{
+    logging.LoggingFields = HttpLoggingFields.All;
+    logging.RequestHeaders.Add(&quot;sec-ch-ua&quot;);
+    logging.ResponseHeaders.Add(&quot;MyResponseHeader&quot;);
+    logging.MediaTypeOptions.AddText(&quot;application/javascript&quot;);
+    logging.RequestBodyLogLimit = 4096;
+    logging.ResponseBodyLogLimit = 4096;
+    logging.CombineLogs = true;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+}
+
+app.UseStaticFiles();
+
+app.UseHttpLogging(); 
+
+app.Use(async (context, next) =&gt;
+{
+    context.Response.Headers[&quot;MyResponseHeader&quot;] =
+        new string[] { &quot;My Response Header Value&quot; };
+
+    await next();
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#mediatypeoptions-methods" aria-hidden="true" class="anchor" id="mediatypeoptions-methods"></a><code>MediaTypeOptions</code> methods</h4>
+<ul>
+<li>
+<p>AddText</p>
+</li>
+<li>
+<p>AddBinary</p>
+</li>
+<li>
+<p>Clear</p>
+</li>
+</ul>
+<h3><a href="#requestbodyloglimit-and-responsebodyloglimit" aria-hidden="true" class="anchor" id="requestbodyloglimit-and-responsebodyloglimit"></a><code>RequestBodyLogLimit</code> and <code>ResponseBodyLogLimit</code></h3>
+<ul>
+<li>
+<p><code>RequestBodyLogLimit</code></p>
+</li>
+<li>
+<p><code>ResponseBodyLogLimit</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.HttpLogging;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(logging =&gt;
+{
+    logging.LoggingFields = HttpLoggingFields.All;
+    logging.RequestHeaders.Add(&quot;sec-ch-ua&quot;);
+    logging.ResponseHeaders.Add(&quot;MyResponseHeader&quot;);
+    logging.MediaTypeOptions.AddText(&quot;application/javascript&quot;);
+    logging.RequestBodyLogLimit = 4096;
+    logging.ResponseBodyLogLimit = 4096;
+    logging.CombineLogs = true;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+}
+
+app.UseStaticFiles();
+
+app.UseHttpLogging(); 
+
+app.Use(async (context, next) =&gt;
+{
+    context.Response.Headers[&quot;MyResponseHeader&quot;] =
+        new string[] { &quot;My Response Header Value&quot; };
+
+    await next();
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#combinelogs" aria-hidden="true" class="anchor" id="combinelogs"></a><code>CombineLogs</code></h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.HttpLogging;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(logging =&gt;
+{
+    logging.LoggingFields = HttpLoggingFields.All;
+    logging.RequestHeaders.Add(&quot;sec-ch-ua&quot;);
+    logging.ResponseHeaders.Add(&quot;MyResponseHeader&quot;);
+    logging.MediaTypeOptions.AddText(&quot;application/javascript&quot;);
+    logging.RequestBodyLogLimit = 4096;
+    logging.ResponseBodyLogLimit = 4096;
+    logging.CombineLogs = true;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+}
+
+app.UseStaticFiles();
+
+app.UseHttpLogging(); 
+
+app.Use(async (context, next) =&gt;
+{
+    context.Response.Headers[&quot;MyResponseHeader&quot;] =
+        new string[] { &quot;My Response Header Value&quot; };
+
+    await next();
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h2><a href="#endpoint-specific-configuration" aria-hidden="true" class="anchor" id="endpoint-specific-configuration"></a>Endpoint-specific configuration</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/response&quot;, () =&gt; &quot;Hello World! (logging response)&quot;)
+    .WithHttpLogging(HttpLoggingFields.ResponsePropertiesAndHeaders);
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/duration&quot;, [HttpLogging(loggingFields: HttpLoggingFields.Duration)]
+    () =&gt; &quot;Hello World! (logging duration)&quot;);
+</code></pre>
+<h2><a href="#ihttplogginginterceptor" aria-hidden="true" class="anchor" id="ihttplogginginterceptor"></a><code>IHttpLoggingInterceptor</code></h2>
+<ul>
+<li>
+<p>Inspect a request or response.</p>
+</li>
+<li>
+<p>Enable or disable any HttpLoggingFields.</p>
+</li>
+<li>
+<p>Adjust how much of the request or response body is logged.</p>
+</li>
+<li>
+<p>Add custom fields to the logs.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(logging =&gt;
+{
+    logging.LoggingFields = HttpLoggingFields.Duration;
+});
+builder.Services.AddHttpLoggingInterceptor&lt;SampleHttpLoggingInterceptor&gt;();
+</code></pre>
+<ul>
+<li>
+<p>Inspects the request method and disables logging for POST requests.</p>
+</li>
+<li>
+<p>For non-POST requests:</p>
+<ul>
+<li>
+<p>Redacts request path, request headers, and response headers.</p>
+</li>
+<li>
+<p>Adds custom fields and field values to the request and response logs.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.HttpLogging;
+
+namespace HttpLoggingSample;
+
+internal sealed class SampleHttpLoggingInterceptor : IHttpLoggingInterceptor
+{
+    public ValueTask OnRequestAsync(HttpLoggingInterceptorContext logContext)
+    {
+        if (logContext.HttpContext.Request.Method == &quot;POST&quot;)
+        {
+            // Don't log anything if the request is a POST.
+            logContext.LoggingFields = HttpLoggingFields.None;
+        }
+
+        // Don't enrich if we're not going to log any part of the request.
+        if (!logContext.IsAnyEnabled(HttpLoggingFields.Request))
+        {
+            return default;
+        }
+
+        if (logContext.TryDisable(HttpLoggingFields.RequestPath))
+        {
+            RedactPath(logContext);
+        }
+
+        if (logContext.TryDisable(HttpLoggingFields.RequestHeaders))
+        {
+            RedactRequestHeaders(logContext);
+        }
+
+        EnrichRequest(logContext);
+
+        return default;
+    }
+
+    public ValueTask OnResponseAsync(HttpLoggingInterceptorContext logContext)
+    {
+        // Don't enrich if we're not going to log any part of the response
+        if (!logContext.IsAnyEnabled(HttpLoggingFields.Response))
+        {
+            return default;
+        }
+
+        if (logContext.TryDisable(HttpLoggingFields.ResponseHeaders))
+        {
+            RedactResponseHeaders(logContext);
+        }
+
+        EnrichResponse(logContext);
+
+        return default;
+    }
+
+    private void RedactPath(HttpLoggingInterceptorContext logContext)
+    {
+        logContext.AddParameter(nameof(logContext.HttpContext.Request.Path), &quot;RedactedPath&quot;);
+    }
+
+    private void RedactRequestHeaders(HttpLoggingInterceptorContext logContext)
+    {
+        foreach (var header in logContext.HttpContext.Request.Headers)
+        {
+            logContext.AddParameter(header.Key, &quot;RedactedHeader&quot;);
+        }
+    }
+
+    private void EnrichRequest(HttpLoggingInterceptorContext logContext)
+    {
+        logContext.AddParameter(&quot;RequestEnrichment&quot;, &quot;Stuff&quot;);
+    }
+
+    private void RedactResponseHeaders(HttpLoggingInterceptorContext logContext)
+    {
+        foreach (var header in logContext.HttpContext.Response.Headers)
+        {
+            logContext.AddParameter(header.Key, &quot;RedactedHeader&quot;);
+        }
+    }
+
+    private void EnrichResponse(HttpLoggingInterceptorContext logContext)
+    {
+        logContext.AddParameter(&quot;ResponseEnrichment&quot;, &quot;Stuff&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-output">info: Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware[1]
+      Request:
+      Path: RedactedPath
+      Accept: RedactedHeader
+      Host: RedactedHeader
+      User-Agent: RedactedHeader
+      Accept-Encoding: RedactedHeader
+      Accept-Language: RedactedHeader
+      Upgrade-Insecure-Requests: RedactedHeader
+      sec-ch-ua: RedactedHeader
+      sec-ch-ua-mobile: RedactedHeader
+      sec-ch-ua-platform: RedactedHeader
+      sec-fetch-site: RedactedHeader
+      sec-fetch-mode: RedactedHeader
+      sec-fetch-user: RedactedHeader
+      sec-fetch-dest: RedactedHeader
+      RequestEnrichment: Stuff
+      Protocol: HTTP/2
+      Method: GET
+      Scheme: https
+info: Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware[2]
+      Response:
+      Content-Type: RedactedHeader
+      MyResponseHeader: RedactedHeader
+      ResponseEnrichment: Stuff
+      StatusCode: 200
+info: Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware[4]
+      ResponseBody: Hello World!
+info: Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware[8]
+      Duration: 2.2778ms
+</code></pre>
+<h2><a href="#logging-configuration-order-of-precedence" aria-hidden="true" class="anchor" id="logging-configuration-order-of-precedence"></a>Logging configuration order of precedence</h2>
+<ul>
+<li>
+<p>Global configuration from HttpLoggingOptions, set by calling <code>AddHttpLogging</code>.</p>
+</li>
+<li>
+<p>Endpoint-specific configuration from the [HttpLogging] attribute or the WithHttpLogging extension method overrides global configuration.</p>
+</li>
+<li>
+<p><code>IHttpLoggingInterceptor</code> is called with the results and can further modify the configuration per request.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging/?view=aspnetcore-8.0">HTTP logging in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

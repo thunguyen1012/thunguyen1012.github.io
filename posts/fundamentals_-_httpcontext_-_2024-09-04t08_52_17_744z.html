@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - HttpContext | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='HttpContext encapsulates all information about an individual HTTP request and response. An HttpContext instance is initialized when an HTTP request is received. The HttpContext instance is accessible by middleware and app frameworks such as Web API controllers, Razor Pages, SignalR, gRPC, and more.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - HttpContext</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p><code>HttpContext</code> encapsulates all information about an individual HTTP request and response. An <code>HttpContext</code> instance is initialized when an HTTP request is received. The <code>HttpContext</code> instance is accessible by middleware and app frameworks such as Web API controllers, Razor Pages, SignalR, gRPC, and more.</p>
+<p>For more information about accessing the <code>HttpContext</code>, see Access <code>HttpContext</code> in ASP.NET Core.</p>
+<h2><a href="#httprequest" aria-hidden="true" class="anchor" id="httprequest"></a><code>HttpRequest</code></h2>
+<p><code>HttpContext</code>.Request provides access to <code>HttpRequest</code>. <code>HttpRequest</code> has information about the incoming HTTP request, and it's initialized when an HTTP request is received by the server. <code>HttpRequest</code> isn't read-only, and middleware can change request values in the middleware pipeline.</p>
+<p>Commonly used members on <code>HttpRequest</code> include:</p>
+<table><thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.path#microsoft-aspnetcore-http-httprequest-path" class="no-loc" data-linktype="absolute-path">HttpRequest.Path</a></td>
+<td>The request path.</td>
+<td><code>/en/article/getstarted</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.method#microsoft-aspnetcore-http-httprequest-method" class="no-loc" data-linktype="absolute-path">HttpRequest.Method</a></td>
+<td>The request method.</td>
+<td><code>GET</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.headers#microsoft-aspnetcore-http-httprequest-headers" class="no-loc" data-linktype="absolute-path">HttpRequest.Headers</a></td>
+<td>A collection of request headers.</td>
+<td><code>user-agent=Edge</code><br><code>x-custom-header=MyValue</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.routevalues#microsoft-aspnetcore-http-httprequest-routevalues" class="no-loc" data-linktype="absolute-path">HttpRequest.RouteValues</a></td>
+<td>A collection of route values. The collection is set when the request is matched to a route.</td>
+<td><code>language=en</code><br><code>article=getstarted</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.query#microsoft-aspnetcore-http-httprequest-query" class="no-loc" data-linktype="absolute-path">HttpRequest.Query</a></td>
+<td>A collection of query values parsed from <a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.querystring#microsoft-aspnetcore-http-httprequest-querystring" class="no-loc" data-linktype="absolute-path">QueryString</a>.</td>
+<td><code>filter=hello</code><br><code>page=1</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.readformasync#microsoft-aspnetcore-http-httprequest-readformasync(system-threading-cancellationtoken)" data-linktype="absolute-path">HttpRequest.ReadFormAsync()</a></td>
+<td>A method that reads the request body as a form and returns a form values collection. For information about why <code>ReadFormAsync</code> should be used to access form data, see <a href="best-practices?view=aspnetcore-8.0#prefer-readformasync-over-requestform" data-linktype="relative-path">Prefer ```ReadFormAsync``` over Request.Form</a>.</td>
+<td><code>email=user@contoso.com</code><br><code>password=TNkt4taM</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.body#microsoft-aspnetcore-http-httprequest-body" class="no-loc" data-linktype="absolute-path">HttpRequest.Body</a></td>
+<td>A <a href="/en-us/dotnet/api/system.io.stream" class="no-loc" data-linktype="absolute-path">Stream</a> for reading the request body.</td>
+<td>UTF-8 JSON payload</td>
+</tr>
+</tbody></table>
+<h3><a href="#get-request-headers" aria-hidden="true" class="anchor" id="get-request-headers"></a>Get request headers</h3>
+<p><code>HttpRequest.Headers</code> provides access to the request headers sent with the HTTP request. There are two ways to access headers using this collection:</p>
+<ul>
+<li>
+<p>Provide the header name to the indexer on the header collection. The header name isn't case-sensitive. The indexer can access any header value.</p>
+</li>
+<li>
+<p>The header collection also has properties for getting and setting commonly used HTTP headers. The properties provide a fast, IntelliSense driven way to access headers.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, (HttpRequest request) =&gt;
+{
+    var userAgent = request.Headers.UserAgent;
+    var customHeader = request.Headers[&quot;x-custom-header&quot;];
+
+    return Results.Ok(new { userAgent = userAgent, customHeader = customHeader });
+});
+
+app.Run();
+</code></pre>
+<p>For information on efficiently handling headers that appear more than once, see A brief look at StringValues.</p>
+<h3><a href="#read-request-body" aria-hidden="true" class="anchor" id="read-request-body"></a>Read request body</h3>
+<p>An HTTP request can include a request body. The request body is data associated with the request, such as the content of an HTML form, UTF-8 JSON payload, or a file.</p>
+<p><code>HttpRequest.Body</code> allows the request body to be read with Stream:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapPost(&quot;/uploadstream&quot;, async (IConfiguration config, HttpContext context) =&gt;
+{
+    var filePath = Path.Combine(config[&quot;StoredFilesPath&quot;], Path.GetRandomFileName());
+
+    await using var writeStream = File.Create(filePath);
+    await context.Request.Body.CopyToAsync(writeStream);
+});
+
+app.Run();
+</code></pre>
+<p><code>HttpRequest.Body</code> can be read directly or used with other APIs that accept stream.</p>
+<blockquote>
+<p class='note'>Note
+Minimal APIs supports binding <code>HttpRequest.Body</code> directly to a Stream parameter.</p>
+</blockquote>
+<h4><a href="#enable-request-body-buffering" aria-hidden="true" class="anchor" id="enable-request-body-buffering"></a>Enable request body buffering</h4>
+<p>Forward-only reading of the request body reduces memory usage.</p>
+<p>The <code>EnableBuffering</code> extension method enables buffering of the HTTP request body and is the recommended way to enable multiple reads. Because a request can be any size, <code>EnableBuffering</code> supports options for buffering large request bodies to disk, or rejecting them entirely.</p>
+<p>The middleware in the following example:</p>
+<ul>
+<li>
+<p>Enables multiple reads with <code>EnableBuffering</code>. It must be called before reading the request body.</p>
+</li>
+<li>
+<p>Reads the request body.</p>
+</li>
+<li>
+<p>Rewinds the request body to the start so other middleware or the endpoint can read it.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.Use(async (context, next) =&gt;
+{
+    context.Request.EnableBuffering();
+    await ReadRequestBody(context.Request.Body);
+    context.Request.Body.Position = 0;
+    
+    await next.Invoke();
+});
+
+app.Run();
+</code></pre>
+<h4><a href="#bodyreader" aria-hidden="true" class="anchor" id="bodyreader"></a><code>BodyReader</code></h4>
+<p>An alternative way to read the request body is to use the <code>HttpRequest.BodyReader</code> property. The <code>BodyReader</code> property exposes the request body as a PipeReader. This API is from I/O pipelines, an advanced, high-performance way to read the request body.</p>
+<p>The reader directly accesses the request body and manages memory on the caller's behalf. Unlike <code>HttpRequest.Body</code>, the reader doesn't copy request data into a buffer. However, a reader is more complicated to use than a stream and should be used with caution.</p>
+<p>For information on how to read content from <code>BodyReader</code>, see I/O pipelines PipeReader.</p>
+<h2><a href="#httpresponse" aria-hidden="true" class="anchor" id="httpresponse"></a><code>HttpResponse</code></h2>
+<p><code>HttpContext.Response</code> provides access to <code>HttpResponse</code>. <code>HttpResponse</code> is used to set information on the HTTP response sent back to the client.</p>
+<p>Commonly used members on <code>HttpResponse</code> include:</p>
+<table><thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httpresponse.statuscode#microsoft-aspnetcore-http-httpresponse-statuscode" class="no-loc" data-linktype="absolute-path">HttpResponse.StatusCode</a></td>
+<td>The response code. Must be set before writing to the response body.</td>
+<td><code>200</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httpresponse.contenttype#microsoft-aspnetcore-http-httpresponse-contenttype" class="no-loc" data-linktype="absolute-path">HttpResponse.ContentType</a></td>
+<td>The response <code>content-type</code> header. Must be set before writing to the response body.</td>
+<td><code>application/json</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httpresponse.headers#microsoft-aspnetcore-http-httpresponse-headers" class="no-loc" data-linktype="absolute-path">HttpResponse.Headers</a></td>
+<td>A collection of response headers. Must be set before writing to the response body.</td>
+<td><code>server=Kestrel</code><br><code>x-custom-header=MyValue</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httpresponse.body#microsoft-aspnetcore-http-httpresponse-body" class="no-loc" data-linktype="absolute-path">HttpResponse.Body</a></td>
+<td>A <a href="/en-us/dotnet/api/system.io.stream" class="no-loc" data-linktype="absolute-path">Stream</a> for writing the response body.</td>
+<td>Generated web page</td>
+</tr>
+</tbody></table>
+<h3><a href="#set-response-headers" aria-hidden="true" class="anchor" id="set-response-headers"></a>Set response headers</h3>
+<p><code>HttpResponse.Headers</code> provides access to the response headers sent with the HTTP response. There are two ways to access headers using this collection:</p>
+<ul>
+<li>
+<p>Provide the header name to the indexer on the header collection. The header name isn't case-sensitive. The indexer can access any header value.</p>
+</li>
+<li>
+<p>The header collection also has properties for getting and setting commonly used HTTP headers. The properties provide a fast, IntelliSense driven way to access headers.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, (HttpResponse response) =&gt;
+{
+    response.Headers.CacheControl = &quot;no-cache&quot;;
+    response.Headers[&quot;x-custom-header&quot;] = &quot;Custom value&quot;;
+
+    return Results.File(File.OpenRead(&quot;helloworld.txt&quot;));
+});
+
+app.Run();
+</code></pre>
+<p>An app can't modify headers after the response has started. Once the response starts, the headers are sent to the client. A response is started by flushing the response body or calling <code>HttpResponse.StartAsync(CancellationToken)</code>. The <code>HttpResponse.HasStarted</code> property indicates whether the response has started. An error is thrown when attempting to modify headers after the response has started:</p>
+<blockquote>
+<p class='note'>Note
+Unless response buffering is enabled, all write operations (for example, WriteAsync) flush the response body internally and mark the response as started. Response buffering is disabled by default.</p>
+</blockquote>
+<h3><a href="#write-response-body" aria-hidden="true" class="anchor" id="write-response-body"></a>Write response body</h3>
+<p>An HTTP response can include a response body. The response body is data associated with the response, such as generated web page content, UTF-8 JSON payload, or a file.</p>
+<p><code>HttpResponse.Body</code> allows the response body to be written with Stream:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapPost(&quot;/downloadfile&quot;, async (IConfiguration config, HttpContext context) =&gt;
+{
+    var filePath = Path.Combine(config[&quot;StoredFilesPath&quot;], &quot;helloworld.txt&quot;);
+
+    await using var fileStream = File.OpenRead(filePath);
+    await fileStream.CopyToAsync(context.Response.Body);
+});
+
+app.Run();
+</code></pre>
+<p><code>HttpResponse.Body</code> can be written directly or used with other APIs that write to a stream.</p>
+<h4><a href="#bodywriter" aria-hidden="true" class="anchor" id="bodywriter"></a><code>BodyWriter</code></h4>
+<p>An alternative way to write the response body is to use the <code>HttpResponse.BodyWriter</code> property. The <code>BodyWriter</code> property exposes the response body as a PipeWriter. This API is from I/O pipelines, and it's an advanced, high-performance way to write the response.</p>
+<p>The writer provides direct access to the response body and manages memory on the caller's behalf. Unlike <code>HttpResponse.Body</code>, the write doesn't copy request data into a buffer. However, a writer is more complicated to use than a stream and writer code should be thoroughly tested.</p>
+<p>For information on how to write content to <code>BodyWriter</code>, see I/O pipelines PipeWriter.</p>
+<h3><a href="#set-response-trailers" aria-hidden="true" class="anchor" id="set-response-trailers"></a>Set response trailers</h3>
+<p>Trailers are headers sent with the response after the response body is complete.</p>
+<p>The following code sets trailers using AppendTrailer:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, (HttpResponse response) =&gt;
+{
+    // Write body
+    response.WriteAsync(&quot;Hello world&quot;);
+
+    if (response.SupportsTrailers())
+    {
+        response.AppendTrailer(&quot;trailername&quot;, &quot;TrailerValue&quot;);
+    }
+});
+
+app.Run();
+</code></pre>
+<h2><a href="#requestaborted" aria-hidden="true" class="anchor" id="requestaborted"></a><code>RequestAborted</code></h2>
+<p>The <code>HttpContext.RequestAborted</code> cancellation token can be used to notify that the HTTP request has been aborted by the client or server. The cancellation token should be passed to long-running tasks so they can be canceled if the request is aborted. For example, aborting a database query or HTTP request to get data to return in the response.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+var httpClient = new HttpClient();
+app.MapPost(&quot;/books/{bookId}&quot;, async (int bookId, HttpContext context) =&gt;
+{
+    var stream = await httpClient.GetStreamAsync(
+        $&quot;http://contoso/books/{bookId}.json&quot;, context.RequestAborted);
+
+    // Proxy the response as JSON
+    return Results.Stream(stream, &quot;application/json&quot;);
+});
+
+app.Run();
+</code></pre>
+<p>The <code>RequestAborted</code> cancellation token doesn't need to be used for request body read operations because reads always throw immediately when the request is aborted. The <code>RequestAborted</code> token is also usually unnecessary when writing response bodies, because writes immediately no-op when the request is aborted.</p>
+<p>In some cases, passing the <code>RequestAborted</code> token to write operations can be a convenient way to force a write loop to exit early with an OperationCanceledException. However, it's typically better to pass the <code>RequestAborted</code> token into any asynchronous operations responsible for retrieving the response body content instead.</p>
+<blockquote>
+<p class='note'>Note
+Minimal APIs supports binding <code>HttpContext.RequestAborted</code> directly to a CancellationToken parameter.</p>
+</blockquote>
+<h2><a href="#abort)" aria-hidden="true" class="anchor" id="abort)"></a><code>Abort()</code></h2>
+<p>The <code>HttpContext.Abort()</code> method can be used to abort an HTTP request from the server. Aborting the HTTP request immediately triggers the <code>HttpContext.RequestAborted</code> cancellation token and sends a notification to the client that the server has aborted the request.</p>
+<p>The middleware in the following example:</p>
+<ul>
+<li>
+<p>Adds a custom check for malicious requests.</p>
+</li>
+<li>
+<p>Aborts the HTTP request if the request is malicious.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.Use(async (context, next) =&gt;
+{
+    if (RequestAppearsMalicious(context.Request))
+    {
+        // Malicious requests don't even deserve an error response (e.g. 400).
+        context.Abort();
+        return;
+    }
+
+    await next.Invoke();
+});
+
+app.Run();
+</code></pre>
+<h2><a href="#user" aria-hidden="true" class="anchor" id="user"></a><code>User</code></h2>
+<p>The <code>HttpContext.User</code> property is used to get or set the user, represented by ClaimsPrincipal, for the request. The ClaimsPrincipal is typically set by ASP.NET Core authentication.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/user/current&quot;, [Authorize] async (HttpContext context) =&gt;
+{
+    var user = await GetUserAsync(context.User.Identity.Name);
+    return Results.Ok(user);
+});
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='note'>Note
+Minimal APIs supports binding <code>HttpContext.User</code> directly to a ClaimsPrincipal parameter.</p>
+</blockquote>
+<h2><a href="#features" aria-hidden="true" class="anchor" id="features"></a><code>Features</code></h2>
+<p>The <code>HttpContext.Features</code> property provides access to the collection of feature interfaces for the current request. Since the feature collection is mutable even within the context of a request, middleware can be used to modify the collection and add support for additional features. Some advanced features are only available by accessing the associated interface through the feature collection.</p>
+<p>The following example:</p>
+<ul>
+<li>
+<p>Gets <code>IHttpMinRequestBodyDataRateFeature</code> from the features collection.</p>
+</li>
+<li>
+<p>Sets <code>MinDataRate</code> to <code>null</code>. This removes the minimum data rate that the request body must be sent by the client for this HTTP request.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/long-running-stream&quot;, async (HttpContext context) =&gt;
+{
+    var feature = context.Features.Get&lt;IHttpMinRequestBodyDataRateFeature&gt;();
+    if (feature != null)
+    {
+        feature.MinDataRate = null;
+    }
+
+    // await and read long-running stream from request body.
+    await Task.Yield();
+});
+
+app.Run();
+</code></pre>
+<p>For more information about using request features and <code>HttpContext</code>, see Request <code>Features</code> in ASP.NET Core.</p>
+<h2><a href="#httpcontext-isnt-thread-safe" aria-hidden="true" class="anchor" id="httpcontext-isnt-thread-safe"></a><code>HttpContext</code> isn't thread safe</h2>
+<p>This article primarily discusses using <code>HttpContext</code> in request and response flow from Razor Pages, controllers, middleware, etc. Consider the following when using <code>HttpContext</code> outside the request and response flow:</p>
+<ul>
+<li>
+<p>The <code>HttpContext</code> is NOT thread safe, accessing it from multiple threads can result in exceptions, data corruption and generally unpredictable results.</p>
+</li>
+<li>
+<p>The <code>IHttpContextAccessor</code> interface should be used with caution. As always, the <code>HttpContext</code> must not be captured outside of the request flow.  <code>IHttpContextAccessor</code>:</p>
+<ul>
+<li>
+<p>Relies on <code>AsyncLocal&lt;T&gt;</code> which can have a negative performance impact on asynchronous calls.</p>
+</li>
+<li>
+<p>Creates a dependency on &quot;ambient state&quot; which can make testing more difficult.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>IHttpContextAccessor.HttpContext</code> may be <code>null</code> if accessed outside of the request flow.</p>
+</li>
+<li>
+<p>To access information from <code>HttpContext</code> outside the request flow, copy the information inside the request flow. Be careful to copy the actual data and not just references. For example, rather than copying a reference to an <code>IHeaderDictionary</code>, copy the relevant header values or copy the entire dictionary key by key before leaving the request flow.</p>
+</li>
+<li>
+<p>Don't capture <code>IHttpContextAccessor.HttpContext</code> in a constructor.</p>
+</li>
+</ul>
+<p>The following sample logs GitHub branches when requested from the <code>/branch</code> endpoint:</p>
+<pre><code class="language-csharp">using System.Text.Json;
+using HttpContextInBackgroundThread;
+using Microsoft.Net.Http.Headers;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHostedService&lt;PeriodicBranchesLoggerService&gt;();
+
+builder.Services.AddHttpClient(&quot;GitHub&quot;, httpClient =&gt;
+{
+    httpClient.BaseAddress = new Uri(&quot;https://api.github.com/&quot;);
+
+    // The GitHub API requires two headers. The Use-Agent header is added
+    // dynamically through UserAgentHeaderHandler
+    httpClient.DefaultRequestHeaders.Add(
+        HeaderNames.Accept, &quot;application/vnd.github.v3+json&quot;);
+}).AddHttpMessageHandler&lt;UserAgentHeaderHandler&gt;();
+
+builder.Services.AddTransient&lt;UserAgentHeaderHandler&gt;();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.MapGet(&quot;/branches&quot;, async (IHttpClientFactory httpClientFactory,
+                         HttpContext context, Logger&lt;Program&gt; logger) =&gt;
+{
+    var httpClient = httpClientFactory.CreateClient(&quot;GitHub&quot;);
+    var httpResponseMessage = await httpClient.GetAsync(
+        &quot;repos/dotnet/AspNetCore.Docs/branches&quot;);
+
+    if (!httpResponseMessage.IsSuccessStatusCode) 
+        return Results.BadRequest();
+
+    await using var contentStream =
+        await httpResponseMessage.Content.ReadAsStreamAsync();
+
+    var response = await JsonSerializer.DeserializeAsync
+        &lt;IEnumerable&lt;GitHubBranch&gt;&gt;(contentStream);
+
+    app.Logger.LogInformation($&quot;/branches request: &quot; +
+                              $&quot;{JsonSerializer.Serialize(response)}&quot;);
+
+    return Results.Ok(response);
+});
+
+app.Run();
+</code></pre>
+<p>The GitHub API requires two headers. The <code>User-Agent</code> header is added dynamically by the <code>UserAgentHeaderHandler</code>:</p>
+<pre><code class="language-csharp">using System.Text.Json;
+using HttpContextInBackgroundThread;
+using Microsoft.Net.Http.Headers;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHostedService&lt;PeriodicBranchesLoggerService&gt;();
+
+builder.Services.AddHttpClient(&quot;GitHub&quot;, httpClient =&gt;
+{
+    httpClient.BaseAddress = new Uri(&quot;https://api.github.com/&quot;);
+
+    // The GitHub API requires two headers. The Use-Agent header is added
+    // dynamically through UserAgentHeaderHandler
+    httpClient.DefaultRequestHeaders.Add(
+        HeaderNames.Accept, &quot;application/vnd.github.v3+json&quot;);
+}).AddHttpMessageHandler&lt;UserAgentHeaderHandler&gt;();
+
+builder.Services.AddTransient&lt;UserAgentHeaderHandler&gt;();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.MapGet(&quot;/branches&quot;, async (IHttpClientFactory httpClientFactory,
+                         HttpContext context, Logger&lt;Program&gt; logger) =&gt;
+{
+    var httpClient = httpClientFactory.CreateClient(&quot;GitHub&quot;);
+    var httpResponseMessage = await httpClient.GetAsync(
+        &quot;repos/dotnet/AspNetCore.Docs/branches&quot;);
+
+    if (!httpResponseMessage.IsSuccessStatusCode) 
+        return Results.BadRequest();
+
+    await using var contentStream =
+        await httpResponseMessage.Content.ReadAsStreamAsync();
+
+    var response = await JsonSerializer.DeserializeAsync
+        &lt;IEnumerable&lt;GitHubBranch&gt;&gt;(contentStream);
+
+    app.Logger.LogInformation($&quot;/branches request: &quot; +
+                              $&quot;{JsonSerializer.Serialize(response)}&quot;);
+
+    return Results.Ok(response);
+});
+
+app.Run();
+</code></pre>
+<p>The <code>UserAgentHeaderHandler</code>:</p>
+<pre><code class="language-csharp">using Microsoft.Net.Http.Headers;
+
+namespace HttpContextInBackgroundThread;
+
+public class UserAgentHeaderHandler : DelegatingHandler
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger _logger;
+
+    public UserAgentHeaderHandler(IHttpContextAccessor httpContextAccessor,
+                                  ILogger&lt;UserAgentHeaderHandler&gt; logger)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
+    }
+
+    protected override async Task&lt;HttpResponseMessage&gt; 
+                                    SendAsync(HttpRequestMessage request, 
+                                    CancellationToken cancellationToken)
+    {
+        var contextRequest = _httpContextAccessor.HttpContext?.Request;
+        string? userAgentString = contextRequest?.Headers[&quot;user-agent&quot;].ToString();
+        
+        if (string.IsNullOrEmpty(userAgentString))
+        {
+            userAgentString = &quot;Unknown&quot;;
+        }
+
+        request.Headers.Add(HeaderNames.UserAgent, userAgentString);
+        _logger.LogInformation($&quot;User-Agent: {userAgentString}&quot;);
+
+        return await base.SendAsync(request, cancellationToken);
+    }
+}
+</code></pre>
+<p>In the preceding code, when the <code>HttpContext</code> is <code>null</code>, the <code>userAgent</code> string is set to &quot;Unknown&quot;. If possible, <code>HttpContext</code> should be explicitly passed to the service. Explicitly passing in <code>HttpContext</code> data:</p>
+<ul>
+<li>
+<p>Makes the service API more useable outside the request flow.</p>
+</li>
+<li>
+<p>Is better for performance.</p>
+</li>
+<li>
+<p>Makes the code easier to understand and reason about than relying on ambient state.</p>
+</li>
+</ul>
+<p>When the service must access <code>HttpContext</code>, it should account for the possibility of <code>HttpContext</code> being <code>null</code> when not called from a request thread.</p>
+<p>The application also includes <code>PeriodicBranchesLoggerService</code>, which logs the open GitHub branches of the specified repository every 30 seconds:</p>
+<pre><code class="language-csharp">using System.Text.Json;
+
+namespace HttpContextInBackgroundThread;
+
+public class PeriodicBranchesLoggerService : BackgroundService
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger _logger;
+    private readonly PeriodicTimer _timer;
+
+    public PeriodicBranchesLoggerService(IHttpClientFactory httpClientFactory,
+                                         ILogger&lt;PeriodicBranchesLoggerService&gt; logger)
+    {
+        _httpClientFactory = httpClientFactory;
+        _logger = logger;
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (await _timer.WaitForNextTickAsync(stoppingToken))
+        {
+            try
+            {
+                // Cancel sending the request to sync branches if it takes too long
+                // rather than miss sending the next request scheduled 30 seconds from now.
+                // Having a single loop prevents this service from sending an unbounded
+                // number of requests simultaneously.
+                using var syncTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                syncTokenSource.CancelAfter(TimeSpan.FromSeconds(30));
+                
+                var httpClient = _httpClientFactory.CreateClient(&quot;GitHub&quot;);
+                var httpResponseMessage = await httpClient.GetAsync(&quot;repos/dotnet/AspNetCore.Docs/branches&quot;,
+                                                                    stoppingToken);
+
+                if (httpResponseMessage.IsSuccessStatusCode)
+                {
+                    await using var contentStream =
+                        await httpResponseMessage.Content.ReadAsStreamAsync(stoppingToken);
+
+                    // Sync the response with preferred datastore.
+                    var response = await JsonSerializer.DeserializeAsync&lt;
+                        IEnumerable&lt;GitHubBranch&gt;&gt;(contentStream, cancellationToken: stoppingToken);
+
+                    _logger.LogInformation(
+                        $&quot;Branch sync successful! Response: {JsonSerializer.Serialize(response)}&quot;);
+                }
+                else
+                {
+                    _logger.LogError(1, $&quot;Branch sync failed! HTTP status code: {httpResponseMessage.StatusCode}&quot;);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(1, ex, &quot;Branch sync failed!&quot;);
+            }
+        }
+    }
+
+    public override Task StopAsync(CancellationToken stoppingToken)
+    {
+        // This will cause any active call to WaitForNextTickAsync() to return false immediately.
+        _timer.Dispose();
+        // This will cancel the stoppingToken and await ExecuteAsync(stoppingToken).
+        return base.StopAsync(stoppingToken);
+    }
+}
+</code></pre>
+<p><code>PeriodicBranchesLoggerService</code> is a hosted service, which runs outside the request and response flow. Logging from the <code>PeriodicBranchesLoggerService</code> has a <code>null</code> <code>HttpContext</code>. The <code>PeriodicBranchesLoggerService</code> was written to not depend on the <code>HttpContext</code>.</p>
+<pre><code class="language-csharp">using System.Text.Json;
+using HttpContextInBackgroundThread;
+using Microsoft.Net.Http.Headers;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHostedService&lt;PeriodicBranchesLoggerService&gt;();
+
+builder.Services.AddHttpClient(&quot;GitHub&quot;, httpClient =&gt;
+{
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/use-http-context?view=aspnetcore-8.0">Use <code>HttpContext</code> in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Options | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Options</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Encapsulation:</p>
+<ul>
+<li>Classes that depend on configuration settings depend only on the configuration settings that they use.</li>
+</ul>
+</li>
+<li>
+<p>Separation of Concerns:</p>
+<ul>
+<li>Settings for different parts of the app aren't dependent or coupled to one another.</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#bind-hierarchical-configuration" aria-hidden="true" class="anchor" id="bind-hierarchical-configuration"></a><code>Bind</code> hierarchical configuration</h2>
+<pre><code class="language-json">&quot;Position&quot;: {
+    &quot;Title&quot;: &quot;Editor&quot;,
+    &quot;Name&quot;: &quot;Joe Smith&quot;
+  }
+</code></pre>
+<pre><code class="language-csharp">public class PositionOptions
+{
+    public const string Position = &quot;Position&quot;;
+
+    public string Title { get; set; } = String.Empty;
+    public string Name { get; set; } = String.Empty;
+}
+</code></pre>
+<ul>
+<li>
+<p>Must be non-abstract.</p>
+</li>
+<li>
+<p>Has public read-write properties of the type that have corresponding items in config are bound.</p>
+</li>
+<li>
+<p>Has its read-write properties bound to matching entries in configuration.</p>
+</li>
+<li>
+<p>Does not have its fields bound. In the preceding code, <code>Position</code> is not bound. The <code>Position</code> field is used so the string &quot;Position&quot; doesn't need to be hard coded in the app when binding the class to a configuration provider.</p>
+</li>
+<li>
+<p>Calls <code>ConfigurationBinder.Bind</code> to bind the <code>PositionOptions</code> class to the <code>Position</code> section.</p>
+</li>
+<li>
+<p>Displays the <code>Position</code> configuration data.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Test22Model : PageModel
+{
+    private readonly IConfiguration Configuration;
+
+    public Test22Model(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var positionOptions = new PositionOptions();
+        Configuration.GetSection(PositionOptions.Position).Bind(positionOptions);
+
+        return Content($&quot;Title: {positionOptions.Title} \n&quot; +
+                       $&quot;Name: {positionOptions.Name}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class Test21Model : PageModel
+{
+    private readonly IConfiguration Configuration;
+    public PositionOptions? positionOptions { get; private set; }
+
+    public Test21Model(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {            
+        positionOptions = Configuration.GetSection(PositionOptions.Position)
+                                                     .Get&lt;PositionOptions&gt;();
+
+        return Content($&quot;Title: {positionOptions.Title} \n&quot; +
+                       $&quot;Name: {positionOptions.Name}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">namespace ConfigSample.Options;
+
+public abstract class SomethingWithAName
+{
+    public abstract string? Name { get; set; }
+}
+
+public class NameTitleOptions(int age) : SomethingWithAName
+{
+    public const string NameTitle = &quot;NameTitle&quot;;
+
+    public override string? Name { get; set; }
+    public string Title { get; set; } = string.Empty;
+
+    public int Age { get; set; } = age;
+}
+</code></pre>
+<pre><code class="language-csharp">public class Test33Model : PageModel
+{
+    private readonly IConfiguration Configuration;
+
+    public Test33Model(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
+    public ContentResult OnGet()
+    {
+        var nameTitleOptions = new NameTitleOptions(22);
+        Configuration.GetSection(NameTitleOptions.NameTitle).Bind(nameTitleOptions);
+
+        return Content($&quot;Title: {nameTitleOptions.Title} \n&quot; +
+                       $&quot;Name: {nameTitleOptions.Name}  \n&quot; +
+                       $&quot;Age: {nameTitleOptions.Age}&quot;
+                       );
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>Bind</code> allows the concretion of an abstract.</p>
+</li>
+<li>
+<p><code>Get&lt;&gt;</code> has to create an instance itself.</p>
+</li>
+</ul>
+<h2><a href="#the-options-pattern" aria-hidden="true" class="anchor" id="the-options-pattern"></a>The Options Pattern</h2>
+<pre><code class="language-csharp">using ConfigSample.Options;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;PositionOptions&gt;(
+    builder.Configuration.GetSection(PositionOptions.Position));
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class Test2Model : PageModel
+{
+    private readonly PositionOptions _options;
+
+    public Test2Model(IOptions&lt;PositionOptions&gt; options)
+    {
+        _options = options.Value;
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content($&quot;Title: {_options.Title} \n&quot; +
+                       $&quot;Name: {_options.Name}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#options-interfaces" aria-hidden="true" class="anchor" id="options-interfaces"></a>Options interfaces</h2>
+<ul>
+<li>
+<p>Does not support:</p>
+<ul>
+<li>
+<p>Reading of configuration data after the app has started.</p>
+</li>
+<li>
+<p>Named options</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Is registered as a Singleton and can be injected into any service lifetime.</p>
+</li>
+<li>
+<p>Is useful in scenarios where options should be recomputed on every request. For more information, see Use <code>IOptionsSnapshot</code> to read updated data.</p>
+</li>
+<li>
+<p>Is registered as Scoped and therefore can't be injected into a Singleton service.</p>
+</li>
+<li>
+<p>Supports named options</p>
+</li>
+<li>
+<p>Is used to retrieve options and manage options notifications for <code>TOptions</code> instances.</p>
+</li>
+<li>
+<p>Is registered as a Singleton and can be injected into any service lifetime.</p>
+</li>
+<li>
+<p>Supports:</p>
+<ul>
+<li>
+<p>Change notifications</p>
+</li>
+<li>
+<p>named options</p>
+</li>
+<li>
+<p>Reloadable configuration</p>
+</li>
+<li>
+<p>Selective options invalidation (<code>IOptionsMonitorCache&lt;TOptions&gt;</code>)</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#use-ioptionssnapshot-to-read-updated-data" aria-hidden="true" class="anchor" id="use-ioptionssnapshot-to-read-updated-data"></a>Use <code>IOptionsSnapshot</code> to read updated data</h2>
+<ul>
+<li>
+<p>Options are computed once per request when accessed and cached for the lifetime of the request.</p>
+</li>
+<li>
+<p>May incur a significant performance penalty because it's a Scoped service and is recomputed per request. For more information, see this GitHub issue and Improve the performance of configuration binding.</p>
+</li>
+<li>
+<p>Changes to the configuration are read after the app starts when using configuration providers that support reading updated configuration values.</p>
+</li>
+<li>
+<p><code>IOptionsMonitor</code> is a Singleton service that retrieves current option values at any time, which is especially useful in singleton dependencies.</p>
+</li>
+<li>
+<p><code>IOptionsSnapshot</code> is a Scoped service and provides a snapshot of the options at the time the <code>IOptionsSnapshot&lt;T&gt;</code> object is constructed. Options snapshots are designed for use with transient and scoped dependencies.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class TestSnapModel : PageModel
+{
+    private readonly MyOptions _snapshotOptions;
+
+    public TestSnapModel(IOptionsSnapshot&lt;MyOptions&gt; snapshotOptionsAccessor)
+    {
+        _snapshotOptions = snapshotOptionsAccessor.Value;
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content($&quot;Option1: {_snapshotOptions.Option1} \n&quot; +
+                       $&quot;Option2: {_snapshotOptions.Option2}&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using SampleApp.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;MyOptions&gt;(
+    builder.Configuration.GetSection(&quot;MyOptions&quot;));
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#ioptionsmonitor" aria-hidden="true" class="anchor" id="ioptionsmonitor"></a><code>IOptionsMonitor</code></h2>
+<pre><code class="language-csharp">using SampleApp.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;MyOptions&gt;(
+    builder.Configuration.GetSection(&quot;MyOptions&quot;));
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class TestMonitorModel : PageModel
+{
+    private readonly IOptionsMonitor&lt;MyOptions&gt; _optionsDelegate;
+
+    public TestMonitorModel(IOptionsMonitor&lt;MyOptions&gt; optionsDelegate )
+    {
+        _optionsDelegate = optionsDelegate;
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content($&quot;Option1: {_optionsDelegate.CurrentValue.Option1} \n&quot; +
+                       $&quot;Option2: {_optionsDelegate.CurrentValue.Option2}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#named-options-support-using-iconfigurenamedoptions" aria-hidden="true" class="anchor" id="named-options-support-using-iconfigurenamedoptions"></a>Named options support using IConfigureNamedOptions</h2>
+<ul>
+<li>
+<p>Are useful when multiple configuration sections bind to the same properties.</p>
+</li>
+<li>
+<p>Are case sensitive.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;TopItem&quot;: {
+    &quot;Month&quot;: {
+      &quot;Name&quot;: &quot;Green Widget&quot;,
+      &quot;Model&quot;: &quot;GW46&quot;
+    },
+    &quot;Year&quot;: {
+      &quot;Name&quot;: &quot;Orange Gadget&quot;,
+      &quot;Model&quot;: &quot;OG35&quot;
+    }
+  }
+}
+</code></pre>
+<pre><code class="language-csharp">public class TopItemSettings
+{
+    public const string Month = &quot;Month&quot;;
+    public const string Year = &quot;Year&quot;;
+
+    public string Name { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+}
+</code></pre>
+<pre><code class="language-csharp">using SampleApp.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;TopItemSettings&gt;(TopItemSettings.Month,
+    builder.Configuration.GetSection(&quot;TopItem:Month&quot;));
+builder.Services.Configure&lt;TopItemSettings&gt;(TopItemSettings.Year,
+    builder.Configuration.GetSection(&quot;TopItem:Year&quot;));
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class TestNOModel : PageModel
+{
+    private readonly TopItemSettings _monthTopItem;
+    private readonly TopItemSettings _yearTopItem;
+
+    public TestNOModel(IOptionsSnapshot&lt;TopItemSettings&gt; namedOptionsAccessor)
+    {
+        _monthTopItem = namedOptionsAccessor.Get(TopItemSettings.Month);
+        _yearTopItem = namedOptionsAccessor.Get(TopItemSettings.Year);
+    }
+
+    public ContentResult OnGet()
+    {
+        return Content($&quot;Month:Name {_monthTopItem.Name} \n&quot; +
+                       $&quot;Month:Model {_monthTopItem.Model} \n\n&quot; +
+                       $&quot;Year:Name {_yearTopItem.Name} \n&quot; +
+                       $&quot;Year:Model {_yearTopItem.Model} \n&quot;   );
+    }
+}
+</code></pre>
+<h2><a href="#optionsbuilder-api" aria-hidden="true" class="anchor" id="optionsbuilder-api"></a><code>OptionsBuilder</code> API</h2>
+<h2><a href="#use-di-services-to-configure-options" aria-hidden="true" class="anchor" id="use-di-services-to-configure-options"></a>Use DI services to configure options</h2>
+<ul>
+<li>Pass a configuration delegate to Configure on <code>OptionsBuilder&lt;TOptions&gt;</code>. <code>OptionsBuilder&lt;TOptions&gt;</code> provides overloads of Configure that allow use of up to five services to configure options:
+builder.Services.AddOptions<MyOptions>(&quot;optionalName&quot;)
+.Configure&lt;Service1, Service2, Service3, Service4, Service5&gt;(
+(o, s, s2, s3, s4, s5) =&gt;
+o.Property = DoSomethingWith(s, s2, s3, s4, s5));</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddOptions&lt;MyOptions&gt;(&quot;optionalName&quot;)
+    .Configure&lt;Service1, Service2, Service3, Service4, Service5&gt;(
+        (o, s, s2, s3, s4, s5) =&gt; 
+            o.Property = DoSomethingWith(s, s2, s3, s4, s5));
+</code></pre>
+<ul>
+<li>Create a type that implements <code>IConfigureOptions&lt;TOptions&gt;</code> or <code>IConfigureNamedOptions&lt;TOptions&gt;</code> and register the type as a service.</li>
+</ul>
+<h2><a href="#options-validation" aria-hidden="true" class="anchor" id="options-validation"></a>Options validation</h2>
+<pre><code class="language-json">{
+  &quot;MyConfig&quot;: {
+    &quot;Key1&quot;: &quot;My Key One&quot;,
+    &quot;Key2&quot;: 10,
+    &quot;Key3&quot;: 32
+  }
+}
+</code></pre>
+<pre><code class="language-csharp">public class MyConfigOptions
+{
+    public const string MyConfig = &quot;MyConfig&quot;;
+
+    [RegularExpression(@&quot;^[a-zA-Z''-'\s]{1,40}$&quot;)]
+    public string Key1 { get; set; }
+    [Range(0, 1000,
+        ErrorMessage = &quot;Value for {0} must be between {1} and {2}.&quot;)]
+    public int Key2 { get; set; }
+    public int Key3 { get; set; }
+}
+</code></pre>
+<ul>
+<li>
+<p>Calls AddOptions to get an <code>OptionsBuilder</code><TOptions> that binds to the <code>MyConfigOptions</code> class.</p>
+</li>
+<li>
+<p>Calls <code>ValidateDataAnnotations</code> to enable validation using <code>DataAnnotations</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using OptionsValidationSample.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddOptions&lt;MyConfigOptions&gt;()
+            .Bind(builder.Configuration.GetSection(MyConfigOptions.MyConfig))
+            .ValidateDataAnnotations();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    private readonly ILogger&lt;HomeController&gt; _logger;
+    private readonly IOptions&lt;MyConfigOptions&gt; _config;
+
+    public HomeController(IOptions&lt;MyConfigOptions&gt; config,
+                          ILogger&lt;HomeController&gt; logger)
+    {
+        _config = config;
+        _logger = logger;
+
+        try
+        {
+            var configValue = _config.Value;
+
+        }
+        catch (OptionsValidationException ex)
+        {
+            foreach (var failure in ex.Failures)
+            {
+                _logger.LogError(failure);
+            }
+        }
+    }
+
+    public ContentResult Index()
+    {
+        string msg;
+        try
+        {
+            msg = $&quot;Key1: {_config.Value.Key1} \n&quot; +
+                  $&quot;Key2: {_config.Value.Key2} \n&quot; +
+                  $&quot;Key3: {_config.Value.Key3}&quot;;
+        }
+        catch (OptionsValidationException optValEx)
+        {
+            return Content(optValEx.Message);
+        }
+        return Content(msg);
+    }
+</code></pre>
+<pre><code class="language-csharp">using OptionsValidationSample.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddOptions&lt;MyConfigOptions&gt;()
+            .Bind(builder.Configuration.GetSection(MyConfigOptions.MyConfig))
+            .ValidateDataAnnotations()
+        .Validate(config =&gt;
+        {
+            if (config.Key2 != 0)
+            {
+                return config.Key3 &gt; config.Key2;
+            }
+
+            return true;
+        }, &quot;Key3 must be &gt; than Key2.&quot;);   // Failure message.
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#ivalidateoptionstoptions>-and-ivalidatableobject" aria-hidden="true" class="anchor" id="ivalidateoptionstoptions>-and-ivalidatableobject"></a><code>IValidateOptions&lt;TOptions&gt;</code> and <code>IValidatableObject</code></h3>
+<pre><code class="language-csharp">public class MyConfigValidation : IValidateOptions&lt;MyConfigOptions&gt;
+{
+    public MyConfigOptions _config { get; private set; }
+
+    public  MyConfigValidation(IConfiguration config)
+    {
+        _config = config.GetSection(MyConfigOptions.MyConfig)
+            .Get&lt;MyConfigOptions&gt;();
+    }
+
+    public ValidateOptionsResult Validate(string name, MyConfigOptions options)
+    {
+        string? vor = null;
+        var rx = new Regex(@&quot;^[a-zA-Z''-'\s]{1,40}$&quot;);
+        var match = rx.Match(options.Key1!);
+
+        if (string.IsNullOrEmpty(match.Value))
+        {
+            vor = $&quot;{options.Key1} doesn't match RegEx \n&quot;;
+        }
+
+        if ( options.Key2 &lt; 0 || options.Key2 &gt; 1000)
+        {
+            vor = $&quot;{options.Key2} doesn't match Range 0 - 1000 \n&quot;;
+        }
+
+        if (_config.Key2 != default)
+        {
+            if(_config.Key3 &lt;= _config.Key2)
+            {
+                vor +=  &quot;Key3 must be &gt; than Key2.&quot;;
+            }
+        }
+
+        if (vor != null)
+        {
+            return ValidateOptionsResult.Fail(vor);
+        }
+
+        return ValidateOptionsResult.Success;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.Extensions.Options;
+using OptionsValidationSample.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.Configure&lt;MyConfigOptions&gt;(builder.Configuration.GetSection(
+                                        MyConfigOptions.MyConfig));
+
+builder.Services.AddSingleton&lt;IValidateOptions
+                              &lt;MyConfigOptions&gt;, MyConfigValidation&gt;();
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>Implement the <code>IValidatableObject</code> interface and its Validate method within the class.</p>
+</li>
+<li>
+<p>Call <code>ValidateDataAnnotations</code> in <code>Program.cs</code>.</p>
+</li>
+</ul>
+<h3><a href="#validateonstart" aria-hidden="true" class="anchor" id="validateonstart"></a><code>ValidateOnStart</code></h3>
+<pre><code class="language-csharp">builder.Services.AddOptions&lt;MyConfigOptions&gt;()
+    .Bind(builder.Configuration.GetSection(MyConfigOptions.MyConfig))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+</code></pre>
+<h2><a href="#options-post-configuration" aria-hidden="true" class="anchor" id="options-post-configuration"></a>Options post-configuration</h2>
+<pre><code class="language-csharp">using OptionsValidationSample.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddOptions&lt;MyConfigOptions&gt;()
+                .Bind(builder.Configuration.GetSection(MyConfigOptions.MyConfig));
+
+builder.Services.PostConfigure&lt;MyConfigOptions&gt;(myOptions =&gt;
+{
+    myOptions.Key1 = &quot;post_configured_key1_value&quot;;
+});
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;TopItemSettings&gt;(TopItemSettings.Month,
+    builder.Configuration.GetSection(&quot;TopItem:Month&quot;));
+builder.Services.Configure&lt;TopItemSettings&gt;(TopItemSettings.Year,
+    builder.Configuration.GetSection(&quot;TopItem:Year&quot;));
+
+builder.Services.PostConfigure&lt;TopItemSettings&gt;(&quot;Month&quot;, myOptions =&gt;
+{
+    myOptions.Name = &quot;post_configured_name_value&quot;;
+    myOptions.Model = &quot;post_configured_model_value&quot;;
+});
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">using OptionsValidationSample.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddOptions&lt;MyConfigOptions&gt;()
+                .Bind(builder.Configuration.GetSection(MyConfigOptions.MyConfig));
+
+builder.Services.PostConfigureAll&lt;MyConfigOptions&gt;(myOptions =&gt;
+{
+    myOptions.Key1 = &quot;post_configured_key1_value&quot;;
+});
+</code></pre>
+<h2><a href="#access-options-in-programcs" aria-hidden="true" class="anchor" id="access-options-in-programcs"></a>Access options in <code>Program.cs</code></h2>
+<pre><code class="language-csharp">var app = builder.Build();
+
+var option1 = app.Services.GetRequiredService&lt;IOptionsMonitor&lt;MyOptions&gt;&gt;()
+    .CurrentValue.Option1;
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>View or download sample code (how to download)</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options?view=aspnetcore-8.0">Options pattern in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

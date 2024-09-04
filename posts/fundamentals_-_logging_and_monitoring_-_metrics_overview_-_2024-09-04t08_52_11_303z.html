@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Logging and monitoring - Metrics overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Metrics are numerical measurements reported over time. They're typically used to monitor the health of an app and generate alerts. For example, a web service might track how many:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Logging and monitoring - Metrics overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Metrics are numerical measurements reported over time. They're typically used to monitor the health of an app and generate alerts. For example, a web service might track how many:</p>
+<ul>
+<li>
+<p>Requests it received per second.</p>
+</li>
+<li>
+<p>Milliseconds it took to respond.</p>
+</li>
+<li>
+<p>Responses sent an error.</p>
+</li>
+</ul>
+<p>Web services can be monitored to see how quickly they respond to requests.</p>
+<blockquote>
+<p class='tip'>Tip
+See ASP.NET Core metrics for a comprehensive list of all instruments together with their attributes.</p>
+</blockquote>
+<h2><a href="#using-metrics" aria-hidden="true" class="anchor" id="using-metrics"></a>Using metrics</h2>
+<p>There are two parts to using metrics in a .NET app:</p>
+<ul>
+<li>
+<p>Instrumentation: Code in .NET libraries takes measurements and associates these measurements with a metric name. .NET and ASP.NET Core include many built-in metrics.</p>
+</li>
+<li>
+<p>Collection: A .NET app configures named metrics to be transmitted from the app for external storage and analysis. Some tools may perform configuration outside the app using configuration files or a UI tool.</p>
+</li>
+</ul>
+<p>In this tutorial, I'll show you how to collect and store metrics in C.</p>
+<ul>
+<li>
+<p>Populating metrics in Grafana with OpenTelemetry and Prometheus.</p>
+</li>
+<li>
+<p>Viewing metrics in real time with <code>dotnet-counters</code></p>
+</li>
+</ul>
+<p>Measurements can also be associated with key-value pairs called tags that allow data to be categorized for analysis. For more information, see Multi-dimensional metrics.</p>
+<h2><a href="#create-the-starter-app" aria-hidden="true" class="anchor" id="create-the-starter-app"></a>Create the starter app</h2>
+<p>Create a new ASP.NET Core app with the following command:</p>
+<pre><code class="language-dotnetcli">dotnet new web -o WebMetric
+cd WebMetric
+dotnet add package OpenTelemetry.Exporter.Prometheus.AspNetCore --prerelease
+dotnet add package OpenTelemetry.Extensions.Hosting
+</code></pre>
+<p>Replace the contents of <code>Program.cs</code> with the following code:</p>
+<pre><code class="language-csharp">using OpenTelemetry.Metrics;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(builder =&gt;
+    {
+        builder.AddPrometheusExporter();
+
+        builder.AddMeter(&quot;Microsoft.AspNetCore.Hosting&quot;,
+                         &quot;Microsoft.AspNetCore.Server.Kestrel&quot;);
+        builder.AddView(&quot;http.server.request.duration&quot;,
+            new ExplicitBucketHistogramConfiguration
+            {
+                Boundaries = new double[] { 0, 0.005, 0.01, 0.025, 0.05,
+                       0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10 }
+            });
+    });
+var app = builder.Build();
+
+app.MapPrometheusScrapingEndpoint();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello OpenTelemetry! ticks:&quot;
+                     + DateTime.Now.Ticks.ToString()[^3..]);
+
+app.Run();
+</code></pre>
+<h2><a href="#view-metrics-with-dotnet-counters" aria-hidden="true" class="anchor" id="view-metrics-with-dotnet-counters"></a>View metrics with <code>dotnet-counters</code></h2>
+<p><code>dotnet-counters</code> is a command-line tool that can view live metrics for .NET Core apps on demand. It doesn't require setup, making it useful for ad-hoc investigations or verifying that metric instrumentation is working. It works with both System.Diagnostics.Metrics based APIs and EventCounters.</p>
+<p>If the <code>dotnet-counters</code> tool isn't installed, run the following command:</p>
+<pre><code class="language-dotnetcli">dotnet tool update -g dotnet-counters
+</code></pre>
+<p>While the test app is running, launch <code>dotnet-counters</code>. The following command shows an example of <code>dotnet-counters</code> monitoring all metrics from the <code>Microsoft.AspNetCore.Hosting</code> meter.</p>
+<pre><code class="language-dotnetcli">dotnet-counters monitor -n WebMetric --counters Microsoft.AspNetCore.Hosting
+</code></pre>
+<p>Output similar to the following is displayed:</p>
+<pre><code class="language-dotnetcli">Press p to pause, r to resume, q to quit.
+    Status: Running
+
+[Microsoft.AspNetCore.Hosting]
+    http-server-current-requests
+        host=localhost,method=GET,port=5045,scheme=http                    0
+    http-server-request-duration (s)
+        host=localhost,method=GET,port=5045,protocol=HTTP/1.1,ro           0.001
+        host=localhost,method=GET,port=5045,protocol=HTTP/1.1,ro           0.001
+        host=localhost,method=GET,port=5045,protocol=HTTP/1.1,ro           0.001
+        host=localhost,method=GET,port=5045,protocol=HTTP/1.1,ro           0
+        host=localhost,method=GET,port=5045,protocol=HTTP/1.1,ro           0
+        host=localhost,method=GET,port=5045,protocol=HTTP/1.1,ro           0
+</code></pre>
+<p>For more information, see <code>dotnet-counters</code>.</p>
+<h2><a href="#enrich-the-aspnet-core-request-metric" aria-hidden="true" class="anchor" id="enrich-the-aspnet-core-request-metric"></a>Enrich the ASP.NET Core request metric</h2>
+<p>ASP.NET Core has many built-in metrics. The <code>http.server.request.duration</code> metric:</p>
+<ul>
+<li>
+<p>Records the duration of HTTP requests on the server.</p>
+</li>
+<li>
+<p>Captures request information in tags, such as the matched route and response status code.</p>
+</li>
+</ul>
+<p>The <code>http.server.request.duration</code> metric supports tag enrichment using <code>IHttpMetricsTagsFeature</code>. Enrichment is when a library or app adds its own tags to a metric. This is useful if an app wants to add a custom categorization to dashboards or alerts built with metrics.</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Http.Features;
+
+var builder = WebApplication.CreateBuilder();
+var app = builder.Build();
+
+app.Use(async (context, next) =&gt;
+{
+    var tagsFeature = context.Features.Get&lt;IHttpMetricsTagsFeature&gt;();
+    if (tagsFeature != null)
+    {
+        var source = context.Request.Query[&quot;utm_medium&quot;].ToString() switch
+        {
+            &quot;&quot; =&gt; &quot;none&quot;,
+            &quot;social&quot; =&gt; &quot;social&quot;,
+            &quot;email&quot; =&gt; &quot;email&quot;,
+            &quot;organic&quot; =&gt; &quot;organic&quot;,
+            _ =&gt; &quot;other&quot;
+        };
+        tagsFeature.Tags.Add(new KeyValuePair&lt;string, object?&gt;(&quot;mkt_medium&quot;, source));
+    }
+
+    await next.Invoke();
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<p>The proceeding example:</p>
+<ul>
+<li>
+<p>Adds middleware to enrich the ASP.NET Core request metric.</p>
+</li>
+<li>
+<p>Gets the <code>IHttpMetricsTagsFeature</code> from the <code>HttpContext</code>. The feature is only present on the context if someone is listening to the metric. Verify <code>IHttpMetricsTagsFeature</code> is not <code>null</code> before using it.</p>
+</li>
+<li>
+<p>Adds a custom tag containing the request's marketing source to the <code>http.server.request.duration</code> metric.</p>
+<ul>
+<li>
+<p>The tag has the name <code>mkt_medium</code> and a value based on the <code>utm_medium</code> query string value. The <code>utm_medium</code> value is resolved to a known range of values.</p>
+</li>
+<li>
+<p>The tag allows requests to be categorized by marketing medium type, which could be useful when analyzing web app traffic.</p>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Follow the multi-dimensional metrics best practices when enriching with custom tags. Too many tags, or tags with an unbound range cause a large combination of tags. Collection tools have a limit on how many combinations they support for a counter and may start filtering results out to avoid excessive memory usage.</p>
+</blockquote>
+<h2><a href="#create-custom-metrics" aria-hidden="true" class="anchor" id="create-custom-metrics"></a>Create custom metrics</h2>
+<p>Metrics are created using APIs in the System.Diagnostics.Metrics namespace. See Create custom metrics for information on creating custom metrics.</p>
+<h3><a href="#creating-metrics-in-aspnet-core-apps-with-imeterfactory" aria-hidden="true" class="anchor" id="creating-metrics-in-aspnet-core-apps-with-imeterfactory"></a>Creating metrics in ASP.NET Core apps with <code>IMeterFactory</code></h3>
+<p>We recommended creating Meter instances in ASP.NET Core apps with <code>IMeterFactory</code>.</p>
+<p>ASP.NET Core registers <code>IMeterFactory</code> in dependency injection (DI) by default. The meter factory integrates metrics with DI, making isolating and collecting metrics easy. <code>IMeterFactory</code> is especially useful for testing. It allows for multiple tests to run side-by-side and only collecting metrics values that are recorded in a test.</p>
+<p>To use <code>IMeterFactory</code> in an app, create a type that uses <code>IMeterFactory</code> to create the app's custom metrics:</p>
+<pre><code class="language-csharp">public class ContosoMetrics
+{
+    private readonly Counter&lt;int&gt; _productSoldCounter;
+
+    public ContosoMetrics(IMeterFactory meterFactory)
+    {
+        var meter = meterFactory.Create(&quot;Contoso.Web&quot;);
+        _productSoldCounter = meter.CreateCounter&lt;int&gt;(&quot;contoso.product.sold&quot;);
+    }
+
+    public void ProductSold(string productName, int quantity)
+    {
+        _productSoldCounter.Add(quantity,
+            new KeyValuePair&lt;string, object?&gt;(&quot;contoso.product.name&quot;, productName));
+    }
+}
+</code></pre>
+<p>Register the metrics type with DI in <code>Program.cs</code>:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton&lt;ContosoMetrics&gt;();
+</code></pre>
+<p>Inject the metrics type and record values where needed. Because the metrics type is registered in DI it can be use with MVC controllers, minimal APIs, or any other type that is created by DI:</p>
+<pre><code class="language-csharp">app.MapPost(&quot;/complete-sale&quot;, (SaleModel model, ContosoMetrics metrics) =&gt;
+{
+    // ... business logic such as saving the sale to a database ...
+
+    metrics.ProductSold(model.ProductName, model.QuantitySold);
+});
+</code></pre>
+<p>To monitor the &quot;Contoso.Web&quot; meter, use the following <code>dotnet-counters</code> command.</p>
+<pre><code class="language-dotnetcli">dotnet-counters monitor -n WebMetric --counters Contoso.Web
+</code></pre>
+<p>Output similar to the following is displayed:</p>
+<pre><code class="language-dotnetcli">Press p to pause, r to resume, q to quit.
+    Status: Running
+
+[Contoso.Web]
+    contoso.product.sold (Count / 1 sec)
+        contoso.product.name=Eggs            12    
+        contoso.product.name=Milk            0
+</code></pre>
+<h2><a href="#view-metrics-in-grafana-with-opentelemetry-and-prometheus" aria-hidden="true" class="anchor" id="view-metrics-in-grafana-with-opentelemetry-and-prometheus"></a>View metrics in Grafana with OpenTelemetry and Prometheus</h2>
+<h3><a href="#overview" aria-hidden="true" class="anchor" id="overview"></a>Overview</h3>
+<p>OpenTelemetry:</p>
+<ul>
+<li>
+<p>Is a vendor-neutral open-source project supported by the Cloud Native Computing Foundation.</p>
+</li>
+<li>
+<p>Standardizes generating and collecting telemetry for cloud-native software.</p>
+</li>
+<li>
+<p>Works with .NET using the .NET metric APIs.</p>
+</li>
+<li>
+<p>Is endorsed by Azure Monitor and many APM vendors.</p>
+</li>
+</ul>
+<p>This tutorial shows one of the integrations available for OpenTelemetry metrics using the OSS Prometheus and Grafana projects. The metrics data flow:</p>
+<ul>
+<li>
+<p>The ASP.NET Core metric APIs record measurements from the example app.</p>
+</li>
+<li>
+<p>The OpenTelemetry .NET library running in the app aggregates the measurements.</p>
+</li>
+<li>
+<p>The Prometheus exporter library makes the aggregated data available via an HTTP metrics endpoint. 'Exporter' is what OpenTelemetry calls the libraries that transmit telemetry to vendor-specific backends.</p>
+</li>
+<li>
+<p>A Prometheus server:</p>
+<ul>
+<li>
+<p>Polls the metrics endpoint</p>
+</li>
+<li>
+<p>Reads the data</p>
+</li>
+<li>
+<p>Stores the data in a database for long-term persistence. Prometheus refers to reading and storing data as scraping an endpoint.</p>
+</li>
+<li>
+<p>Can run on a different machine</p>
+</li>
+</ul>
+</li>
+<li>
+<p>The Grafana server:</p>
+<ul>
+<li>
+<p>Queries the data stored in Prometheus and displays it on a web-based monitoring dashboard.</p>
+</li>
+<li>
+<p>Can run on a different machine.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#view-metrics-from-sample-app" aria-hidden="true" class="anchor" id="view-metrics-from-sample-app"></a>View metrics from sample app</h3>
+<p>Navigate to the sample app. The browser displays Hello OpenTelemetry! ticks:&lt;3digits&gt; where <code>3digits</code> are the last 3 digits of the current DateTime.Ticks.</p>
+<p>Append <code>/metrics</code> to the URL to view the metrics endpoint. The browser displays the metrics being collected:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/metrics.png?view=aspnetcore-8.0" alt="metrics 2!" title="metrics 2" /></p>
+<h3><a href="#set-up-and-configure-prometheus" aria-hidden="true" class="anchor" id="set-up-and-configure-prometheus"></a>Set up and configure Prometheus</h3>
+<p>Follow the Prometheus first steps to set up a Prometheus server and confirm it's working.</p>
+<p>Modify the prometheus.yml configuration file so that Prometheus scrapes the metrics endpoint that the example app is exposing. Add the following highlighted text in the <code>scrape_configs</code> section:</p>
+<pre><code class="language-yaml"># my global config
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - &quot;first_rules.yml&quot;
+  # - &quot;second_rules.yml&quot;
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=&lt;job_name&gt;` to any timeseries scraped from this config.
+  - job_name: &quot;prometheus&quot;
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      - targets: [&quot;localhost:9090&quot;]
+
+  - job_name: 'MyASPNETApp'
+    scrape_interval: 5s # Poll every 5 seconds for a more responsive demo.
+    static_configs:
+      - targets: [&quot;localhost:5045&quot;]  ## Enter the HTTP port number of the demo app.
+</code></pre>
+<p>In the preceding highlighted YAML, replace <code>5045</code> with the port number that the example app is running on.</p>
+<h4><a href="#start-prometheus" aria-hidden="true" class="anchor" id="start-prometheus"></a>Start Prometheus</h4>
+<ul>
+<li>
+<p>Reload the configuration or restart the Prometheus server.</p>
+</li>
+<li>
+<p>Confirm that OpenTelemetryTest is in the UP state in the Status &gt; Targets page of the Prometheus web portal.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/prometheus_status.png?view=aspnetcore-8.0" alt="Prometheus status!" title="Prometheus status" /></p>
+<p>Select the Open metric explorer icon to see available metrics:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/open_metric_exp.png?view=aspnetcore-8.0" alt="Prometheus open_metric_exp!" title="Prometheus open_metric_exp" /></p>
+<p>Enter counter category such as <code>http_</code> in the Expression input box to see the available metrics:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/metrics2.png?view=aspnetcore-8.0" alt="available metrics!" title="available metrics" /></p>
+<p>Alternatively, enter counter category such as <code>kestrel</code> in the Expression input box to see the available metrics:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/kestrel.png?view=aspnetcore-8.0" alt="Prometheus kestrel!" title="Prometheus kestrel" /></p>
+<h3><a href="#show-metrics-on-a-grafana-dashboard" aria-hidden="true" class="anchor" id="show-metrics-on-a-grafana-dashboard"></a>Show metrics on a Grafana dashboard</h3>
+<ul>
+<li>
+<p>Follow the installation instructions to install Grafana and connect it to a Prometheus data source.</p>
+</li>
+<li>
+<p>Follow Creating a Prometheus graph. Alternatively, pre-built dashboards for .NET metrics are available to download at .NET team dashboards @ grafana.com. Downloaded dashboard JSON can be imported into Grafana.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/dashboard-screenshot.png?view=aspnetcore-8.0" alt="dashboard-screenshot2!" title="dashboard-screenshot2" /></p>
+<h2><a href="#test-metrics-in-aspnet-core-apps" aria-hidden="true" class="anchor" id="test-metrics-in-aspnet-core-apps"></a>Test metrics in ASP.NET Core apps</h2>
+<p>It's possible to test metrics in ASP.NET Core apps. One way to do that is collect and assert metrics values in ASP.NET Core integration tests using <code>MetricCollector&lt;T&gt;</code>.</p>
+<pre><code class="language-csharp">public class BasicTests : IClassFixture&lt;WebApplicationFactory&lt;Program&gt;&gt;
+{
+    private readonly WebApplicationFactory&lt;Program&gt; _factory;
+    public BasicTests(WebApplicationFactory&lt;Program&gt; factory) =&gt; _factory = factory;
+
+    [Fact]
+    public async Task Get_RequestCounterIncreased()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var meterFactory = _factory.Services.GetRequiredService&lt;IMeterFactory&gt;();
+        var collector = new MetricCollector&lt;double&gt;(meterFactory,
+            &quot;Microsoft.AspNetCore.Hosting&quot;, &quot;http.server.request.duration&quot;);
+
+        // Act
+        var response = await client.GetAsync(&quot;/&quot;);
+
+        // Assert
+        Assert.Contains(&quot;Hello OpenTelemetry!&quot;, await response.Content.ReadAsStringAsync());
+
+        await collector.WaitForMeasurementsAsync(minCount: 1).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Collection(collector.GetMeasurementSnapshot(),
+            measurement =&gt;
+            {
+                Assert.Equal(&quot;http&quot;, measurement.Tags[&quot;url.scheme&quot;]);
+                Assert.Equal(&quot;GET&quot;, measurement.Tags[&quot;http.request.method&quot;]);
+                Assert.Equal(&quot;/&quot;, measurement.Tags[&quot;http.route&quot;]);
+            });
+    }
+}
+</code></pre>
+<p>The proceeding test:</p>
+<ul>
+<li>
+<p>Bootstraps a web app in memory with <code>WebApplicationFactory&lt;TEntryPoint&gt;</code>. <code>Program</code> in the factory's generic argument specifies the web app.</p>
+</li>
+<li>
+<p>Collects metrics values with <code>MetricCollector&lt;T&gt;</code></p>
+<ul>
+<li>
+<p>Requires a package reference to <code>Microsoft.Extensions.Diagnostics.Testing</code></p>
+</li>
+<li>
+<p>The <code>MetricCollector&lt;T&gt;</code> is created using the web app's <code>IMeterFactory</code>. This allows the collector to only report metrics values recorded by test.</p>
+</li>
+<li>
+<p>Includes the meter name, <code>Microsoft.AspNetCore.Hosting</code>, and counter name, <code>http.server.request.duration</code> to collect.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Makes an HTTP request to the web app.</p>
+</li>
+<li>
+<p>Asserts the test using results from the metrics collector.</p>
+</li>
+</ul>
+<h2><a href="#aspnet-core-meters-and-counters" aria-hidden="true" class="anchor" id="aspnet-core-meters-and-counters"></a>ASP.NET Core meters and counters</h2>
+<p>See ASP.NET Core metrics for a list of ASP.NET Core meters and counters.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics?view=aspnetcore-8.0">ASP.NET Core metrics</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
