@@ -352,7 +352,7 @@ builder.Services.AddSingleton&lt;ContosoMetrics&gt;();
 <h3><a href="#view-metrics-from-sample-app" aria-hidden="true" class="anchor" id="view-metrics-from-sample-app"></a>View metrics from sample app</h3>
 <p>Navigate to the sample app. The browser displays Hello OpenTelemetry! ticks:&lt;3digits&gt; where <code>3digits</code> are the last 3 digits of the current DateTime.Ticks.</p>
 <p>Append <code>/metrics</code> to the URL to view the metrics endpoint. The browser displays the metrics being collected:</p>
-<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/metrics.png?view=aspnetcore-8.0" alt="metrics 2!" title="metrics 2" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/metrics.png?view=aspnetcore-8.0" alt="metrics 2!" title="metrics 2" /></p>
 <h3><a href="#set-up-and-configure-prometheus" aria-hidden="true" class="anchor" id="set-up-and-configure-prometheus"></a>Set up and configure Prometheus</h3>
 <p>Follow the Prometheus first steps to set up a Prometheus server and confirm it's working.</p>
 <p>Modify the prometheus.yml configuration file so that Prometheus scrapes the metrics endpoint that the example app is exposing. Add the following highlighted text in the <code>scrape_configs</code> section:</p>
@@ -401,13 +401,13 @@ scrape_configs:
 <p>Confirm that OpenTelemetryTest is in the UP state in the Status &gt; Targets page of the Prometheus web portal.</p>
 </li>
 </ul>
-<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/prometheus_status.png?view=aspnetcore-8.0" alt="Prometheus status!" title="Prometheus status" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/prometheus_status.png?view=aspnetcore-8.0" alt="Prometheus status!" title="Prometheus status" /></p>
 <p>Select the Open metric explorer icon to see available metrics:</p>
-<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/open_metric_exp.png?view=aspnetcore-8.0" alt="Prometheus open_metric_exp!" title="Prometheus open_metric_exp" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/open_metric_exp.png?view=aspnetcore-8.0" alt="Prometheus open_metric_exp!" title="Prometheus open_metric_exp" /></p>
 <p>Enter counter category such as <code>http_</code> in the Expression input box to see the available metrics:</p>
-<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/metrics2.png?view=aspnetcore-8.0" alt="available metrics!" title="available metrics" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/metrics2.png?view=aspnetcore-8.0" alt="available metrics!" title="available metrics" /></p>
 <p>Alternatively, enter counter category such as <code>kestrel</code> in the Expression input box to see the available metrics:</p>
-<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/kestrel.png?view=aspnetcore-8.0" alt="Prometheus kestrel!" title="Prometheus kestrel" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/kestrel.png?view=aspnetcore-8.0" alt="Prometheus kestrel!" title="Prometheus kestrel" /></p>
 <h3><a href="#show-metrics-on-a-grafana-dashboard" aria-hidden="true" class="anchor" id="show-metrics-on-a-grafana-dashboard"></a>Show metrics on a Grafana dashboard</h3>
 <ul>
 <li>
@@ -417,7 +417,7 @@ scrape_configs:
 <p>Follow Creating a Prometheus graph. Alternatively, pre-built dashboards for .NET metrics are available to download at .NET team dashboards @ grafana.com. Downloaded dashboard JSON can be imported into Grafana.</p>
 </li>
 </ul>
-<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/dashboard-screenshot.png?view=aspnetcore-8.0" alt="dashboard-screenshot2!" title="dashboard-screenshot2" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/dashboard-screenshot.png?view=aspnetcore-8.0" alt="dashboard-screenshot2!" title="dashboard-screenshot2" /></p>
 <h2><a href="#test-metrics-in-aspnet-core-apps" aria-hidden="true" class="anchor" id="test-metrics-in-aspnet-core-apps"></a>Test metrics in ASP.NET Core apps</h2>
 <p>It's possible to test metrics in ASP.NET Core apps. One way to do that is collect and assert metrics values in ASP.NET Core integration tests using <code>MetricCollector&lt;T&gt;</code>.</p>
 <pre><code class="language-csharp">public class BasicTests : IClassFixture&lt;WebApplicationFactory&lt;Program&gt;&gt;

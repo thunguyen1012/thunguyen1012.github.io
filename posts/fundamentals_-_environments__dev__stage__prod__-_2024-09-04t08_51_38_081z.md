@@ -152,7 +152,7 @@ info: Microsoft.Hosting.Lifetime[0]
 
  - ```IIS Express```: The "commandName" key has the value "IISExpress", therefore, ```IISExpress``` is the web server.
 
-![IIS Express launch on menu!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/environments/_static/iisx2.png?view=aspnetcore-8.0 "IIS Express launch on menu")
+![IIS Express launch on menu!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/_static/iisx2.png?view=aspnetcore-8.0 "IIS Express launch on menu")
 
  - ```IISExpress``` : Launches ```IIS Express```.
 
@@ -160,7 +160,7 @@ info: Microsoft.Hosting.Lifetime[0]
 
  - ```Project``` : Launches Kestrel.
 
-![Project Properties Setting Environment variables!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/environments/_static/launch-profiles.png?view=aspnetcore-8.0 "Project Properties Setting Environment variables")
+![Project Properties Setting Environment variables!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/_static/launch-profiles.png?view=aspnetcore-8.0 "Project Properties Setting Environment variables")
 
 ```json
 {
@@ -288,9 +288,9 @@ dotnet run --no-launch-profile
 
  - Open the Control Panel > System > Advanced system settings and add or edit the ```ASPNETCORE_ENVIRONMENT``` value:
 
-![System Advanced Properties!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/environments/_static/systemsetting_environment.png?view=aspnetcore-8.0 "System Advanced Properties")
+![System Advanced Properties!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/_static/systemsetting_environment.png?view=aspnetcore-8.0 "System Advanced Properties")
 
-![ASPNET Core Environment Variable!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/environments/_static/windows_aspnetcore_environment.png?view=aspnetcore-8.0 "ASPNET Core Environment Variable")
+![ASPNET Core Environment Variable!](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments/_static/windows_aspnetcore_environment.png?view=aspnetcore-8.0 "ASPNET Core Environment Variable")
 
  - Open an administrative command prompt and use the ```setx``` command or open an administrative PowerShell command prompt and use ```[Environment]::SetEnvironmentVariable```:
 

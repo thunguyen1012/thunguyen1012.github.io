@@ -281,7 +281,7 @@ Navigate to the sample app. The browser displays Hello OpenTelemetry! ticks:<3di
 
 Append ```/metrics``` to the URL to view the metrics endpoint. The browser displays the metrics being collected:
 
-![metrics 2!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/metrics.png?view=aspnetcore-8.0 "metrics 2")
+![metrics 2!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/metrics.png?view=aspnetcore-8.0 "metrics 2")
 
 ### Set up and configure Prometheus
 
@@ -335,22 +335,22 @@ In the preceding highlighted YAML, replace ```5045``` with the port number that 
 - Confirm that OpenTelemetryTest is in the UP state in the Status > Targets page of the Prometheus web portal.
 
 
-![Prometheus status!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/prometheus_status.png?view=aspnetcore-8.0 "Prometheus status")
+![Prometheus status!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/prometheus_status.png?view=aspnetcore-8.0 "Prometheus status")
 
 Select the Open metric explorer icon to see available metrics:
 
 
-![Prometheus open_metric_exp!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/open_metric_exp.png?view=aspnetcore-8.0 "Prometheus open_metric_exp")
+![Prometheus open_metric_exp!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/open_metric_exp.png?view=aspnetcore-8.0 "Prometheus open_metric_exp")
 
 Enter counter category such as ```http_``` in the Expression input box to see the available metrics:
 
 
-![available metrics!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/metrics2.png?view=aspnetcore-8.0 "available metrics")
+![available metrics!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/metrics2.png?view=aspnetcore-8.0 "available metrics")
 
 Alternatively, enter counter category such as ```kestrel``` in the Expression input box to see the available metrics:
 
 
-![Prometheus kestrel!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/kestrel.png?view=aspnetcore-8.0 "Prometheus kestrel")
+![Prometheus kestrel!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/kestrel.png?view=aspnetcore-8.0 "Prometheus kestrel")
 
 ### Show metrics on a Grafana dashboard
 
@@ -359,7 +359,7 @@ Alternatively, enter counter category such as ```kestrel``` in the Expression in
 - Follow Creating a Prometheus graph. Alternatively, pre-built dashboards for .NET metrics are available to download at .NET team dashboards @ grafana.com. Downloaded dashboard JSON can be imported into Grafana.
 
 
-![dashboard-screenshot2!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/metrics/static/dashboard-screenshot.png?view=aspnetcore-8.0 "dashboard-screenshot2")
+![dashboard-screenshot2!](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/metrics/static/dashboard-screenshot.png?view=aspnetcore-8.0 "dashboard-screenshot2")
 
 ## Test metrics in ASP.NET Core apps
 
