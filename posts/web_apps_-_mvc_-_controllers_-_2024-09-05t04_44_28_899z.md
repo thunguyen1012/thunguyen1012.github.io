@@ -3,13 +3,11 @@ title: Web apps - MVC - Controllers
 published: true
 date: 2024-09-05 04:44:28
 tags: Summary, AspNetCore
-description: By Steve Smith and Scott Addie
+description:
 image:
 ---
 
 ## In this article
-
-By Steve Smith and Scott Addie
 
 Controllers, actions, and action results are a fundamental part of how developers build apps using ASP.NET Core MVC.
 

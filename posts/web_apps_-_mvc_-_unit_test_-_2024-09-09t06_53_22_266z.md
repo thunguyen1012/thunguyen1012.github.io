@@ -9,8 +9,6 @@ image:
 
 ## In this article
 
-By Steve Smith
-
 ## Unit testing controllers
 
 ```csharp
