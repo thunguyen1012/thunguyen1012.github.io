@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - MVC - Controllers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='By Steve Smith and Scott Addie'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - MVC - Controllers</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>By Steve Smith and Scott Addie</p>
+<p>Controllers, actions, and action results are a fundamental part of how developers build apps using ASP.NET Core MVC.</p>
+<h2><a href="#what-is-a-controller" aria-hidden="true" class="anchor" id="what-is-a-controller"></a>What is a <code>Controller</code>?</h2>
+<p>A controller is used to define and group a set of actions. An action (or action method) is a method on a controller which handles requests. Controllers logically group similar actions together. This aggregation of actions allows common sets of rules, such as routing, caching, and authorization, to be applied collectively. Requests are mapped to actions through routing. Controllers are activated and disposed on a per request basis.</p>
+<p>By convention, controller classes:</p>
+<ul>
+<li>
+<p>Reside in the project's root-level Controllers folder.</p>
+</li>
+<li>
+<p>Inherit from <code>Microsoft.AspNetCore.Mvc.Controller</code>.</p>
+</li>
+</ul>
+<p>A controller is an instantiable class, usually public, in which at least one of the following conditions is true:</p>
+<ul>
+<li>
+<p>The class name is suffixed with <code>Controller</code>.</p>
+</li>
+<li>
+<p>The class inherits from a class whose name is suffixed with <code>Controller</code>.</p>
+</li>
+<li>
+<p>The <code>[Controller]</code> attribute is applied to the class.</p>
+</li>
+</ul>
+<p>A controller class must not have an associated <code>[NonController]</code> attribute.</p>
+<p>Controllers should follow the Explicit Dependencies Principle. There are a couple of approaches to implementing this principle. If multiple controller actions require the same service, consider using constructor injection to request those dependencies. If the service is needed by only a single action method, consider using Action Injection to request the dependency.</p>
+<p>Within the Model-View-Controller pattern, a controller is responsible for the initial processing of the request and instantiation of the model. Generally, business decisions should be performed within the model.</p>
+<p>The ASP.NET Core MVC <code>Controller</code> is a component of the ASP.NET Core framework that implements the following functions:</p>
+<p>A controller is a piece of software that handles requests for data.</p>
+<h2><a href="#defining-actions" aria-hidden="true" class="anchor" id="defining-actions"></a>Defining Actions</h2>
+<p>Public methods on a controller, except those with the <code>[NonAction]</code> attribute, are actions. Parameters on actions are bound to request data and are validated using model binding. Model validation occurs for everything that's model-bound. The <code>ModelState.IsValid</code> property value indicates whether model binding and validation succeeded.</p>
+<p>Action methods are used to map business actions to an application state.</p>
+<p>Actions can return anything, but frequently return an instance of <code>IActionResult</code> (or <code>Task&lt;IActionResult&gt;</code> for async methods) that produces a response. The action method is responsible for choosing what kind of response. The action result does the responding.</p>
+<h3><a href="#controller-helper-methods" aria-hidden="true" class="anchor" id="controller-helper-methods"></a><code>Controller</code> Helper Methods</h3>
+<p>Controllers usually inherit from <code>Controller</code>, although this isn't required. Deriving from <code>Controller</code> provides access to three categories of helper methods:</p>
+<h4><a href="#1-methods-resulting-in-an-empty-response-body" aria-hidden="true" class="anchor" id="1-methods-resulting-in-an-empty-response-body"></a>1. Methods resulting in an empty response body</h4>
+<p>No <code>Content-Type</code> HTTP response header is included, since the response body lacks content to describe.</p>
+<p>There are two result types within this category: <code>Redirect</code> and HTTP Status Code.</p>
+<ul>
+<li>
+<p>HTTP Status Code
+This type returns an HTTP status code. A couple of helper methods of this type are <code>BadRequest</code>, <code>NotFound</code>, and <code>Ok</code>. For example, return BadRequest(); produces a 400 status code when executed. When methods such as <code>BadRequest</code>, <code>NotFound</code>, and <code>Ok</code> are overloaded, they no longer qualify as HTTP Status Code responders, since content negotiation is taking place.</p>
+</li>
+<li>
+<p><code>Redirect</code>
+This type returns a redirect to an action or destination (using <code>Redirect</code>, <code>LocalRedirect</code>, <code>RedirectToAction</code>, or <code>RedirectToRoute</code>). For example, return RedirectToAction(&quot;Complete&quot;, new {id = 123}); redirects to <code>Complete</code>, passing an anonymous <code>object</code>.
+The <code>Redirect</code> result type differs from the HTTP Status Code type primarily in the addition of a <code>Location</code> HTTP response header.</p>
+</li>
+</ul>
+<h4><a href="#2-methods-resulting-in-a-non-empty-response-body-with-a-predefined-content-type" aria-hidden="true" class="anchor" id="2-methods-resulting-in-a-non-empty-response-body-with-a-predefined-content-type"></a>2. Methods resulting in a non-empty response body with a predefined content type</h4>
+<p>Most helper methods in this category include a <code>ContentType</code> property, allowing you to set the <code>Content-Type</code> response header to describe the response body.</p>
+<p>There are two result types within this category: View and Formatted Response.</p>
+<ul>
+<li>
+<p>View
+This type returns a view which uses a model to render HTML. For example, return View(customer); passes a model to the view for data-binding.</p>
+</li>
+<li>
+<p>Formatted Response
+This type returns JSON or a similar data exchange format to represent an <code>object</code> in a specific manner. For example, return Json(customer); serializes the provided <code>object</code> into JSON format.
+Other common methods of this type include <code>File</code> and <code>PhysicalFile</code>. For example, return PhysicalFile(customerFilePath, &quot;text/xml&quot;); returns PhysicalFileResult.</p>
+</li>
+</ul>
+<h4><a href="#3-methods-resulting-in-a-non-empty-response-body-formatted-in-a-content-type-negotiated-with-the-client" aria-hidden="true" class="anchor" id="3-methods-resulting-in-a-non-empty-response-body-formatted-in-a-content-type-negotiated-with-the-client"></a>3. Methods resulting in a non-empty response body formatted in a content type negotiated with the client</h4>
+<p>This category is better known as Content Negotiation. Content negotiation applies whenever an action returns an ObjectResult type or something other than an <code>IActionResult</code> implementation. An action that returns a non-IActionResult implementation (for example, <code>object</code>) also returns a Formatted Response.</p>
+<p>Some helper methods of this type include <code>BadRequest</code>, <code>CreatedAtRoute</code>, and <code>Ok</code>. Examples of these methods include return BadRequest(modelState);, return CreatedAtRoute(&quot;routename&quot;, values, newobject);, and return Ok(value);, respectively. Note that <code>BadRequest</code> and <code>Ok</code> perform content negotiation only when passed a value; without being passed a value, they instead serve as HTTP Status Code result types. The <code>CreatedAtRoute</code> method, on the other hand, always performs content negotiation since its overloads all require that a value be passed.</p>
+<h3><a href="#cross-cutting-concerns" aria-hidden="true" class="anchor" id="cross-cutting-concerns"></a>Cross-Cutting Concerns</h3>
+<p>Cross-cutting is a problem when developing applications.</p>
+<p>Most filter attributes, such as <code>[Authorize]</code>, can be applied at the controller or action level depending upon the desired level of granularity.</p>
+<p>Error handling and response caching are often cross-cutting concerns:</p>
+<ul>
+<li>
+<p>Handle errors</p>
+</li>
+<li>
+<p>Response Caching</p>
+</li>
+</ul>
+<p>Many cross-cutting concerns can be handled using filters or custom middleware.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/actions?view=aspnetcore-8.0">Handle requests with controllers in ASP.NET Core MVC</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

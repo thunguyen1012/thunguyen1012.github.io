@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Make HTTP requests | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Make HTTP requests</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Provides a central location for naming and configuring logical <code>HttpClient</code> instances. For example, a client named  github could be registered and configured to access GitHub. A default client can be registered for general access.</p>
+</li>
+<li>
+<p>Codifies the concept of outgoing middleware via delegating handlers in <code>HttpClient</code>. Provides extensions for Polly-based middleware to take advantage of delegating handlers in <code>HttpClient</code>.</p>
+</li>
+<li>
+<p>Manages the pooling and lifetime of underlying <code>HttpClientMessageHandler</code> instances. Automatic management avoids common DNS (Domain Name System) problems that occur when manually managing <code>HttpClient</code> lifetimes.</p>
+</li>
+<li>
+<p>Adds a configurable logging experience (via <code>ILogger</code>) for all requests sent through clients created by the factory.</p>
+</li>
+</ul>
+<h2><a href="#consumption-patterns" aria-hidden="true" class="anchor" id="consumption-patterns"></a>Consumption patterns</h2>
+<ul>
+<li>
+<p>Basic usage</p>
+</li>
+<li>
+<p>Named clients</p>
+</li>
+<li>
+<p>Typed clients</p>
+</li>
+<li>
+<p>Generated clients</p>
+</li>
+</ul>
+<h3><a href="#basic-usage" aria-hidden="true" class="anchor" id="basic-usage"></a>Basic usage</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddHttpClient();
+</code></pre>
+<pre><code class="language-csharp">public class BasicModel : PageModel
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public BasicModel(IHttpClientFactory httpClientFactory) =&gt;
+        _httpClientFactory = httpClientFactory;
+
+    public IEnumerable&lt;GitHubBranch&gt;? GitHubBranches { get; set; }
+
+    public async Task OnGet()
+    {
+        var httpRequestMessage = new HttpRequestMessage(
+            HttpMethod.Get,
+            &quot;https://api.github.com/repos/dotnet/AspNetCore.Docs/branches&quot;)
+        {
+            Headers =
+            {
+                { HeaderNames.Accept, &quot;application/vnd.github.v3+json&quot; },
+                { HeaderNames.UserAgent, &quot;HttpRequestsSample&quot; }
+            }
+        };
+
+        var httpClient = _httpClientFactory.CreateClient();
+        var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
+
+        if (httpResponseMessage.IsSuccessStatusCode)
+        {
+            using var contentStream =
+                await httpResponseMessage.Content.ReadAsStreamAsync();
+            
+            GitHubBranches = await JsonSerializer.DeserializeAsync
+                &lt;IEnumerable&lt;GitHubBranch&gt;&gt;(contentStream);
+        }
+    }
+}
+</code></pre>
+<h3><a href="#named-clients" aria-hidden="true" class="anchor" id="named-clients"></a>Named clients</h3>
+<ul>
+<li>
+<p>The app requires many distinct uses of <code>HttpClient</code>.</p>
+</li>
+<li>
+<p>Many HttpClients have different configuration.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddHttpClient(&quot;GitHub&quot;, httpClient =&gt;
+{
+    httpClient.BaseAddress = new Uri(&quot;https://api.github.com/&quot;);
+
+    // using Microsoft.Net.Http.Headers;
+    // The GitHub API requires two headers.
+    httpClient.DefaultRequestHeaders.Add(
+        HeaderNames.Accept, &quot;application/vnd.github.v3+json&quot;);
+    httpClient.DefaultRequestHeaders.Add(
+        HeaderNames.UserAgent, &quot;HttpRequestsSample&quot;);
+});
+</code></pre>
+<ul>
+<li>
+<p>The base address <a href="https://api.github.com/">https://api.github.com/</a>.</p>
+</li>
+<li>
+<p>Two headers required to work with the GitHub API.</p>
+</li>
+</ul>
+<h4><a href="#createclient" aria-hidden="true" class="anchor" id="createclient"></a><code>CreateClient</code></h4>
+<ul>
+<li>
+<p>A new instance of <code>HttpClient</code> is created.</p>
+</li>
+<li>
+<p>The configuration action is called.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class NamedClientModel : PageModel
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public NamedClientModel(IHttpClientFactory httpClientFactory) =&gt;
+        _httpClientFactory = httpClientFactory;
+
+    public IEnumerable&lt;GitHubBranch&gt;? GitHubBranches { get; set; }
+
+    public async Task OnGet()
+    {
+        var httpClient = _httpClientFactory.CreateClient(&quot;GitHub&quot;);
+        var httpResponseMessage = await httpClient.GetAsync(
+            &quot;repos/dotnet/AspNetCore.Docs/branches&quot;);
+
+        if (httpResponseMessage.IsSuccessStatusCode)
+        {
+            using var contentStream =
+                await httpResponseMessage.Content.ReadAsStreamAsync();
+            
+            GitHubBranches = await JsonSerializer.DeserializeAsync
+                &lt;IEnumerable&lt;GitHubBranch&gt;&gt;(contentStream);
+        }
+    }
+}
+</code></pre>
+<h3><a href="#typed-clients" aria-hidden="true" class="anchor" id="typed-clients"></a>Typed clients</h3>
+<ul>
+<li>
+<p>Provide the same capabilities as named clients without the need to use strings as keys.</p>
+</li>
+<li>
+<p>Provides IntelliSense and compiler help when consuming clients.</p>
+</li>
+<li>
+<p>Provide a single location to configure and interact with a particular <code>HttpClient</code>. For example, a single typed client might be used:</p>
+<ul>
+<li>
+<p>For a single backend endpoint.</p>
+</li>
+<li>
+<p>To encapsulate all logic dealing with the endpoint.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Work with DI and can be injected where required in the app.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class GitHubService
+{
+    private readonly HttpClient _httpClient;
+
+    public GitHubService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+
+        _httpClient.BaseAddress = new Uri(&quot;https://api.github.com/&quot;);
+
+        // using Microsoft.Net.Http.Headers;
+        // The GitHub API requires two headers.
+        _httpClient.DefaultRequestHeaders.Add(
+            HeaderNames.Accept, &quot;application/vnd.github.v3+json&quot;);
+        _httpClient.DefaultRequestHeaders.Add(
+            HeaderNames.UserAgent, &quot;HttpRequestsSample&quot;);
+    }
+
+    public async Task&lt;IEnumerable&lt;GitHubBranch&gt;?&gt; GetAspNetCoreDocsBranchesAsync() =&gt;
+        await _httpClient.GetFromJsonAsync&lt;IEnumerable&lt;GitHubBranch&gt;&gt;(
+            &quot;repos/dotnet/AspNetCore.Docs/branches&quot;);
+}
+</code></pre>
+<ul>
+<li>
+<p>The configuration is moved into the typed client.</p>
+</li>
+<li>
+<p>The provided <code>HttpClient</code> instance is stored as a private field.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddHttpClient&lt;GitHubService&gt;();
+</code></pre>
+<ul>
+<li>
+<p>Create an instance of <code>HttpClient</code>.</p>
+</li>
+<li>
+<p>Create an instance of <code>GitHubService</code>, passing in the instance of <code>HttpClient</code> to its constructor.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class TypedClientModel : PageModel
+{
+    private readonly GitHubService _gitHubService;
+
+    public TypedClientModel(GitHubService gitHubService) =&gt;
+        _gitHubService = gitHubService;
+
+    public IEnumerable&lt;GitHubBranch&gt;? GitHubBranches { get; set; }
+
+    public async Task OnGet()
+    {
+        try
+        {
+            GitHubBranches = await _gitHubService.GetAspNetCoreDocsBranchesAsync();
+        }
+        catch (HttpRequestException)
+        {
+            // ...
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddHttpClient&lt;GitHubService&gt;(httpClient =&gt;
+{
+    httpClient.BaseAddress = new Uri(&quot;https://api.github.com/&quot;);
+
+    // ...
+});
+</code></pre>
+<h3><a href="#generated-clients" aria-hidden="true" class="anchor" id="generated-clients"></a>Generated clients</h3>
+<pre><code class="language-csharp">public interface IGitHubClient
+{
+    [Get(&quot;/repos/dotnet/AspNetCore.Docs/branches&quot;)]
+    Task&lt;IEnumerable&lt;GitHubBranch&gt;&gt; GetAspNetCoreDocsBranchesAsync();
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddRefitClient&lt;IGitHubClient&gt;()
+    .ConfigureHttpClient(httpClient =&gt;
+    {
+        httpClient.BaseAddress = new Uri(&quot;https://api.github.com/&quot;);
+
+        // using Microsoft.Net.Http.Headers;
+        // The GitHub API requires two headers.
+        httpClient.DefaultRequestHeaders.Add(
+            HeaderNames.Accept, &quot;application/vnd.github.v3+json&quot;);
+        httpClient.DefaultRequestHeaders.Add(
+            HeaderNames.UserAgent, &quot;HttpRequestsSample&quot;);
+    });
+</code></pre>
+<pre><code class="language-csharp">public class RefitModel : PageModel
+{
+    private readonly IGitHubClient _gitHubClient;
+
+    public RefitModel(IGitHubClient gitHubClient) =&gt;
+        _gitHubClient = gitHubClient;
+
+    public IEnumerable&lt;GitHubBranch&gt;? GitHubBranches { get; set; }
+
+    public async Task OnGet()
+    {
+        try
+        {
+            GitHubBranches = await _gitHubClient.GetAspNetCoreDocsBranchesAsync();
+        }
+        catch (ApiException)
+        {
+            // ...
+        }
+    }
+}
+</code></pre>
+<h2><a href="#make-post-put,-and-delete-requests" aria-hidden="true" class="anchor" id="make-post-put,-and-delete-requests"></a>Make POST, PUT, and DELETE requests</h2>
+<ul>
+<li>
+<p>POST</p>
+</li>
+<li>
+<p>PUT</p>
+</li>
+<li>
+<p>DELETE</p>
+</li>
+<li>
+<p>PATCH</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public async Task CreateItemAsync(TodoItem todoItem)
+{
+    var todoItemJson = new StringContent(
+        JsonSerializer.Serialize(todoItem),
+        Encoding.UTF8,
+        Application.Json); // using static System.Net.Mime.MediaTypeNames;
+
+    using var httpResponseMessage =
+        await _httpClient.PostAsync(&quot;/api/TodoItems&quot;, todoItemJson);
+
+    httpResponseMessage.EnsureSuccessStatusCode();
+}
+</code></pre>
+<ul>
+<li>
+<p>Serializes the <code>TodoItem</code> parameter to JSON using <code>System.Text.Json</code>.</p>
+</li>
+<li>
+<p>Creates an instance of <code>StringContent</code> to package the serialized JSON for sending in the HTTP request's body.</p>
+</li>
+<li>
+<p>Calls <code>PostAsync</code> to send the JSON content to the specified URL. This is a relative URL that gets added to the <code>HttpClient</code>.BaseAddress.</p>
+</li>
+<li>
+<p>Calls <code>EnsureSuccessStatusCode</code> to throw an exception if the response status code doesn't indicate success.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public async Task SaveItemAsync(TodoItem todoItem)
+{
+    var todoItemJson = new StringContent(
+        JsonSerializer.Serialize(todoItem),
+        Encoding.UTF8,
+        Application.Json);
+
+    using var httpResponseMessage =
+        await _httpClient.PutAsync($&quot;/api/TodoItems/{todoItem.Id}&quot;, todoItemJson);
+
+    httpResponseMessage.EnsureSuccessStatusCode();
+}
+</code></pre>
+<pre><code class="language-csharp">public async Task DeleteItemAsync(long itemId)
+{
+    using var httpResponseMessage =
+        await _httpClient.DeleteAsync($&quot;/api/TodoItems/{itemId}&quot;);
+
+    httpResponseMessage.EnsureSuccessStatusCode();
+}
+</code></pre>
+<h2><a href="#outgoing-request-middleware" aria-hidden="true" class="anchor" id="outgoing-request-middleware"></a>Outgoing request middleware</h2>
+<ul>
+<li>
+<p>Simplifies defining the handlers to apply for each named client.</p>
+</li>
+<li>
+<p>Supports registration and chaining of multiple handlers to build an outgoing request middleware pipeline. Each of these handlers is able to perform work before and after the   outgoing request. This pattern:</p>
+<ul>
+<li>
+<p>Is similar to the inbound middleware pipeline in ASP.NET Core.</p>
+</li>
+<li>
+<p>Provides a mechanism to manage cross-cutting concerns around HTTP requests, such as:</p>
+<ul>
+<li>
+<p>caching</p>
+</li>
+<li>
+<p>error handling</p>
+</li>
+<li>
+<p>serialization</p>
+</li>
+<li>
+<p>logging</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Derive from <code>DelegatingHandler</code>.</p>
+</li>
+<li>
+<p>Override <code>SendAsync</code>. Execute code before passing the request to the next handler in the pipeline:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class ValidateHeaderHandler : DelegatingHandler
+{
+    protected override async Task&lt;HttpResponseMessage&gt; SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (!request.Headers.Contains(&quot;X-API-KEY&quot;))
+        {
+            return new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(
+                    &quot;The API key header X-API-KEY is required.&quot;)
+            };
+        }
+
+        return await base.SendAsync(request, cancellationToken);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddTransient&lt;ValidateHeaderHandler&gt;();
+
+builder.Services.AddHttpClient(&quot;HttpMessageHandler&quot;)
+    .AddHttpMessageHandler&lt;ValidateHeaderHandler&gt;();
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddTransient&lt;SampleHandler1&gt;();
+builder.Services.AddTransient&lt;SampleHandler2&gt;();
+
+builder.Services.AddHttpClient(&quot;MultipleHttpMessageHandlers&quot;)
+    .AddHttpMessageHandler&lt;SampleHandler1&gt;()
+    .AddHttpMessageHandler&lt;SampleHandler2&gt;();
+</code></pre>
+<h3><a href="#use-di-in-outgoing-request-middleware" aria-hidden="true" class="anchor" id="use-di-in-outgoing-request-middleware"></a>Use DI in outgoing request middleware</h3>
+<pre><code class="language-csharp">public interface IOperationScoped
+{
+    string OperationId { get; }
+}
+
+public class OperationScoped : IOperationScoped
+{
+    public string OperationId { get; } = Guid.NewGuid().ToString()[^4..];
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddScoped&lt;IOperationScoped, OperationScoped&gt;();
+</code></pre>
+<pre><code class="language-csharp">public class OperationHandler : DelegatingHandler
+{
+    private readonly IOperationScoped _operationScoped;
+
+    public OperationHandler(IOperationScoped operationScoped) =&gt;
+        _operationScoped = operationScoped;
+
+    protected override async Task&lt;HttpResponseMessage&gt; SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        request.Headers.Add(&quot;X-OPERATION-ID&quot;, _operationScoped.OperationId);
+
+        return await base.SendAsync(request, cancellationToken);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Pass data into the handler using <code>HttpRequestMessage.Options</code>.</p>
+</li>
+<li>
+<p>Use <code>IHttpContextAccessor</code> to access the current request.</p>
+</li>
+<li>
+<p>Create a custom <code>AsyncLocal&lt;T&gt;</code> storage object to pass the data.</p>
+</li>
+</ul>
+<h2><a href="#use-polly-based-handlers" aria-hidden="true" class="anchor" id="use-polly-based-handlers"></a>Use Polly-based handlers</h2>
+<h3><a href="#handle-transient-faults" aria-hidden="true" class="anchor" id="handle-transient-faults"></a>Handle transient faults</h3>
+<ul>
+<li>
+<p>HttpRequestException</p>
+</li>
+<li>
+<p>HTTP 5xx</p>
+</li>
+<li>
+<p>HTTP 408</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddHttpClient(&quot;PollyWaitAndRetry&quot;)
+    .AddTransientHttpErrorPolicy(policyBuilder =&gt;
+        policyBuilder.WaitAndRetryAsync(
+            3, retryNumber =&gt; TimeSpan.FromMilliseconds(600)));
+</code></pre>
+<h3><a href="#dynamically-select-policies" aria-hidden="true" class="anchor" id="dynamically-select-policies"></a>Dynamically select policies</h3>
+<pre><code class="language-csharp">var timeoutPolicy = Policy.TimeoutAsync&lt;HttpResponseMessage&gt;(
+    TimeSpan.FromSeconds(10));
+var longTimeoutPolicy = Policy.TimeoutAsync&lt;HttpResponseMessage&gt;(
+    TimeSpan.FromSeconds(30));
+
+builder.Services.AddHttpClient(&quot;PollyDynamic&quot;)
+    .AddPolicyHandler(httpRequestMessage =&gt;
+        httpRequestMessage.Method == HttpMethod.Get ? timeoutPolicy : longTimeoutPolicy);
+</code></pre>
+<h3><a href="#add-multiple-polly-handlers" aria-hidden="true" class="anchor" id="add-multiple-polly-handlers"></a>Add multiple Polly handlers</h3>
+<pre><code class="language-csharp">builder.Services.AddHttpClient(&quot;PollyMultiple&quot;)
+    .AddTransientHttpErrorPolicy(policyBuilder =&gt;
+        policyBuilder.RetryAsync(3))
+    .AddTransientHttpErrorPolicy(policyBuilder =&gt;
+        policyBuilder.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
+</code></pre>
+<ul>
+<li>
+<p>Two handlers are added.</p>
+</li>
+<li>
+<p>The first handler uses <code>AddTransientHttpErrorPolicy</code> to add a retry policy. Failed requests are retried up to three times.</p>
+</li>
+<li>
+<p>The second <code>AddTransientHttpErrorPolicy</code> call adds a circuit breaker policy. Further external requests are blocked for 30 seconds if 5 failed attempts occur sequentially. Circuit breaker policies are stateful. All calls through this client share the same circuit state.</p>
+</li>
+</ul>
+<h3><a href="#add-policies-from-the-polly-registry" aria-hidden="true" class="anchor" id="add-policies-from-the-polly-registry"></a>Add policies from the Polly registry</h3>
+<pre><code class="language-csharp">var timeoutPolicy = Policy.TimeoutAsync&lt;HttpResponseMessage&gt;(
+    TimeSpan.FromSeconds(10));
+var longTimeoutPolicy = Policy.TimeoutAsync&lt;HttpResponseMessage&gt;(
+    TimeSpan.FromSeconds(30));
+
+var policyRegistry = builder.Services.AddPolicyRegistry();
+
+policyRegistry.Add(&quot;Regular&quot;, timeoutPolicy);
+policyRegistry.Add(&quot;Long&quot;, longTimeoutPolicy);
+
+builder.Services.AddHttpClient(&quot;PollyRegistryRegular&quot;)
+    .AddPolicyHandlerFromRegistry(&quot;Regular&quot;);
+
+builder.Services.AddHttpClient(&quot;PollyRegistryLong&quot;)
+    .AddPolicyHandlerFromRegistry(&quot;Long&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Two policies, <code>Regular</code> and <code>Long</code>, are added to the Polly registry.</p>
+</li>
+<li>
+<p><code>AddPolicyHandlerFromRegistry</code> configures individual named clients to use these policies from the Polly registry.</p>
+</li>
+</ul>
+<h2><a href="#httpclient-and-lifetime-management" aria-hidden="true" class="anchor" id="httpclient-and-lifetime-management"></a><code>HttpClient</code> and lifetime management</h2>
+<pre><code class="language-csharp">builder.Services.AddHttpClient(&quot;HandlerLifetime&quot;)
+    .SetHandlerLifetime(TimeSpan.FromMinutes(5));
+</code></pre>
+<h3><a href="#alternatives-to-ihttpclientfactory" aria-hidden="true" class="anchor" id="alternatives-to-ihttpclientfactory"></a>Alternatives to <code>IHttpClientFactory</code></h3>
+<ul>
+<li>
+<p>Resource exhaustion problems by pooling <code>HttpMessageHandler</code> instances.</p>
+</li>
+<li>
+<p>Stale DNS problems by cycling <code>HttpMessageHandler</code> instances at regular intervals.</p>
+</li>
+<li>
+<p>Create an instance of <code>SocketsHttpHandler</code> when the app starts and use it for the life of the app.</p>
+</li>
+<li>
+<p>Configure <code>PooledConnectionLifetime</code> to an appropriate value based on DNS refresh times.</p>
+</li>
+<li>
+<p>Create <code>HttpClient</code> instances using new <code>HttpClient(handler, disposeHandler: false)</code> as needed.</p>
+</li>
+<li>
+<p>The <code>SocketsHttpHandler</code> shares connections across <code>HttpClient</code> instances. This sharing prevents socket exhaustion.</p>
+</li>
+<li>
+<p>The <code>SocketsHttpHandler</code> cycles connections according to <code>PooledConnectionLifetime</code> to avoid stale DNS problems.</p>
+</li>
+</ul>
+<h2><a href="#logging" aria-hidden="true" class="anchor" id="logging"></a>Logging</h2>
+<h2><a href="#configure-the-httpmessagehandler" aria-hidden="true" class="anchor" id="configure-the-httpmessagehandler"></a>Configure the <code>HttpMessageHandler</code></h2>
+<pre><code class="language-csharp">builder.Services.AddHttpClient(&quot;ConfiguredHttpMessageHandler&quot;)
+    .ConfigurePrimaryHttpMessageHandler(() =&gt;
+        new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            UseDefaultCredentials = true
+        });
+</code></pre>
+<h2><a href="#cookies" aria-hidden="true" class="anchor" id="cookies"></a>Cookies</h2>
+<ul>
+<li>
+<p>Disabling automatic cookie handling</p>
+</li>
+<li>
+<p>Avoiding <code>IHttpClientFactory</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddHttpClient(&quot;NoAutomaticCookies&quot;)
+    .ConfigurePrimaryHttpMessageHandler(() =&gt;
+        new HttpClientHandler
+        {
+            UseCookies = false
+        });
+</code></pre>
+<h2><a href="#use-ihttpclientfactory-in-a-console-app" aria-hidden="true" class="anchor" id="use-ihttpclientfactory-in-a-console-app"></a>Use <code>IHttpClientFactory</code> in a console app</h2>
+<ul>
+<li>
+<p><code>Microsoft.Extensions.Hosting</code></p>
+</li>
+<li>
+<p><code>Microsoft.Extensions.Http</code></p>
+</li>
+<li>
+<p><code>IHttpClientFactory</code> and <code>GitHubService</code> are registered in the Generic Host's service container.</p>
+</li>
+<li>
+<p><code>GitHubService</code> is requested from DI, which in-turn requests an instance of <code>IHttpClientFactory</code>.</p>
+</li>
+<li>
+<p><code>GitHubService</code> uses <code>IHttpClientFactory</code> to create an instance of <code>HttpClient</code>, which it uses to retrieve docs GitHub branches.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+var host = new HostBuilder()
+    .ConfigureServices(services =&gt;
+    {
+        services.AddHttpClient();
+        services.AddTransient&lt;GitHubService&gt;();
+    })
+    .Build();
+
+try
+{
+    var gitHubService = host.Services.GetRequiredService&lt;GitHubService&gt;();
+    var gitHubBranches = await gitHubService.GetAspNetCoreDocsBranchesAsync();
+
+    Console.WriteLine($&quot;{gitHubBranches?.Count() ?? 0} GitHub Branches&quot;);
+
+    if (gitHubBranches is not null)
+    {
+        foreach (var gitHubBranch in gitHubBranches)
+        {
+            Console.WriteLine($&quot;- {gitHubBranch.Name}&quot;);
+        }
+    }
+}
+catch (Exception ex)
+{
+    host.Services.GetRequiredService&lt;ILogger&lt;Program&gt;&gt;()
+        .LogError(ex, &quot;Unable to load branches from GitHub.&quot;);
+}
+
+public class GitHubService
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public GitHubService(IHttpClientFactory httpClientFactory) =&gt;
+        _httpClientFactory = httpClientFactory;
+
+    public async Task&lt;IEnumerable&lt;GitHubBranch&gt;?&gt; GetAspNetCoreDocsBranchesAsync()
+    {
+        var httpRequestMessage = new HttpRequestMessage(
+            HttpMethod.Get,
+            &quot;https://api.github.com/repos/dotnet/AspNetCore.Docs/branches&quot;)
+        {
+            Headers =
+            {
+                { &quot;Accept&quot;, &quot;application/vnd.github.v3+json&quot; },
+                { &quot;User-Agent&quot;, &quot;HttpRequestsConsoleSample&quot; }
+            }
+        };
+
+        var httpClient = _httpClientFactory.CreateClient();
+        var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
+
+        httpResponseMessage.EnsureSuccessStatusCode();
+
+        using var contentStream =
+            await httpResponseMessage.Content.ReadAsStreamAsync();
+        
+        return await JsonSerializer.DeserializeAsync
+            &lt;IEnumerable&lt;GitHubBranch&gt;&gt;(contentStream);
+    }
+}
+
+public record GitHubBranch(
+    [property: JsonPropertyName(&quot;name&quot;)] string Name);
+</code></pre>
+<h2><a href="#header-propagation-middleware" aria-hidden="true" class="anchor" id="header-propagation-middleware"></a>Header propagation middleware</h2>
+<ul>
+<li>
+<p>Install the <code>Microsoft.AspNetCore.HeaderPropagation</code> package.</p>
+</li>
+<li>
+<p>Configure the <code>HttpClient</code> and middleware pipeline in <code>Program.cs</code>:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">// Add services to the container.
+builder.Services.AddControllers();
+
+builder.Services.AddHttpClient(&quot;PropagateHeaders&quot;)
+    .AddHeaderPropagation();
+
+builder.Services.AddHeaderPropagation(options =&gt;
+{
+    options.Headers.Add(&quot;X-TraceId&quot;);
+});
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+app.UseHttpsRedirection();
+
+app.UseHeaderPropagation();
+
+app.MapControllers();
+</code></pre>
+<ul>
+<li>Make outbound requests using the configured <code>HttpClient</code> instance, which includes the added headers.</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Use HttpClientFactory to implement resilient HTTP requests</p>
+</li>
+<li>
+<p>Implement HTTP call retries with exponential backoff with <code>HttpClientFactory</code> and Polly policies</p>
+</li>
+<li>
+<p>Implement the Circuit Breaker pattern</p>
+</li>
+<li>
+<p>How to serialize and deserialize JSON in .NET</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-requests?view=aspnetcore-8.0">Make HTTP requests using <code>IHttpClientFactory</code> in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - MVC - Unit test | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - MVC - Unit test</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>By Steve Smith</p>
+<h2><a href="#unit-testing-controllers" aria-hidden="true" class="anchor" id="unit-testing-controllers"></a>Unit testing controllers</h2>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    private readonly IBrainstormSessionRepository _sessionRepository;
+
+    public HomeController(IBrainstormSessionRepository sessionRepository)
+    {
+        _sessionRepository = sessionRepository;
+    }
+
+    public async Task&lt;IActionResult&gt; Index()
+    {
+        var sessionList = await _sessionRepository.ListAsync();
+
+        var model = sessionList.Select(session =&gt; new StormSessionViewModel()
+        {
+            Id = session.Id,
+            DateCreated = session.DateCreated,
+            Name = session.Name,
+            IdeaCount = session.Ideas.Count
+        });
+
+        return View(model);
+    }
+
+    public class NewSessionModel
+    {
+        [Required]
+        public string SessionName { get; set; }
+    }
+
+    [HttpPost]
+    public async Task&lt;IActionResult&gt; Index(NewSessionModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+        else
+        {
+            await _sessionRepository.AddAsync(new BrainstormSession()
+            {
+                DateCreated = DateTimeOffset.Now,
+                Name = model.SessionName
+            });
+        }
+
+        return RedirectToAction(actionName: nameof(Index));
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Follows the Explicit Dependencies Principle.</p>
+</li>
+<li>
+<p>Expects dependency injection (DI) to provide an instance of <code>IBrainstormSessionRepository</code>.</p>
+</li>
+<li>
+<p>Can be tested with a mocked <code>IBrainstormSessionRepository</code> service using a mock object framework, such as Moq. A mocked object is a fabricated object with a predetermined set of property and method behaviors used for testing. For more information, see Introduction to integration tests.</p>
+</li>
+<li>
+<p>Mocks the <code>IBrainstormSessionRepository</code> service using the <code>GetTestSessions</code> method. <code>GetTestSessions</code> creates two mock brainstorm sessions with dates and session names.</p>
+</li>
+<li>
+<p>Executes the <code>Index</code> method.</p>
+</li>
+<li>
+<p>Makes assertions on the result returned by the method:</p>
+<ul>
+<li>
+<p>A <code>ViewResult</code> is returned.</p>
+</li>
+<li>
+<p>The <code>ViewDataDictionary.Model</code> is a <code>StormSessionViewModel</code>.</p>
+</li>
+<li>
+<p>There are two brainstorming sessions stored in the <code>ViewDataDictionary.Model</code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">[Fact]
+public async Task Index_ReturnsAViewResult_WithAListOfBrainstormSessions()
+{
+    // Arrange
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.ListAsync())
+        .ReturnsAsync(GetTestSessions());
+    var controller = new HomeController(mockRepo.Object);
+
+    // Act
+    var result = await controller.Index();
+
+    // Assert
+    var viewResult = Assert.IsType&lt;ViewResult&gt;(result);
+    var model = Assert.IsAssignableFrom&lt;IEnumerable&lt;StormSessionViewModel&gt;&gt;(
+        viewResult.ViewData.Model);
+    Assert.Equal(2, model.Count());
+}
+</code></pre>
+<pre><code class="language-csharp">private List&lt;BrainstormSession&gt; GetTestSessions()
+{
+    var sessions = new List&lt;BrainstormSession&gt;();
+    sessions.Add(new BrainstormSession()
+    {
+        DateCreated = new DateTime(2016, 7, 2),
+        Id = 1,
+        Name = &quot;Test One&quot;
+    });
+    sessions.Add(new BrainstormSession()
+    {
+        DateCreated = new DateTime(2016, 7, 1),
+        Id = 2,
+        Name = &quot;Test Two&quot;
+    });
+    return sessions;
+}
+</code></pre>
+<ul>
+<li>
+<p>When <code>ModelState.IsValid</code> is <code>false</code>, the action method returns a 400 Bad Request <code>ViewResult</code> with the appropriate data.</p>
+</li>
+<li>
+<p>When <code>ModelState.IsValid</code> is <code>true</code>:</p>
+<ul>
+<li>
+<p>The <code>Add</code> method on the repository is called.</p>
+</li>
+<li>
+<p>A <code>RedirectToActionResult</code> is returned with the correct arguments.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">[Fact]
+public async Task IndexPost_ReturnsBadRequestResult_WhenModelStateIsInvalid()
+{
+    // Arrange
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.ListAsync())
+        .ReturnsAsync(GetTestSessions());
+    var controller = new HomeController(mockRepo.Object);
+    controller.ModelState.AddModelError(&quot;SessionName&quot;, &quot;Required&quot;);
+    var newSession = new HomeController.NewSessionModel();
+
+    // Act
+    var result = await controller.Index(newSession);
+
+    // Assert
+    var badRequestResult = Assert.IsType&lt;BadRequestObjectResult&gt;(result);
+    Assert.IsType&lt;SerializableError&gt;(badRequestResult.Value);
+}
+
+[Fact]
+public async Task IndexPost_ReturnsARedirectAndAddsSession_WhenModelStateIsValid()
+{
+    // Arrange
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.AddAsync(It.IsAny&lt;BrainstormSession&gt;()))
+        .Returns(Task.CompletedTask)
+        .Verifiable();
+    var controller = new HomeController(mockRepo.Object);
+    var newSession = new HomeController.NewSessionModel()
+    {
+        SessionName = &quot;Test Name&quot;
+    };
+
+    // Act
+    var result = await controller.Index(newSession);
+
+    // Assert
+    var redirectToActionResult = Assert.IsType&lt;RedirectToActionResult&gt;(result);
+    Assert.Null(redirectToActionResult.ControllerName);
+    Assert.Equal(&quot;Index&quot;, redirectToActionResult.ActionName);
+    mockRepo.Verify();
+}
+</code></pre>
+<ul>
+<li>
+<p>A new <code>BrainstormSession</code> is added (via the repository).</p>
+</li>
+<li>
+<p>The method returns a <code>RedirectToActionResult</code> with the expected properties.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+The Moq library used in this sample makes it possible to mix verifiable, or &quot;strict&quot;, mocks with non-verifiable mocks (also called &quot;loose&quot; mocks or stubs). Learn more about customizing Mock behavior with Moq.</p>
+</blockquote>
+<pre><code class="language-csharp">public class SessionController : Controller
+{
+    private readonly IBrainstormSessionRepository _sessionRepository;
+
+    public SessionController(IBrainstormSessionRepository sessionRepository)
+    {
+        _sessionRepository = sessionRepository;
+    }
+
+    public async Task&lt;IActionResult&gt; Index(int? id)
+    {
+        if (!id.HasValue)
+        {
+            return RedirectToAction(actionName: nameof(Index), 
+                controllerName: &quot;Home&quot;);
+        }
+
+        var session = await _sessionRepository.GetByIdAsync(id.Value);
+        if (session == null)
+        {
+            return Content(&quot;Session not found.&quot;);
+        }
+
+        var viewModel = new StormSessionViewModel()
+        {
+            DateCreated = session.DateCreated,
+            Name = session.Name,
+            Id = session.Id
+        };
+
+        return View(viewModel);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[Fact]
+public async Task IndexReturnsARedirectToIndexHomeWhenIdIsNull()
+{
+    // Arrange
+    var controller = new SessionController(sessionRepository: null);
+
+    // Act
+    var result = await controller.Index(id: null);
+
+    // Assert
+    var redirectToActionResult = 
+        Assert.IsType&lt;RedirectToActionResult&gt;(result);
+    Assert.Equal(&quot;Home&quot;, redirectToActionResult.ControllerName);
+    Assert.Equal(&quot;Index&quot;, redirectToActionResult.ActionName);
+}
+
+[Fact]
+public async Task IndexReturnsContentWithSessionNotFoundWhenSessionNotFound()
+{
+    // Arrange
+    int testSessionId = 1;
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync((BrainstormSession)null);
+    var controller = new SessionController(mockRepo.Object);
+
+    // Act
+    var result = await controller.Index(testSessionId);
+
+    // Assert
+    var contentResult = Assert.IsType&lt;ContentResult&gt;(result);
+    Assert.Equal(&quot;Session not found.&quot;, contentResult.Content);
+}
+
+[Fact]
+public async Task IndexReturnsViewResultWithStormSessionViewModel()
+{
+    // Arrange
+    int testSessionId = 1;
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync(GetTestSessions().FirstOrDefault(
+            s =&gt; s.Id == testSessionId));
+    var controller = new SessionController(mockRepo.Object);
+
+    // Act
+    var result = await controller.Index(testSessionId);
+
+    // Assert
+    var viewResult = Assert.IsType&lt;ViewResult&gt;(result);
+    var model = Assert.IsType&lt;StormSessionViewModel&gt;(
+        viewResult.ViewData.Model);
+    Assert.Equal(&quot;Test One&quot;, model.Name);
+    Assert.Equal(2, model.DateCreated.Day);
+    Assert.Equal(testSessionId, model.Id);
+}
+</code></pre>
+<ul>
+<li>
+<p>A list of ideas (IdeaDTO) associated with a brainstorming session is returned by the <code>ForSession</code> method.</p>
+</li>
+<li>
+<p>The Create method adds new ideas to a session.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;forsession/{sessionId}&quot;)]
+public async Task&lt;IActionResult&gt; ForSession(int sessionId)
+{
+    var session = await _sessionRepository.GetByIdAsync(sessionId);
+    if (session == null)
+    {
+        return NotFound(sessionId);
+    }
+
+    var result = session.Ideas.Select(idea =&gt; new IdeaDTO()
+    {
+        Id = idea.Id,
+        Name = idea.Name,
+        Description = idea.Description,
+        DateCreated = idea.DateCreated
+    }).ToList();
+
+    return Ok(result);
+}
+
+[HttpPost(&quot;create&quot;)]
+public async Task&lt;IActionResult&gt; Create([FromBody]NewIdeaModel model)
+{
+    if (!ModelState.IsValid)
+    {
+        return BadRequest(ModelState);
+    }
+
+    var session = await _sessionRepository.GetByIdAsync(model.SessionId);
+    if (session == null)
+    {
+        return NotFound(model.SessionId);
+    }
+
+    var idea = new Idea()
+    {
+        DateCreated = DateTimeOffset.Now,
+        Description = model.Description,
+        Name = model.Name
+    };
+    session.AddIdea(idea);
+
+    await _sessionRepository.UpdateAsync(session);
+
+    return Ok(session);
+}
+</code></pre>
+<ul>
+<li>
+<p>Often include more data than the client requires.</p>
+</li>
+<li>
+<p>Unnecessarily couple the app's internal domain model with the publicly exposed API.</p>
+</li>
+<li>
+<p>Manually with a LINQ <code>Select</code>, as the sample app uses. For more information, see LINQ (Language Integrated Query).</p>
+</li>
+<li>
+<p>Automatically with a library, such as AutoMapper.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Fact]
+public async Task ForSession_ReturnsHttpNotFound_ForInvalidSession()
+{
+    // Arrange
+    int testSessionId = 123;
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync((BrainstormSession)null);
+    var controller = new IdeasController(mockRepo.Object);
+
+    // Act
+    var result = await controller.ForSession(testSessionId);
+
+    // Assert
+    var notFoundObjectResult = Assert.IsType&lt;NotFoundObjectResult&gt;(result);
+    Assert.Equal(testSessionId, notFoundObjectResult.Value);
+}
+</code></pre>
+<pre><code class="language-csharp">[Fact]
+public async Task ForSession_ReturnsIdeasForSession()
+{
+    // Arrange
+    int testSessionId = 123;
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync(GetTestSession());
+    var controller = new IdeasController(mockRepo.Object);
+
+    // Act
+    var result = await controller.ForSession(testSessionId);
+
+    // Assert
+    var okResult = Assert.IsType&lt;OkObjectResult&gt;(result);
+    var returnValue = Assert.IsType&lt;List&lt;IdeaDTO&gt;&gt;(okResult.Value);
+    var idea = returnValue.FirstOrDefault();
+    Assert.Equal(&quot;One&quot;, idea.Name);
+}
+</code></pre>
+<pre><code class="language-csharp">[Fact]
+public async Task Create_ReturnsBadRequest_GivenInvalidModel()
+{
+    // Arrange &amp; Act
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    var controller = new IdeasController(mockRepo.Object);
+    controller.ModelState.AddModelError(&quot;error&quot;, &quot;some error&quot;);
+
+    // Act
+    var result = await controller.Create(model: null);
+
+    // Assert
+    Assert.IsType&lt;BadRequestObjectResult&gt;(result);
+}
+</code></pre>
+<pre><code class="language-csharp">[Fact]
+public async Task Create_ReturnsHttpNotFound_ForInvalidSession()
+{
+    // Arrange
+    int testSessionId = 123;
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync((BrainstormSession)null);
+    var controller = new IdeasController(mockRepo.Object);
+
+    // Act
+    var result = await controller.Create(new NewIdeaModel());
+
+    // Assert
+    Assert.IsType&lt;NotFoundObjectResult&gt;(result);
+}
+</code></pre>
+<pre><code class="language-csharp">[Fact]
+public async Task Create_ReturnsNewlyCreatedIdeaForSession()
+{
+    // Arrange
+    int testSessionId = 123;
+    string testName = &quot;test name&quot;;
+    string testDescription = &quot;test description&quot;;
+    var testSession = GetTestSession();
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync(testSession);
+    var controller = new IdeasController(mockRepo.Object);
+
+    var newIdea = new NewIdeaModel()
+    {
+        Description = testDescription,
+        Name = testName,
+        SessionId = testSessionId
+    };
+    mockRepo.Setup(repo =&gt; repo.UpdateAsync(testSession))
+        .Returns(Task.CompletedTask)
+        .Verifiable();
+
+    // Act
+    var result = await controller.Create(newIdea);
+
+    // Assert
+    var okResult = Assert.IsType&lt;OkObjectResult&gt;(result);
+    var returnSession = Assert.IsType&lt;BrainstormSession&gt;(okResult.Value);
+    mockRepo.Verify();
+    Assert.Equal(2, returnSession.Ideas.Count());
+    Assert.Equal(testName, returnSession.Ideas.LastOrDefault().Name);
+    Assert.Equal(testDescription, returnSession.Ideas.LastOrDefault().Description);
+}
+</code></pre>
+<h2><a href="#test-actionresultt>" aria-hidden="true" class="anchor" id="test-actionresultt>"></a>Test <code>ActionResult&lt;T&gt;</code></h2>
+<pre><code class="language-csharp">[HttpGet(&quot;forsessionactionresult/{sessionId}&quot;)]
+[ProducesResponseType(200)]
+[ProducesResponseType(404)]
+public async Task&lt;ActionResult&lt;List&lt;IdeaDTO&gt;&gt;&gt; ForSessionActionResult(int sessionId)
+{
+    var session = await _sessionRepository.GetByIdAsync(sessionId);
+
+    if (session == null)
+    {
+        return NotFound(sessionId);
+    }
+
+    var result = session.Ideas.Select(idea =&gt; new IdeaDTO()
+    {
+        Id = idea.Id,
+        Name = idea.Name,
+        Description = idea.Description,
+        DateCreated = idea.DateCreated
+    }).ToList();
+
+    return result;
+}
+</code></pre>
+<ul>
+<li>
+<p>The <code>ActionResult</code> type is <code>ActionResult&lt;List&lt;IdeaDTO&gt;&gt;</code>.</p>
+</li>
+<li>
+<p>The Result is a NotFoundObjectResult.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Fact]
+public async Task ForSessionActionResult_ReturnsNotFoundObjectResultForNonexistentSession()
+{
+    // Arrange
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    var controller = new IdeasController(mockRepo.Object);
+    var nonExistentSessionId = 999;
+
+    // Act
+    var result = await controller.ForSessionActionResult(nonExistentSessionId);
+
+    // Assert
+    var actionResult = Assert.IsType&lt;ActionResult&lt;List&lt;IdeaDTO&gt;&gt;&gt;(result);
+    Assert.IsType&lt;NotFoundObjectResult&gt;(actionResult.Result);
+}
+</code></pre>
+<ul>
+<li>
+<p>An <code>ActionResult</code> with a <code>List&lt;IdeaDTO&gt;</code> type.</p>
+</li>
+<li>
+<p>The <code>ActionResult&lt;T&gt;.Value</code> is a <code>List&lt;IdeaDTO&gt;</code> type.</p>
+</li>
+<li>
+<p>The first item in the list is a valid idea matching the idea stored in the mock session (obtained by calling <code>GetTestSession</code>).</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Fact]
+public async Task ForSessionActionResult_ReturnsIdeasForSession()
+{
+    // Arrange
+    int testSessionId = 123;
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync(GetTestSession());
+    var controller = new IdeasController(mockRepo.Object);
+
+    // Act
+    var result = await controller.ForSessionActionResult(testSessionId);
+
+    // Assert
+    var actionResult = Assert.IsType&lt;ActionResult&lt;List&lt;IdeaDTO&gt;&gt;&gt;(result);
+    var returnValue = Assert.IsType&lt;List&lt;IdeaDTO&gt;&gt;(actionResult.Value);
+    var idea = returnValue.FirstOrDefault();
+    Assert.Equal(&quot;One&quot;, idea.Name);
+}
+</code></pre>
+<ul>
+<li>
+<p>BadRequest for an invalid model.</p>
+</li>
+<li>
+<p>NotFound if the session doesn't exist.</p>
+</li>
+<li>
+<p>CreatedAtAction when the session is updated with the new idea.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpPost(&quot;createactionresult&quot;)]
+[ProducesResponseType(201)]
+[ProducesResponseType(400)]
+[ProducesResponseType(404)]
+public async Task&lt;ActionResult&lt;BrainstormSession&gt;&gt; CreateActionResult([FromBody]NewIdeaModel model)
+{
+    if (!ModelState.IsValid)
+    {
+        return BadRequest(ModelState);
+    }
+
+    var session = await _sessionRepository.GetByIdAsync(model.SessionId);
+
+    if (session == null)
+    {
+        return NotFound(model.SessionId);
+    }
+
+    var idea = new Idea()
+    {
+        DateCreated = DateTimeOffset.Now,
+        Description = model.Description,
+        Name = model.Name
+    };
+    session.AddIdea(idea);
+
+    await _sessionRepository.UpdateAsync(session);
+
+    return CreatedAtAction(nameof(CreateActionResult), new { id = session.Id }, session);
+}
+</code></pre>
+<pre><code class="language-csharp">[Fact]
+public async Task CreateActionResult_ReturnsBadRequest_GivenInvalidModel()
+{
+    // Arrange &amp; Act
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    var controller = new IdeasController(mockRepo.Object);
+    controller.ModelState.AddModelError(&quot;error&quot;, &quot;some error&quot;);
+
+    // Act
+    var result = await controller.CreateActionResult(model: null);
+
+    // Assert
+    var actionResult = Assert.IsType&lt;ActionResult&lt;BrainstormSession&gt;&gt;(result);
+    Assert.IsType&lt;BadRequestObjectResult&gt;(actionResult.Result);
+}
+</code></pre>
+<pre><code class="language-csharp">[Fact]
+public async Task CreateActionResult_ReturnsNotFoundObjectResultForNonexistentSession()
+{
+    // Arrange
+    var nonExistentSessionId = 999;
+    string testName = &quot;test name&quot;;
+    string testDescription = &quot;test description&quot;;
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    var controller = new IdeasController(mockRepo.Object);
+
+    var newIdea = new NewIdeaModel()
+    {
+        Description = testDescription,
+        Name = testName,
+        SessionId = nonExistentSessionId
+    };
+
+    // Act
+    var result = await controller.CreateActionResult(newIdea);
+
+    // Assert
+    var actionResult = Assert.IsType&lt;ActionResult&lt;BrainstormSession&gt;&gt;(result);
+    Assert.IsType&lt;NotFoundObjectResult&gt;(actionResult.Result);
+}
+</code></pre>
+<ul>
+<li>
+<p>The method returns an <code>ActionResult</code> with a <code>BrainstormSession</code> type.</p>
+</li>
+<li>
+<p>The <code>ActionResult&lt;T&gt;.Result</code> is a <code>CreatedAtActionResult</code>. <code>CreatedAtActionResult</code> is analogous to a 201 Created response with a <code>Location</code> header.</p>
+</li>
+<li>
+<p>The <code>ActionResult&lt;T&gt;.Value</code> is a <code>BrainstormSession</code> type.</p>
+</li>
+<li>
+<p>The mock call to update the session, <code>UpdateAsync(testSession)</code>, was invoked. The <code>Verifiable</code> method call is checked by executing <code>mockRepo.Verify()</code> in the assertions.</p>
+</li>
+<li>
+<p>Two <code>Idea</code> objects are returned for the session.</p>
+</li>
+<li>
+<p>The last item (the <code>Idea</code> added by the mock call to <code>UpdateAsync</code>) matches the <code>newIdea</code> added to the session in the test.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Fact]
+public async Task CreateActionResult_ReturnsNewlyCreatedIdeaForSession()
+{
+    // Arrange
+    int testSessionId = 123;
+    string testName = &quot;test name&quot;;
+    string testDescription = &quot;test description&quot;;
+    var testSession = GetTestSession();
+    var mockRepo = new Mock&lt;IBrainstormSessionRepository&gt;();
+    mockRepo.Setup(repo =&gt; repo.GetByIdAsync(testSessionId))
+        .ReturnsAsync(testSession);
+    var controller = new IdeasController(mockRepo.Object);
+
+    var newIdea = new NewIdeaModel()
+    {
+        Description = testDescription,
+        Name = testName,
+        SessionId = testSessionId
+    };
+    mockRepo.Setup(repo =&gt; repo.UpdateAsync(testSession))
+        .Returns(Task.CompletedTask)
+        .Verifiable();
+
+    // Act
+    var result = await controller.CreateActionResult(newIdea);
+
+    // Assert
+    var actionResult = Assert.IsType&lt;ActionResult&lt;BrainstormSession&gt;&gt;(result);
+    var createdAtActionResult = Assert.IsType&lt;CreatedAtActionResult&gt;(actionResult.Result);
+    var returnValue = Assert.IsType&lt;BrainstormSession&gt;(createdAtActionResult.Value);
+    mockRepo.Verify();
+    Assert.Equal(2, returnValue.Ideas.Count());
+    Assert.Equal(testName, returnValue.Ideas.LastOrDefault().Name);
+    Assert.Equal(testDescription, returnValue.Ideas.LastOrDefault().Description);
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Integration tests in ASP.NET Core</p>
+</li>
+<li>
+<p>Create and run unit tests with Visual Studio</p>
+</li>
+<li>
+<p>MyTested.AspNetCore.Mvc - Fluent Testing Library for ASP.NET Core MVC: Strongly-typed unit testing library, providing a fluent interface for testing MVC and web API apps. (Not maintained or supported by Microsoft.)</p>
+</li>
+<li>
+<p>JustMockLite: A mocking framework for .NET developers. (Not maintained or supported by Microsoft.)</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/testing?view=aspnetcore-8.0">Unit test controller logic in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

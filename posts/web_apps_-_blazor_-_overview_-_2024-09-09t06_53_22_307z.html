@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - Blazor - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Welcome to Blazor!'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - Blazor - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Welcome to Blazor!</p>
+<ul>
+<li>
+<p>Create rich interactive UIs using C#.</p>
+</li>
+<li>
+<p>Share server-side and client-side app logic written in .NET.</p>
+</li>
+<li>
+<p>Render the UI as HTML and CSS for wide browser support, including mobile browsers.</p>
+</li>
+<li>
+<p>Build hybrid desktop and mobile apps with .NET and Blazor.</p>
+</li>
+</ul>
+<p>Using .NET for client-side web development offers the following advantages:</p>
+<ul>
+<li>
+<p>Write code in C#, which can improve productivity in app development and maintenance.</p>
+</li>
+<li>
+<p>Leverage the existing .NET ecosystem of .NET libraries.</p>
+</li>
+<li>
+<p>Benefit from .NET's performance, reliability, and security.</p>
+</li>
+<li>
+<p>Stay productive on Windows, Linux, or macOS with a development environment, such as Visual Studio or Visual Studio Code. Integrate with modern hosting platforms, such as Docker.</p>
+</li>
+<li>
+<p>Build on a common set of languages, frameworks, and tools that are stable, feature-rich, and easy to use.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+For a Blazor quick start tutorial, see Build your first Blazor app.</p>
+</blockquote>
+<h2><a href="#components" aria-hidden="true" class="anchor" id="components"></a>Components</h2>
+<p>Blazor apps are based on components. A component in Blazor is an element of UI, such as a page, dialog, or data entry form.</p>
+<p>Components are .NET C# classes built into .NET assemblies that:</p>
+<ul>
+<li>
+<p>Define flexible UI rendering logic.</p>
+</li>
+<li>
+<p>Handle user events.</p>
+</li>
+<li>
+<p>Can be nested and reused.</p>
+</li>
+<li>
+<p>Can be shared and distributed as Razor class libraries or NuGet packages.</p>
+</li>
+</ul>
+<p>The component class is usually written in the form of a Razor markup page with a <code>.razor</code> file extension. Components in Blazor are formally referred to as Razor components, informally as Blazor components. Razor is a syntax for combining HTML markup with C# code designed for developer productivity. Razor allows you to switch between HTML markup and C# in the same file with IntelliSense programming support in Visual Studio.</p>
+<p>Blazor uses natural HTML tags for UI composition. The following Razor markup demonstrates a component that increments a counter when the user selects a button.</p>
+<pre><code class="language-razor">&lt;PageTitle&gt;Counter&lt;/PageTitle&gt;
+
+&lt;h1&gt;Counter&lt;/h1&gt;
+
+&lt;p role=&quot;status&quot;&gt;Current count: @currentCount&lt;/p&gt;
+
+&lt;button class=&quot;btn btn-primary&quot; @onclick=&quot;IncrementCount&quot;&gt;Click me&lt;/button&gt;
+
+@code {
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
+</code></pre>
+<p>Components render into an in-memory representation of the browser's Document Object Model (DOM) called a render tree, which is used to update the UI in a flexible and efficient way.</p>
+<h2><a href="#build-a-full-stack-web-app-with-blazor" aria-hidden="true" class="anchor" id="build-a-full-stack-web-app-with-blazor"></a>Build a full-stack web app with Blazor</h2>
+<h2><a href="#build-a-native-client-app-with-blazor-hybrid" aria-hidden="true" class="anchor" id="build-a-native-client-app-with-blazor-hybrid"></a>Build a native client app with Blazor Hybrid</h2>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/blazor/?view=aspnetcore-8.0">ASP.NET Core Blazor</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - MVC - Dependency injection - views | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - MVC - Dependency injection - views</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#configuration-injection" aria-hidden="true" class="anchor" id="configuration-injection"></a>Configuration injection</h2>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;MyRoot&quot;: {
+    &quot;MyParent&quot;: {
+      &quot;MyChildName&quot;: &quot;Joe&quot;
+    }
+  }
+}
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model PrivacyModel
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+    ViewData[&quot;Title&quot;] = &quot;Privacy RP&quot;;
+}
+&lt;h1&gt;@ViewData[&quot;Title&quot;]&lt;/h1&gt;
+
+&lt;p&gt;PR Privacy&lt;/p&gt;
+
+&lt;h2&gt;
+   MyRoot:MyParent:MyChildName: @Configuration[&quot;MyRoot:MyParent:MyChildName&quot;]
+&lt;/h2&gt;
+</code></pre>
+<pre><code class="language-cshtml">@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+    ViewData[&quot;Title&quot;] = &quot;Privacy MVC&quot;;
+}
+&lt;h1&gt;@ViewData[&quot;Title&quot;]&lt;/h1&gt;
+
+&lt;p&gt;MVC Use this page to detail your site's privacy policy.&lt;/p&gt;
+
+&lt;h2&gt;
+   MyRoot:MyParent:MyChildName: @Configuration[&quot;MyRoot:MyParent:MyChildName&quot;]
+&lt;/h2&gt;
+</code></pre>
+<h2><a href="#service-injection" aria-hidden="true" class="anchor" id="service-injection"></a>Service injection</h2>
+<pre><code class="language-cshtml">@using System.Threading.Tasks
+@using ViewInjectSample.Model
+@using ViewInjectSample.Model.Services
+@model IEnumerable&lt;ToDoItem&gt;
+@inject StatisticsService StatsService
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;To Do Items&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div&gt;
+        &lt;h1&gt;To Do Items&lt;/h1&gt;
+        &lt;ul&gt;
+            &lt;li&gt;Total Items: @StatsService.GetCount()&lt;/li&gt;
+            &lt;li&gt;Completed: @StatsService.GetCompletedCount()&lt;/li&gt;
+            &lt;li&gt;Avg. Priority: @StatsService.GetAveragePriority()&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;table&gt;
+            &lt;tr&gt;
+                &lt;th&gt;Name&lt;/th&gt;
+                &lt;th&gt;Priority&lt;/th&gt;
+                &lt;th&gt;Is Done?&lt;/th&gt;
+            &lt;/tr&gt;
+            @foreach (var item in Model)
+            {
+                &lt;tr&gt;
+                    &lt;td&gt;@item.Name&lt;/td&gt;
+                    &lt;td&gt;@item.Priority&lt;/td&gt;
+                    &lt;td&gt;@item.IsDone&lt;/td&gt;
+                &lt;/tr&gt;
+            }
+        &lt;/table&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<pre><code class="language-csharp">using ViewInjectSample.Helpers;
+using ViewInjectSample.Infrastructure;
+using ViewInjectSample.Interfaces;
+using ViewInjectSample.Model.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
+builder.Services.AddTransient&lt;IToDoItemRepository, ToDoItemRepository&gt;();
+builder.Services.AddTransient&lt;StatisticsService&gt;();
+builder.Services.AddTransient&lt;ProfileOptionsService&gt;();
+builder.Services.AddTransient&lt;MyHtmlHelper&gt;();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Home/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.MapRazorPages();
+
+app.MapDefaultControllerRoute();
+
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using System.Linq;
+using ViewInjectSample.Interfaces;
+
+namespace ViewInjectSample.Model.Services
+{
+    public class StatisticsService
+    {
+        private readonly IToDoItemRepository _toDoItemRepository;
+
+        public StatisticsService(IToDoItemRepository toDoItemRepository)
+        {
+            _toDoItemRepository = toDoItemRepository;
+        }
+
+        public int GetCount()
+        {
+            return _toDoItemRepository.List().Count();
+        }
+
+        public int GetCompletedCount()
+        {
+            return _toDoItemRepository.List().Count(x =&gt; x.IsDone);
+        }
+
+        public double GetAveragePriority()
+        {
+            if (_toDoItemRepository.List().Count() == 0)
+            {
+                return 0.0;
+            }
+
+            return _toDoItemRepository.List().Average(x =&gt; x.Priority);
+        }
+    }
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/dependency-injection/_static/screenshot.png?view=aspnetcore-8.0" alt="To Do view listing total items, completed items, average priority, and a list of tasks with their priority levels and boolean values indicating completion.!" title="To Do view listing total items, completed items, average priority, and a list of tasks with their priority levels and boolean values indicating completion." /></p>
+<h2><a href="#populating-lookup-data" aria-hidden="true" class="anchor" id="populating-lookup-data"></a>Populating Lookup Data</h2>
+<ul>
+<li>
+<p>Request data access services for each of the sets of options.</p>
+</li>
+<li>
+<p>Populate a model or <code>ViewBag</code> with each set of options to be bound.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using ViewInjectSample.Model;
+
+namespace ViewInjectSample.Controllers;
+
+public class ProfileController : Controller
+{
+    public IActionResult Index()
+    {
+        // A real app would up profile based on the user.
+        var profile = new Profile()
+        {
+            Name = &quot;Rick&quot;,
+            FavColor = &quot;Blue&quot;,
+            Gender = &quot;Male&quot;,
+            State = new State(&quot;Ohio&quot;,&quot;OH&quot;)
+        };
+        return View(profile);
+    }
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/dependency-injection/_static/updateprofile.png?view=aspnetcore-8.0" alt="Update Profile view with a form allowing the entry of name, gender, state, and favorite Color.!" title="Update Profile view with a form allowing the entry of name, gender, state, and favorite Color." /></p>
+<pre><code class="language-cshtml">@using System.Threading.Tasks
+@using ViewInjectSample.Model.Services
+@model ViewInjectSample.Model.Profile
+@inject ProfileOptionsService Options
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;Update Profile&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div&gt;
+    &lt;h1&gt;Update Profile&lt;/h1&gt;
+    Name: @Html.TextBoxFor(m =&gt; m.Name)
+    &lt;br/&gt;
+    Gender: @Html.DropDownList(&quot;Gender&quot;,
+           Options.ListGenders().Select(g =&gt; 
+                new SelectListItem() { Text = g, Value = g }))
+    &lt;br/&gt;
+
+    State: @Html.DropDownListFor(m =&gt; m.State!.Code,
+           Options.ListStates().Select(s =&gt; 
+                new SelectListItem() { Text = s.Name, Value = s.Code}))
+    &lt;br /&gt;
+
+    Fav. Color: @Html.DropDownList(&quot;FavColor&quot;,
+           Options.ListColors().Select(c =&gt; 
+                new SelectListItem() { Text = c, Value = c }))
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<pre><code class="language-csharp">namespace ViewInjectSample.Model.Services;
+
+public class ProfileOptionsService
+{
+    public List&lt;string&gt; ListGenders()
+    {
+        // Basic sample
+        return new List&lt;string&gt;() {&quot;Female&quot;, &quot;Male&quot;};
+    }
+
+    public List&lt;State&gt; ListStates()
+    {
+        // Add a few states
+        return new List&lt;State&gt;()
+        {
+            new State(&quot;Alabama&quot;, &quot;AL&quot;),
+            new State(&quot;Alaska&quot;, &quot;AK&quot;),
+            new State(&quot;Ohio&quot;, &quot;OH&quot;)
+        };
+    }
+
+    public List&lt;string&gt; ListColors()
+    {
+        return new List&lt;string&gt;() { &quot;Blue&quot;,&quot;Green&quot;,&quot;Red&quot;,&quot;Yellow&quot; };
+    }
+}
+</code></pre>
+<h2><a href="#overriding-services" aria-hidden="true" class="anchor" id="overriding-services"></a>Overriding Services</h2>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/dependency-injection/_static/razor-fields.png?view=aspnetcore-8.0" alt="Intellisense contextual menu on a typed @ symbol listing Html, Component, StatsService, and Url fields!" title="Intellisense contextual menu on a typed @ symbol listing Html, Component, StatsService, and Url fields" /></p>
+<pre><code class="language-cshtml">@using System.Threading.Tasks
+@using ViewInjectSample.Helpers
+@inject MyHtmlHelper Html
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;My Helper&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div&gt;
+        Test: @Html.Value
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See Also</h2>
+<ul>
+<li>Simon Timms Blog: Getting Lookup Data Into Your View</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/dependency-injection?view=aspnetcore-8.0">Dependency injection into views in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

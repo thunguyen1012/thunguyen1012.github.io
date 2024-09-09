@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - MVC - Routing | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - MVC - Routing</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Are defined at startup in <code>Program.cs</code> or in attributes.</p>
+</li>
+<li>
+<p>Describe how URL paths are matched to actions.</p>
+</li>
+<li>
+<p>Are used to generate URLs for links. The generated links are typically returned in responses.</p>
+</li>
+<li>
+<p>Explains the interactions between MVC and routing:</p>
+<ul>
+<li>
+<p>How typical MVC apps make use of routing features.</p>
+</li>
+<li>
+<p>Covers both:</p>
+<ul>
+<li>
+<p>Conventional routing typically used with controllers and views.</p>
+</li>
+<li>
+<p>Attribute routing used with REST APIs. If you're primarily interested in routing for REST APIs, jump to the Attribute routing for REST APIs <code>section</code>.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>See Routing for advanced routing details.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Refers to the <code>default</code> routing system called endpoint routing. It's possible to use controllers with the previous version of routing for compatibility purposes. See the 2.2-3.0 migration guide for instructions.</p>
+</li>
+</ul>
+<h2><a href="#set-up-conventional-route" aria-hidden="true" class="anchor" id="set-up-conventional-route"></a>Set up conventional route</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Home/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: &quot;default&quot;,
+    pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">app.MapControllerRoute(
+    name: &quot;default&quot;,
+    pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Matches a URL path like <code>/Products/Details/5</code></p>
+</li>
+<li>
+<p>Extracts the route values { controller = Products, action = <code>Details</code>, <code>id =</code>5 } by tokenizing the path. The extraction of route values results in a match if the app has a controller named <code>ProductsController</code> and a <code>Details</code> action:
+MyDisplayRouteInfo is provided by the Rick.Docs.Samples.RouteInfo NuGet package and displays route information.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class ProductsController : Controller
+{
+    public IActionResult Details(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>/Products/Details/5</code> model binds the value of <code>id =</code>5 to set the id parameter to <code>5</code>. See Model Binding for more details.</p>
+</li>
+<li>
+<p>{controller=Home} defines <code>Home</code> as the <code>default</code> controller.</p>
+</li>
+<li>
+<p>{action=Index} defines <code>Index</code> as the <code>default</code> action.</p>
+</li>
+<li>
+<p>The ? character in {id?} defines id as optional.</p>
+<ul>
+<li>Default and optional route parameters don't need to be present in the URL path for a match. See Route Template Reference for a detailed description of route template syntax.</li>
+</ul>
+</li>
+<li>
+<p>Matches the URL path /.</p>
+</li>
+<li>
+<p>Produces the route values { controller = <code>Home</code>, action = <code>Index</code> }.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    public IActionResult Index() { ... }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>/Home/Index/17</code></p>
+</li>
+<li>
+<p><code>/Home/Index</code></p>
+</li>
+<li>
+<p><code>/Home</code></p>
+</li>
+<li>
+<p>/</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.MapDefaultControllerRoute();
+</code></pre>
+<pre><code class="language-csharp">app.MapControllerRoute(
+    name: &quot;default&quot;,
+    pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+</code></pre>
+<blockquote>
+<p class='important'>Important
+Routing is configured using the <code>UseRouting</code> and <code>UseEndpoints</code> middleware. To use controllers:</p>
+</blockquote>
+<p>Call MapControllers to map attribute routed controllers.
+Call MapControllerRoute or <code>MapAreaControllerRoute</code>, to map both conventionally routed controllers and attribute routed controllers.</p>
+<p>Apps typically don't need to call <code>UseRouting</code> or <code>UseEndpoints</code>. WebApplicationBuilder configures a middleware pipeline that wraps middleware added in <code>Program.cs</code> with <code>UseRouting</code> and <code>UseEndpoints</code>. For more information, see Routing in ASP.NET Core.</p>
+<ul>
+<li>
+<p>Call MapControllers to map attribute routed controllers.</p>
+</li>
+<li>
+<p>Call MapControllerRoute or <code>MapAreaControllerRoute</code>, to map both conventionally routed controllers and attribute routed controllers.</p>
+</li>
+</ul>
+<h2><a href="#conventional-routing" aria-hidden="true" class="anchor" id="conventional-routing"></a>Conventional routing</h2>
+<pre><code class="language-csharp">app.MapControllerRoute(
+    name: &quot;default&quot;,
+    pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+</code></pre>
+<ul>
+<li>
+<p>The first path segment, {controller=Home}, maps to the controller name.</p>
+</li>
+<li>
+<p>The second segment, {action=Index}, maps to the action name.</p>
+</li>
+<li>
+<p>The third segment, {id?} is used for an optional id. The ? in {id?} makes it optional. id is used to map to a model entity.</p>
+</li>
+<li>
+<p><code>/Products/List</code> maps to the <code>ProductsController.List</code> action.</p>
+</li>
+<li>
+<p><code>/Blog/Article/17</code> maps to <code>BlogController.Article</code> and typically model binds the id parameter to 17.</p>
+</li>
+<li>
+<p>Is based on the controller and action names only.</p>
+</li>
+<li>
+<p>Isn't based on namespaces, source file locations, or method parameters.</p>
+</li>
+<li>
+<p>Helps simplify the code.</p>
+</li>
+<li>
+<p>Makes the UI more predictable.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+The id in the preceding code is defined as optional by the route template. Actions can execute without the optional ID provided as part of the URL. Generally, when id is omitted from the URL:</p>
+</blockquote>
+<p>id is set to <code>0</code> by model binding.
+No entity is found in the database matching <code>id == 0</code>.</p>
+<p>Attribute routing provides fine-grained control to make the ID required for some actions and not for others. By convention, the documentation includes optional parameters like id when they're likely to appear in correct usage.</p>
+<ul>
+<li>
+<p>id is set to <code>0</code> by model binding.</p>
+</li>
+<li>
+<p>No entity is found in the database matching <code>id == 0</code>.</p>
+</li>
+<li>
+<p>Supports a basic and descriptive routing scheme.</p>
+</li>
+<li>
+<p>Is a useful starting point for UI-based apps.</p>
+</li>
+<li>
+<p>Is the only route template needed for many web UI apps. For larger web UI apps, another route using Areas is frequently all that's needed.</p>
+</li>
+<li>
+<p>Automatically assign an order value to their endpoints based on the order they are invoked.</p>
+</li>
+<li>
+<p>Doesn't have a concept of routes.</p>
+</li>
+<li>
+<p>Doesn't provide ordering guarantees for the execution of extensibility,  all endpoints are processed at once.</p>
+</li>
+</ul>
+<h3><a href="#multiple-conventional-routes" aria-hidden="true" class="anchor" id="multiple-conventional-routes"></a>Multiple conventional routes</h3>
+<pre><code class="language-csharp">app.MapControllerRoute(name: &quot;blog&quot;,
+                pattern: &quot;blog/{*article}&quot;,
+                defaults: new { controller = &quot;Blog&quot;, action = &quot;Article&quot; });
+app.MapControllerRoute(name: &quot;default&quot;,
+               pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+</code></pre>
+<ul>
+<li>
+<p>It uses conventional routing.</p>
+</li>
+<li>
+<p>It's dedicated to a specific action.</p>
+</li>
+<li>
+<p>They can only have the <code>default</code> values { controller = &quot;Blog&quot;, action = &quot;Article&quot; }.</p>
+</li>
+<li>
+<p>This route always maps to the action <code>BlogController.Article</code>.</p>
+</li>
+<li>
+<p><code>blog</code> route has a higher priority for matches than the <code>default</code> route because it is added first.</p>
+</li>
+<li>
+<p>Is an example of Slug style routing where it's typical to have an article name as part of the URL.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+In ASP.NET Core, routing doesn't:</p>
+</blockquote>
+<p>Define a concept called a route. <code>UseRouting</code> adds route matching to the middleware pipeline. The <code>UseRouting</code> middleware looks at the set of endpoints defined in the app, and selects the best endpoint match based on the request.
+Provide guarantees about the execution order of extensibility like IRouteConstraint or <code>IActionConstraint</code>.</p>
+<p>See Routing for reference material on routing.</p>
+<ul>
+<li>
+<p>Define a concept called a route. <code>UseRouting</code> adds route matching to the middleware pipeline. The <code>UseRouting</code> middleware looks at the set of endpoints defined in the app, and selects the best endpoint match based on the request.</p>
+</li>
+<li>
+<p>Provide guarantees about the execution order of extensibility like IRouteConstraint or <code>IActionConstraint</code>.</p>
+</li>
+</ul>
+<h3><a href="#conventional-routing-order" aria-hidden="true" class="anchor" id="conventional-routing-order"></a>Conventional routing order</h3>
+<h3><a href="#resolving-ambiguous-actions" aria-hidden="true" class="anchor" id="resolving-ambiguous-actions"></a>Resolving ambiguous actions</h3>
+<ul>
+<li>
+<p>Choose the best candidate.</p>
+</li>
+<li>
+<p>Throw an exception.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Products33Controller : Controller
+{
+    public IActionResult Edit(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    [HttpPost]
+    public IActionResult Edit(int id, Product product)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id, product.name);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>The URL path <code>/Products33/Edit/17</code></p>
+</li>
+<li>
+<p>Route data { controller = Products33, action = Edit, id = 17 }.</p>
+</li>
+<li>
+<p>Edit(int) displays a <code>form</code> to edit a product.</p>
+</li>
+<li>
+<p>Edit(int, Product) processes  the posted <code>form</code>.</p>
+</li>
+<li>
+<p>Edit(int, Product) is selected when the request is an HTTP <code>POST</code>.</p>
+</li>
+<li>
+<p>Edit(int) is selected when the HTTP verb is anything else. Edit(int) is generally called via <code>GET</code>.</p>
+</li>
+</ul>
+<h3><a href="#conventional-route-names" aria-hidden="true" class="anchor" id="conventional-route-names"></a>Conventional route names</h3>
+<pre><code class="language-csharp">app.MapControllerRoute(name: &quot;blog&quot;,
+                pattern: &quot;blog/{*article}&quot;,
+                defaults: new { controller = &quot;Blog&quot;, action = &quot;Article&quot; });
+app.MapControllerRoute(name: &quot;default&quot;,
+               pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Have no impact on URL matching or handling of requests.</p>
+</li>
+<li>
+<p>Are used only for URL generation.</p>
+</li>
+<li>
+<p>Are interchangeable.</p>
+</li>
+<li>
+<p>Which one is used in documentation and code depends on the API being described.</p>
+</li>
+</ul>
+<h2><a href="#attribute-routing-for-rest-apis" aria-hidden="true" class="anchor" id="attribute-routing-for-rest-apis"></a>Attribute routing for REST APIs</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<ul>
+<li><code>HomeController</code> matches a set of URLs similar to what the <code>default</code> conventional route {controller=Home}/{action=Index}/{id?} matches.</li>
+</ul>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    [Route(&quot;&quot;)]
+    [Route(&quot;Home&quot;)]
+    [Route(&quot;Home/Index&quot;)]
+    [Route(&quot;Home/Index/{id?}&quot;)]
+    public IActionResult Index(int? id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    [Route(&quot;Home/About&quot;)]
+    [Route(&quot;Home/About/{id?}&quot;)]
+    public IActionResult About(int? id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class MyDemoController : Controller
+{
+    [Route(&quot;&quot;)]
+    [Route(&quot;Home&quot;)]
+    [Route(&quot;Home/Index&quot;)]
+    [Route(&quot;Home/Index/{id?}&quot;)]
+    public IActionResult MyIndex(int? id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    [Route(&quot;Home/About&quot;)]
+    [Route(&quot;Home/About/{id?}&quot;)]
+    public IActionResult MyAbout(int? id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    [Route(&quot;&quot;)]
+    [Route(&quot;Home&quot;)]
+    [Route(&quot;[controller]/[action]&quot;)]
+    public IActionResult Index()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    [Route(&quot;[controller]/[action]&quot;)]
+    public IActionResult About()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;[controller]/[action]&quot;)]
+public class HomeController : Controller
+{
+    [Route(&quot;~/&quot;)]
+    [Route(&quot;/Home&quot;)]
+    [Route(&quot;~/Home/Index&quot;)]
+    public IActionResult Index()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    public IActionResult About()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<h2><a href="#reserved-routing-names" aria-hidden="true" class="anchor" id="reserved-routing-names"></a>Reserved routing names</h2>
+<ul>
+<li>
+<p>action</p>
+</li>
+<li>
+<p><code>area</code></p>
+</li>
+<li>
+<p>controller</p>
+</li>
+<li>
+<p><code>handler</code></p>
+</li>
+<li>
+<p><code>page</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class MyDemo2Controller : Controller
+{
+    [Route(&quot;/articles/{page}&quot;)]
+    public IActionResult ListArticles(int page)
+    {
+        return ControllerContext.MyDisplayRouteInfo(page);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>page</code></p>
+</li>
+<li>
+<p>using</p>
+</li>
+<li>
+<p><code>namespace</code></p>
+</li>
+<li>
+<p><code>inject</code></p>
+</li>
+<li>
+<p><code>section</code></p>
+</li>
+<li>
+<p><code>inherits</code></p>
+</li>
+<li>
+<p>model</p>
+</li>
+<li>
+<p><code>addTagHelper</code></p>
+</li>
+<li>
+<p><code>removeTagHelper</code></p>
+</li>
+</ul>
+<h2><a href="#http-verb-templates" aria-hidden="true" class="anchor" id="http-verb-templates"></a>HTTP verb templates</h2>
+<ul>
+<li>
+<p><code>[HttpGet]</code></p>
+</li>
+<li>
+<p><code>[HttpPost]</code></p>
+</li>
+<li>
+<p><code>[HttpPut]</code></p>
+</li>
+<li>
+<p><code>[HttpDelete]</code></p>
+</li>
+<li>
+<p><code>[HttpHead]</code></p>
+</li>
+<li>
+<p><code>[HttpPatch]</code></p>
+</li>
+</ul>
+<h3><a href="#route-templates" aria-hidden="true" class="anchor" id="route-templates"></a>Route templates</h3>
+<ul>
+<li>
+<p>All the HTTP verb templates are route templates.</p>
+</li>
+<li>
+<p><code>[Route]</code></p>
+</li>
+</ul>
+<h3><a href="#attribute-routing-with-http-verb-attributes" aria-hidden="true" class="anchor" id="attribute-routing-with-http-verb-attributes"></a>Attribute routing with Http verb attributes</h3>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]&quot;)]
+[ApiController]
+public class Test2Controller : ControllerBase
+{
+    [HttpGet]   // GET /api/test2
+    public IActionResult ListProducts()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    [HttpGet(&quot;{id}&quot;)]   // GET /api/test2/xyz
+    public IActionResult GetProduct(string id)
+    {
+       return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    [HttpGet(&quot;int/{id:int}&quot;)] // GET /api/test2/int/3
+    public IActionResult GetIntProduct(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    [HttpGet(&quot;int2/{id}&quot;)]  // GET /api/test2/int2/3
+    public IActionResult GetInt2Product(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Each action contains the <code>[HttpGet]</code> attribute, which constrains matching to HTTP <code>GET</code> requests only.</p>
+</li>
+<li>
+<p>The <code>GetProduct</code> action includes the &quot;{id}&quot; template, therefore id is appended to the &quot;api/[controller]&quot; template on the controller. The methods template is &quot;api/[controller]/{id}&quot;. Therefore this action only matches <code>GET</code> requests for the <code>form</code> <code>/api/test2/xyz</code>,/api/test2/123,/api/test2/{any string}, etc.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]   // GET /api/test2/xyz
+public IActionResult GetProduct(string id)
+{
+   return ControllerContext.MyDisplayRouteInfo(id);
+}
+</code></pre>
+<ul>
+<li>
+<p>The <code>GetIntProduct</code> action contains the &quot;int/{id:int}&quot; template. The <code>:int</code> portion of the template constrains the id route values to strings that can be converted to an integer. A <code>GET</code> request to <code>/api/test2/int/abc</code>:</p>
+<ul>
+<li>
+<p>Doesn't match this action.</p>
+</li>
+<li>
+<p>Returns a 404 Not Found error.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;int/{id:int}&quot;)] // GET /api/test2/int/3
+public IActionResult GetIntProduct(int id)
+{
+    return ControllerContext.MyDisplayRouteInfo(id);
+}
+</code></pre>
+<ul>
+<li>
+<p>The <code>GetInt2Product</code> action contains {id} in the template, but doesn't constrain id to values that can be converted to an integer. A <code>GET</code> request to <code>/api/test2/int2/abc</code>:</p>
+<ul>
+<li>
+<p>Matches this route.</p>
+</li>
+<li>
+<p>Model binding fails to convert <code>abc</code> to an integer. The id parameter of the method is integer.</p>
+</li>
+<li>
+<p>Returns a 400 Bad Request because model binding failed to convert <code>abc</code> to an integer.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;int2/{id}&quot;)]  // GET /api/test2/int2/3
+public IActionResult GetInt2Product(int id)
+{
+    return ControllerContext.MyDisplayRouteInfo(id);
+}
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+public class MyProductsController : ControllerBase
+{
+    [HttpGet(&quot;/products3&quot;)]
+    public IActionResult ListProducts()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    [HttpPost(&quot;/products3&quot;)]
+    public IActionResult CreateProduct(MyProduct myProduct)
+    {
+        return ControllerContext.MyDisplayRouteInfo(myProduct.Name);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>The <code>MyProductsController.ListProducts</code> action runs when the HTTP verb is <code>GET</code>.</p>
+</li>
+<li>
+<p>The <code>MyProductsController.CreateProduct</code> action runs when the HTTP verb is <code>POST</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[ApiController]
+public class Products2ApiController : ControllerBase
+{
+    [HttpGet(&quot;/products2/{id}&quot;, Name = &quot;Products_List&quot;)]
+    public IActionResult GetProduct(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Is run with URL path like <code>/products2/3</code></p>
+</li>
+<li>
+<p>Isn't run with the URL path <code>/products2</code>.</p>
+</li>
+</ul>
+<h2><a href="#route-name" aria-hidden="true" class="anchor" id="route-name"></a>Route name</h2>
+<pre><code class="language-csharp">[ApiController]
+public class Products2ApiController : ControllerBase
+{
+    [HttpGet(&quot;/products2/{id}&quot;, Name = &quot;Products_List&quot;)]
+    public IActionResult GetProduct(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Have no impact on the URL matching behavior of routing.</p>
+</li>
+<li>
+<p>Are only used for URL generation.</p>
+</li>
+</ul>
+<h2><a href="#combining-attribute-routes" aria-hidden="true" class="anchor" id="combining-attribute-routes"></a>Combining attribute routes</h2>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;products&quot;)]
+public class ProductsApiController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult ListProducts()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    [HttpGet(&quot;{id}&quot;)]
+    public IActionResult GetProduct(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>The URL path <code>/products</code> can match <code>ProductsApi.ListProducts</code></p>
+</li>
+<li>
+<p>The URL path <code>/products/5</code> can match ProductsApi.GetProduct(int).</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Route(&quot;Home&quot;)]
+public class HomeController : Controller
+{
+    [Route(&quot;&quot;)]
+    [Route(&quot;Index&quot;)]
+    [Route(&quot;/&quot;)]
+    public IActionResult Index()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    [Route(&quot;About&quot;)]
+    public IActionResult About()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>Attribute</th>
+<th>Combines with <code>[Route("Home")]</code></th>
+<th>Defines route template</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[Route("")]</code></td>
+<td>Yes</td>
+<td><code>"Home"</code></td>
+</tr>
+<tr>
+<td><code>[Route("Index")]</code></td>
+<td>Yes</td>
+<td><code>"Home/Index"</code></td>
+</tr>
+<tr>
+<td><code>[Route("/")]</code></td>
+<td><strong>No</strong></td>
+<td><code>""</code></td>
+</tr>
+<tr>
+<td><code>[Route("About")]</code></td>
+<td>Yes</td>
+<td><code>"Home/About"</code></td>
+</tr>
+</tbody></table>
+<h3><a href="#attribute-route-order" aria-hidden="true" class="anchor" id="attribute-route-order"></a>Attribute route order</h3>
+<ul>
+<li>
+<p>The route entries behave as if placed in an ideal ordering.</p>
+</li>
+<li>
+<p>The most specific routes have a chance to execute before the more general routes.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class MyDemoController : Controller
+{
+    [Route(&quot;&quot;)]
+    [Route(&quot;Home&quot;)]
+    [Route(&quot;Home/Index&quot;)]
+    [Route(&quot;Home/Index/{id?}&quot;)]
+    public IActionResult MyIndex(int? id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    [Route(&quot;Home/About&quot;)]
+    [Route(&quot;Home/About/{id?}&quot;)]
+    public IActionResult MyAbout(int? id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<pre><code class="language-text">AmbiguousMatchException: The request matched multiple endpoints. Matches:
+
+ WebMvcRouting.Controllers.HomeController.Index
+ WebMvcRouting.Controllers.MyDemoController.MyIndex
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;&quot;)]
+[Route(&quot;Home&quot;, Order = 2)]
+[Route(&quot;Home/MyIndex&quot;)]
+public IActionResult MyIndex()
+{
+    return ControllerContext.MyDisplayRouteInfo();
+}
+</code></pre>
+<ul>
+<li>
+<p>The preceding code is an example or poor routing design. It was used to illustrate the <code>Order</code> property.</p>
+</li>
+<li>
+<p>The <code>Order</code> property only resolves the ambiguity, that template cannot be matched. It would be better to remove the <code>[Route(&quot;Home&quot;)]</code> template.</p>
+</li>
+</ul>
+<h2><a href="#token-replacement-in-route-templates-controller],-[action],-[area]" aria-hidden="true" class="anchor" id="token-replacement-in-route-templates-controller],-[action],-[area]"></a>Token replacement in route templates <code>[controller]</code>, <code>[action]</code>, <code>[area]</code></h2>
+<pre><code class="language-csharp">[Route(&quot;[controller]/[action]&quot;)]
+public class Products0Controller : Controller
+{
+    [HttpGet]
+    public IActionResult List()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+
+    [HttpGet(&quot;{id}&quot;)]
+    public IActionResult Edit(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpGet]
+public IActionResult List()
+{
+    return ControllerContext.MyDisplayRouteInfo();
+}
+</code></pre>
+<ul>
+<li>Matches <code>/Products0/List</code></li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public IActionResult Edit(int id)
+{
+    return ControllerContext.MyDisplayRouteInfo(id);
+}
+</code></pre>
+<ul>
+<li>Matches <code>/</code>Products0/Edit/{id}</li>
+</ul>
+<pre><code class="language-csharp">public class Products20Controller : Controller
+{
+    [HttpGet(&quot;[controller]/[action]&quot;)]  // Matches '/Products20/List'
+    public IActionResult List()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    [HttpGet(&quot;[controller]/[action]/{id}&quot;)]   // Matches '/Products20/Edit/{id}'
+    public IActionResult Edit(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;api/[controller]/[action]&quot;, Name = &quot;[controller]_[action]&quot;)]
+public abstract class MyBase2Controller : ControllerBase
+{
+}
+
+public class Products11Controller : MyBase2Controller
+{
+    [HttpGet]                      // /api/products11/list
+    public IActionResult List()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+
+    [HttpGet(&quot;{id}&quot;)]             //    /api/products11/edit/3
+    public IActionResult Edit(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<h3><a href="#use-a-parameter-transformer-to-customize-token-replacement" aria-hidden="true" class="anchor" id="use-a-parameter-transformer-to-customize-token-replacement"></a>Use a parameter transformer to customize token replacement</h3>
+<pre><code class="language-csharp">using System.Text.RegularExpressions;
+
+public class SlugifyParameterTransformer : IOutboundParameterTransformer
+{
+    public string? TransformOutbound(object? value)
+    {
+        if (value == null) { return null; }
+
+        return Regex.Replace(value.ToString()!,
+                             &quot;([a-z])([A-Z])&quot;,
+                             &quot;$1-$2&quot;,
+                             RegexOptions.CultureInvariant,
+                             TimeSpan.FromMilliseconds(100)).ToLowerInvariant();
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Applies a parameter transformer to all attribute routes in an application.</p>
+</li>
+<li>
+<p>Customizes the attribute route token values as they are replaced.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class SubscriptionManagementController : Controller
+{
+    [HttpGet(&quot;[controller]/[action]&quot;)]
+    public IActionResult ListAll()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc.ApplicationModels;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews(options =&gt;
+{
+    options.Conventions.Add(new RouteTokenTransformerConvention(
+                                 new SlugifyParameterTransformer()));
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Home/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapControllerRoute(name: &quot;default&quot;,
+               pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+When using System.Text.RegularExpressions to process untrusted input, pass a timeout. A malicious user can provide input to <code>RegularExpressions</code> causing a Denial-of-Service attack. ASP.NET Core framework APIs that use <code>RegularExpressions</code> pass a timeout.</p>
+</blockquote>
+<h3><a href="#multiple-attribute-routes" aria-hidden="true" class="anchor" id="multiple-attribute-routes"></a>Multiple attribute routes</h3>
+<pre><code class="language-csharp">[Route(&quot;[controller]&quot;)]
+public class Products13Controller : Controller
+{
+    [Route(&quot;&quot;)]     // Matches 'Products13'
+    [Route(&quot;Index&quot;)] // Matches 'Products13/Index'
+    public IActionResult Index()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;Store&quot;)]
+[Route(&quot;[controller]&quot;)]
+public class Products6Controller : Controller
+{
+    [HttpPost(&quot;Buy&quot;)]       // Matches 'Products6/Buy' and 'Store/Buy'
+    [HttpPost(&quot;Checkout&quot;)]  // Matches 'Products6/Checkout' and 'Store/Checkout'
+    public IActionResult Buy()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<ul>
+<li>Each action constraint combines with the route template applied to the controller.</li>
+</ul>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]&quot;)]
+public class Products7Controller : ControllerBase
+{
+    [HttpPut(&quot;Buy&quot;)]        // Matches PUT 'api/Products7/Buy'
+    [HttpPost(&quot;Checkout&quot;)]  // Matches POST 'api/Products7/Checkout'
+    public IActionResult Buy()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<h3><a href="#specifying-attribute-route-optional-parameters-default-values,-and-constraints" aria-hidden="true" class="anchor" id="specifying-attribute-route-optional-parameters-default-values,-and-constraints"></a>Specifying attribute route optional parameters, <code>default</code> values, and constraints</h3>
+<pre><code class="language-csharp">public class Products14Controller : Controller
+{
+    [HttpPost(&quot;product14/{id:int}&quot;)]
+    public IActionResult ShowProduct(int id)
+    {
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+}
+</code></pre>
+<h3><a href="#custom-route-attributes-using-iroutetemplateprovider" aria-hidden="true" class="anchor" id="custom-route-attributes-using-iroutetemplateprovider"></a>Custom route attributes using <code>IRouteTemplateProvider</code></h3>
+<ul>
+<li>
+<p>Looks for attributes on controller classes and action methods when the app starts.</p>
+</li>
+<li>
+<p>Uses the attributes that implement <code>IRouteTemplateProvider</code> to build the initial set of routes.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class MyApiControllerAttribute : Attribute, IRouteTemplateProvider
+{
+    public string Template =&gt; &quot;api/[controller]&quot;;
+    public int? Order =&gt; 2;
+    public string Name { get; set; } = string.Empty;
+}
+
+[MyApiController]
+[ApiController]
+public class MyTestApiController : ControllerBase
+{
+    // GET /api/MyTestApi
+    [HttpGet]
+    public IActionResult Get()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<h3><a href="#use-application-model-to-customize-attribute-routes" aria-hidden="true" class="anchor" id="use-application-model-to-customize-attribute-routes"></a>Use application model to customize attribute routes</h3>
+<ul>
+<li>
+<p>Is an object model created at startup in <code>Program.cs</code>.</p>
+</li>
+<li>
+<p>Contains all of the metadata used by ASP.NET Core to route and execute the actions in an app.</p>
+</li>
+<li>
+<p>Can be written to modify the application model to customize how routing behaves.</p>
+</li>
+<li>
+<p>Are read at app startup.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class NamespaceRoutingConvention : Attribute, IControllerModelConvention
+{
+    private readonly string _baseNamespace;
+
+    public NamespaceRoutingConvention(string baseNamespace)
+    {
+        _baseNamespace = baseNamespace;
+    }
+
+    public void Apply(ControllerModel controller)
+    {
+        var hasRouteAttributes = controller.Selectors.Any(selector =&gt;
+                                                selector.AttributeRouteModel != null);
+        if (hasRouteAttributes)
+        {
+            return;
+        }
+
+        var namespc = controller.ControllerType.Namespace;
+        if (namespc == null)
+            return;
+        var template = new StringBuilder();
+        template.Append(namespc, _baseNamespace.Length + 1,
+                        namespc.Length - _baseNamespace.Length - 1);
+        template.Replace('.', '/');
+        template.Append(&quot;/[controller]/[action]/{id?}&quot;);
+
+        foreach (var selector in controller.Selectors)
+        {
+            selector.AttributeRouteModel = new AttributeRouteModel()
+            {
+                Template = template.ToString()
+            };
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public void Apply(ControllerModel controller)
+{
+    var hasRouteAttributes = controller.Selectors.Any(selector =&gt;
+                                            selector.AttributeRouteModel != null);
+    if (hasRouteAttributes)
+    {
+        return;
+    }
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;[controller]/[action]/{id?}&quot;)]
+public class ManagersController : Controller
+{
+    // /managers/index
+    public IActionResult Index()
+    {
+        var template = ControllerContext.ActionDescriptor.AttributeRouteInfo?.Template;
+        return Content($&quot;Index- template:{template}&quot;);
+    }
+
+    public IActionResult List(int? id)
+    {
+        var path = Request.Path.Value;
+        return Content($&quot;List- Path:{path}&quot;);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Does nothing if the controller is attribute routed.</p>
+</li>
+<li>
+<p>Sets the controllers template based on the <code>namespace</code>, with the base <code>namespace</code> removed.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using My.Application.Controllers;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews(options =&gt;
+{
+    options.Conventions.Add(
+     new NamespaceRoutingConvention(typeof(HomeController).Namespace!));
+});
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+namespace My.Application.Admin.Controllers
+{
+    public class UsersController : Controller
+    {
+        // GET /admin/controllers/users/index
+        public IActionResult Index()
+        {
+            var fullname = typeof(UsersController).FullName;
+            var template = 
+                ControllerContext.ActionDescriptor.AttributeRouteInfo?.Template;
+            var path = Request.Path.Value;
+
+            return Content($&quot;Path: {path} fullname: {fullname}  template:{template}&quot;);
+        }
+
+        public IActionResult List(int? id)
+        {
+            var path = Request.Path.Value;
+            return Content($&quot;Path: {path} ID:{id}&quot;);
+        }
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>The base <code>namespace</code> is <code>My.Application</code>.</p>
+</li>
+<li>
+<p>The full name of the preceding controller is <code>My.Application.Admin.Controllers.UsersController</code>.</p>
+</li>
+<li>
+<p>The <code>NamespaceRoutingConvention</code> sets the controllers template to Admin/Controllers/Users/[action]/{id?.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[NamespaceRoutingConvention(&quot;My.Application&quot;)]
+public class TestController : Controller
+{
+    // /admin/controllers/test/index
+    public IActionResult Index()
+    {
+        var template = ControllerContext.ActionDescriptor.AttributeRouteInfo?.Template;
+        var actionname = ControllerContext.ActionDescriptor.ActionName;
+        return Content($&quot;Action- {actionname} template:{template}&quot;);
+    }
+
+    public IActionResult List(int? id)
+    {
+        var path = Request.Path.Value;
+        return Content($&quot;List- Path:{path}&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#mixed-routing-attribute-routing-vs-conventional-routing" aria-hidden="true" class="anchor" id="mixed-routing-attribute-routing-vs-conventional-routing"></a>Mixed routing: Attribute routing vs conventional routing</h2>
+<h2><a href="#routing-with-special-characters" aria-hidden="true" class="anchor" id="routing-with-special-characters"></a>Routing with special characters</h2>
+<pre><code class="language-csharp">[HttpGet(&quot;{id?}/name&quot;)]
+public async Task&lt;ActionResult&lt;string&gt;&gt; GetName(string id)
+{
+    var todoItem = await _context.TodoItems.FindAsync(id);
+
+    if (todoItem == null || todoItem.Name == null)
+    {
+        return NotFound();
+    }
+
+    return todoItem.Name;
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>ASCII</th>
+<th>Encoded</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code></td>
+<td><code>%2F</code></td>
+</tr>
+<tr>
+<td><code> </code></td>
+<td><code>+</code></td>
+</tr>
+</tbody></table>
+<h2><a href="#url-generation-and-ambient-values" aria-hidden="true" class="anchor" id="url-generation-and-ambient-values"></a>URL Generation and ambient values</h2>
+<pre><code class="language-csharp">public class UrlGenerationController : Controller
+{
+    public IActionResult Source()
+    {
+        // Generates /UrlGeneration/Destination
+        var url = Url.Action(&quot;Destination&quot;);
+        return ControllerContext.MyDisplayRouteInfo(&quot;&quot;, $&quot; URL = {url}&quot;);
+    }
+
+    public IActionResult Destination()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>The route values from the current request, which are called ambient values.</p>
+</li>
+<li>
+<p>The values passed to <code>Url.Action</code> and substituting those values into the route template:</p>
+</li>
+</ul>
+<pre><code class="language-text">ambient values: { controller = &quot;UrlGeneration&quot;, action = &quot;Source&quot; }
+values passed to Url.Action: { controller = &quot;UrlGeneration&quot;, action = &quot;Destination&quot; }
+route template: {controller}/{action}/{id?}
+
+result: /UrlGeneration/Destination
+</code></pre>
+<ul>
+<li>
+<p>Use a <code>default</code> value if it has one.</p>
+</li>
+<li>
+<p>Be skipped if it's optional. For example, the id from the  route template {controller}/{action}/{id?}.</p>
+</li>
+<li>
+<p>The route values are used to expand a template.</p>
+</li>
+<li>
+<p>The route values for controller and action usually appear in that template. This works because the URLs matched by routing adhere to a convention.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class UrlGenerationAttrController : Controller
+{
+    [HttpGet(&quot;custom&quot;)]
+    public IActionResult Source()
+    {
+        var url = Url.Action(&quot;Destination&quot;);
+        return ControllerContext.MyDisplayRouteInfo(&quot;&quot;, $&quot; URL = {url}&quot;);
+    }
+
+    [HttpGet(&quot;custom/url/to/destination&quot;)]
+    public IActionResult Destination()
+    {
+       return ControllerContext.MyDisplayRouteInfo();
+    }
+}
+</code></pre>
+<h3><a href="#generating-urls-by-action-name" aria-hidden="true" class="anchor" id="generating-urls-by-action-name"></a>Generating URLs by action name</h3>
+<ul>
+<li>
+<p>The value of controller and action are part of both ambient values and values. The method <code>Url.Action</code> always uses the current values of action and controller and generates a URL path that routes to the current action.</p>
+</li>
+<li>
+<p>Routing has enough information to generate a URL without any additional values.</p>
+</li>
+<li>
+<p>Routing has enough information because all route parameters have a value.</p>
+</li>
+<li>
+<p>The value { <code>d = David</code> } is ignored.</p>
+</li>
+<li>
+<p>The generated URL path is <code>Alice/Bob/Carol/Donovan</code>.</p>
+</li>
+<li>
+<p>Both of the values { <code>c = Carol, d = David</code> } are ignored.</p>
+</li>
+<li>
+<p>There is no longer a value for <code>d</code> and URL generation fails.</p>
+</li>
+<li>
+<p>The desired values of <code>c</code> and <code>d</code> must be specified to generate a URL.</p>
+</li>
+<li>
+<p>By convention is usually an object of anonymous type.</p>
+</li>
+<li>
+<p>Can be an IDictionary&lt;&gt; or a POCO).</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public IActionResult Index()
+{
+    var url = Url.Action(&quot;Buy&quot;, &quot;Products&quot;, new { id = 17, color = &quot;red&quot; });
+    return Content(url!);
+}
+</code></pre>
+<pre><code class="language-csharp">public IActionResult Index2()
+{
+    var url = Url.Action(&quot;Buy&quot;, &quot;Products&quot;, new { id = 17 }, protocol: Request.Scheme);
+    // Returns https://localhost:5001/Products/Buy/17
+    return Content(url!);
+}
+</code></pre>
+<ul>
+<li>
+<p>An overload that accepts a <code>protocol</code>. For example, the preceding code.</p>
+</li>
+<li>
+<p><code>LinkGenerator.GetUriByAction</code>, which generates absolute URIs by <code>default</code>.</p>
+</li>
+</ul>
+<h3><a href="#generate-urls-by-route" aria-hidden="true" class="anchor" id="generate-urls-by-route"></a>Generate URLs by route</h3>
+<ul>
+<li>
+<p>Specifies a route name to generate the URL.</p>
+</li>
+<li>
+<p>Generally doesn't specify a controller or action name.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class UrlGeneration2Controller : Controller
+{
+    [HttpGet(&quot;&quot;)]
+    public IActionResult Source()
+    {
+        var url = Url.RouteUrl(&quot;Destination_Route&quot;);
+        return ControllerContext.MyDisplayRouteInfo(&quot;&quot;, $&quot; URL = {url}&quot;);
+    }
+
+    [HttpGet(&quot;custom/url/to/destination2&quot;, Name = &quot;Destination_Route&quot;)]
+    public IActionResult Destination()
+    {
+        return ControllerContext.MyDisplayRouteInfo();
+    }
+</code></pre>
+<pre><code class="language-cshtml">&lt;h1&gt;Test Links&lt;/h1&gt;
+
+&lt;ul&gt;
+    &lt;li&gt;&lt;a href=&quot;@Url.RouteUrl(&quot;Destination_Route&quot;)&quot;&gt;Test Destination_Route&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+<h3><a href="#generate-urls-in-html-and-razor" aria-hidden="true" class="anchor" id="generate-urls-in-html-and-razor"></a>Generate URLs in HTML and Razor</h3>
+<h3><a href="#url-generation-in-action-results" aria-hidden="true" class="anchor" id="url-generation-in-action-results"></a>URL generation in Action Results</h3>
+<pre><code class="language-csharp">[HttpPost]
+[ValidateAntiForgeryToken]
+public IActionResult Edit(int id, Customer customer)
+{
+    if (ModelState.IsValid)
+    {
+        // Update DB with new details.
+        ViewData[&quot;Message&quot;] = $&quot;Successful edit of customer {id}&quot;;
+        return RedirectToAction(&quot;Index&quot;);
+    }
+    return View(customer);
+}
+</code></pre>
+<h3><a href="#special-case-for-dedicated-conventional-routes" aria-hidden="true" class="anchor" id="special-case-for-dedicated-conventional-routes"></a>Special case for dedicated conventional routes</h3>
+<pre><code class="language-csharp">app.MapControllerRoute(name: &quot;blog&quot;,
+                pattern: &quot;blog/{*article}&quot;,
+                defaults: new { controller = &quot;Blog&quot;, action = &quot;Article&quot; });
+app.MapControllerRoute(name: &quot;default&quot;,
+               pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+</code></pre>
+<h2><a href="#areas" aria-hidden="true" class="anchor" id="areas"></a>Areas</h2>
+<ul>
+<li>
+<p>Routing <code>namespace</code> for controller actions.</p>
+</li>
+<li>
+<p>Folder structure for views.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{    
+    app.UseExceptionHandler(&quot;/Home/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapAreaControllerRoute(&quot;blog_route&quot;, &quot;Blog&quot;,
+        &quot;Manage/{controller}/{action}/{id?}&quot;);
+app.MapControllerRoute(&quot;default_route&quot;, &quot;{controller}/{action}/{id?}&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">app.MapControllerRoute(&quot;blog_route&quot;, &quot;Manage/{controller}/{action}/{id?}&quot;,
+        defaults: new { area = &quot;Blog&quot; }, constraints: new { area = &quot;Blog&quot; });
+app.MapControllerRoute(&quot;default_route&quot;, &quot;{controller}/{action}/{id?}&quot;);
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Namespace1
+{
+    [Area(&quot;Blog&quot;)]
+    public class UsersController : Controller
+    {
+        // GET /manage/users/adduser
+        public IActionResult AddUser()
+        {
+            var area = ControllerContext.ActionDescriptor.RouteValues[&quot;area&quot;];
+            var actionName = ControllerContext.ActionDescriptor.ActionName;
+            var controllerName = ControllerContext.ActionDescriptor.ControllerName;
+
+            return Content($&quot;area name:{area}&quot; +
+                $&quot; controller:{controllerName}  action name: {actionName}&quot;);
+        }        
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Namespace1
+{
+    [Area(&quot;Blog&quot;)]
+    public class UsersController : Controller
+    {
+        // GET /manage/users/adduser
+        public IActionResult AddUser()
+        {
+            var area = ControllerContext.ActionDescriptor.RouteValues[&quot;area&quot;];
+            var actionName = ControllerContext.ActionDescriptor.ActionName;
+            var controllerName = ControllerContext.ActionDescriptor.ControllerName;
+
+            return Content($&quot;area name:{area}&quot; +
+                $&quot; controller:{controllerName}  action name: {actionName}&quot;);
+        }        
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Namespace2
+{
+    // Matches { area = Zebra, controller = Users, action = AddUser }
+    [Area(&quot;Zebra&quot;)]
+    public class UsersController : Controller
+    {
+        // GET /zebra/users/adduser
+        public IActionResult AddUser()
+        {
+            var area = ControllerContext.ActionDescriptor.RouteValues[&quot;area&quot;];
+            var actionName = ControllerContext.ActionDescriptor.ActionName;
+            var controllerName = ControllerContext.ActionDescriptor.ControllerName;
+
+            return Content($&quot;area name:{area}&quot; +
+                $&quot; controller:{controllerName}  action name: {actionName}&quot;);
+        }        
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Namespace3
+{
+    // Matches { area = string.Empty, controller = Users, action = AddUser }
+    // Matches { area = null, controller = Users, action = AddUser }
+    // Matches { controller = Users, action = AddUser }
+    public class UsersController : Controller
+    {
+        // GET /users/adduser
+        public IActionResult AddUser()
+        {
+            var area = ControllerContext.ActionDescriptor.RouteValues[&quot;area&quot;];
+            var actionName = ControllerContext.ActionDescriptor.ActionName;
+            var controllerName = ControllerContext.ActionDescriptor.ControllerName;
+
+            return Content($&quot;area name:{area}&quot; +
+                $&quot; controller:{controllerName}  action name: {actionName}&quot;);
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">app.MapAreaControllerRoute(name: &quot;duck_route&quot;,
+                                     areaName: &quot;Duck&quot;,
+                                     pattern: &quot;Manage/{controller}/{action}/{id?}&quot;);
+app.MapControllerRoute(name: &quot;default&quot;,
+                             pattern: &quot;Manage/{controller=Home}/{action=Index}/{id?}&quot;);
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Namespace4
+{
+    [Area(&quot;Duck&quot;)]
+    public class UsersController : Controller
+    {
+        // GET /Manage/users/GenerateURLInArea
+        public IActionResult GenerateURLInArea()
+        {
+            // Uses the 'ambient' value of area.
+            var url = Url.Action(&quot;Index&quot;, &quot;Home&quot;);
+            // Returns /Manage/Home/Index
+            return Content(url);
+        }
+
+        // GET /Manage/users/GenerateURLOutsideOfArea
+        public IActionResult GenerateURLOutsideOfArea()
+        {
+            // Uses the empty value for area.
+            var url = Url.Action(&quot;Index&quot;, &quot;Home&quot;, new { area = &quot;&quot; });
+            // Returns /Manage
+            return Content(url);
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    public IActionResult About()
+    {
+        var url = Url.Action(&quot;AddUser&quot;, &quot;Users&quot;, new { Area = &quot;Zebra&quot; });
+        return Content($&quot;URL: {url}&quot;);
+    }
+</code></pre>
+<h2><a href="#action-definition" aria-hidden="true" class="anchor" id="action-definition"></a>Action definition</h2>
+<h2><a href="#sample-code" aria-hidden="true" class="anchor" id="sample-code"></a>Sample code</h2>
+<ul>
+<li>
+<p>MyDisplayRouteInfo is provided by the Rick.Docs.Samples.RouteInfo NuGet package and displays route information.</p>
+</li>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+</ul>
+<h2><a href="#debug-diagnostics" aria-hidden="true" class="anchor" id="debug-diagnostics"></a><code>Debug</code> diagnostics</h2>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft&quot;: &quot;Debug&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Information&quot;
+    }
+  }
+}
+</code></pre>
+<p>Ref: <code>[</code>Routing to controller actions in ASP.NET Core](<a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing?view=aspnetcore-8.0">https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing?view=aspnetcore-8.0</a>)</p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

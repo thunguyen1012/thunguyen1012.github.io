@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - Blazor - Tooling | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article describes tools for building Blazor apps using several tools:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - Blazor - Tooling</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article describes tools for building Blazor apps using several tools:</p>
+<ul>
+<li>
+<p>Visual Studio (VS): The most comprehensive integrated development environment (IDE) for .NET developers on Windows. Includes an array of tools and features to elevate and enhance every stage of software development.</p>
+</li>
+<li>
+<p>Visual Studio Code (VS Code) is an open source, cross-platform code editor that can be used to develop Blazor apps.</p>
+</li>
+<li>
+<p>.NET CLI: The .NET command-line interface (CLI) is a cross-platform toolchain for developing, building, running, and publishing .NET applications. The .NET CLI is included with the .NET SDK and runs on any platform supported by the SDK.</p>
+</li>
+</ul>
+<p>Select the pivot of this article that matches your tooling choice.</p>
+<ul>
+<li>
+<p>Install the latest version of Visual Studio with the ASP.NET and web development workload.</p>
+</li>
+<li>
+<p>Create a new project using one of the available Blazor templates:</p>
+<ul>
+<li>
+<p>Blazor Web App: Creates a Blazor web app that supports interactive server-side rendering (interactive SSR) and client-side rendering (CSR). The Blazor Web App template is recommended for getting started with Blazor to learn about server-side and client-side Blazor features.</p>
+</li>
+<li>
+<p>Blazor WebAssembly Standalone App: Creates a standalone client web app that can be deployed as a static site.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Provide a Project name and confirm that the Location is correct.</p>
+</li>
+<li>
+<p>For more information on the options in the Additional information dialog, see the Blazor project templates and template options section.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+The hosted Blazor WebAssembly project template isn't available in ASP.NET Core 8.0 or later. To create a hosted Blazor WebAssembly app, a Framework option earlier than .NET 8.0 must be selected with the ASP.NET Core Hosted checkbox.</p>
+</blockquote>
+<ul>
+<li>
+<p>Select Create.</p>
+</li>
+<li>
+<p>Open VS Code.</p>
+</li>
+<li>
+<p>Go to the Explorer view and select the Create .NET Project button. Alternatively, you can bring up the Command Palette using Ctrl+Shift+P, and then type &quot;.NET&quot; and find and select the .NET: New Project command.</p>
+</li>
+<li>
+<p>Select the Blazor project template from the list.</p>
+</li>
+<li>
+<p>In the Project Location dialog, create or select a folder for the project.</p>
+</li>
+<li>
+<p>In the Command Palette, provide a name for the project or accept the default name.</p>
+</li>
+<li>
+<p>Select Create project to create the project or adjust the project's options by selecting Show all template options. For more information on the templates and options, see the Blazor project templates and template options section.</p>
+</li>
+<li>
+<p>Press F5 on the keyboard to run the app with the debugger or Ctrl+F5 to run the app without the debugger.
+The Command Palette asks you to select a debugger. Select C# from the list.
+Next, select the <code>https</code> launch configuration.</p>
+</li>
+<li>
+<p>To stop the app, press Shift+F5 on the keyboard.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet --version
+</code></pre>
+<ul>
+<li>
+<p>Change to the directory using the <code>cd</code> command to where you want to create the project folder (for example, <code>cd c:/users/Bernie_Kopell/Documents</code>).</p>
+</li>
+<li>
+<p>For a Blazor Web App experience with default interactive server-side rendering (interactive SSR), execute the following command:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new blazor -o BlazorApp
+</code></pre>
+<ul>
+<li>For a standalone Blazor WebAssembly experience, execute the following command in a command shell that uses the <code>blazorwasm</code> template:</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new blazorwasm -o BlazorApp
+</code></pre>
+<h2><a href="#run-the-app" aria-hidden="true" class="anchor" id="run-the-app"></a>Run the app</h2>
+<blockquote>
+<p class='important'>Important
+When executing a Blazor Web App, run the app from the solution's server project, which is the project with a name that doesn't end in <code>.Client</code>.</p>
+</blockquote>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/blazor/tooling/tooling/_static/trust-certificate.png?view=aspnetcore-8.0" alt="Trust self-signed certificate dialog!" title="Trust self-signed certificate dialog" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/blazor/tooling/tooling/_static/install-certificate.png?view=aspnetcore-8.0" alt="Security warning dialog!" title="Security warning dialog" /></p>
+<ul>
+<li>
+<p>Compiles and runs the app.</p>
+</li>
+<li>
+<p>Launches the default browser at <code>https</code>://localhost:{PORT}, which displays the app's UI. The {PORT} placeholder is the random port assigned at app creation. If you need to change the port due to a local port conflict, change the port in the project's <code>Properties/launchSettings.json</code> file.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet watch
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet watch -lp https
+</code></pre>
+<h2><a href="#stop-the-app" aria-hidden="true" class="anchor" id="stop-the-app"></a>Stop the app</h2>
+<ul>
+<li>
+<p>Close the browser window.</p>
+</li>
+<li>
+<p>In Visual Studio, either:</p>
+<ul>
+<li>Use the Stop button in Visual Studio's menu bar:</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/blazor/tooling/tooling/_static/stop-button.png?view=aspnetcore-8.0" alt="Stop button in Visual Studio's menu bar!" title="Stop button in Visual Studio's menu bar" /></p>
+<ul>
+<li>
+<p>Press Shift+F5 on the keyboard.</p>
+</li>
+<li>
+<p>Close the browser window.</p>
+</li>
+<li>
+<p>In VS Code, either:</p>
+<ul>
+<li>
+<p>From the Run menu, select Stop Debugging.</p>
+</li>
+<li>
+<p>Press Shift+F5 on the keyboard.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Close the browser window.</p>
+</li>
+<li>
+<p>In the command shell, press Ctrl+C (Windows) or ⌘+C (macOS).</p>
+</li>
+</ul>
+<h2><a href="#visual-studio-solution-file-.sln)" aria-hidden="true" class="anchor" id="visual-studio-solution-file-.sln)"></a>Visual Studio solution file (.sln)</h2>
+<p>A solution is a container to organize one or more related code projects. Solution files use a unique format and aren't intended to be edited directly.</p>
+<p>Visual Studio and Visual Studio Code (VS Code) use a solution file (.sln) to store settings for a solution. The .NET CLI doesn't organize projects using a solution file, but it can create solution files and list/modify the projects in solution files via the <code>dotnet sln</code> command. Other .NET CLI commands use the path of the solution file for various publishing, testing, and packaging commands.</p>
+<p>For more information, see the following resources:</p>
+<ul>
+<li>
+<p>Introduction to projects and solutions (Visual Studio documentation)</p>
+</li>
+<li>
+<p>What are solutions and projects in Visual Studio? (Visual Studio documentation)</p>
+</li>
+<li>
+<p>Project management (VS Code documentation)</p>
+</li>
+</ul>
+<h2><a href="#blazor-project-templates-and-template-options" aria-hidden="true" class="anchor" id="blazor-project-templates-and-template-options"></a>Blazor project templates and template options</h2>
+<p>The Blazor framework provides project templates for creating new apps. The templates are used to create new Blazor projects and solutions regardless of the tooling that you select for Blazor development (Visual Studio, Visual Studio Code, or the .NET command-line interface (CLI)):</p>
+<ul>
+<li>
+<p>Blazor Web App project template: <code>blazor</code></p>
+</li>
+<li>
+<p>Standalone Blazor WebAssembly app project template: <code>blazorwasm</code></p>
+</li>
+</ul>
+<p>For more information on Blazor project templates, see ASP.NET Core Blazor project structure.</p>
+<ul>
+<li>
+<p>Client and server rendering concepts</p>
+</li>
+<li>
+<p>Static and interactive rendering concepts</p>
+</li>
+<li>
+<p>Render modes</p>
+</li>
+</ul>
+<h3><a href="#interactive-render-mode" aria-hidden="true" class="anchor" id="interactive-render-mode"></a>Interactive render mode</h3>
+<ul>
+<li>
+<p>Interactive server-side rendering (interactive SSR) is enabled by default with the Server option.</p>
+</li>
+<li>
+<p>To only enable interactivity with client-side rendering (CSR), use the WebAssembly option.</p>
+</li>
+<li>
+<p>To enable both interactive rendering modes and the ability to automatically switch between them at runtime, use the Auto (Server and WebAssembly) (automatic) render mode option.</p>
+</li>
+<li>
+<p>If interactivity is set to <code>None</code>, the generated app has no interactivity. The app is only configured for static server-side rendering.</p>
+</li>
+</ul>
+<blockquote>
+<p class='important'>Important
+When using a Blazor Web App, most of the Blazor documentation example components require interactivity to function and demonstrate the concepts covered by the articles. When you test an example component provided by an article, make sure that either the app adopts global interactivity or the component adopts an interactive render mode.</p>
+</blockquote>
+<h3><a href="#interactivity-location" aria-hidden="true" class="anchor" id="interactivity-location"></a>Interactivity location</h3>
+<ul>
+<li>
+<p>Per page/component: The default sets up interactivity per page or per component.</p>
+</li>
+<li>
+<p>Global: Using this option sets up interactivity globally for the entire app.</p>
+</li>
+</ul>
+<h3><a href="#sample-pages" aria-hidden="true" class="anchor" id="sample-pages"></a>Sample pages</h3>
+<h3><a href="#additional-guidance-on-template-options" aria-hidden="true" class="anchor" id="additional-guidance-on-template-options"></a>Additional guidance on template options</h3>
+<ul>
+<li>
+<p>ASP.NET Core Blazor render modes</p>
+</li>
+<li>
+<p>The .NET default templates for <code>dotnet new</code> article in the .NET Core documentation:</p>
+<ul>
+<li>
+<p><code>blazor</code></p>
+</li>
+<li>
+<p><code>blazorwasm</code></p>
+</li>
+</ul>
+</li>
+<li>
+<p>Passing the help option (-h or <code>--help</code>) to the <code>dotnet new</code> CLI command in a command shell:</p>
+<ul>
+<li>
+<p><code>dotnet new</code>blazor<code></code>-h``````</p>
+</li>
+<li>
+<p><code>dotnet new</code>blazorwasm<code></code>-h``````</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor WebAssembly build tools and ahead-of-time (AOT) compilation</p>
+</li>
+<li>
+<p>.NET command-line interface (CLI)</p>
+</li>
+<li>
+<p>.NET SDK</p>
+</li>
+<li>
+<p>.NET Hot Reload support for ASP.NET Core</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor hosting models</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor project structure</p>
+</li>
+<li>
+<p>ASP.NET Core Blazor Hybrid tutorials</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/blazor/tooling?view=aspnetcore-8.0">Tooling for ASP.NET Core Blazor</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

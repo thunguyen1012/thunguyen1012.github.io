@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Static files | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Static files</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#serve-static-files" aria-hidden="true" class="anchor" id="serve-static-files"></a>Serve static files</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p><code>wwwroot</code></p>
+<ul>
+<li>
+<p><code>css</code></p>
+</li>
+<li>
+<p><code>js</code></p>
+</li>
+<li>
+<p><code>lib</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#serve-files-in-web-root" aria-hidden="true" class="anchor" id="serve-files-in-web-root"></a>Serve files in web root</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-html">&lt;img src=&quot;~/images/MyImage.jpg&quot; class=&quot;img&quot; alt=&quot;My image&quot; /&gt;
+</code></pre>
+<h3><a href="#serve-files-outside-of-web-root" aria-hidden="true" class="anchor" id="serve-files-outside-of-web-root"></a>Serve files outside of web root</h3>
+<ul>
+<li>
+<p><code>wwwroot</code></p>
+<ul>
+<li>
+<p><code>css</code></p>
+</li>
+<li>
+<p><code>images</code></p>
+</li>
+<li>
+<p><code>js</code></p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>MyStaticFiles</code></p>
+<ul>
+<li>
+<p><code>images</code></p>
+<ul>
+<li><code>red-rose.jpg</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.Extensions.FileProviders;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+           Path.Combine(builder.Environment.ContentRootPath, &quot;MyStaticFiles&quot;)),
+    RequestPath = &quot;/StaticFiles&quot;
+});
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-html">&lt;img src=&quot;~/StaticFiles/images/red-rose.jpg&quot; class=&quot;img&quot; alt=&quot;A red rose&quot; /&gt;
+</code></pre>
+<h3><a href="#set-http-response-headers" aria-hidden="true" class="anchor" id="set-http-response-headers"></a>Set HTTP response headers</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+var cacheMaxAgeOneWeek = (60 * 60 * 24 * 7).ToString();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =&gt;
+    {
+        ctx.Context.Response.Headers.Append(
+             &quot;Cache-Control&quot;, $&quot;public, max-age={cacheMaxAgeOneWeek}&quot;);
+    }
+});
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h2><a href="#static-file-authorization" aria-hidden="true" class="anchor" id="static-file-authorization"></a>Static file authorization</h2>
+<ul>
+<li>
+<p>No authorization checks are performed on the static files.</p>
+</li>
+<li>
+<p>Static files served by the Static File Middleware, such as those under <code>wwwroot</code>, are publicly accessible.</p>
+</li>
+<li>
+<p>Store them outside of <code>wwwroot</code>.</p>
+</li>
+<li>
+<p>Call <code>UseStaticFiles</code>, specifying a path, after calling <code>UseAuthorization</code>.</p>
+</li>
+<li>
+<p>Set the fallback authorization policy.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using StaticFileAuth.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+builder.Services.AddRazorPages();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+           Path.Combine(builder.Environment.ContentRootPath, &quot;MyStaticFiles&quot;)),
+    RequestPath = &quot;/StaticFiles&quot;
+});
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Store them outside of <code>wwwroot</code> and any directory accessible to the Static File Middleware.</p>
+</li>
+<li>
+<p>Serve them via an action method to which authorization is applied and return a FileResult object:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Authorize]
+public class BannerImageModel : PageModel
+{
+    private readonly IWebHostEnvironment _env;
+
+    public BannerImageModel(IWebHostEnvironment env) =&gt;
+        _env = env;
+
+    public PhysicalFileResult OnGet()
+    {
+        var filePath = Path.Combine(
+                _env.ContentRootPath, &quot;MyStaticFiles&quot;, &quot;images&quot;, &quot;red-rose.jpg&quot;);
+
+        return PhysicalFile(filePath, &quot;image/jpeg&quot;);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/files/{fileName}&quot;,  IResult (string fileName) =&gt; 
+    {
+        var filePath = GetOrCreateFilePath(fileName);
+
+        if (File.Exists(filePath))
+        {
+            return TypedResults.PhysicalFile(filePath, fileDownloadName: $&quot;{fileName}&quot;);
+        }
+
+        return TypedResults.NotFound(&quot;No file found with the supplied file name&quot;);
+    })
+    .WithName(&quot;GetFileByName&quot;)
+    .RequireAuthorization(&quot;AuthenticatedUsers&quot;);
+
+// IFormFile uses memory buffer for uploading. For handling large file use streaming instead.
+// https://learn.microsoft.com/aspnet/core/mvc/models/file-uploads#upload-large-files-with-streaming
+app.MapPost(&quot;/files&quot;, async (IFormFile file, LinkGenerator linker, HttpContext context) =&gt;
+    {
+        // Don't rely on the file.FileName as it is only metadata that can be manipulated by the end-user
+        // Take a look at the `Utilities.IsFileValid` method that takes an IFormFile and validates its signature within the AllowedFileSignatures
+        
+        var fileSaveName = Guid.NewGuid().ToString(&quot;N&quot;) + Path.GetExtension(file.FileName);
+        await SaveFileWithCustomFileName(file, fileSaveName);
+        
+        context.Response.Headers.Append(&quot;Location&quot;, linker.GetPathByName(context, &quot;GetFileByName&quot;, new { fileName = fileSaveName}));
+        return TypedResults.Ok(&quot;File Uploaded Successfully!&quot;);
+    })
+    .RequireAuthorization(&quot;AdminsOnly&quot;);
+
+app.Run();
+</code></pre>
+<h2><a href="#directory-browsing" aria-hidden="true" class="anchor" id="directory-browsing"></a>Directory browsing</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddDirectoryBrowser();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+
+var fileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.WebRootPath, &quot;images&quot;));
+var requestPath = &quot;/MyImages&quot;;
+
+// Enable displaying browser links.
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = fileProvider,
+    RequestPath = requestPath
+});
+
+app.UseDirectoryBrowser(new DirectoryBrowserOptions
+{
+    FileProvider = fileProvider,
+    RequestPath = requestPath
+});
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/static-files/_static/dir-browse.png?view=aspnetcore-8.0" alt="directory browsing!" title="directory browsing" /></p>
+<h2><a href="#serve-default-documents" aria-hidden="true" class="anchor" id="serve-default-documents"></a>Serve default documents</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseDefaultFiles();
+
+app.UseStaticFiles();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p><code>default.htm</code></p>
+</li>
+<li>
+<p><code>default.html</code></p>
+</li>
+<li>
+<p><code>index.htm</code></p>
+</li>
+<li>
+<p><code>index.html</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+var options = new DefaultFilesOptions();
+options.DefaultFileNames.Clear();
+options.DefaultFileNames.Add(&quot;mydefault.html&quot;);
+app.UseDefaultFiles(options);
+
+app.UseStaticFiles();
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h3><a href="#usefileserver-for-default-documents" aria-hidden="true" class="anchor" id="usefileserver-for-default-documents"></a><code>UseFileServer</code> for default documents</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseFileServer();
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddDirectoryBrowser();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseFileServer(enableDirectoryBrowsing: true);
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p><code>wwwroot</code></p>
+<ul>
+<li>
+<p><code>css</code></p>
+</li>
+<li>
+<p><code>images</code></p>
+</li>
+<li>
+<p><code>js</code></p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>MyStaticFiles</code></p>
+<ul>
+<li>
+<p><code>images</code></p>
+<ul>
+<li><code>MyImage.jpg</code></li>
+</ul>
+</li>
+<li>
+<p><code>default.html</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.Extensions.FileProviders;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddDirectoryBrowser();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+
+app.UseFileServer(new FileServerOptions
+{
+    FileProvider = new PhysicalFileProvider(
+           Path.Combine(builder.Environment.ContentRootPath, &quot;MyStaticFiles&quot;)),
+    RequestPath = &quot;/StaticFiles&quot;,
+    EnableDirectoryBrowsing = true
+});
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<table><thead>
+<tr>
+<th>URI</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>https://&lt;hostname&gt;/StaticFiles/images/MyImage.jpg</code></td>
+<td><code>MyStaticFiles/images/MyImage.jpg</code></td>
+</tr>
+<tr>
+<td><code>https://&lt;hostname&gt;/StaticFiles</code></td>
+<td><code>MyStaticFiles/default.html</code></td>
+</tr>
+</tbody></table>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/static-files/_static/db2.png?view=aspnetcore-8.0" alt="Static files list!" title="Static files list" /></p>
+<h2><a href="#fileextensioncontenttypeprovider" aria-hidden="true" class="anchor" id="fileextensioncontenttypeprovider"></a>FileExtensionContentTypeProvider</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+// Set up custom content types - associating file extension to MIME type
+var provider = new FileExtensionContentTypeProvider();
+// Add new mappings
+provider.Mappings[&quot;.myapp&quot;] = &quot;application/x-msdownload&quot;;
+provider.Mappings[&quot;.htm3&quot;] = &quot;text/html&quot;;
+provider.Mappings[&quot;.image&quot;] = &quot;image/png&quot;;
+// Replace an existing mapping
+provider.Mappings[&quot;.rtf&quot;] = &quot;application/x-msdownload&quot;;
+// Remove MP4 videos.
+provider.Mappings.Remove(&quot;.mp4&quot;);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider
+});
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h2><a href="#non-standard-content-types" aria-hidden="true" class="anchor" id="non-standard-content-types"></a>Non-standard content types</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ServeUnknownFileTypes = true,
+    DefaultContentType = &quot;image/png&quot;
+});
+
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Enabling ServeUnknownFileTypes is a security risk. It's disabled by default, and its use is discouraged. FileExtensionContentTypeProvider provides a safer alternative to serving files with non-standard extensions.</p>
+</blockquote>
+<h2><a href="#serve-files-from-multiple-locations" aria-hidden="true" class="anchor" id="serve-files-from-multiple-locations"></a>Serve files from multiple locations</h2>
+<pre><code class="language-cshtml">@page
+
+&lt;p&gt; Test /MyStaticFiles/image3.png&lt;/p&gt;
+
+&lt;img src=&quot;~/image3.png&quot; class=&quot;img&quot; asp-append-version=&quot;true&quot; alt=&quot;Test&quot;&gt;
+</code></pre>
+<pre><code class="language-csharp">app.UseStaticFiles(); // Serve files from wwwroot
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, &quot;MyStaticFiles&quot;))
+});
+</code></pre>
+<ul>
+<li>
+<p>The <code>/MyStaticFiles/image3.png</code> file is displayed.</p>
+</li>
+<li>
+<p>The Image Tag Helpers AppendVersion is not applied because the Tag Helpers depend on <code>WebRootFileProvider</code>. <code>WebRootFileProvider</code> has not been updated to include the <code>MyStaticFiles</code> folder.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var webRootProvider = new PhysicalFileProvider(builder.Environment.WebRootPath);
+var newPathProvider = new PhysicalFileProvider(
+  Path.Combine(builder.Environment.ContentRootPath, &quot;MyStaticFiles&quot;));
+
+var compositeProvider = new CompositeFileProvider(webRootProvider,
+                                                  newPathProvider);
+
+// Update the default provider.
+app.Environment.WebRootFileProvider = compositeProvider;
+
+app.UseStaticFiles();
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The preceding approach applies to Razor Pages and MVC apps. For guidance that applies to Blazor Web Apps, see ASP.NET Core Blazor static files.</p>
+</blockquote>
+<h3><a href="#security-considerations-for-static-files" aria-hidden="true" class="anchor" id="security-considerations-for-static-files"></a>Security considerations for static files</h3>
+<blockquote>
+<p class='warning'>Warning
+UseDirectoryBrowser and <code>UseStaticFiles</code> can leak secrets. Disabling directory browsing in production is highly recommended. Carefully review which directories are enabled via <code>UseStaticFiles</code> or <code>UseDirectoryBrowser</code>. The entire directory and its sub-directories become publicly accessible. Store files suitable for serving to the public in a dedicated directory, such as <code>&lt;content_root&gt;/wwwroot</code>. Separate these files from MVC views, Razor Pages, configuration files, etc.</p>
+</blockquote>
+<ul>
+<li>
+<p>The URLs for content exposed with <code>UseDirectoryBrowser</code> and <code>UseStaticFiles</code> are subject to the case sensitivity and character restrictions of the underlying file system. For example, Windows is case insensitive, but macOS and Linux aren't.</p>
+</li>
+<li>
+<p>ASP.NET Core apps hosted in IIS use the ASP.NET Core Module to forward all requests to the app, including static file requests. The IIS static file handler isn't used and has no chance to handle requests.</p>
+</li>
+<li>
+<p>Complete the following steps in IIS Manager to remove the IIS static file handler at the server or website level:</p>
+</li>
+</ul>
+<p>Navigate to the Modules feature.
+Select StaticFileModule in the list.
+Click Remove in the Actions sidebar.</p>
+<ul>
+<li>
+<p>Navigate to the Modules feature.</p>
+</li>
+<li>
+<p>Select StaticFileModule in the list.</p>
+</li>
+<li>
+<p>Click Remove in the Actions sidebar.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+If the IIS static file handler is enabled and the ASP.NET Core Module is configured incorrectly, static files are served. This happens, for example, if the web.config file isn't deployed.</p>
+</blockquote>
+<ul>
+<li>Place code files, including <code>.cs</code> and <code>.cshtml</code>, outside of the app project's web root. A logical separation is therefore created between the app's client-side content and server-based code. This prevents server-side code from being leaked.</li>
+</ul>
+<h2><a href="#serve-files-outside-wwwroot-by-updating-iwebhostenvironmentwebrootpath" aria-hidden="true" class="anchor" id="serve-files-outside-wwwroot-by-updating-iwebhostenvironmentwebrootpath"></a>Serve files outside <code>wwwroot</code> by updating <code>IWebHostEnvironment.WebRootPath</code></h2>
+<ul>
+<li>
+<p>In the development environment, static assets found in both <code>wwwroot</code> and the updated <code>IWebHostEnvironment.WebRootPath</code> are served from <code>wwwroot</code>.</p>
+</li>
+<li>
+<p>In any environment other than development, duplicate static assets are served from the updated <code>IWebHostEnvironment.WebRootPath</code> folder.</p>
+</li>
+<li>
+<p>Containing an <code>Index.html</code> file in <code>wwwroot</code> and <code>wwwroot-custom</code>.</p>
+</li>
+<li>
+<p>With the following updated <code>Program.cs</code> file that sets WebRootPath = &quot;wwwroot-custom&quot;:
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+Args = args,
+// Look for static files in &quot;wwwroot-custom&quot;
+WebRootPath = &quot;wwwroot-custom&quot;
+});</p>
+</li>
+</ul>
+<p>var app = builder.Build();</p>
+<p>app.UseDefaultFiles();
+app.UseStaticFiles();</p>
+<p>app.Run();</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    // Look for static files in &quot;wwwroot-custom&quot;
+    WebRootPath = &quot;wwwroot-custom&quot;
+});
+
+var app = builder.Build();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>In the development environment return <code>wwwroot/Index.html</code></p>
+</li>
+<li>
+<p>In any environment other than development return <code>wwwroot-custom/Index.html</code></p>
+</li>
+<li>
+<p>Delete duplicate named assets in <code>wwwroot</code>.</p>
+</li>
+<li>
+<p>Set &quot;ASPNETCORE_ENVIRONMENT&quot; in <code>Properties/launchSettings.json</code> to any value other than &quot;Development&quot;.</p>
+</li>
+<li>
+<p>Completely disable static web assets by setting <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled> in the project file. WARNING, disabling static web assets disables Razor Class Libraries.</p>
+</li>
+<li>
+<p>Add the following JSON to the project file:</p>
+</li>
+</ul>
+<ItemGroup>
+    <Content Remove="wwwroot\**" />
+</ItemGroup>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+    &lt;Content Remove=&quot;wwwroot\**&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    // Examine Hosting environment: logging value
+    EnvironmentName = Environments.Staging,
+    WebRootPath = &quot;wwwroot-custom&quot;
+});
+
+var app = builder.Build();
+
+app.Logger.LogInformation(&quot;ASPNETCORE_ENVIRONMENT: {env}&quot;,
+      Environment.GetEnvironmentVariable(&quot;ASPNETCORE_ENVIRONMENT&quot;));
+
+app.Logger.LogInformation(&quot;app.Environment.IsDevelopment(): {env}&quot;,
+      app.Environment.IsDevelopment().ToString());
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.Run();
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Middleware</p>
+</li>
+<li>
+<p>Introduction to ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/static-files?view=aspnetcore-8.0">Static files in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

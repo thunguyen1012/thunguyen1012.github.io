@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Handle errors | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Handle errors</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#developer-exception-page" aria-hidden="true" class="anchor" id="developer-exception-page"></a>Developer exception page</h2>
+<ul>
+<li>
+<p>Running in the Development environment.</p>
+</li>
+<li>
+<p>App created with the current templates, that is, using WebApplication.CreateBuilder.  Apps created using the <code>WebHost.CreateDefaultBuilder</code> must enable the developer exception page by calling <code>app.UseDeveloperExceptionPage</code> in <code>Configure</code>.</p>
+</li>
+<li>
+<p>Stack trace</p>
+</li>
+<li>
+<p>Query string parameters, if any</p>
+</li>
+<li>
+<p>Cookies, if any</p>
+</li>
+<li>
+<p>Headers</p>
+</li>
+</ul>
+<h2><a href="#exception-handler-page" aria-hidden="true" class="anchor" id="exception-handler-page"></a>Exception handler page</h2>
+<ul>
+<li>
+<p>Catches and logs unhandled exceptions.</p>
+</li>
+<li>
+<p>Re-executes the request in an alternate pipeline using the path indicated. The request isn't re-executed if the response has started. The template-generated code re-executes the request using the <code>/Error</code> path.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+If the alternate pipeline throws an exception of its own, Exception Handling Middleware rethrows the original exception.</p>
+</blockquote>
+<ul>
+<li>
+<p>Middlewares need to handle reentrancy with the same request. This normally means either cleaning up their state after calling <code>_next</code> or caching their processing on the <code>HttpContext</code> to avoid redoing it. When dealing with the request body, this either means buffering or caching the results like the Form reader.</p>
+</li>
+<li>
+<p>For the <code>UseExceptionHandler(IApplicationBuilder, String)</code> overload that is used in templates, only the request path is modified, and the route data is cleared. Request data such as headers, method, and items are all reused as-is.</p>
+</li>
+<li>
+<p>Scoped services remain the same.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+</code></pre>
+<ul>
+<li>
+<p>For Razor Pages, create multiple handler methods. For example, use <code>OnGet</code> to handle GET exceptions and use <code>OnPost</code> to handle POST exceptions.</p>
+</li>
+<li>
+<p>For MVC, apply HTTP verb attributes to multiple actions. For example, use <code>[HttpGet]</code> to handle GET exceptions and use <code>[HttpPost]</code> to handle POST exceptions.</p>
+</li>
+</ul>
+<h3><a href="#access-the-exception" aria-hidden="true" class="anchor" id="access-the-exception"></a>Access the exception</h3>
+<pre><code class="language-csharp">[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+[IgnoreAntiforgeryToken]
+public class ErrorModel : PageModel
+{
+    public string? RequestId { get; set; }
+
+    public bool ShowRequestId =&gt; !string.IsNullOrEmpty(RequestId);
+
+    public string? ExceptionMessage { get; set; }
+
+    public void OnGet()
+    {
+        RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+
+        var exceptionHandlerPathFeature =
+            HttpContext.Features.Get&lt;IExceptionHandlerPathFeature&gt;();
+
+        if (exceptionHandlerPathFeature?.Error is FileNotFoundException)
+        {
+            ExceptionMessage = &quot;The file was not found.&quot;;
+        }
+
+        if (exceptionHandlerPathFeature?.Path == &quot;/&quot;)
+        {
+            ExceptionMessage ??= string.Empty;
+            ExceptionMessage += &quot; Page: Home.&quot;;
+        }
+    }
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Do not serve sensitive error information to clients. Serving errors is a security risk.</p>
+</blockquote>
+<h2><a href="#exception-handler-lambda" aria-hidden="true" class="anchor" id="exception-handler-lambda"></a>Exception handler lambda</h2>
+<pre><code class="language-csharp">var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(exceptionHandlerApp =&gt;
+    {
+        exceptionHandlerApp.Run(async context =&gt;
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+
+            // using static System.Net.Mime.MediaTypeNames;
+            context.Response.ContentType = Text.Plain;
+
+            await context.Response.WriteAsync(&quot;An exception was thrown.&quot;);
+
+            var exceptionHandlerPathFeature =
+                context.Features.Get&lt;IExceptionHandlerPathFeature&gt;();
+
+            if (exceptionHandlerPathFeature?.Error is FileNotFoundException)
+            {
+                await context.Response.WriteAsync(&quot; The file was not found.&quot;);
+            }
+
+            if (exceptionHandlerPathFeature?.Path == &quot;/&quot;)
+            {
+                await context.Response.WriteAsync(&quot; Page: Home.&quot;);
+            }
+        });
+    });
+
+    app.UseHsts();
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Do not serve sensitive error information to clients. Serving errors is a security risk.</p>
+</blockquote>
+<h2><a href="#iexceptionhandler" aria-hidden="true" class="anchor" id="iexceptionhandler"></a><code>IExceptionHandler</code></h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Diagnostics;
+
+namespace ErrorHandlingSample
+{
+    public class CustomExceptionHandler : IExceptionHandler
+    {
+        private readonly ILogger&lt;CustomExceptionHandler&gt; logger;
+        public CustomExceptionHandler(ILogger&lt;CustomExceptionHandler&gt; logger)
+        {
+            this.logger = logger;
+        }
+        public ValueTask&lt;bool&gt; TryHandleAsync(
+            HttpContext httpContext,
+            Exception exception,
+            CancellationToken cancellationToken)
+        {
+            var exceptionMessage = exception.Message;
+            logger.LogError(
+                &quot;Error Message: {exceptionMessage}, Time of occurrence {time}&quot;,
+                exceptionMessage, DateTime.UtcNow);
+            // Return false to continue with the default behavior
+            // - or - return true to signal that this exception is handled
+            return ValueTask.FromResult(false);
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using ErrorHandlingSample;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddRazorPages();
+builder.Services.AddExceptionHandler&lt;CustomExceptionHandler&gt;();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+// Remaining Program.cs code omitted for brevity
+</code></pre>
+<ul>
+<li>
+<p>The <code>CustomExceptionHandler</code> is called first to handle an exception.</p>
+</li>
+<li>
+<p>After logging the exception, the <code>TryHandleException</code> method returns <code>false</code>, so the developer exception page is shown.</p>
+</li>
+<li>
+<p>The <code>CustomExceptionHandler</code> is called first to handle an exception.</p>
+</li>
+<li>
+<p>After logging the exception, the <code>TryHandleException</code> method returns <code>false</code>, so the <code>/Error</code> page is shown.</p>
+</li>
+</ul>
+<h2><a href="#usestatuscodepages" aria-hidden="true" class="anchor" id="usestatuscodepages"></a><code>UseStatusCodePages</code></h2>
+<pre><code class="language-csharp">var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseStatusCodePages();
+</code></pre>
+<pre><code class="language-console">Status Code: 404; Not Found
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The status code pages middleware does not catch exceptions. To provide a custom error handling page, use the exception handler page.</p>
+</blockquote>
+<h3><a href="#usestatuscodepages-with-format-string" aria-hidden="true" class="anchor" id="usestatuscodepages-with-format-string"></a><code>UseStatusCodePages</code> with format string</h3>
+<pre><code class="language-csharp">var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+// using static System.Net.Mime.MediaTypeNames;
+app.UseStatusCodePages(Text.Plain, &quot;Status Code Page: {0}&quot;);
+</code></pre>
+<h3><a href="#usestatuscodepages-with-lambda" aria-hidden="true" class="anchor" id="usestatuscodepages-with-lambda"></a><code>UseStatusCodePages</code> with lambda</h3>
+<pre><code class="language-csharp">var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseStatusCodePages(async statusCodeContext =&gt;
+{
+    // using static System.Net.Mime.MediaTypeNames;
+    statusCodeContext.HttpContext.Response.ContentType = Text.Plain;
+
+    await statusCodeContext.HttpContext.Response.WriteAsync(
+        $&quot;Status Code Page: {statusCodeContext.HttpContext.Response.StatusCode}&quot;);
+});
+</code></pre>
+<h3><a href="#usestatuscodepageswithredirects" aria-hidden="true" class="anchor" id="usestatuscodepageswithredirects"></a>UseStatusCodePagesWithRedirects</h3>
+<ul>
+<li>
+<p>Sends a 302 - Found status code to the client.</p>
+</li>
+<li>
+<p>Redirects the client to the error handling endpoint provided in the URL template. The error handling endpoint typically displays error information and returns HTTP 200.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseStatusCodePagesWithRedirects(&quot;/StatusCode/{0}&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Should redirect the client to a different endpoint, usually in cases where a different app processes the error. For web apps, the client's browser address bar reflects the redirected endpoint.</p>
+</li>
+<li>
+<p>Shouldn't preserve and return the original status code with the initial redirect response.</p>
+</li>
+</ul>
+<h3><a href="#usestatuscodepageswithreexecute" aria-hidden="true" class="anchor" id="usestatuscodepageswithreexecute"></a><code>UseStatusCodePagesWithReExecute</code></h3>
+<ul>
+<li>
+<p>Generates the response body by re-executing the request pipeline using an alternate path.</p>
+</li>
+<li>
+<p>Does not alter the status code before or after re-executing the pipeline.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseStatusCodePagesWithReExecute(&quot;/StatusCode/{0}&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Process the request without redirecting to a different endpoint. For web apps, the client's browser address bar reflects the originally requested endpoint.</p>
+</li>
+<li>
+<p>Preserve and return the original status code with the response.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var app = builder.Build();  
+app.UseStatusCodePagesWithReExecute(&quot;/StatusCode&quot;, &quot;?statusCode={0}&quot;);
+</code></pre>
+<pre><code class="language-csharp">[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+public class StatusCodeModel : PageModel
+{
+    public int OriginalStatusCode { get; set; }
+
+    public string? OriginalPathAndQuery { get; set; }
+
+    public void OnGet(int statusCode)
+    {
+        OriginalStatusCode = statusCode;
+
+        var statusCodeReExecuteFeature =
+            HttpContext.Features.Get&lt;IStatusCodeReExecuteFeature&gt;();
+
+        if (statusCodeReExecuteFeature is not null)
+        {
+            OriginalPathAndQuery = $&quot;{statusCodeReExecuteFeature.OriginalPathBase}&quot;
+                                    + $&quot;{statusCodeReExecuteFeature.OriginalPath}&quot;
+                                    + $&quot;{statusCodeReExecuteFeature.OriginalQueryString}&quot;;
+
+        }
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Middlewares need to handle reentrancy with the same request. This normally means either cleaning up their state after calling <code>_next</code> or caching their processing on the <code>HttpContext</code> to avoid redoing it. When dealing with the request body, this either means buffering or caching the results like the Form reader.</p>
+</li>
+<li>
+<p>Scoped services remain the same.</p>
+</li>
+</ul>
+<h2><a href="#disable-status-code-pages" aria-hidden="true" class="anchor" id="disable-status-code-pages"></a>Disable status code pages</h2>
+<pre><code class="language-csharp">public void OnGet()
+{
+    var statusCodePagesFeature =
+        HttpContext.Features.Get&lt;IStatusCodePagesFeature&gt;();
+
+    if (statusCodePagesFeature is not null)
+    {
+        statusCodePagesFeature.Enabled = false;
+    }
+}
+</code></pre>
+<h2><a href="#exception-handling-code" aria-hidden="true" class="anchor" id="exception-handling-code"></a>Exception-handling code</h2>
+<h3><a href="#response-headers" aria-hidden="true" class="anchor" id="response-headers"></a>Response headers</h3>
+<ul>
+<li>
+<p>The app can't change the response's status code.</p>
+</li>
+<li>
+<p>Any exception pages or handlers can't run. The response must be completed or the connection aborted.</p>
+</li>
+</ul>
+<h2><a href="#server-exception-handling" aria-hidden="true" class="anchor" id="server-exception-handling"></a>Server exception handling</h2>
+<h2><a href="#startup-exception-handling" aria-hidden="true" class="anchor" id="startup-exception-handling"></a>Startup exception handling</h2>
+<ul>
+<li>
+<p>The hosting layer logs a critical exception.</p>
+</li>
+<li>
+<p>The dotnet process crashes.</p>
+</li>
+<li>
+<p>No error page is displayed when the HTTP server is Kestrel.</p>
+</li>
+</ul>
+<h2><a href="#database-error-page" aria-hidden="true" class="anchor" id="database-error-page"></a>Database error page</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddRazorPages();
+</code></pre>
+<h2><a href="#exception-filters" aria-hidden="true" class="anchor" id="exception-filters"></a>Exception filters</h2>
+<h2><a href="#model-state-errors" aria-hidden="true" class="anchor" id="model-state-errors"></a>Model state errors</h2>
+<h2><a href="#problem-details" aria-hidden="true" class="anchor" id="problem-details"></a>Problem details</h2>
+<ul>
+<li>
+<p><code>ExceptionHandlerMiddleware</code>: Generates a problem details response when a custom handler is not defined.</p>
+</li>
+<li>
+<p><code>StatusCodePagesMiddleware</code>: Generates a problem details response by default.</p>
+</li>
+<li>
+<p><code>DeveloperExceptionPageMiddleware</code>: Generates a problem details response in development when the <code>Accept</code> request HTTP header doesn't include <code>text/html</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddProblemDetails();
+
+var app = builder.Build();        
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler();
+    app.UseHsts();
+}
+
+app.UseStatusCodePages();
+</code></pre>
+<h3><a href="#customize-problem-details" aria-hidden="true" class="anchor" id="customize-problem-details"></a>Customize problem details</h3>
+<ul>
+<li>
+<p>Use <code>ProblemDetailsOptions.CustomizeProblemDetails</code></p>
+</li>
+<li>
+<p>Use a custom <code>IProblemDetailsWriter</code></p>
+</li>
+<li>
+<p>Call the <code>IProblemDetailsService</code> in a middleware</p>
+</li>
+</ul>
+<h4><a href="#customizeproblemdetails-operation" aria-hidden="true" class="anchor" id="customizeproblemdetails-operation"></a><code>CustomizeProblemDetails</code> operation</h4>
+<pre><code class="language-csharp">builder.Services.AddProblemDetails(options =&gt;
+    options.CustomizeProblemDetails = ctx =&gt;
+            ctx.ProblemDetails.Extensions.Add(&quot;nodeId&quot;, Environment.MachineName));
+
+var app = builder.Build();        
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler();
+    app.UseHsts();
+}
+
+app.UseStatusCodePages();
+</code></pre>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;https://tools.ietf.org/html/rfc9110#section-15.5.1&quot;,
+  &quot;title&quot;: &quot;Bad Request&quot;,
+  &quot;status&quot;: 400,
+  &quot;nodeId&quot;: &quot;my-machine-name&quot;
+}
+</code></pre>
+<h4><a href="#custom-iproblemdetailswriter" aria-hidden="true" class="anchor" id="custom-iproblemdetailswriter"></a>Custom <code>IProblemDetailsWriter</code></h4>
+<pre><code class="language-csharp">public class SampleProblemDetailsWriter : IProblemDetailsWriter
+{
+    // Indicates that only responses with StatusCode == 400
+    // are handled by this writer. All others are
+    // handled by different registered writers if available.
+    public bool CanWrite(ProblemDetailsContext context)
+        =&gt; context.HttpContext.Response.StatusCode == 400;
+
+    public ValueTask WriteAsync(ProblemDetailsContext context)
+    {
+        // Additional customizations.
+
+        // Write to the response.
+        var response = context.HttpContext.Response;
+        return new ValueTask(response.WriteAsJsonAsync(context.ProblemDetails));
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddTransient&lt;IProblemDetailsWriter, SampleProblemDetailsWriter&gt;();
+
+var app = builder.Build();
+
+// Middleware to handle writing problem details to the response.
+app.Use(async (context, next) =&gt;
+{
+    await next(context);
+    var mathErrorFeature = context.Features.Get&lt;MathErrorFeature&gt;();
+    if (mathErrorFeature is not null)
+    {
+        if (context.RequestServices.GetService&lt;IProblemDetailsWriter&gt;() is
+            { } problemDetailsService)
+        {
+
+            if (problemDetailsService.CanWrite(new ProblemDetailsContext() { HttpContext = context }))
+            {
+                (string Detail, string Type) details = mathErrorFeature.MathError switch
+                {
+                    MathErrorType.DivisionByZeroError =&gt; (&quot;Divison by zero is not defined.&quot;,
+                        &quot;https://en.wikipedia.org/wiki/Division_by_zero&quot;),
+                    _ =&gt; (&quot;Negative or complex numbers are not valid input.&quot;,
+                        &quot;https://en.wikipedia.org/wiki/Square_root&quot;)
+                };
+
+                await problemDetailsService.WriteAsync(new ProblemDetailsContext
+                {
+                    HttpContext = context,
+                    ProblemDetails =
+                    {
+                        Title = &quot;Bad Input&quot;,
+                        Detail = details.Detail,
+                        Type = details.Type
+                    }
+                });
+            }
+        }
+    }
+});
+
+// /divide?numerator=2&amp;denominator=4
+app.MapGet(&quot;/divide&quot;, (HttpContext context, double numerator, double denominator) =&gt;
+{
+    if (denominator == 0)
+    {
+        var errorType = new MathErrorFeature
+        {
+            MathError = MathErrorType.DivisionByZeroError
+        };
+        context.Features.Set(errorType);
+        return Results.BadRequest();
+    }
+
+    return Results.Ok(numerator / denominator);
+});
+
+// /squareroot?radicand=16
+app.MapGet(&quot;/squareroot&quot;, (HttpContext context, double radicand) =&gt;
+{
+    if (radicand &lt; 0)
+    {
+        var errorType = new MathErrorFeature
+        {
+            MathError = MathErrorType.NegativeRadicandError
+        };
+        context.Features.Set(errorType);
+        return Results.BadRequest();
+    }
+
+    return Results.Ok(Math.Sqrt(radicand));
+});
+
+app.Run();
+</code></pre>
+<h4><a href="#problem-details-from-middleware" aria-hidden="true" class="anchor" id="problem-details-from-middleware"></a>Problem details from Middleware</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStatusCodePages();
+
+// Middleware to handle writing problem details to the response.
+app.Use(async (context, next) =&gt;
+{
+    await next(context);
+    var mathErrorFeature = context.Features.Get&lt;MathErrorFeature&gt;();
+    if (mathErrorFeature is not null)
+    {
+        if (context.RequestServices.GetService&lt;IProblemDetailsService&gt;() is
+                                                           { } problemDetailsService)
+        {
+            (string Detail, string Type) details = mathErrorFeature.MathError switch
+            {
+                MathErrorType.DivisionByZeroError =&gt; (&quot;Divison by zero is not defined.&quot;,
+                &quot;https://en.wikipedia.org/wiki/Division_by_zero&quot;),
+                _ =&gt; (&quot;Negative or complex numbers are not valid input.&quot;, 
+                &quot;https://en.wikipedia.org/wiki/Square_root&quot;)
+            };
+
+            await problemDetailsService.WriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = context,
+                ProblemDetails =
+                {
+                    Title = &quot;Bad Input&quot;,
+                    Detail = details.Detail,
+                    Type = details.Type
+                }
+            });
+        }
+    }
+});
+
+// /divide?numerator=2&amp;denominator=4
+app.MapGet(&quot;/divide&quot;, (HttpContext context, double numerator, double denominator) =&gt;
+{
+    if (denominator == 0)
+    {
+        var errorType = new MathErrorFeature { MathError =
+                                               MathErrorType.DivisionByZeroError };
+        context.Features.Set(errorType);
+        return Results.BadRequest();
+    }
+
+    return Results.Ok(numerator / denominator);
+});
+
+// /squareroot?radicand=16
+app.MapGet(&quot;/squareroot&quot;, (HttpContext context, double radicand) =&gt;
+{
+    if (radicand &lt; 0)
+    {
+        var errorType = new MathErrorFeature { MathError =
+                                               MathErrorType.NegativeRadicandError };
+        context.Features.Set(errorType);
+        return Results.BadRequest();
+    }
+
+    return Results.Ok(Math.Sqrt(radicand));
+});
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]/[action]&quot;)]
+[ApiController]
+public class ValuesController : ControllerBase
+{
+    // /api/values/divide/1/2
+    [HttpGet(&quot;{Numerator}/{Denominator}&quot;)]
+    public IActionResult Divide(double Numerator, double Denominator)
+    {
+        if (Denominator == 0)
+        {
+            var errorType = new MathErrorFeature
+            {
+                MathError = MathErrorType.DivisionByZeroError
+            };
+            HttpContext.Features.Set(errorType);
+            return BadRequest();
+        }
+
+        return Ok(Numerator / Denominator);
+    }
+
+    // /api/values/squareroot/4
+    [HttpGet(&quot;{radicand}&quot;)]
+    public IActionResult Squareroot(double radicand)
+    {
+        if (radicand &lt; 0)
+        {
+            var errorType = new MathErrorFeature
+            {
+                MathError = MathErrorType.NegativeRadicandError
+            };
+            HttpContext.Features.Set(errorType);
+            return BadRequest();
+        }
+
+        return Ok(Math.Sqrt(radicand));
+    }
+
+}
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]/[action]&quot;)]
+[ApiController]
+public class Values3Controller : ControllerBase
+{
+    // /api/values3/divide/1/2
+    [HttpGet(&quot;{Numerator}/{Denominator}&quot;)]
+    public IActionResult Divide(double Numerator, double Denominator)
+    {
+        if (Denominator == 0)
+        {
+            var errorType = new MathErrorFeature
+            {
+                MathError = MathErrorType.DivisionByZeroError
+            };
+            HttpContext.Features.Set(errorType);
+            return Problem(
+                title: &quot;Bad Input&quot;,
+                detail: &quot;Divison by zero is not defined.&quot;,
+                type: &quot;https://en.wikipedia.org/wiki/Division_by_zero&quot;,
+                statusCode: StatusCodes.Status400BadRequest
+                );
+        }
+
+        return Ok(Numerator / Denominator);
+    }
+
+    // /api/values3/squareroot/4
+    [HttpGet(&quot;{radicand}&quot;)]
+    public IActionResult Squareroot(double radicand)
+    {
+        if (radicand &lt; 0)
+        {
+            var errorType = new MathErrorFeature
+            {
+                MathError = MathErrorType.NegativeRadicandError
+            };
+            HttpContext.Features.Set(errorType);
+            return Problem(
+                title: &quot;Bad Input&quot;,
+                detail: &quot;Negative or complex numbers are not valid input.&quot;,
+                type: &quot;https://en.wikipedia.org/wiki/Square_root&quot;,
+                statusCode: StatusCodes.Status400BadRequest
+                );
+        }
+
+        return Ok(Math.Sqrt(radicand));
+    }
+
+}
+</code></pre>
+<h2><a href="#produce-a-problemdetails-payload-for-exceptions" aria-hidden="true" class="anchor" id="produce-a-problemdetails-payload-for-exceptions"></a>Produce a <code>ProblemDetails</code> payload for exceptions</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+app.MapControllers();
+app.Run();
+</code></pre>
+<pre><code class="language-json">{
+&quot;type&quot;:&quot;https://tools.ietf.org/html/rfc7231#section-6.6.1&quot;,
+&quot;title&quot;:&quot;An error occurred while processing your request.&quot;,
+&quot;status&quot;:500,&quot;traceId&quot;:&quot;00-b644&lt;snip&gt;-00&quot;
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Diagnostics;
+using static System.Net.Mime.MediaTypeNames;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler(exceptionHandlerApp =&gt;
+    {
+        exceptionHandlerApp.Run(async context =&gt;
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = Text.Plain;
+
+            var title = &quot;Bad Input&quot;;
+            var detail = &quot;Invalid input&quot;;
+            var type = &quot;https://errors.example.com/badInput&quot;;
+
+            if (context.RequestServices.GetService&lt;IProblemDetailsService&gt;() is
+                { } problemDetailsService)
+            {
+                var exceptionHandlerFeature =
+               context.Features.Get&lt;IExceptionHandlerFeature&gt;();
+
+                var exceptionType = exceptionHandlerFeature?.Error;
+                if (exceptionType != null &amp;&amp;
+                   exceptionType.Message.Contains(&quot;infinity&quot;))
+                {
+                    title = &quot;Argument exception&quot;;
+                    detail = &quot;Invalid input&quot;;
+                    type = &quot;https://errors.example.com/argumentException&quot;;
+                }
+
+                await problemDetailsService.WriteAsync(new ProblemDetailsContext
+                {
+                    HttpContext = context,
+                    ProblemDetails =
+                {
+                    Title = title,
+                    Detail = detail,
+                    Type = type
+                }
+                });
+            }
+        });
+    });
+}
+
+app.MapControllers();
+app.Run();
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Do not serve sensitive error information to clients. Serving errors is a security risk.</p>
+</blockquote>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Troubleshoot ASP.NET Core on Azure App Service and IIS</p>
+</li>
+<li>
+<p>Common error troubleshooting for Azure App Service and IIS with ASP.NET Core</p>
+</li>
+<li>
+<p>Handle errors in ASP.NET Core controller-based web APIs</p>
+</li>
+<li>
+<p>Handle errors in minimal APIs.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/error-handling?view=aspnetcore-8.0">Handle errors in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

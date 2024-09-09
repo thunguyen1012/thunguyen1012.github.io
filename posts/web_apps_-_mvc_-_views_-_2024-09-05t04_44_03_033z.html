@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - MVC - Views | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - MVC - Views</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This document explains views used in ASP.NET Core MVC applications. For information on Razor <code>Pages</code>, see Introduction to Razor <code>Pages</code> in ASP.NET Core.</p>
+<p>In the Model-View-Controller (MVC) pattern, the view handles the app's data presentation and user interaction. A view is an HTML template with embedded Razor markup. Razor markup is code that interacts with HTML markup to produce a webpage that's sent to the client.</p>
+<p>In ASP.NET Core MVC, views are <code>.cshtml</code> files that use the C# programming language in Razor markup. Usually, view files are grouped into folders named for each of the app's controllers. The folders are stored in a <code>Views</code> folder at the root of the app:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/overview/_static/views_solution_explorer.png?view=aspnetcore-8.0" alt="Views folder in Solution Explorer of Visual Studio is open with the Home folder open to show About.cshtml, Contact.cshtml, and Index.cshtml files!" title="Views folder in Solution Explorer of Visual Studio is open with the Home folder open to show About.cshtml, Contact.cshtml, and Index.cshtml files" /></p>
+<p>The <code>Home</code> controller is represented by a <code>Home</code> folder inside the <code>Views</code> folder. The <code>Home</code> folder contains the views for the <code>About</code>, <code>Contact</code>, and <code>Index</code> (homepage) webpages. When a user requests one of these three webpages, controller actions in the <code>Home</code> controller determine which of the three views is used to build and return a webpage to the user.</p>
+<p>Use layouts to provide consistent webpage sections and reduce code repetition. Layouts often contain the header, navigation and menu elements, and the footer. The header and footer usually contain boilerplate markup for many metadata elements and links to script and style assets. Layouts help you avoid this boilerplate markup in your views.</p>
+<p>Partial views reduce code duplication by managing reusable parts of views. For example, a partial view is useful for an author biography on a blog website that appears in several views. An author biography is ordinary view content and doesn't require code to execute in order to produce the content for the webpage. Author biography content is available to the view by model binding alone, so using a partial view for this type of content is ideal.</p>
+<p><code>View</code> components are similar to partial views in that they allow you to reduce repetitive code, but they're appropriate for view content that requires code to run on the server in order to render the webpage. <code>View</code> components are useful when the rendered content requires database interaction, such as for a website shopping cart. <code>View</code> components aren't limited to model binding in order to produce webpage output.</p>
+<h2><a href="#benefits-of-using-views" aria-hidden="true" class="anchor" id="benefits-of-using-views"></a>Benefits of using views</h2>
+<p><code>Views</code> help to establish separation of concerns within an MVC app by separating the user interface markup from other parts of the app. Following SoC design makes your app modular, which provides several benefits:</p>
+<ul>
+<li>
+<p>The app is easier to maintain because it's better organized. <code>Views</code> are generally grouped by app feature. This makes it easier to find related views when working on a feature.</p>
+</li>
+<li>
+<p>The parts of the app are loosely coupled. You can build and update the app's views separately from the business logic and data access components. You can modify the views of the app without necessarily having to update other parts of the app.</p>
+</li>
+<li>
+<p>It's easier to test the user interface parts of the app because the views are separate units.</p>
+</li>
+<li>
+<p>Due to better organization, it's less likely that you'll accidentally repeat sections of the user interface.</p>
+</li>
+</ul>
+<h2><a href="#creating-a-view" aria-hidden="true" class="anchor" id="creating-a-view"></a>Creating a view</h2>
+<p><code>Views</code> that are specific to a controller are created in the <code>Views/[ControllerName]</code> folder. <code>Views</code> that are shared among controllers are placed in the <code>Views/Shared</code> folder. To create a view, add a new file and give it the same name as its associated controller action with the <code>.cshtml</code> file extension. To create a view that corresponds with the <code>About</code> action in the <code>Home</code> controller, create an <code>About.cshtml</code> file in the <code>Views/Home</code> folder:</p>
+<pre><code class="language-cshtml">@{
+    ViewData[&quot;Title&quot;] = &quot;About&quot;;
+}
+&lt;h2&gt;@ViewData[&quot;Title&quot;].&lt;/h2&gt;
+&lt;h3&gt;@ViewData[&quot;Message&quot;]&lt;/h3&gt;
+
+&lt;p&gt;Use this area to provide additional information.&lt;/p&gt;
+</code></pre>
+<p>Razor markup starts with the @ symbol. Run C# statements by placing C# code within Razor code blocks set off by curly braces ({ ... }). For example, see the assignment of &quot;About&quot; to <code>ViewData[&quot;Title&quot;]</code> shown above. You can display values within HTML by simply referencing the value with the @ symbol. See the contents of the <h2> and <h3> elements above.</p>
+<p>The view content shown above is only part of the entire webpage that's rendered to the user. The rest of the page's layout and other common aspects of the view are specified in other view files. To learn more, see the Layout topic.</p>
+<h2><a href="#how-controllers-specify-views" aria-hidden="true" class="anchor" id="how-controllers-specify-views"></a>How controllers specify views</h2>
+<p><code>Views</code> are typically returned from actions as a <code>ViewResult</code>, which is a type of <code>ActionResult</code>. Your action method can create and return a <code>ViewResult</code> directly, but that isn't commonly done. Since most controllers inherit from Controller, you simply use the <code>View</code> helper method to return the <code>ViewResult</code>:</p>
+<p><code>HomeController.cs</code>:</p>
+<pre><code class="language-csharp">public IActionResult About()
+{
+    ViewData[&quot;Message&quot;] = &quot;Your application description page.&quot;;
+
+    return View();
+}
+</code></pre>
+<p>When this action returns, the <code>About.cshtml</code> view shown in the last section is rendered as the following webpage:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/overview/_static/about-page.png?view=aspnetcore-8.0" alt="About page rendered in the Edge browser!" title="About page rendered in the Edge browser" /></p>
+<p>The <code>View</code> helper method has several overloads. You can optionally specify:</p>
+<ul>
+<li>An explicit view to return:
+return <code>View</code>(&quot;Orders&quot;);</li>
+</ul>
+<pre><code class="language-csharp">return View(&quot;Orders&quot;);
+</code></pre>
+<ul>
+<li>A model to pass to the view:
+return <code>View</code>(Orders);</li>
+</ul>
+<pre><code class="language-csharp">return View(Orders);
+</code></pre>
+<ul>
+<li>Both a view and a model:
+return <code>View</code>(&quot;Orders&quot;, Orders);</li>
+</ul>
+<pre><code class="language-csharp">return View(&quot;Orders&quot;, Orders);
+</code></pre>
+<h3><a href="#view-discovery" aria-hidden="true" class="anchor" id="view-discovery"></a><code>View</code> discovery</h3>
+<p>When an action returns a view, a process called view discovery takes place. This process determines which view file is used based on the view name.</p>
+<p>The default behavior of the <code>View</code> method (return <code>View();</code>) is to return a view with the same name as the action method from which it's called. For example, the <code>About</code> <code>ActionResult</code> method name of the controller is used to search for a view file named <code>About.cshtml</code>. First, the runtime looks in the <code>Views/[ControllerName]</code> folder for the view. If it doesn't find a matching view there, it searches the <code>Shared</code> folder for the view.</p>
+<p>It doesn't matter if you implicitly return the <code>ViewResult</code> with return <code>View();</code> or explicitly pass the view name to the <code>View</code> method with return <code>View(&quot;&lt;ViewName&gt;&quot;);</code>. In both cases, view discovery searches for a matching view file in this order:</p>
+<ul>
+<li>
+<p><code>Views/\[ControllerName]/\[ViewName].cshtml</code></p>
+</li>
+<li>
+<p><code>Views/Shared/\[ViewName].cshtml</code></p>
+</li>
+</ul>
+<p>A view file path can be provided instead of a view name. If using an absolute path starting at the app root (optionally starting with &quot;/&quot; or &quot;~/&quot;), the <code>.cshtml</code> extension must be specified:</p>
+<pre><code class="language-csharp">return View(&quot;Views/Home/About.cshtml&quot;);
+</code></pre>
+<p>You can also use a relative path to specify views in different directories without the <code>.cshtml</code> extension. Inside the <code>HomeController</code>, you can return the <code>Index</code> view of your <code>Manage</code> views with a relative path:</p>
+<pre><code class="language-csharp">return View(&quot;../Manage/Index&quot;);
+</code></pre>
+<p>Similarly, you can indicate the current controller-specific directory with the &quot;./&quot; prefix:</p>
+<pre><code class="language-csharp">return View(&quot;./About&quot;);
+</code></pre>
+<p>Partial views and view components use similar (but not identical) discovery mechanisms.</p>
+<p>You can customize the default convention for how views are located within the app by using a custom IViewLocationExpander.</p>
+<p><code>View</code> discovery relies on finding view files by file name. If the underlying file system is case sensitive, view names are probably case sensitive. For compatibility across operating systems, match case between controller and action names and associated view folders and file names. If you encounter an error that a view file can't be found while working with a case-sensitive file system, confirm that the casing matches between the requested view file and the actual view file name.</p>
+<p>Follow the best practice of organizing the file structure for your views to reflect the relationships among controllers, actions, and views for maintainability and clarity.</p>
+<h2><a href="#pass-data-to-views" aria-hidden="true" class="anchor" id="pass-data-to-views"></a>Pass data to views</h2>
+<p>Pass data to views using several approaches:</p>
+<ul>
+<li>
+<p>Strongly typed data: viewmodel</p>
+</li>
+<li>
+<p>Weakly typed data</p>
+<ul>
+<li>
+<p><code>ViewData</code> (ViewDataAttribute)</p>
+</li>
+<li>
+<p><code>ViewBag</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#strongly-typed-data-viewmodel)" aria-hidden="true" class="anchor" id="strongly-typed-data-viewmodel)"></a>Strongly-typed data (viewmodel)</h3>
+<p>The most robust approach is to specify a model type in the view. This model is commonly referred to as a viewmodel. You pass an instance of the viewmodel type to the view from the action.</p>
+<p>Using a viewmodel to pass data to a view allows the view to take advantage of strong type checking. Strong typing (or strongly typed) means that every variable and constant has an explicitly defined type (for example, <code>string</code>, <code>int</code>, or <code>DateTime</code>). The validity of types used in a view is checked at compile time.</p>
+<p>Visual Studio and Visual Studio Code list strongly typed class members using a feature called IntelliSense. When you want to see the properties of a viewmodel, type the variable name for the viewmodel followed by a period (.). This helps you write code faster with fewer errors.</p>
+<p>Specify a model using the <code>@model</code> directive. Use the model with <code>@Model</code>:</p>
+<pre><code class="language-cshtml">@model WebApplication1.ViewModels.Address
+
+&lt;h2&gt;Contact&lt;/h2&gt;
+&lt;address&gt;
+    @Model.Street&lt;br&gt;
+    @Model.City, @Model.State @Model.PostalCode&lt;br&gt;
+    &lt;abbr title=&quot;Phone&quot;&gt;P:&lt;/abbr&gt; 425.555.0100
+&lt;/address&gt;
+</code></pre>
+<p>To provide the model to the view, the controller passes it as a parameter:</p>
+<pre><code class="language-csharp">public IActionResult Contact()
+{
+    ViewData[&quot;Message&quot;] = &quot;Your contact page.&quot;;
+
+    var viewModel = new Address()
+    {
+        Name = &quot;Microsoft&quot;,
+        Street = &quot;One Microsoft Way&quot;,
+        City = &quot;Redmond&quot;,
+        State = &quot;WA&quot;,
+        PostalCode = &quot;98052-6399&quot;
+    };
+
+    return View(viewModel);
+}
+</code></pre>
+<p>There are no restrictions on the model types that you can provide to a view. We recommend using Plain Old CLR Object (POCO) viewmodels with little or no behavior (methods) defined. Usually, viewmodel classes are either stored in the <code>Models</code> folder or a separate <code>ViewModels</code> folder at the root of the app. The <code>Address</code> viewmodel used in the example above is a POCO viewmodel stored in a file named <code>Address.cs</code>:</p>
+<pre><code class="language-csharp">namespace WebApplication1.ViewModels
+{
+    public class Address
+    {
+        public string Name { get; set; }
+        public string Street { get; set; }
+        public string City { get; set; }
+        public string State { get; set; }
+        public string PostalCode { get; set; }
+    }
+}
+</code></pre>
+<p>Nothing prevents you from using the same classes for both your viewmodel types and your business model types. However, using separate models allows your views to vary independently from the business logic and data access parts of your app. Separation of models and viewmodels also offers security benefits when models use model binding and validation for data sent to the app by the user.</p>
+<h3><a href="#weakly-typed-data-viewdata,-[viewdata]-attribute,-and-viewbag)" aria-hidden="true" class="anchor" id="weakly-typed-data-viewdata,-[viewdata]-attribute,-and-viewbag)"></a>Weakly typed data (<code>ViewData</code>, <code>[ViewData]</code> attribute, and <code>ViewBag</code>)</h3>
+<p><code>ViewBag</code> isn't available by default for use in Razor <code>Pages</code> <code>PageModel</code> classes.</p>
+<p>In addition to strongly typed views, views have access to a weakly typed (also called loosely typed) collection of data. Unlike strong types, weak types (or loose types) means that you don't explicitly declare the type of data you're using. You can use the collection of weakly typed data for passing small amounts of data in and out of controllers and views.</p>
+<table><thead>
+<tr>
+<th>Passing data between a ...</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller and a view</td>
+<td>Populating a dropdown list with data.</td>
+</tr>
+<tr>
+<td>View and a <a ```href```="layout?view=aspnetcore-8.0" data-linktype="relative-path">layout view</a></td>
+<td>Setting the <code>&lt;title&gt;</code> element content in the layout view from a view file.</td>
+</tr>
+<tr>
+<td><a ```href```="partial?view=aspnetcore-8.0" data-linktype="relative-path">Partial view</a> and a view</td>
+<td>A widget that displays data based on the webpage that the user requested.</td>
+</tr>
+</tbody></table>
+<p>This collection can be referenced through either the <code>ViewData</code> or <code>ViewBag</code> properties on controllers and views. The <code>ViewData</code> property is a dictionary of weakly typed objects. The <code>ViewBag</code> property is a wrapper around <code>ViewData</code> that provides dynamic properties for the underlying <code>ViewData</code> collection. Note: Key lookups are case-insensitive for both <code>ViewData</code> and <code>ViewBag</code>.</p>
+<p><code>ViewData</code> and <code>ViewBag</code> are dynamically resolved at runtime. Since they don't offer compile-time type checking, both are generally more error-prone than using a viewmodel. For that reason, some developers prefer to minimally or never use <code>ViewData</code> and <code>ViewBag</code>.</p>
+<h4><a href="#viewdata" aria-hidden="true" class="anchor" id="viewdata"></a><code>ViewData</code></h4>
+<p><code>ViewData</code> is a ViewDataDictionary object accessed through <code>string</code> keys. String data can be stored and used directly without the need for a cast, but you must cast other <code>ViewData</code> object values to specific types when you extract them. You can use <code>ViewData</code> to pass data from controllers to views and within views, including partial views and layouts.</p>
+<p>The following is an example that sets values for a greeting and an address using <code>ViewData</code> in an action:</p>
+<pre><code class="language-csharp">public IActionResult SomeAction()
+{
+    ViewData[&quot;Greeting&quot;] = &quot;Hello&quot;;
+    ViewData[&quot;Address&quot;]  = new Address()
+    {
+        Name = &quot;Steve&quot;,
+        Street = &quot;123 Main St&quot;,
+        City = &quot;Hudson&quot;,
+        State = &quot;OH&quot;,
+        PostalCode = &quot;44236&quot;
+    };
+
+    return View();
+}
+</code></pre>
+<p>Work with the data in a view:</p>
+<pre><code class="language-cshtml">@{
+    // Since Address isn't a string, it requires a cast.
+    var address = ViewData[&quot;Address&quot;] as Address;
+}
+
+@ViewData[&quot;Greeting&quot;] World!
+
+&lt;address&gt;
+    @address.Name&lt;br&gt;
+    @address.Street&lt;br&gt;
+    @address.City, @address.State @address.PostalCode
+&lt;/address&gt;
+</code></pre>
+<h4><a href="#viewdata]-attribute" aria-hidden="true" class="anchor" id="viewdata]-attribute"></a><code>[ViewData]</code> attribute</h4>
+<p>Another approach that uses the ViewDataDictionary is <code>ViewDataAttribute</code>. Properties on controllers or Razor Page models marked with the <code>[ViewData]</code> attribute have their values stored and loaded from the dictionary.</p>
+<p>In the following example, the <code>Home</code> controller contains a <code>Title</code> property marked with <code>[ViewData]</code>. The <code>About</code> method sets the title for the <code>About</code> view:</p>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    [ViewData]
+    public string Title { get; set; }
+
+    public IActionResult About()
+    {
+        Title = &quot;About Us&quot;;
+        ViewData[&quot;Message&quot;] = &quot;Your application description page.&quot;;
+
+        return View();
+    }
+}
+</code></pre>
+<p>In the layout, the title is read from the <code>ViewData</code> dictionary:</p>
+<pre><code class="language-cshtml">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;title&gt;@ViewData[&quot;Title&quot;] - WebApplication&lt;/title&gt;
+    ...
+</code></pre>
+<h4><a href="#viewbag" aria-hidden="true" class="anchor" id="viewbag"></a><code>ViewBag</code></h4>
+<p><code>ViewBag</code> isn't available by default for use in Razor <code>Pages</code> <code>PageModel</code> classes.</p>
+<p><code>ViewBag</code> is a <code>Microsoft.AspNetCore.Mvc.ViewFeatures.Internal.DynamicViewData</code> object that provides dynamic access to the objects stored in <code>ViewData</code>. <code>ViewBag</code> can be more convenient to work with, since it doesn't require casting. The following example shows how to use <code>ViewBag</code> with the same result as using <code>ViewData</code> above:</p>
+<pre><code class="language-csharp">public IActionResult SomeAction()
+{
+    ViewBag.Greeting = &quot;Hello&quot;;
+    ViewBag.Address  = new Address()
+    {
+        Name = &quot;Steve&quot;,
+        Street = &quot;123 Main St&quot;,
+        City = &quot;Hudson&quot;,
+        State = &quot;OH&quot;,
+        PostalCode = &quot;44236&quot;
+    };
+
+    return View();
+}
+</code></pre>
+<pre><code class="language-cshtml">@ViewBag.Greeting World!
+
+&lt;address&gt;
+    @ViewBag.Address.Name&lt;br&gt;
+    @ViewBag.Address.Street&lt;br&gt;
+    @ViewBag.Address.City, @ViewBag.Address.State @ViewBag.Address.PostalCode
+&lt;/address&gt;
+</code></pre>
+<h4><a href="#using-viewdata-and-viewbag-simultaneously" aria-hidden="true" class="anchor" id="using-viewdata-and-viewbag-simultaneously"></a>Using <code>ViewData</code> and <code>ViewBag</code> simultaneously</h4>
+<p><code>ViewBag</code> isn't available by default for use in Razor <code>Pages</code> <code>PageModel</code> classes.</p>
+<p>Since <code>ViewData</code> and <code>ViewBag</code> refer to the same underlying <code>ViewData</code> collection, you can use both <code>ViewData</code> and <code>ViewBag</code> and mix and match between them when reading and writing values.</p>
+<p>Set the title using <code>ViewBag</code> and the description using <code>ViewData</code> at the top of an <code>About.cshtml</code> view:</p>
+<pre><code class="language-cshtml">@{
+    Layout = &quot;/Views/Shared/_Layout.cshtml&quot;;
+    ViewBag.Title = &quot;About Contoso&quot;;
+    ViewData[&quot;Description&quot;] = &quot;Let us tell you about Contoso's philosophy and mission.&quot;;
+}
+</code></pre>
+<p>Read the properties but reverse the use of <code>ViewData</code> and <code>ViewBag</code>. In the <code>_Layout.cshtml</code> file, obtain the title using <code>ViewData</code> and obtain the description using <code>ViewBag</code>:</p>
+<pre><code class="language-cshtml">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;title&gt;@ViewData[&quot;Title&quot;]&lt;/title&gt;
+    &lt;meta name=&quot;description&quot; content=&quot;@ViewBag.Description&quot;&gt;
+    ...
+</code></pre>
+<p>Remember that strings don't require a cast for <code>ViewData</code>. You can use <code>@ViewData[&quot;Title&quot;]</code> without casting.</p>
+<p>Using both <code>ViewData</code> and <code>ViewBag</code> at the same time works, as does mixing and matching reading and writing the properties. The following markup is rendered:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;title&gt;About Contoso&lt;/title&gt;
+    &lt;meta name=&quot;description&quot; content=&quot;Let us tell you about Contoso's philosophy and mission.&quot;&gt;
+    ...
+</code></pre>
+<h4><a href="#summary-of-the-differences-between-viewdata-and-viewbag" aria-hidden="true" class="anchor" id="summary-of-the-differences-between-viewdata-and-viewbag"></a>Summary of the differences between <code>ViewData</code> and <code>ViewBag</code></h4>
+<p><code>ViewBag</code> isn't available by default for use in Razor <code>Pages</code> <code>PageModel</code> classes.</p>
+<ul>
+<li>
+<p><code>ViewData</code></p>
+<ul>
+<li>
+<p>Derives from ViewDataDictionary, so it has dictionary properties that can be useful, such as <code>ContainsKey</code>, <code>Add</code>, <code>Remove</code>, and <code>Clear</code>.</p>
+</li>
+<li>
+<p>Keys in the dictionary are strings, so whitespace is allowed. Example: <code>ViewData[&quot;Some Key With Whitespace&quot;]</code></p>
+</li>
+<li>
+<p>Any type other than a <code>string</code> must be cast in the view to use <code>ViewData</code>.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>ViewBag</code></p>
+<ul>
+<li>
+<p>Derives from <code>Microsoft.AspNetCore.Mvc.ViewFeatures.Internal.DynamicViewData</code>, so it allows the creation of dynamic properties using dot notation (<code>@ViewBag.SomeKey = &lt;value or object&gt;</code>), and no casting is required. The syntax of <code>ViewBag</code> makes it quicker to add to controllers and views.</p>
+</li>
+<li>
+<p>Simpler to check for null values. Example: <code>@ViewBag.Person?.Name</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<h4><a href="#when-to-use-viewdata-or-viewbag" aria-hidden="true" class="anchor" id="when-to-use-viewdata-or-viewbag"></a>When to use <code>ViewData</code> or <code>ViewBag</code></h4>
+<p>Both <code>ViewData</code> and <code>ViewBag</code> are equally valid approaches for passing small amounts of data among controllers and views. The choice of which one to use is based on preference. You can mix and match <code>ViewData</code> and <code>ViewBag</code> objects, however, the code is easier to read and maintain with one approach used consistently. Both approaches are dynamically resolved at runtime and thus prone to causing runtime errors. Some development teams avoid them.</p>
+<h3><a href="#dynamic-views" aria-hidden="true" class="anchor" id="dynamic-views"></a>Dynamic views</h3>
+<p><code>Views</code> that don't declare a model type using <code>@model</code> but that have a model instance passed to them (for example, return <code>View(Address);</code>) can reference the instance's properties dynamically:</p>
+<pre><code class="language-cshtml">&lt;address&gt;
+    @Model.Street&lt;br&gt;
+    @Model.City, @Model.State @Model.PostalCode&lt;br&gt;
+    &lt;abbr title=&quot;Phone&quot;&gt;P:&lt;/abbr&gt; 425.555.0100
+&lt;/address&gt;
+</code></pre>
+<p>This feature offers flexibility but doesn't offer compilation protection or IntelliSense. If the property doesn't exist, webpage generation fails at runtime.</p>
+<h2><a href="#more-view-features" aria-hidden="true" class="anchor" id="more-view-features"></a>More view features</h2>
+<p>Tag Helpers make it easy to add server-side behavior to existing HTML tags. Using Tag Helpers avoids the need to write custom code or helpers within your views. Tag helpers are applied as attributes to HTML elements and are ignored by editors that can't process them. This allows you to edit and render view markup in a variety of tools.</p>
+<p>Generating custom HTML markup can be achieved with many built-in HTML Helpers. More complex user interface logic can be handled by <code>View</code> Components. <code>View</code> components provide the same SoC that controllers and views offer. They can eliminate the need for actions and views that deal with data used by common user interface elements.</p>
+<p>Like many other aspects of ASP.NET Core, views support dependency injection, allowing services to be injected into views.</p>
+<h2><a href="#css-isolation" aria-hidden="true" class="anchor" id="css-isolation"></a>CSS isolation</h2>
+<ul>
+<li>
+<p>Dependencies on global styles that can be challenging to maintain.</p>
+</li>
+<li>
+<p>Style conflicts in nested content.</p>
+</li>
+</ul>
+<pre><code class="language-css">h1 {
+    color: red;
+}
+</code></pre>
+<pre><code class="language-html">&lt;link rel=&quot;stylesheet&quot; href=&quot;~/{APP ASSEMBLY}.styles.css&quot; /&gt;
+</code></pre>
+<pre><code class="language-html">&lt;link rel=&quot;stylesheet&quot; href=&quot;WebApp.styles.css&quot; /&gt;
+</code></pre>
+<blockquote>
+<p class='note'>Note
+In order to guarantee CSS style isolation when bundling occurs, importing CSS in Razor code blocks isn't supported.
+CSS isolation only applies to HTML elements. CSS isolation isn't supported for Tag Helpers.</p>
+</blockquote>
+<pre><code class="language-css">/* /Pages/Index.cshtml.rz.scp.css */
+h1[b-3xxtam6d07] {
+    color: red;
+}
+</code></pre>
+<pre><code class="language-html">&lt;h1 b-3xxtam6d07&gt;
+</code></pre>
+<ul>
+<li>
+<p>References the styles using CSS imports.</p>
+</li>
+<li>
+<p>Isn't published as a static web asset of the app that consumes the styles.</p>
+</li>
+</ul>
+<h2><a href="#css-preprocessor-support" aria-hidden="true" class="anchor" id="css-preprocessor-support"></a>CSS preprocessor support</h2>
+<h2><a href="#css-isolation-configuration" aria-hidden="true" class="anchor" id="css-isolation-configuration"></a>CSS isolation configuration</h2>
+<h3><a href="#customize-scope-identifier-format" aria-hidden="true" class="anchor" id="customize-scope-identifier-format"></a>Customize scope identifier format</h3>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;None Update=&quot;{Pages|Views}/Index.cshtml.css&quot; CssScope=&quot;custom-scope-identifier&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;None Update=&quot;{Pages|Views}/BaseView.cshtml.css&quot; CssScope=&quot;custom-scope-identifier&quot; /&gt;
+  &lt;None Update=&quot;{Pages|Views}/DerivedView.cshtml.css&quot; CssScope=&quot;custom-scope-identifier&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;None Update=&quot;{Pages|Views}/*.cshtml.css&quot; CssScope=&quot;custom-scope-identifier&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<h3><a href="#change-base-path-for-static-web-assets" aria-hidden="true" class="anchor" id="change-base-path-for-static-web-assets"></a>Change base path for static web assets</h3>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;StaticWebAssetBasePath&gt;_content/$(PackageId)&lt;/StaticWebAssetBasePath&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<h3><a href="#disable-automatic-bundling" aria-hidden="true" class="anchor" id="disable-automatic-bundling"></a>Disable automatic bundling</h3>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;DisableScopedCssBundling&gt;true&lt;/DisableScopedCssBundling&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<h2><a href="#razor-class-library-rcl)-support" aria-hidden="true" class="anchor" id="razor-class-library-rcl)-support"></a>Razor class library (RCL) support</h2>
+<ul>
+<li>
+<p>{STATIC WEB ASSET BASE PATH}: The static web asset base path.</p>
+</li>
+<li>
+<p>{PACKAGE ID}: The library's package identifier. The package identifier defaults to the project's assembly name if the package identifier isn't specified in the project file.</p>
+</li>
+<li>
+<p>The static web asset base path is <code>_content/ClassLib</code>.</p>
+</li>
+<li>
+<p>The class library's assembly name is <code>ClassLib</code>.</p>
+</li>
+</ul>
+<pre><code class="language-html">&lt;link href=&quot;_content/ClassLib/ClassLib.bundle.scp.css&quot; rel=&quot;stylesheet&quot;&gt;
+</code></pre>
+<ul>
+<li>
+<p>Reusable Razor UI in class libraries with ASP.NET Core</p>
+</li>
+<li>
+<p>Consume ASP.NET Core Razor components from a Razor class library (RCL)</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/overview?view=aspnetcore-8.0">Views in ASP.NET Core MVC</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

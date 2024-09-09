@@ -1,0 +1,1927 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Fundamentals - Routing | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='By Ryan Nowak, Kirk Larkin, and Rick Anderson'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Fundamentals - Routing</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Controllers</p>
+</li>
+<li>
+<p>Razor Pages</p>
+</li>
+<li>
+<p>SignalR</p>
+</li>
+<li>
+<p>gRPC Services</p>
+</li>
+<li>
+<p><code>Endpoint</code>-enabled middleware such as Health Checks.</p>
+</li>
+<li>
+<p>Delegates and lambdas registered with routing.</p>
+</li>
+<li>
+<p>For controllers, see Routing to <code>controller</code> actions in ASP.NET Core.</p>
+</li>
+<li>
+<p>For Razor Pages conventions, see Razor Pages route and app conventions in ASP.NET Core.</p>
+</li>
+</ul>
+<h2><a href="#routing-basics" aria-hidden="true" class="anchor" id="routing-basics"></a>Routing basics</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>When an HTTP <code>GET</code> request is sent to the root URL /:</p>
+<ul>
+<li>
+<p>The request delegate executes.</p>
+</li>
+<li>
+<p>Hello World! is written to the HTTP response.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>If the request method is not <code>GET</code> or the root URL is not /, no route matches and an HTTP <code>404</code> is returned.</p>
+</li>
+<li>
+<p><code>UseRouting</code> adds route matching to the middleware pipeline. This middleware looks at the set of endpoints defined in the app, and selects the best match based on the request.</p>
+</li>
+<li>
+<p><code>UseEndpoints</code> adds endpoint execution to the middleware pipeline. It runs the delegate associated with the selected endpoint.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.Use(async (context, next) =&gt;
+{
+    // ...
+    await next(context);
+});
+
+app.UseRouting();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+</code></pre>
+<ul>
+<li>
+<p>The call to <code>app.Use</code> registers a custom middleware that runs at the start of the pipeline.</p>
+</li>
+<li>
+<p>The call to <code>UseRouting</code> configures the route matching middleware to run after the custom middleware.</p>
+</li>
+<li>
+<p>The endpoint registered with <code>MapGet</code> runs at the end of the pipeline.</p>
+</li>
+</ul>
+<h3><a href="#endpoints" aria-hidden="true" class="anchor" id="endpoints"></a>Endpoints</h3>
+<ul>
+<li>
+<p>Selected, by matching the URL and HTTP method.</p>
+</li>
+<li>
+<p>Executed, by running the delegate.</p>
+</li>
+<li>
+<p>MapRazorPages for Razor Pages</p>
+</li>
+<li>
+<p>MapControllers for controllers</p>
+</li>
+<li>
+<p>MapHub<THub> for SignalR</p>
+</li>
+<li>
+<p>MapGrpcService<TService> for gRPC</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.MapGet(&quot;/hello/{name:alpha}&quot;, (string name) =&gt; $&quot;Hello {name}!&quot;);
+</code></pre>
+<ul>
+<li>
+<p>A URL like <code>/hello/Docs</code></p>
+</li>
+<li>
+<p>Any URL path that begins with <code>/hello</code>/ followed by a sequence of alphabetic characters. <code>:alpha</code> applies a route constraint that matches only alphabetic characters. Route constraints are explained later in this article.</p>
+</li>
+<li>
+<p>Is bound to the name parameter.</p>
+</li>
+<li>
+<p>Is captured and stored in <code>HttpRequest.RouteValues</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapHealthChecks(&quot;/healthz&quot;).RequireAuthorization();
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+</code></pre>
+<ul>
+<li>
+<p>The authorization middleware can be used with routing.</p>
+</li>
+<li>
+<p>Endpoints can be used to configure authorization behavior.</p>
+</li>
+<li>
+<p>See which endpoint was selected by <code>UseRouting</code>.</p>
+</li>
+<li>
+<p>Apply an authorization policy before <code>UseEndpoints</code> dispatches to the endpoint.</p>
+</li>
+</ul>
+<h3><a href="#endpoint-metadata" aria-hidden="true" class="anchor" id="endpoint-metadata"></a><code>Endpoint</code> metadata</h3>
+<ul>
+<li>
+<p>The metadata can be processed by routing-aware middleware.</p>
+</li>
+<li>
+<p>The metadata can be of any <code>.</code>NET type.</p>
+</li>
+</ul>
+<h2><a href="#routing-concepts" aria-hidden="true" class="anchor" id="routing-concepts"></a>Routing concepts</h2>
+<h3><a href="#aspnet-core-endpoint-definition" aria-hidden="true" class="anchor" id="aspnet-core-endpoint-definition"></a>ASP.NET Core endpoint definition</h3>
+<ul>
+<li>
+<p>Executable: Has a RequestDelegate.</p>
+</li>
+<li>
+<p>Extensible: Has a Metadata collection.</p>
+</li>
+<li>
+<p>Selectable: Optionally, has routing information.</p>
+</li>
+<li>
+<p>Enumerable: The collection of endpoints can be listed by retrieving the <code>EndpointDataSource</code> from DI.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.Use(async (context, next) =&gt;
+{
+    var currentEndpoint = context.GetEndpoint();
+
+    if (currentEndpoint is null)
+    {
+        await next(context);
+        return;
+    }
+
+    Console.WriteLine($&quot;Endpoint: {currentEndpoint.DisplayName}&quot;);
+
+    if (currentEndpoint is RouteEndpoint routeEndpoint)
+    {
+        Console.WriteLine($&quot;  - Route Pattern: {routeEndpoint.RoutePattern}&quot;);
+    }
+
+    foreach (var endpointMetadata in currentEndpoint.Metadata)
+    {
+        Console.WriteLine($&quot;  - Metadata: {endpointMetadata}&quot;);
+    }
+
+    await next(context);
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Inspect Endpoint.&quot;);
+</code></pre>
+<pre><code class="language-csharp">// Location 1: before routing runs, endpoint is always null here.
+app.Use(async (context, next) =&gt;
+{
+    Console.WriteLine($&quot;1. Endpoint: {context.GetEndpoint()?.DisplayName ?? &quot;(null)&quot;}&quot;);
+    await next(context);
+});
+
+app.UseRouting();
+
+// Location 2: after routing runs, endpoint will be non-null if routing found a match.
+app.Use(async (context, next) =&gt;
+{
+    Console.WriteLine($&quot;2. Endpoint: {context.GetEndpoint()?.DisplayName ?? &quot;(null)&quot;}&quot;);
+    await next(context);
+});
+
+// Location 3: runs when this endpoint matches
+app.MapGet(&quot;/&quot;, (HttpContext context) =&gt;
+{
+    Console.WriteLine($&quot;3. Endpoint: {context.GetEndpoint()?.DisplayName ?? &quot;(null)&quot;}&quot;);
+    return &quot;Hello World!&quot;;
+}).WithDisplayName(&quot;Hello&quot;);
+
+app.UseEndpoints(_ =&gt; { });
+
+// Location 4: runs after UseEndpoints - will only run if there was no match.
+app.Use(async (context, next) =&gt;
+{
+    Console.WriteLine($&quot;4. Endpoint: {context.GetEndpoint()?.DisplayName ?? &quot;(null)&quot;}&quot;);
+    await next(context);
+});
+</code></pre>
+<pre><code class="language-txt">1. Endpoint: (null)
+2. Endpoint: Hello
+3. Endpoint: Hello
+</code></pre>
+<pre><code class="language-txt">1. Endpoint: (null)
+2. Endpoint: (null)
+4. Endpoint: (null)
+</code></pre>
+<ul>
+<li>
+<p>The endpoint is always <code>null</code> before <code>UseRouting</code> is called.</p>
+</li>
+<li>
+<p>If a match is found, the endpoint is non-null between <code>UseRouting</code> and <code>UseEndpoints</code>.</p>
+</li>
+<li>
+<p>The <code>UseEndpoints</code> middleware is terminal when a match is found. Terminal middleware is defined later in this article.</p>
+</li>
+<li>
+<p>The middleware after <code>UseEndpoints</code> execute only when no match is found.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.UseHttpMethodOverride();
+app.UseRouting();
+
+app.Use(async (context, next) =&gt;
+{
+    if (context.GetEndpoint()?.Metadata.GetMetadata&lt;RequiresAuditAttribute&gt;() is not null)
+    {
+        Console.WriteLine($&quot;ACCESS TO SENSITIVE DATA AT: {DateTime.UtcNow}&quot;);
+    }
+
+    await next(context);
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Audit isn't required.&quot;);
+app.MapGet(&quot;/sensitive&quot;, () =&gt; &quot;Audit required for sensitive data.&quot;)
+    .WithMetadata(new RequiresAuditAttribute());
+</code></pre>
+<pre><code class="language-csharp">public class RequiresAuditAttribute : Attribute { }
+</code></pre>
+<ul>
+<li>
+<p>Middleware can run before <code>UseRouting</code> to modify the data that routing operates upon.</p>
+<ul>
+<li>Usually middleware that appears before routing modifies some property of the request, such as UseRewriter, UseHttpMethodOverride, or UsePathBase.</li>
+</ul>
+</li>
+<li>
+<p>Middleware can run between <code>UseRouting</code> and <code>UseEndpoints</code> to process the results of routing before the endpoint is executed.</p>
+<ul>
+<li>
+<p>Middleware that runs between <code>UseRouting</code> and <code>UseEndpoints</code>:</p>
+<ul>
+<li>
+<p>Usually inspects metadata to understand the endpoints.</p>
+</li>
+<li>
+<p>Often makes security decisions, as done by <code>UseAuthorization</code> and <code>UseCors</code>.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>The combination of middleware and metadata allows configuring policies per-endpoint.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Log to a file or database.</p>
+</li>
+<li>
+<p>Include details such as the user, IP address, name of the sensitive endpoint, and more.</p>
+</li>
+<li>
+<p>Metadata is attached with a builder API.</p>
+</li>
+<li>
+<p>Class-based frameworks include all attributes on the corresponding method and class when creating endpoints.</p>
+</li>
+</ul>
+<h3><a href="#compare-terminal-middleware-with-routing" aria-hidden="true" class="anchor" id="compare-terminal-middleware-with-routing"></a>Compare terminal middleware with routing</h3>
+<pre><code class="language-csharp">// Approach 1: Terminal Middleware.
+app.Use(async (context, next) =&gt;
+{
+    if (context.Request.Path == &quot;/&quot;)
+    {
+        await context.Response.WriteAsync(&quot;Terminal Middleware.&quot;);
+        return;
+    }
+
+    await next(context);
+});
+
+app.UseRouting();
+
+// Approach 2: Routing.
+app.MapGet(&quot;/Routing&quot;, () =&gt; &quot;Routing.&quot;);
+</code></pre>
+<ul>
+<li>
+<p>The matching operation in the preceding sample is Path == &quot;/&quot; for the middleware and Path == &quot;/Routing&quot; for routing.</p>
+</li>
+<li>
+<p>When a match is successful, it executes some functionality and returns, rather than invoking the <code>next</code> middleware.</p>
+</li>
+<li>
+<p>Both approaches allow terminating the processing pipeline:</p>
+<ul>
+<li>
+<p>Middleware terminates the pipeline by returning rather than invoking <code>next</code>.</p>
+</li>
+<li>
+<p>Endpoints are always terminal.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Terminal middleware allows positioning the middleware at an arbitrary place in the pipeline:</p>
+<ul>
+<li>Endpoints execute at the position of <code>UseEndpoints</code>.</li>
+</ul>
+</li>
+<li>
+<p>Terminal middleware allows arbitrary code to determine when the middleware matches:</p>
+<ul>
+<li>
+<p>Custom route matching code can be verbose and difficult to write correctly.</p>
+</li>
+<li>
+<p>Routing provides straightforward solutions for typical apps. Most apps don't require custom route matching code.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Endpoints interface with middleware such as <code>UseAuthorization</code> and <code>UseCors</code>.</p>
+<ul>
+<li>Using a terminal middleware with <code>UseAuthorization</code> or <code>UseCors</code> requires manual interfacing with the authorization system.</li>
+</ul>
+</li>
+<li>
+<p>A delegate to process requests.</p>
+</li>
+<li>
+<p>A collection of arbitrary metadata. The metadata is used to implement cross-cutting concerns based on policies and configuration attached to each endpoint.</p>
+</li>
+<li>
+<p>A significant amount of coding and testing.</p>
+</li>
+<li>
+<p>Manual integration with other systems to achieve the desired level of flexibility.</p>
+</li>
+<li>
+<p>Write an extension method on IEndpointRouteBuilder.</p>
+</li>
+<li>
+<p>Create a nested middleware pipeline using CreateApplicationBuilder.</p>
+</li>
+<li>
+<p>Attach the middleware to the new pipeline. In this case, UseHealthChecks.</p>
+</li>
+<li>
+<p>Build the middleware pipeline into a RequestDelegate.</p>
+</li>
+<li>
+<p>Call <code>Map</code> and provide the new middleware pipeline.</p>
+</li>
+<li>
+<p>Return the builder object provided by <code>Map</code> from the extension method.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapHealthChecks(&quot;/healthz&quot;).RequireAuthorization();
+</code></pre>
+<h3><a href="#url-matching" aria-hidden="true" class="anchor" id="url-matching"></a>URL matching</h3>
+<ul>
+<li>
+<p>Is the process by which routing matches an incoming request to an endpoint.</p>
+</li>
+<li>
+<p>Is based on data in the URL path and headers.</p>
+</li>
+<li>
+<p>Can be extended to consider any data in the request.</p>
+</li>
+<li>
+<p>Calling <code>HttpContext</code>.GetEndpoint gets the endpoint.</p>
+</li>
+<li>
+<p><code>HttpRequest.RouteValues</code> gets the collection of route values.</p>
+</li>
+<li>
+<p>Any decision that can affect dispatching or the application of security policies is made inside the routing system.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+For backward-compatibility, when a Controller or Razor Pages endpoint delegate is executed, the properties of <code>RouteContext</code>.RouteData are set to appropriate values based on the request processing performed thus far.
+The <code>RouteContext</code> type will be marked obsolete in a future release:</p>
+</blockquote>
+<p>Migrate <code>RouteData.Values</code> to <code>HttpRequest.RouteValues</code>.
+Migrate <code>RouteData.DataTokens</code> to retrieve IDataTokensMetadata from the endpoint metadata.</p>
+<ul>
+<li>
+<p>Migrate <code>RouteData.Values</code> to <code>HttpRequest.RouteValues</code>.</p>
+</li>
+<li>
+<p>Migrate <code>RouteData.DataTokens</code> to retrieve IDataTokensMetadata from the endpoint metadata.</p>
+</li>
+<li>
+<p>Processes the URL path against the set of endpoints and their route templates, collecting all of the matches.</p>
+</li>
+<li>
+<p>Takes the preceding list and removes matches that fail with route constraints applied.</p>
+</li>
+<li>
+<p>Takes the preceding list and removes matches that fail the set of MatcherPolicy instances.</p>
+</li>
+<li>
+<p>Uses the <code>EndpointSelector</code> to make a final decision from the preceding list.</p>
+</li>
+<li>
+<p>The <code>RouteEndpoint</code>.Order</p>
+</li>
+<li>
+<p>The route template precedence</p>
+</li>
+<li>
+<p>Both match the URL path <code>/hello</code>.</p>
+</li>
+<li>
+<p><code>/hello</code> is more specific and therefore higher priority.</p>
+</li>
+<li>
+<p>The <code>alpha</code> constraint matches only alphabetic characters.</p>
+</li>
+<li>
+<p>The <code>int</code> constraint matches only numbers.</p>
+</li>
+<li>
+<p>These templates have the same route precedence, but there's no single URL they both match.</p>
+</li>
+<li>
+<p>If the routing system reported an ambiguity error at startup, it would block this valid use case.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+The order of operations inside <code>UseEndpoints</code> doesn't influence the behavior of routing, with one exception. MapControllerRoute and MapAreaRoute automatically assign an order value to their endpoints based on the order they are invoked. This simulates long-time behavior of controllers without the routing system providing the same guarantees as older routing implementations.
+Endpoint routing in ASP.NET Core:</p>
+</blockquote>
+<p>Doesn't have the concept of routes.
+Doesn't provide ordering guarantees. All endpoints are processed at once.</p>
+<ul>
+<li>
+<p>Doesn't have the concept of routes.</p>
+</li>
+<li>
+<p>Doesn't provide ordering guarantees. All endpoints are processed at once.</p>
+</li>
+</ul>
+<h3><a href="#route-template-precedence-and-endpoint-selection-order" aria-hidden="true" class="anchor" id="route-template-precedence-and-endpoint-selection-order"></a>Route template precedence and endpoint selection order</h3>
+<ul>
+<li>
+<p>Avoids the need to adjust the order of endpoints in common cases.</p>
+</li>
+<li>
+<p>Attempts to match the common-sense expectations of routing behavior.</p>
+</li>
+<li>
+<p>Templates with more segments are considered more specific.</p>
+</li>
+<li>
+<p>A segment with literal text is considered more specific than a parameter segment.</p>
+</li>
+<li>
+<p>A parameter segment with a constraint is considered more specific than one without.</p>
+</li>
+<li>
+<p>A complex segment is considered as specific as a parameter segment with a constraint.</p>
+</li>
+<li>
+<p>Catch-all parameters are the least specific. See catch-all in the Route templates section for important information on catch-all routes.</p>
+</li>
+</ul>
+<h3><a href="#url-generation-concepts" aria-hidden="true" class="anchor" id="url-generation-concepts"></a>URL generation concepts</h3>
+<ul>
+<li>
+<p>Is the process by which routing can <code>create</code> a URL path based on a set of route values.</p>
+</li>
+<li>
+<p>Allows for a logical separation between endpoints and the URLs that access them.</p>
+</li>
+<li>
+<p>GetPathByAction</p>
+</li>
+<li>
+<p>GetUriByAction</p>
+</li>
+<li>
+<p>GetPathByPage</p>
+</li>
+<li>
+<p>GetUriByPage</p>
+</li>
+<li>
+<p>An address is bound to a list of endpoints that match the address.</p>
+</li>
+<li>
+<p>Each endpoint's RoutePattern is evaluated until a route pattern that matches the supplied values is found. The resulting output is combined with the other URI parts supplied to the link generator and returned.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Extension Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.routing.linkgenerator.getpathbyaddress" class="no-loc" data-linktype="absolute-path">GetPathByAddress</a></td>
+<td>Generates a URI with an absolute path based on the provided values.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.routing.linkgenerator.geturibyaddress" class="no-loc" data-linktype="absolute-path">GetUriByAddress</a></td>
+<td>Generates an absolute URI based on the provided values.</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p class='warning'>Warning
+Pay attention to the following implications of calling <code>LinkGenerator</code> methods:</p>
+</blockquote>
+<p>Use GetUri* extension methods with caution in an app configuration that doesn't validate the <code>Host</code> header of incoming requests. If the <code>Host</code> header of incoming requests isn't validated, untrusted request input can be sent back to the client in URIs in a view or page. We recommend that all production apps configure their server to validate the <code>Host</code> header against known valid values.</p>
+<p>Use <code>LinkGenerator</code> with caution in middleware in combination with <code>Map</code> or <code>MapWhen</code>. <code>Map</code>* changes the base path of the executing request, which affects the output of link generation. All of the <code>LinkGenerator</code> APIs allow specifying a base path. Specify an empty base path to undo the <code>Map</code>* affect on link generation.</p>
+<ul>
+<li>
+<p>Use GetUri* extension methods with caution in an app configuration that doesn't validate the <code>Host</code> header of incoming requests. If the <code>Host</code> header of incoming requests isn't validated, untrusted request input can be sent back to the client in URIs in a view or page. We recommend that all production apps configure their server to validate the <code>Host</code> header against known valid values.</p>
+</li>
+<li>
+<p>Use <code>LinkGenerator</code> with caution in middleware in combination with <code>Map</code> or <code>MapWhen</code>. <code>Map</code>* changes the base path of the executing request, which affects the output of link generation. All of the <code>LinkGenerator</code> APIs allow specifying a base path. Specify an empty base path to undo the <code>Map</code>* affect on link generation.</p>
+</li>
+</ul>
+<h3><a href="#middleware-example" aria-hidden="true" class="anchor" id="middleware-example"></a>Middleware example</h3>
+<pre><code class="language-csharp">public class ProductsMiddleware
+{
+    private readonly LinkGenerator _linkGenerator;
+
+    public ProductsMiddleware(RequestDelegate next, LinkGenerator linkGenerator) =&gt;
+        _linkGenerator = linkGenerator;
+
+    public async Task InvokeAsync(HttpContext httpContext)
+    {
+        httpContext.Response.ContentType = MediaTypeNames.Text.Plain;
+
+        var productsPath = _linkGenerator.GetPathByAction(&quot;Products&quot;, &quot;Store&quot;);
+
+        await httpContext.Response.WriteAsync(
+            $&quot;Go to {productsPath} to see our products.&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#route-templates" aria-hidden="true" class="anchor" id="route-templates"></a>Route templates</h2>
+<ul>
+<li>
+<p>Can be used as a prefix to a route parameter to bind to the rest of the URI.</p>
+</li>
+<li>
+<p>Are called a catch-all parameters. For example, blog/{**slug}:</p>
+<ul>
+<li>
+<p>Matches any URI that starts with blog/ and has any value following it.</p>
+</li>
+<li>
+<p>The value following blog/ is assigned to the slug route value.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>/files/myFile.txt</code></p>
+</li>
+<li>
+<p><code>/files/myFile</code></p>
+</li>
+<li>
+<p>A route parameter with a default value always produces a value.</p>
+</li>
+<li>
+<p>An optional parameter has a value only when a value is provided by the request URL.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Route Template</th>
+<th>Example Matching URI</th>
+<th>The request URI…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hello</code></td>
+<td><code>/hello</code></td>
+<td>Only matches the single path <code>/hello</code>.</td>
+</tr>
+<tr>
+<td><code>{Page=Home}</code></td>
+<td><code>/</code></td>
+<td>Matches and sets <code>Page</code> to <code>Home</code>.</td>
+</tr>
+<tr>
+<td><code>{Page=Home}</code></td>
+<td><code>/Contact</code></td>
+<td>Matches and sets <code>Page</code> to <code>Contact</code>.</td>
+</tr>
+<tr>
+<td><code>{controller}/{action}/{id?}</code></td>
+<td><code>/Products/List</code></td>
+<td>Maps to the <code>Products</code> ```controller``` and <code>List</code> ```action```.</td>
+</tr>
+<tr>
+<td><code>{controller}/{action}/{id?}</code></td>
+<td><code>/Products/Details/123</code></td>
+<td>Maps to the <code>Products</code> ```controller``` and  <code>Details</code> ```action``` with<code>id</code> set to 123.</td>
+</tr>
+<tr>
+<td><code>{controller=Home}/{action=Index}/{id?}</code></td>
+<td><code>/</code></td>
+<td>Maps to the <code>Home</code> ```controller``` and <code>Index</code> method. <code>id</code> is ignored.</td>
+</tr>
+<tr>
+<td><code>{controller=Home}/{action=Index}/{id?}</code></td>
+<td><code>/Products</code></td>
+<td>Maps to the <code>Products</code> ```controller``` and <code>Index</code> method. <code>id</code> is ignored.</td>
+</tr>
+</tbody></table>
+<h3><a href="#complex-segments" aria-hidden="true" class="anchor" id="complex-segments"></a>Complex segments</h3>
+<blockquote>
+<p class='warning'>Warning
+When using System.Text.RegularExpressions to process untrusted input, pass a timeout. A malicious user can provide input to <code>RegularExpressions</code> causing a Denial-of-Service attack. ASP.NET Core framework APIs that use <code>RegularExpressions</code> pass a timeout.</p>
+</blockquote>
+<ul>
+<li>
+<p>The first literal, right to left, is <code>c</code>. So <code>/abcd</code> is searched from right and finds <code>/ab|c|d</code>.</p>
+</li>
+<li>
+<p>Everything to the right (d) is now matched to the route parameter <code>{d}</code>.</p>
+</li>
+<li>
+<p>The <code>next</code> literal, right to left, is a. So <code>/ab|c|d</code> is searched starting where we left off, then a is found <code>/|a|b|c|d</code>.</p>
+</li>
+<li>
+<p>The value to the right (b) is now matched to the route parameter <code>{b}</code>.</p>
+</li>
+<li>
+<p>There is no remaining text and no remaining route template, so this is a match.</p>
+</li>
+<li>
+<p>The first literal, right to left, is <code>c</code>. So <code>/aabcd</code> is searched from right and finds <code>/aab|c|d</code>.</p>
+</li>
+<li>
+<p>Everything to the right (d) is now matched to the route parameter <code>{d}</code>.</p>
+</li>
+<li>
+<p>The <code>next</code> literal, right to left, is a. So <code>/aab|c|d</code> is searched starting where we left off, then a is found <code>/a|a|b|c|d</code>.</p>
+</li>
+<li>
+<p>The value to the right (b) is now matched to the route parameter <code>{b}</code>.</p>
+</li>
+<li>
+<p>At this point there is remaining text a, but the algorithm has run out of route template to parse, so this is not a match.</p>
+</li>
+<li>
+<p>It matches the smallest amount of text possible in each step.</p>
+</li>
+<li>
+<p>Any case where the delimiter value appears inside the parameter values results in not matching.</p>
+</li>
+</ul>
+<h2><a href="#routing-with-special-characters" aria-hidden="true" class="anchor" id="routing-with-special-characters"></a>Routing with special characters</h2>
+<pre><code class="language-csharp">[HttpGet(&quot;{id?}/name&quot;)]
+public async Task&lt;ActionResult&lt;string&gt;&gt; GetName(string id)
+{
+    var todoItem = await _context.TodoItems.FindAsync(id);
+
+    if (todoItem == null || todoItem.Name == null)
+    {
+        return NotFound();
+    }
+
+    return todoItem.Name;
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>ASCII</th>
+<th>Encoded</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code></td>
+<td><code>%2F</code></td>
+</tr>
+<tr>
+<td><code> </code></td>
+<td><code>+</code></td>
+</tr>
+</tbody></table>
+<h2><a href="#route-constraints" aria-hidden="true" class="anchor" id="route-constraints"></a>Route constraints</h2>
+<blockquote>
+<p class='warning'>Warning
+Don't use constraints for input validation. If constraints are used for input validation, invalid input results in a <code>404</code> Not Found response. Invalid input should produce a <code>400</code> Bad Request with an appropriate error message. Route constraints are used to disambiguate similar routes, not to validate the inputs for a particular route.</p>
+</blockquote>
+<table><thead>
+<tr>
+<th>constraint</th>
+<th>Example</th>
+<th>Example Matches</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>int</code></td>
+<td><code>{id:int}</code></td>
+<td><code>123456789</code>, <code>-123456789</code></td>
+<td>Matches any integer</td>
+</tr>
+<tr>
+<td><code>bool</code></td>
+<td><code>{active:bool}</code></td>
+<td><code>true</code>, <code>FALSE</code></td>
+<td>Matches <code>true</code> or <code>false</code>. Case-insensitive</td>
+</tr>
+<tr>
+<td><code>datetime</code></td>
+<td><code>{dob:datetime}</code></td>
+<td><code>2016-12-31</code>, <code>2016-12-31 7:32pm</code></td>
+<td>Matches a valid <code>DateTime</code> value in the invariant ```culture```. See preceding warning.</td>
+</tr>
+<tr>
+<td><code>decimal</code></td>
+<td><code>{price:decimal}</code></td>
+<td><code>49.99</code>, <code>-1,000.01</code></td>
+<td>Matches a valid <code>decimal</code> value in the invariant ```culture```. See preceding warning.</td>
+</tr>
+<tr>
+<td><code>double</code></td>
+<td><code>{weight:double}</code></td>
+<td><code>1.234</code>, <code>-1,001.01e8</code></td>
+<td>Matches a valid <code>double</code> value in the invariant ```culture```. See preceding warning.</td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td><code>{weight:float}</code></td>
+<td><code>1.234</code>, <code>-1,001.01e8</code></td>
+<td>Matches a valid <code>float</code> value in the invariant ```culture```. See preceding warning.</td>
+</tr>
+<tr>
+<td><code>guid</code></td>
+<td><code>{id:guid}</code></td>
+<td><code>CD2C1638-1638-72D5-1638-DEADBEEF1638</code></td>
+<td>Matches a valid <code>Guid</code> value</td>
+</tr>
+<tr>
+<td><code>long</code></td>
+<td><code>{ticks:long}</code></td>
+<td><code>123456789</code>, <code>-123456789</code></td>
+<td>Matches a valid <code>long</code> value</td>
+</tr>
+<tr>
+<td><code>minlength(value)</code></td>
+<td><code>{username:minlength(4)}</code></td>
+<td><code>Rick</code></td>
+<td>String must be at least 4 characters</td>
+</tr>
+<tr>
+<td><code>maxlength(value)</code></td>
+<td><code>{filename:maxlength(8)}</code></td>
+<td><code>MyFile</code></td>
+<td>String must be no more than 8 characters</td>
+</tr>
+<tr>
+<td><code>length(length)</code></td>
+<td><code>{filename:length(12)}</code></td>
+<td><code>somefile.txt</code></td>
+<td>String must be exactly 12 characters long</td>
+</tr>
+<tr>
+<td><code>length(min,max)</code></td>
+<td><code>{filename:length(8,16)}</code></td>
+<td><code>somefile.txt</code></td>
+<td>String must be at least 8 and no more than 16 characters long</td>
+</tr>
+<tr>
+<td><code>min(value)</code></td>
+<td><code>{age:min(18)}</code></td>
+<td><code>19</code></td>
+<td>Integer value must be at least 18</td>
+</tr>
+<tr>
+<td><code>max(value)</code></td>
+<td><code>{age:max(120)}</code></td>
+<td><code>91</code></td>
+<td>Integer value must be no more than 120</td>
+</tr>
+<tr>
+<td><code>range(min,max)</code></td>
+<td><code>{age:range(18,120)}</code></td>
+<td><code>91</code></td>
+<td>Integer value must be at least 18 but no more than 120</td>
+</tr>
+<tr>
+<td><code>alpha</code></td>
+<td><code>{name:alpha}</code></td>
+<td><code>Rick</code></td>
+<td>String must consist of one or more alphabetical characters, <code>a</code>-<code>z</code> and case-insensitive.</td>
+</tr>
+<tr>
+<td><code>regex(expression)</code></td>
+<td><code>{ssn:regex(^\\d{{3}}-\\d{{2}}-\\d{{4}}$)}</code></td>
+<td><code>123-45-6789</code></td>
+<td>String must match the regular expression. See tips about defining a regular expression.</td>
+</tr>
+<tr>
+<td><code>required</code></td>
+<td><code>{name:required}</code></td>
+<td><code>Rick</code></td>
+<td>Used to enforce that a non-parameter value is present during URL generation</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p class='warning'>Warning
+When using System.Text.RegularExpressions to process untrusted input, pass a timeout. A malicious user can provide input to <code>RegularExpressions</code> causing a Denial-of-Service attack. ASP.NET Core framework APIs that use <code>RegularExpressions</code> pass a timeout.</p>
+</blockquote>
+<pre><code class="language-csharp">[Route(&quot;users/{id:int:min(1)}&quot;)]
+public User GetUserById(int id) { }
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Route constraints that verify the URL and are converted to a CLR type always use the invariant <code>culture</code>. For example, conversion to the CLR type <code>int</code> or <code>DateTime</code>. These constraints assume that the URL is not localizable. The framework-provided route constraints don't modify the values stored in route values. All route values parsed from the URL are stored as strings. For example, the <code>float</code> constraint attempts to convert the route value to a <code>float</code>, but the converted value is used only to verify it can be converted to a <code>float</code>.</p>
+</blockquote>
+<h3><a href="#regular-expressions-in-constraints" aria-hidden="true" class="anchor" id="regular-expressions-in-constraints"></a>Regular expressions in constraints</h3>
+<blockquote>
+<p class='warning'>Warning
+When using System.Text.RegularExpressions to process untrusted input, pass a timeout. A malicious user can provide input to <code>RegularExpressions</code> causing a Denial-of-Service attack. ASP.NET Core framework APIs that use <code>RegularExpressions</code> pass a timeout.</p>
+</blockquote>
+<pre><code class="language-csharp">app.MapGet(&quot;{message:regex(^\\d{{3}}-\\d{{2}}-\\d{{4}}$)}&quot;,
+    () =&gt; &quot;Inline Regex Constraint Matched&quot;);
+</code></pre>
+<pre><code class="language-csharp">app.MapControllerRoute(
+    name: &quot;people&quot;,
+    pattern: &quot;people/{ssn}&quot;,
+    constraints: new { ssn = &quot;^\\d{3}-\\d{2}-\\d{4}$&quot;, },
+    defaults: new { controller = &quot;People&quot;, action = &quot;List&quot; });
+</code></pre>
+<ul>
+<li>
+<p>Replace \ characters provided in the string as \ characters in the C# source file in order to escape the \ string escape character.</p>
+</li>
+<li>
+<p>Verbatim string literals.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Regular expression</th>
+<th>Escaped regular expression</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>^\d{3}-\d{2}-\d{4}$</code></td>
+<td><code>^\\d{{3}}-\\d{{2}}-\\d{{4}}$</code></td>
+</tr>
+<tr>
+<td><code>^[a-z]{2}$</code></td>
+<td><code>^[[a-z]]{{2}}$</code></td>
+</tr>
+</tbody></table>
+<table><thead>
+<tr>
+<th>Expression</th>
+<th>String</th>
+<th style="text-align: center;">Match</th>
+<th>Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[a-z]{2}</code></td>
+<td>hello</td>
+<td style="text-align: center;">Yes</td>
+<td>Substring matches</td>
+</tr>
+<tr>
+<td><code>[a-z]{2}</code></td>
+<td>123abc456</td>
+<td style="text-align: center;">Yes</td>
+<td>Substring matches</td>
+</tr>
+<tr>
+<td><code>[a-z]{2}</code></td>
+<td>mz</td>
+<td style="text-align: center;">Yes</td>
+<td>Matches expression</td>
+</tr>
+<tr>
+<td><code>[a-z]{2}</code></td>
+<td>MZ</td>
+<td style="text-align: center;">Yes</td>
+<td>Not case sensitive</td>
+</tr>
+<tr>
+<td><code>^[a-z]{2}$</code></td>
+<td>hello</td>
+<td style="text-align: center;">No</td>
+<td>See <code>^</code> and <code>$</code> above</td>
+</tr>
+<tr>
+<td><code>^[a-z]{2}$</code></td>
+<td>123abc456</td>
+<td style="text-align: center;">No</td>
+<td>See <code>^</code> and <code>$</code> above</td>
+</tr>
+</tbody></table>
+<h3><a href="#custom-route-constraints" aria-hidden="true" class="anchor" id="custom-route-constraints"></a>Custom route constraints</h3>
+<pre><code class="language-csharp">builder.Services.AddRouting(options =&gt;
+    options.ConstraintMap.Add(&quot;noZeroes&quot;, typeof(NoZeroesRouteConstraint)));
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;api/[controller]&quot;)]
+public class NoZeroesController : ControllerBase
+{
+    [HttpGet(&quot;{id:noZeroes}&quot;)]
+    public IActionResult Get(string id) =&gt;
+        Content(id);
+}
+</code></pre>
+<pre><code class="language-csharp">public class NoZeroesRouteConstraint : IRouteConstraint
+{
+    private static readonly Regex _regex = new(
+        @&quot;^[1-9]*$&quot;,
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase,
+        TimeSpan.FromMilliseconds(100));
+
+    public bool Match(
+        HttpContext? httpContext, IRouter? route, string routeKey,
+        RouteValueDictionary values, RouteDirection routeDirection)
+    {
+        if (!values.TryGetValue(routeKey, out var routeValue))
+        {
+            return false;
+        }
+
+        var routeValueString = Convert.ToString(routeValue, CultureInfo.InvariantCulture);
+
+        if (routeValueString is null)
+        {
+            return false;
+        }
+
+        return _regex.IsMatch(routeValueString);
+    }
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+When using System.Text.RegularExpressions to process untrusted input, pass a timeout. A malicious user can provide input to <code>RegularExpressions</code> causing a Denial-of-Service attack. ASP.NET Core framework APIs that use <code>RegularExpressions</code> pass a timeout.</p>
+</blockquote>
+<ul>
+<li>
+<p>Prevents <code>0</code> in the <code>{id}</code> segment of the route.</p>
+</li>
+<li>
+<p>Is shown to provide a basic example of implementing a custom constraint. It should not be used in a production app.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public IActionResult Get(string id)
+{
+    if (id.Contains('0'))
+    {
+        return StatusCode(StatusCodes.Status406NotAcceptable);
+    }
+
+    return Content(id);
+}
+</code></pre>
+<ul>
+<li>
+<p>It doesn't require a custom constraint.</p>
+</li>
+<li>
+<p>It returns a more descriptive error when the route parameter includes <code>0</code>.</p>
+</li>
+</ul>
+<h2><a href="#parameter-transformers" aria-hidden="true" class="anchor" id="parameter-transformers"></a>Parameter transformers</h2>
+<ul>
+<li>
+<p>Execute when generating a link using <code>LinkGenerator</code>.</p>
+</li>
+<li>
+<p>Implement <code>Microsoft.AspNetCore.Routing</code>.IOutboundParameterTransformer.</p>
+</li>
+<li>
+<p>Are configured using <code>ConstraintMap</code>.</p>
+</li>
+<li>
+<p>Take the parameter's route value and transform it to a new string value.</p>
+</li>
+<li>
+<p>Result in using the transformed value in the generated link.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class SlugifyParameterTransformer : IOutboundParameterTransformer
+{
+    public string? TransformOutbound(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        return Regex.Replace(
+            value.ToString()!,
+                &quot;([a-z])([A-Z])&quot;,
+            &quot;$1-$2&quot;,
+            RegexOptions.CultureInvariant,
+            TimeSpan.FromMilliseconds(100))
+            .ToLowerInvariant();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddRouting(options =&gt;
+    options.ConstraintMap[&quot;slugify&quot;] = typeof(SlugifyParameterTransformer));
+</code></pre>
+<pre><code class="language-csharp">app.MapControllerRoute(
+    name: &quot;default&quot;,
+    pattern: &quot;{controller:slugify=Home}/{action:slugify=Index}/{id?}&quot;);
+</code></pre>
+<ul>
+<li>
+<p>The Microsoft.AspNetCore.Mvc.ApplicationModels.RouteTokenTransformerConvention MVC convention applies a specified parameter transformer to all attribute routes in the app. The parameter transformer transforms attribute route tokens as they are replaced. For more information, see Use a parameter transformer to customize token replacement.</p>
+</li>
+<li>
+<p>Razor Pages uses the PageRouteTransformerConvention API convention. This convention applies a specified parameter transformer to all automatically discovered Razor Pages. The parameter transformer transforms the folder and file name segments of Razor Pages routes. For more information, see Use a parameter transformer to customize page routes.</p>
+</li>
+</ul>
+<h2><a href="#url-generation-reference" aria-hidden="true" class="anchor" id="url-generation-reference"></a>URL generation reference</h2>
+<h3><a href="#troubleshooting-url-generation-with-logging" aria-hidden="true" class="anchor" id="troubleshooting-url-generation-with-logging"></a>Troubleshooting URL generation with logging</h3>
+<h3><a href="#addresses" aria-hidden="true" class="anchor" id="addresses"></a>Addresses</h3>
+<ul>
+<li>
+<p>Using endpoint name (string) as the address:</p>
+<ul>
+<li>
+<p>Provides similar functionality to MVC's route name.</p>
+</li>
+<li>
+<p>Uses the IEndpointNameMetadata metadata type.</p>
+</li>
+<li>
+<p>Resolves the provided string against the metadata of all registered endpoints.</p>
+</li>
+<li>
+<p>Throws an exception on startup if multiple endpoints use the same name.</p>
+</li>
+<li>
+<p>Recommended for general-purpose use outside of controllers and Razor Pages.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Using route values (RouteValuesAddress) as the address:</p>
+<ul>
+<li>
+<p>Provides similar functionality to controllers and Razor Pages legacy URL generation.</p>
+</li>
+<li>
+<p>Very complex to extend and debug.</p>
+</li>
+<li>
+<p>Provides the implementation used by <code>IUrlHelper</code>, Tag Helpers, HTML Helpers, Action Results, etc.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>The endpoint name scheme performs a basic dictionary lookup.</p>
+</li>
+<li>
+<p>The route values scheme has a complex best subset of set algorithm.</p>
+</li>
+</ul>
+<h3><a href="#ambient-values-and-explicit-values" aria-hidden="true" class="anchor" id="ambient-values-and-explicit-values"></a>Ambient values and explicit values</h3>
+<pre><code class="language-csharp">public class WidgetController : ControllerBase
+{
+    private readonly LinkGenerator _linkGenerator;
+
+    public WidgetController(LinkGenerator linkGenerator) =&gt;
+        _linkGenerator = linkGenerator;
+
+    public IActionResult Index()
+    {
+        var indexPath = _linkGenerator.GetPathByAction(
+            HttpContext, values: new { id = 17 })!;
+
+        return Content(indexPath);
+    }
+
+    // ...
+</code></pre>
+<ul>
+<li>
+<p>Returns <code>/Widget/Index/17</code></p>
+</li>
+<li>
+<p>Gets <code>LinkGenerator</code> via DI.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var subscribePath = _linkGenerator.GetPathByAction(
+    &quot;Subscribe&quot;, &quot;Home&quot;, new { id = 17 })!;
+</code></pre>
+<pre><code class="language-csharp">var subscribePath = _linkGenerator.GetPathByAction(
+    HttpContext, &quot;Subscribe&quot;, null, new { id = 17 });
+</code></pre>
+<pre><code class="language-csharp">public class GadgetController : ControllerBase
+{
+    public IActionResult Index() =&gt;
+        Content(Url.Action(&quot;Edit&quot;, new { id = 17 })!);
+}
+</code></pre>
+<ul>
+<li>
+<p><code>/Gadget/Edit/17</code> is returned.</p>
+</li>
+<li>
+<p>Url gets the <code>IUrlHelper</code>.</p>
+</li>
+<li>
+<p>Action generates a URL with an absolute path for an <code>action</code> method. The URL contains the specified <code>action</code> name and route values.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    public void OnGet()
+    {
+        var editUrl = Url.Page(&quot;./Edit&quot;, new { id = 17 });
+
+        // ...
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>IUrlHelper</code> always provides the route values from the current request as ambient values.</p>
+</li>
+<li>
+<p><code>IUrlHelper</code>.Action always copies the current <code>action</code> and <code>controller</code> route values as explicit values unless overridden by the developer.</p>
+</li>
+<li>
+<p><code>IUrlHelper.Page</code> always copies the current page route value as an explicit value unless overridden.</p>
+</li>
+<li>
+<p><code>IUrlHelper.Page</code> always overrides the current <code>handler</code> route value with <code>null</code> as an explicit values unless overridden.</p>
+</li>
+</ul>
+<h3><a href="#url-generation-process" aria-hidden="true" class="anchor" id="url-generation-process"></a>URL generation process</h3>
+<ul>
+<li>
+<p>Processes the endpoints iteratively.</p>
+</li>
+<li>
+<p>Returns the first successful result.</p>
+</li>
+<li>
+<p>When linking to another <code>action</code> in the same <code>controller</code>, the <code>controller</code> name doesn't need to be specified.</p>
+</li>
+<li>
+<p>When linking to another <code>controller</code> in the same <code>area</code>, the <code>area</code> name doesn't need to be specified.</p>
+</li>
+<li>
+<p>When linking to the same <code>action</code> method, route values don't need to be specified.</p>
+</li>
+<li>
+<p>When linking to another part of the app, you don't want to carry over route values that have no meaning in that part of the app.</p>
+</li>
+<li>
+<p><code>id</code> won't be reused because <code>{controller}</code> is to the left of <code>{id?}</code>.</p>
+</li>
+<li>
+<p>If the explicit values contain a value for <code>id</code>, the ambient value for <code>id</code> is ignored. The ambient values for <code>controller</code> and <code>action</code> can be used.</p>
+</li>
+<li>
+<p>If the explicit values contain a value for <code>action</code>, any ambient value for <code>action</code> is ignored. The ambient values for <code>controller</code> can be used. If the explicit value for <code>action</code> is different from the ambient value for <code>action</code>, the <code>id</code> value won't be used. If the explicit value for <code>action</code> is the same as the ambient value for <code>action</code>, the <code>id</code> value can be used.</p>
+</li>
+<li>
+<p>If the explicit values contain a value for <code>controller</code>, any ambient value for <code>controller</code> is ignored. If the explicit value for <code>controller</code> is different from the ambient value for <code>controller</code>, the <code>action</code> and <code>id</code> values won't be used. If the explicit value for <code>controller</code> is the same as the ambient value for <code>controller</code>, the <code>action</code> and <code>id</code> values can be used.</p>
+</li>
+<li>
+<p>There is a hierarchy of route values.</p>
+</li>
+<li>
+<p>They don't appear in the template.</p>
+</li>
+<li>
+<p>The required value names are combined with the route parameters, then processed from left-to-right.</p>
+</li>
+<li>
+<p>For each parameter, the ambient value and explicit value are compared:</p>
+<ul>
+<li>
+<p>If the ambient value and explicit value are the same, the process continues.</p>
+</li>
+<li>
+<p>If the ambient value is present and the explicit value isn't, the ambient value is used when generating the URL.</p>
+</li>
+<li>
+<p>If the ambient value isn't present and the explicit value is, reject the ambient value and all subsequent ambient values.</p>
+</li>
+<li>
+<p>If the ambient value and the explicit value are present, and the two values are different, reject the ambient value and all subsequent ambient values.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>From left-to-right.</p>
+</li>
+<li>
+<p>Each parameter has its accepted value substituted.</p>
+</li>
+<li>
+<p>With the following special cases:</p>
+<ul>
+<li>
+<p>If the accepted values is missing a value and the parameter has a default value, the default value is used.</p>
+</li>
+<li>
+<p>If the accepted values is missing a value and the parameter is optional, processing continues.</p>
+</li>
+<li>
+<p>If any route parameter to the right of a missing optional parameter has a value, the operation fails.</p>
+</li>
+<li>
+<p>Contiguous default-valued parameters and optional parameters are collapsed where possible.</p>
+</li>
+</ul>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Ambient Values</th>
+<th>Explicit Values</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>controller = "Home"</td>
+<td>action = "About"</td>
+<td><code>/Home/About</code></td>
+</tr>
+<tr>
+<td>controller = "Home"</td>
+<td>controller = "Order", ```action``` = "About"</td>
+<td><code>/Order/About</code></td>
+</tr>
+<tr>
+<td>controller = "Home", ```color``` = "Red"</td>
+<td>action = "About"</td>
+<td><code>/Home/About</code></td>
+</tr>
+<tr>
+<td>controller = "Home"</td>
+<td>action = "About", ```color``` = "Red"</td>
+<td><code>/Home/About?color=Red</code></td>
+</tr>
+</tbody></table>
+<h3><a href="#optional-route-parameter-order" aria-hidden="true" class="anchor" id="optional-route-parameter-order"></a>Optional route parameter order</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+namespace WebApplication1.Controllers;
+
+[Route(&quot;api/[controller]&quot;)]
+public class MyController : ControllerBase
+{
+    // GET /api/my/red/2/joe
+    // GET /api/my/red/2
+    // GET /api/my
+    [HttpGet(&quot;{color}/{id:int?}/{name?}&quot;)]
+    public IActionResult GetByIdAndOptionalName(string color, int id = 1, string? name = null)
+    {
+        return Ok($&quot;{color} {id} {name ?? &quot;&quot;}&quot;);
+    }
+}
+</code></pre>
+<h3><a href="#problems-with-route-value-invalidation" aria-hidden="true" class="anchor" id="problems-with-route-value-invalidation"></a>Problems with route value invalidation</h3>
+<pre><code class="language-csharp">app.MapControllerRoute(
+    &quot;default&quot;,
+    &quot;{culture}/{controller=Home}/{action=Index}/{id?}&quot;);
+
+app.MapControllerRoute(
+    &quot;blog&quot;,
+    &quot;{culture}/{**slug}&quot;,
+    new { controller = &quot;Blog&quot;, action = &quot;ReadPost&quot; });
+</code></pre>
+<ul>
+<li>
+<p>In the &quot;default&quot; route template, the <code>culture</code> route parameter is to the left of <code>controller</code>, so changes to <code>controller</code> won't invalidate <code>culture</code>.</p>
+</li>
+<li>
+<p>In the &quot;blog&quot; route template, the <code>culture</code> route parameter is considered to be to the right of <code>controller</code>, which appears in the required values.</p>
+</li>
+</ul>
+<h2><a href="#parse-url-paths-with-linkparser" aria-hidden="true" class="anchor" id="parse-url-paths-with-linkparser"></a>Parse URL paths with <code>LinkParser</code></h2>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;api/[controller]&quot;)]
+public class ProductsController : ControllerBase
+{
+    [HttpGet(&quot;{id}&quot;, Name = nameof(GetProduct))]
+    public IActionResult GetProduct(string id)
+    {
+        // ...
+</code></pre>
+<pre><code class="language-csharp">[HttpPost(&quot;{id}/Related&quot;)]
+public IActionResult AddRelatedProduct(
+    string id, string pathToRelatedProduct, [FromServices] LinkParser linkParser)
+{
+    var routeValues = linkParser.ParsePathByEndpointName(
+        nameof(GetProduct), pathToRelatedProduct);
+    var relatedProductId = routeValues?[&quot;id&quot;];
+
+    // ...
+</code></pre>
+<h2><a href="#configure-endpoint-metadata" aria-hidden="true" class="anchor" id="configure-endpoint-metadata"></a>Configure endpoint metadata</h2>
+<ul>
+<li>
+<p>Enable Cors with endpoint routing</p>
+</li>
+<li>
+<p>IAuthorizationPolicyProvider sample using a custom <code>[MinimumAgeAuthorize]</code> attribute</p>
+</li>
+<li>
+<p>Test authentication with the <code>[Authorize]</code> attribute</p>
+</li>
+<li>
+<p>RequireAuthorization</p>
+</li>
+<li>
+<p>Selecting the scheme with the <code>[Authorize]</code> attribute</p>
+</li>
+<li>
+<p>Apply policies using the <code>[Authorize]</code> attribute</p>
+</li>
+<li>
+<p>Role-based authorization in ASP.NET Core</p>
+</li>
+</ul>
+<h2><a href="#host-matching-in-routes-with-requirehost" aria-hidden="true" class="anchor" id="host-matching-in-routes-with-requirehost"></a><code>Host</code> matching in routes with <code>RequireHost</code></h2>
+<ul>
+<li>
+<p><code>Host</code>: <code>www.domain.com</code>, matches <code>www.domain.com</code> with any port.</p>
+</li>
+<li>
+<p><code>Host</code> with wildcard: <code>*.domain.com</code>, matches <code>www.domain.com</code>, <code>subdomain.domain.com</code>, or <code>www.subdomain.domain.com</code> on any port.</p>
+</li>
+<li>
+<p>Port: <code>*:5000</code>, matches port 5000 with any host.</p>
+</li>
+<li>
+<p><code>Host</code> and port: <code>www.domain.com:5000</code> or <code>*.domain.com:5000</code>, matches host and port.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, () =&gt; &quot;Contoso&quot;).RequireHost(&quot;contoso.com&quot;);
+app.MapGet(&quot;/&quot;, () =&gt; &quot;AdventureWorks&quot;).RequireHost(&quot;adventure-works.com&quot;);
+
+app.MapHealthChecks(&quot;/healthz&quot;).RequireHost(&quot;*:8080&quot;);
+</code></pre>
+<pre><code class="language-csharp">[Host(&quot;contoso.com&quot;, &quot;adventure-works.com&quot;)]
+public class HostsController : Controller
+{
+    public IActionResult Index() =&gt;
+        View();
+
+    [Host(&quot;example.com&quot;)]
+    public IActionResult Example() =&gt;
+        View();
+}
+</code></pre>
+<ul>
+<li>
+<p>The attribute on the <code>action</code> is used.</p>
+</li>
+<li>
+<p>The <code>controller</code> attribute is ignored.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+API that relies on the <code>Host</code> header, such as <code>HttpRequest.Host</code> and <code>RequireHost</code>, are subject to potential spoofing by clients.
+To prevent host and port spoofing, use one of the following approaches:</p>
+</blockquote>
+<p>Use <code>HttpContext.Connection (ConnectionInfo.LocalPort)</code> where the ports are checked.
+Employ <code>Host</code> filtering.</p>
+<ul>
+<li>
+<p>Use <code>HttpContext.Connection (ConnectionInfo.LocalPort)</code> where the ports are checked.</p>
+</li>
+<li>
+<p>Employ <code>Host</code> filtering.</p>
+</li>
+</ul>
+<h2><a href="#route-groups" aria-hidden="true" class="anchor" id="route-groups"></a>Route groups</h2>
+<pre><code class="language-csharp">app.MapGroup(&quot;/public/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Public&quot;);
+
+app.MapGroup(&quot;/private/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Private&quot;)
+    .AddEndpointFilterFactory(QueryPrivateTodos)
+    .RequireAuthorization();
+
+
+EndpointFilterDelegate QueryPrivateTodos(EndpointFilterFactoryContext factoryContext, EndpointFilterDelegate next)
+{
+    var dbContextIndex = -1;
+
+    foreach (var argument in factoryContext.MethodInfo.GetParameters())
+    {
+        if (argument.ParameterType == typeof(TodoDb))
+        {
+            dbContextIndex = argument.Position;
+            break;
+        }
+    }
+
+    // Skip filter if the method doesn't have a TodoDb parameter.
+    if (dbContextIndex &lt; 0)
+    {
+        return next;
+    }
+
+    return async invocationContext =&gt;
+    {
+        var dbContext = invocationContext.GetArgument&lt;TodoDb&gt;(dbContextIndex);
+        dbContext.IsPrivate = true;
+
+        try
+        {
+            return await next(invocationContext);
+        }
+        finally
+        {
+            // This should only be relevant if you're pooling or otherwise reusing the DbContext instance.
+            dbContext.IsPrivate = false;
+        }
+    };
+}
+</code></pre>
+<pre><code class="language-csharp">public static RouteGroupBuilder MapTodosApi(this RouteGroupBuilder group)
+{
+    group.MapGet(&quot;/&quot;, GetAllTodos);
+    group.MapGet(&quot;/{id}&quot;, GetTodo);
+    group.MapPost(&quot;/&quot;, CreateTodo);
+    group.MapPut(&quot;/{id}&quot;, UpdateTodo);
+    group.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+    return group;
+}
+</code></pre>
+<pre><code class="language-csharp">public static async Task&lt;Created&lt;Todo&gt;&gt; CreateTodo(Todo todo, TodoDb database)
+{
+    await database.AddAsync(todo);
+    await database.SaveChangesAsync();
+
+    return TypedResults.Created($&quot;{todo.Id}&quot;, todo);
+}
+</code></pre>
+<pre><code class="language-csharp">var all = app.MapGroup(&quot;&quot;).WithOpenApi();
+var org = all.MapGroup(&quot;{org}&quot;);
+var user = org.MapGroup(&quot;{user}&quot;);
+user.MapGet(&quot;&quot;, (string org, string user) =&gt; $&quot;{org}/{user}&quot;);
+</code></pre>
+<pre><code class="language-csharp">var outer = app.MapGroup(&quot;/outer&quot;);
+var inner = outer.MapGroup(&quot;/inner&quot;);
+
+inner.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/inner group filter&quot;);
+    return next(context);
+});
+
+outer.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/outer group filter&quot;);
+    return next(context);
+});
+
+inner.MapGet(&quot;/&quot;, () =&gt; &quot;Hi!&quot;).AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;MapGet filter&quot;);
+    return next(context);
+});
+</code></pre>
+<pre><code class="language-dotnetcli">/outer group filter
+/inner group filter
+MapGet filter
+</code></pre>
+<h2><a href="#performance-guidance-for-routing" aria-hidden="true" class="anchor" id="performance-guidance-for-routing"></a>Performance guidance for routing</h2>
+<ul>
+<li>
+<p>Developers eliminate their app code as the source of the problem.</p>
+</li>
+<li>
+<p>It's common to assume routing is the cause.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var logger = app.Services.GetRequiredService&lt;ILogger&lt;Program&gt;&gt;();
+
+app.Use(async (context, next) =&gt;
+{
+    var stopwatch = Stopwatch.StartNew();
+    await next(context);
+    stopwatch.Stop();
+
+    logger.LogInformation(&quot;Time 1: {ElapsedMilliseconds}ms&quot;, stopwatch.ElapsedMilliseconds);
+});
+
+app.UseRouting();
+
+app.Use(async (context, next) =&gt;
+{
+    var stopwatch = Stopwatch.StartNew();
+    await next(context);
+    stopwatch.Stop();
+
+    logger.LogInformation(&quot;Time 2: {ElapsedMilliseconds}ms&quot;, stopwatch.ElapsedMilliseconds);
+});
+
+app.UseAuthorization();
+
+app.Use(async (context, next) =&gt;
+{
+    var stopwatch = Stopwatch.StartNew();
+    await next(context);
+    stopwatch.Stop();
+
+    logger.LogInformation(&quot;Time 3: {ElapsedMilliseconds}ms&quot;, stopwatch.ElapsedMilliseconds);
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Timing Test.&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Interleave each middleware with a copy of the timing middleware shown in the preceding code.</p>
+</li>
+<li>
+<p>Add a unique identifier to correlate the timing data with the code.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public sealed class AutoStopwatch : IDisposable
+{
+    private readonly ILogger _logger;
+    private readonly string _message;
+    private readonly Stopwatch _stopwatch;
+    private bool _disposed;
+
+    public AutoStopwatch(ILogger logger, string message) =&gt;
+        (_logger, _message, _stopwatch) = (logger, message, Stopwatch.StartNew());
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _logger.LogInformation(&quot;{Message}: {ElapsedMilliseconds}ms&quot;,
+            _message, _stopwatch.ElapsedMilliseconds);
+
+        _disposed = true;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">var logger = app.Services.GetRequiredService&lt;ILogger&lt;Program&gt;&gt;();
+var timerCount = 0;
+
+app.Use(async (context, next) =&gt;
+{
+    using (new AutoStopwatch(logger, $&quot;Time {++timerCount}&quot;))
+    {
+        await next(context);
+    }
+});
+
+app.UseRouting();
+
+app.Use(async (context, next) =&gt;
+{
+    using (new AutoStopwatch(logger, $&quot;Time {++timerCount}&quot;))
+    {
+        await next(context);
+    }
+});
+
+app.UseAuthorization();
+
+app.Use(async (context, next) =&gt;
+{
+    using (new AutoStopwatch(logger, $&quot;Time {++timerCount}&quot;))
+    {
+        await next(context);
+    }
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Timing Test.&quot;);
+</code></pre>
+<h3><a href="#potentially-expensive-routing-features" aria-hidden="true" class="anchor" id="potentially-expensive-routing-features"></a>Potentially expensive routing features</h3>
+<ul>
+<li>
+<p>Regular expressions: It's possible to write regular expressions that are complex, or have long running time with a small amount of input.</p>
+</li>
+<li>
+<p>Complex segments ({x}-{y}-{z}):</p>
+<ul>
+<li>
+<p>Are significantly more expensive than parsing a regular URL path segment.</p>
+</li>
+<li>
+<p>Result in many more substrings being allocated.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Synchronous data access: Many complex apps have database access as part of their routing. Use extensibility points such as MatcherPolicy and EndpointSelectorContext, which are asynchronous.</p>
+</li>
+</ul>
+<h3><a href="#guidance-for-large-route-tables" aria-hidden="true" class="anchor" id="guidance-for-large-route-tables"></a>Guidance for large route tables</h3>
+<ul>
+<li>
+<p>There are a high number of routes in the app using this pattern.</p>
+</li>
+<li>
+<p>There is a large number of routes in the app.</p>
+</li>
+</ul>
+<h4><a href="#how-to-determine-if-an-app-is-running-into-the-large-route-table-problem" aria-hidden="true" class="anchor" id="how-to-determine-if-an-app-is-running-into-the-large-route-table-problem"></a>How to determine if an app is running into the large route table problem</h4>
+<ul>
+<li>
+<p>There are two symptoms to look for:</p>
+<ul>
+<li>
+<p>The app is slow to start on the first request.</p>
+<ul>
+<li>Note that this is required but not sufficient. There are many other non-route problems than can cause slow app startup. Check for the condition below to accurately determine the app is running into this situation.</li>
+</ul>
+</li>
+<li>
+<p>The app consumes a lot of memory during startup and a memory dump shows a large number of <code>Microsoft.AspNetCore.Routing.Matching.DfaNode</code> instances.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4><a href="#how-to-address-this-issue" aria-hidden="true" class="anchor" id="how-to-address-this-issue"></a>How to address this issue</h4>
+<ul>
+<li>
+<p>Apply route constraints to your parameters, for example <code>{parameter:int}</code>, <code>{parameter:guid}</code>, <code>{parameter:regex(\\d+)}</code>, etc. where possible.</p>
+<ul>
+<li>
+<p>This allows the routing algorithm to internally optimize the structures used for matching and drastically reduce the memory used.</p>
+</li>
+<li>
+<p>In the vast majority of cases this will suffice to get back to an acceptable behavior.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Change the routes to move parameters to later segments in the template.</p>
+<ul>
+<li>This reduces the number of possible &quot;paths&quot; to match an endpoint given a path.</li>
+</ul>
+</li>
+<li>
+<p>Use a dynamic route and perform the mapping to a <code>controller/page</code> dynamically.</p>
+<ul>
+<li>This can be achieved using <code>MapDynamicControllerRoute</code> and <code>MapDynamicPageRoute</code>.</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#short-circuit-middleware-after-routing" aria-hidden="true" class="anchor" id="short-circuit-middleware-after-routing"></a>Short-circuit middleware after routing</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/short-circuit&quot;, () =&gt; &quot;Short circuiting!&quot;).ShortCircuit();
+</code></pre>
+<pre><code class="language-csharp">app.MapShortCircuit(404, &quot;robots.txt&quot;, &quot;favicon.ico&quot;);
+</code></pre>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft&quot;: &quot;Information&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Information&quot;
+    }
+  }
+}
+</code></pre>
+<pre><code class="language-csharp">var app = WebApplication.Create();
+
+app.UseHttpLogging();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;No short-circuiting!&quot;);
+app.MapGet(&quot;/short-circuit&quot;, () =&gt; &quot;Short circuiting!&quot;).ShortCircuit();
+app.MapShortCircuit(404, &quot;robots.txt&quot;, &quot;favicon.ico&quot;);
+
+app.Run();
+</code></pre>
+<h2><a href="#guidance-for-library-authors" aria-hidden="true" class="anchor" id="guidance-for-library-authors"></a>Guidance for library authors</h2>
+<h3><a href="#define-endpoints" aria-hidden="true" class="anchor" id="define-endpoints"></a>Define endpoints</h3>
+<pre><code class="language-csharp">// Your framework
+app.MapMyFramework(...);
+
+app.MapHealthChecks(&quot;/healthz&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Allows for metadata to be composed.</p>
+</li>
+<li>
+<p>Is targeted by a variety of extension methods.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">// Your framework
+app.MapMyFramework(...)
+    .RequireAuthorization()
+    .WithMyFrameworkFeature(awesome: true);
+
+app.MapHealthChecks(&quot;/healthz&quot;);
+</code></pre>
+<h3><a href="#creating-routing-integrated-middleware" aria-hidden="true" class="anchor" id="creating-routing-integrated-middleware"></a>Creating routing-integrated middleware</h3>
+<pre><code class="language-csharp">public interface ICoolMetadata
+{
+    bool IsCool { get; }
+}
+
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+public class CoolMetadataAttribute : Attribute, ICoolMetadata
+{
+    public bool IsCool =&gt; true;
+}
+</code></pre>
+<ul>
+<li>
+<p>Make them accessible as attributes.</p>
+</li>
+<li>
+<p>Most users are familiar with applying attributes.</p>
+</li>
+<li>
+<p>Interfaces are composable.</p>
+</li>
+<li>
+<p>Developers can declare their own types that combine multiple policies.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+public class SuppressCoolMetadataAttribute : Attribute, ICoolMetadata
+{
+    public bool IsCool =&gt; false;
+}
+
+[CoolMetadata]
+public class MyController : Controller
+{
+    public void MyCool() { }
+
+    [SuppressCoolMetadata]
+    public void Uncool() { }
+}
+</code></pre>
+<ul>
+<li>
+<p>Don't just look for the presence of a metadata type.</p>
+</li>
+<li>
+<p>Define a property on the metadata and check the property.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.UseAuthorization(new AuthorizationPolicy() { ... });
+
+// Your framework
+app.MapMyFramework(...).RequireAuthorization();
+</code></pre>
+<ul>
+<li>
+<p>Endpoints without a specified policy.</p>
+</li>
+<li>
+<p>Requests that don't match an endpoint.</p>
+</li>
+</ul>
+<h2><a href="#debug-diagnostics" aria-hidden="true" class="anchor" id="debug-diagnostics"></a><code>Debug</code> diagnostics</h2>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft&quot;: &quot;Debug&quot;,
+      &quot;Microsoft.Hosting.Lifetime&quot;: &quot;Information&quot;
+    }
+  }
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>View or download sample code (how to download)</li>
+</ul>
+<p>Ref: <code>[</code>Routing in ASP.NET Core](<a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-8.0">https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-8.0</a>)</p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

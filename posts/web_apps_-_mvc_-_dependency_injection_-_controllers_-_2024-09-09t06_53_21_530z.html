@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - MVC - Dependency injection - controllers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - MVC - Dependency injection - controllers</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>10/30/2023</p>
+</li>
+<li>
+<p>13 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#constructor-injection" aria-hidden="true" class="anchor" id="constructor-injection"></a>Constructor injection</h2>
+<pre><code class="language-csharp">public interface IDateTime
+{
+    DateTime Now { get; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class SystemDateTime : IDateTime
+{
+    public DateTime Now
+    {
+        get { return DateTime.Now; }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton&lt;IDateTime, SystemDateTime&gt;();
+
+    services.AddControllersWithViews();
+}
+</code></pre>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    private readonly IDateTime _dateTime;
+
+    public HomeController(IDateTime dateTime)
+    {
+        _dateTime = dateTime;
+    }
+
+    public IActionResult Index()
+    {
+        var serverTime = _dateTime.Now;
+        if (serverTime.Hour &lt; 12)
+        {
+            ViewData[&quot;Message&quot;] = &quot;It's morning here - Good Morning!&quot;;
+        }
+        else if (serverTime.Hour &lt; 17)
+        {
+            ViewData[&quot;Message&quot;] = &quot;It's afternoon here - Good Afternoon!&quot;;
+        }
+        else
+        {
+            ViewData[&quot;Message&quot;] = &quot;It's evening here - Good Evening!&quot;;
+        }
+        return View();
+    }
+</code></pre>
+<h2><a href="#action-injection-with-fromservices" aria-hidden="true" class="anchor" id="action-injection-with-fromservices"></a>Action injection with <code>FromServices</code></h2>
+<pre><code class="language-csharp">public IActionResult About([FromServices] IDateTime dateTime)
+{
+    return Content( $&quot;Current server time: {dateTime.Now}&quot;);
+}
+</code></pre>
+<h2><a href="#action-injection-with-fromkeyedservices" aria-hidden="true" class="anchor" id="action-injection-with-fromkeyedservices"></a>Action injection with <code>FromKeyedServices</code></h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddKeyedSingleton&lt;ICache, BigCache&gt;(&quot;big&quot;);
+builder.Services.AddKeyedSingleton&lt;ICache, SmallCache&gt;(&quot;small&quot;);
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.Run();
+
+public interface ICache
+{
+    object Get(string key);
+}
+public class BigCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from big cache.&quot;;
+}
+
+public class SmallCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from small cache.&quot;;
+}
+
+[ApiController]
+[Route(&quot;/cache&quot;)]
+public class CustomServicesApiController : Controller
+{
+    [HttpGet(&quot;big&quot;)]
+    public ActionResult&lt;object&gt; GetBigCache([FromKeyedServices(&quot;big&quot;)] ICache cache)
+    {
+        return cache.Get(&quot;data-mvc&quot;);
+    }
+
+    [HttpGet(&quot;small&quot;)]
+    public ActionResult&lt;object&gt; GetSmallCache([FromKeyedServices(&quot;small&quot;)] ICache cache)
+    {
+        return cache.Get(&quot;data-mvc&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#access-settings-from-a-controller" aria-hidden="true" class="anchor" id="access-settings-from-a-controller"></a>Access settings from a controller</h2>
+<pre><code class="language-csharp">public class SampleWebSettings
+{
+    public string Title { get; set; }
+    public int Updates { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton&lt;IDateTime, SystemDateTime&gt;();
+    services.Configure&lt;SampleWebSettings&gt;(Configuration);
+
+    services.AddControllersWithViews();
+}
+</code></pre>
+<pre><code class="language-csharp">public class Program
+{
+    public static void Main(string[] args)
+    {
+        CreateHostBuilder(args).Build().Run();
+    }
+
+    public static IHostBuilder CreateHostBuilder(string[] args) =&gt;
+        Host.CreateDefaultBuilder(args)
+            .ConfigureAppConfiguration((hostingContext, config) =&gt;
+            {
+                config.AddJsonFile(&quot;samplewebsettings.json&quot;,
+                    optional: false,
+                    reloadOnChange: true);
+            })
+            .ConfigureWebHostDefaults(webBuilder =&gt;
+            {
+                webBuilder.UseStartup&lt;Startup&gt;();
+            });
+}
+</code></pre>
+<pre><code class="language-csharp">public class SettingsController : Controller
+{
+    private readonly SampleWebSettings _settings;
+
+    public SettingsController(IOptions&lt;SampleWebSettings&gt; settingsOptions)
+    {
+        _settings = settingsOptions.Value;
+    }
+
+    public IActionResult Index()
+    {
+        ViewData[&quot;Title&quot;] = _settings.Title;
+        ViewData[&quot;Updates&quot;] = _settings.Updates;
+        return View();
+    }
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>See Test controller logic in ASP.NET Core to learn how to make code easier to test by explicitly requesting dependencies in controllers.</p>
+</li>
+<li>
+<p>Keyed service dependency injection container support</p>
+</li>
+<li>
+<p>Replace the default dependency injection container with a third party implementation.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/dependency-injection?view=aspnetcore-8.0">Dependency injection into controllers in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

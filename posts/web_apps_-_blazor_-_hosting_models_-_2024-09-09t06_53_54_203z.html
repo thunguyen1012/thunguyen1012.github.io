@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - Blazor - Hosting models | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='With the Blazor Server hosting model, components are executed on the server from within an ASP.NET Core app. UI updates, event handling, and JavaScript calls are handled over a SignalR connection using the WebSockets protocol. The state on the server associated with each connected client is called a circuit. Circuits aren't tied to a specific network connection and can tolerate temporary network interruptions and attempts by the client to reconnect to the server when the connection is lost.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - Blazor - Hosting models</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#blazor-server" aria-hidden="true" class="anchor" id="blazor-server"></a>Blazor Server</h2>
+<p>Blazor Server is a server-side Java app development platform.</p>
+<p>In a traditional server-rendered app, opening the same app in multiple browser screens (tabs or <code>iframes</code>) typically doesn't translate into additional resource demands on the server. For the Blazor Server hosting model, each browser screen requires a separate circuit and separate instances of server-managed component state. Blazor considers closing a browser tab or navigating to an external URL a graceful termination. In the event of a graceful termination, the circuit and associated resources are immediately released. A client may also disconnect non-gracefully, for instance due to a network interruption. Blazor Server stores disconnected circuits for a configurable interval to allow the client to reconnect.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models/hosting-models/_static/blazor-server.png?view=aspnetcore-8.0" alt="The browser interacts with Blazor (hosted inside of an ASP.NET Core app) on the server over a SignalR connection.!" title="The browser interacts with Blazor (hosted inside of an ASP.NET Core app) on the server over a SignalR connection." /></p>
+<p>On the client, the Blazor script establishes the SignalR connection with the server. The script is served from an embedded resource in the ASP.NET Core shared framework.</p>
+<p>The Blazor Server hosting model offers several benefits:</p>
+<ul>
+<li>
+<p>Download size is significantly smaller than when the Blazor WebAssembly hosting model is used, and the app loads much faster.</p>
+</li>
+<li>
+<p>The app takes full advantage of server capabilities, including the use of .NET Core APIs.</p>
+</li>
+<li>
+<p>.NET Core on the server is used to run the app, so existing .NET tooling, such as debugging, works as expected.</p>
+</li>
+<li>
+<p>Thin clients are supported. For example, Blazor Server works with browsers that don't support WebAssembly and on resource-constrained devices.</p>
+</li>
+<li>
+<p>The app's .NET/C# code base, including the app's component code, isn't served to clients.</p>
+</li>
+</ul>
+<p>The Blazor Server hosting model has the following limitations:</p>
+<ul>
+<li>
+<p>Higher latency usually exists. Every user interaction involves a network hop.</p>
+</li>
+<li>
+<p>There's no offline support. If the client connection fails, interactivity fails.</p>
+</li>
+<li>
+<p>Scaling apps with many users requires server resources to handle multiple client connections and client state.</p>
+</li>
+<li>
+<p>An ASP.NET Core server is required to serve the app. Serverless deployment scenarios aren't possible, such as serving the app from a Content Delivery Network (CDN).</p>
+</li>
+</ul>
+<p>Blazor Server apps are hosted on Azure.</p>
+<h2><a href="#blazor-webassembly" aria-hidden="true" class="anchor" id="blazor-webassembly"></a>Blazor WebAssembly</h2>
+<p>The Blazor WebAssembly hosting model runs components client-side in the browser on a WebAssembly-based .NET runtime. The Blazor WebAssembly hosting model runs components client-side in the browser on a WebAssembly-based .NET runtime.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models/hosting-models/_static/blazor-webassembly.png?view=aspnetcore-8.0" alt="Blazor WebAssembly: Blazor runs on a UI thread inside the browser.!" title="Blazor WebAssembly: Blazor runs on a UI thread inside the browser." /></p>
+<p>Blazor WebAssembly is a full-stack .NET web development tool that allows you to build web apps using a single codebase.</p>
+<p>The Blazor script handles:</p>
+<ul>
+<li>
+<p>Downloading the .NET runtime, Razor components, and the component's dependencies.</p>
+</li>
+<li>
+<p>Initialization of the runtime.</p>
+</li>
+</ul>
+<p>WebAssembly from Blazor reduces the download times of large apps by up to 50%.</p>
+<ul>
+<li>
+<p>Unused code is stripped out of the app when it's published by the Intermediate Language (IL) Trimmer.</p>
+</li>
+<li>
+<p>HTTP responses are compressed.</p>
+</li>
+<li>
+<p>The .NET runtime and assemblies are cached in the browser.</p>
+</li>
+</ul>
+<p>The Blazor WebAssembly hosting model offers several benefits:</p>
+<ul>
+<li>
+<p>For standalone Blazor WebAssembly apps, there's no .NET server-side dependency after the app is downloaded from the server, so the app remains functional if the server goes offline.</p>
+</li>
+<li>
+<p>Client resources and capabilities are fully leveraged.</p>
+</li>
+<li>
+<p>Work is offloaded from the server to the client.</p>
+</li>
+<li>
+<p>For standalone Blazor WebAssembly apps, an ASP.NET Core web server isn't required to host the app. Serverless deployment scenarios are possible, such as serving the app from a Content Delivery Network (CDN).</p>
+</li>
+</ul>
+<p>The Blazor WebAssembly hosting model has the following limitations:</p>
+<ul>
+<li>
+<p>Razor components are restricted to the capabilities of the browser.</p>
+</li>
+<li>
+<p>Capable client hardware and software (for example, WebAssembly support) is required.</p>
+</li>
+<li>
+<p>Download size is larger, and components take longer to load.</p>
+</li>
+<li>
+<p>Code sent to the client can't be protected from inspection and tampering by users.</p>
+</li>
+</ul>
+<h2><a href="#blazor-hybrid" aria-hidden="true" class="anchor" id="blazor-hybrid"></a>Blazor Hybrid</h2>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models/hosting-models/_static/hybrid-apps-1.png?view=aspnetcore-8.0" alt="Hybrid apps with .NET and Blazor render UI in a Web View control, where the HTML DOM interacts with Blazor and .NET of the native desktop or mobile app.!" title="Hybrid apps with .NET and Blazor render UI in a Web View control, where the HTML DOM interacts with Blazor and .NET of the native desktop or mobile app." /></p>
+<ul>
+<li>
+<p>Reuse existing components that can be shared across mobile, desktop, and web.</p>
+</li>
+<li>
+<p>Leverage web development skills, experience, and resources.</p>
+</li>
+<li>
+<p>Apps have full access to the native capabilities of the device.</p>
+</li>
+<li>
+<p>Separate native client apps must be built, deployed, and maintained for each target platform.</p>
+</li>
+<li>
+<p>Native client apps usually take longer to find, download, and install over accessing a web app in a browser.</p>
+</li>
+<li>
+<p>.NET Multi-platform App UI (.NET MAUI)</p>
+</li>
+<li>
+<p>Windows Presentation Foundation (WPF)</p>
+</li>
+<li>
+<p>Windows Forms</p>
+</li>
+</ul>
+<h2><a href="#which-blazor-hosting-model-should-i-choose" aria-hidden="true" class="anchor" id="which-blazor-hosting-model-should-i-choose"></a>Which Blazor hosting model should I choose?</h2>
+<table><thead>
+<tr>
+<th>Feature</th>
+<th style="text-align: center;">Blazor Server</th>
+<th style="text-align: center;">Blazor WebAssembly (WASM)</th>
+<th style="text-align: center;">Blazor Hybrid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#complete-net-api-compatibility" data-linktype="self-bookmark">Complete .NET API compatibility</a></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+</tr>
+<tr>
+<td><a href="#direct-access-to-server-and-network-resources" data-linktype="self-bookmark">Direct access to server and network resources</a></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span>†</td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span>†</td>
+</tr>
+<tr>
+<td><a href="#small-payload-size-with-fast-initial-load-time" data-linktype="self-bookmark">Small payload size with fast initial load time</a></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+</tr>
+<tr>
+<td><a href="#near-native-execution-speed" data-linktype="self-bookmark">Near native execution speed</a></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span>‡</td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+</tr>
+<tr>
+<td><a href="#app-code-secure-and-private-on-the-server" data-linktype="self-bookmark">App code secure and private on the server</a></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span>†</td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span>†</td>
+</tr>
+<tr>
+<td><a href="#run-apps-offline-once-downloaded" data-linktype="self-bookmark">Run apps offline once downloaded</a></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+</tr>
+<tr>
+<td><a href="#static-site-hosting" data-linktype="self-bookmark">Static site hosting</a></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+</tr>
+<tr>
+<td><a href="#offloads-processing-to-clients" data-linktype="self-bookmark">Offloads processing to clients</a></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+</tr>
+<tr>
+<td><a href="#full-access-to-native-client-capabilities" data-linktype="self-bookmark">Full access to native client capabilities</a></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+</tr>
+<tr>
+<td><a href="#web-based-deployment" data-linktype="self-bookmark">Web-based deployment</a></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">✔️</span><span class="visually-hidden">Supported</span></td>
+<td style="text-align: center;"><span aria-hidden="true">❌</span><span class="visually-hidden">Not supported</span></td>
+</tr>
+</tbody></table>
+<p>After you choose the app's hosting model, you can generate a Blazor Server or Blazor WebAssembly app from a Blazor project template. For more information, see Tooling for ASP.NET Core Blazor.</p>
+<h3><a href="#complete-net-api-compatibility" aria-hidden="true" class="anchor" id="complete-net-api-compatibility"></a>Complete .NET API compatibility</h3>
+<h3><a href="#direct-access-to-server-and-network-resources" aria-hidden="true" class="anchor" id="direct-access-to-server-and-network-resources"></a>Direct access to server and network resources</h3>
+<ul>
+<li>
+<p>Third-party libraries, packages, and services might be costly to implement and maintain, weakly supported, or introduce security risks.</p>
+</li>
+<li>
+<p>If one or more server-based APIs are developed internally by your organization, additional resources are required to build and maintain them.</p>
+</li>
+</ul>
+<h3><a href="#small-payload-size-with-fast-initial-load-time" aria-hidden="true" class="anchor" id="small-payload-size-with-fast-initial-load-time"></a>Small payload size with fast initial load time</h3>
+<h3><a href="#near-native-execution-speed" aria-hidden="true" class="anchor" id="near-native-execution-speed"></a>Near native execution speed</h3>
+<h3><a href="#app-code-secure-and-private-on-the-server" aria-hidden="true" class="anchor" id="app-code-secure-and-private-on-the-server"></a>App code secure and private on the server</h3>
+<h3><a href="#run-apps-offline-once-downloaded" aria-hidden="true" class="anchor" id="run-apps-offline-once-downloaded"></a>Run apps offline once downloaded</h3>
+<h3><a href="#static-site-hosting" aria-hidden="true" class="anchor" id="static-site-hosting"></a>Static site hosting</h3>
+<p>Blazor WebAssembly apps can be hosted on the Blazor web server.</p>
+<h3><a href="#offloads-processing-to-clients" aria-hidden="true" class="anchor" id="offloads-processing-to-clients"></a>Offloads processing to clients</h3>
+<h3><a href="#full-access-to-native-client-capabilities" aria-hidden="true" class="anchor" id="full-access-to-native-client-capabilities"></a>Full access to native client capabilities</h3>
+<h3><a href="#web-based-deployment" aria-hidden="true" class="anchor" id="web-based-deployment"></a>Web-based deployment</h3>
+<p>Blazor web apps are updated on the next app refresh from the browser.</p>
+<h2><a href="#setting-a-components-hosting-model" aria-hidden="true" class="anchor" id="setting-a-components-hosting-model"></a>Setting a component's hosting model</h2>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models?view=aspnetcore-8.0">ASP.NET Core Blazor hosting models</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

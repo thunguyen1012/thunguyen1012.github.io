@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web apps - MVC - Partial views | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Web apps - MVC - Partial views</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A partial view is a Razor markup file (.cshtml) without a <code>@page</code> directive that renders HTML output within another markup file's rendered output.</p>
+<p>View or download sample code (how to download)</p>
+<h2><a href="#when-to-use-partial-views" aria-hidden="true" class="anchor" id="when-to-use-partial-views"></a>When to use partial views</h2>
+<p><code>Partial</code> views are an effective way to:</p>
+<ul>
+<li>
+<p>Break up large markup files into smaller components.
+In a large, complex markup file composed of several logical pieces, there's an advantage to working with each piece isolated into a partial view. The code in the markup file is manageable because the markup only contains the overall page structure and references to partial views.</p>
+</li>
+<li>
+<p>Reduce the duplication of common markup content across markup files.
+When the same markup elements are used across markup files, a partial view removes the duplication of markup content into one partial view file. When the markup is changed in the partial view, it updates the rendered output of the markup files that use the partial view.</p>
+</li>
+</ul>
+<p><code>Partial</code> views shouldn't be used to maintain common layout elements. Common layout elements should be specified in <code>_Layout.cshtml</code> files.</p>
+<p>Don't use a partial view where complex rendering logic or code execution is required to render the markup. Instead of a partial view, use a view component.</p>
+<h2><a href="#declare-partial-views" aria-hidden="true" class="anchor" id="declare-partial-views"></a>Declare partial views</h2>
+<h2><a href="#reference-a-partial-view" aria-hidden="true" class="anchor" id="reference-a-partial-view"></a>Reference a partial view</h2>
+<h3><a href="#use-a-partial-view-in-a-razor-pages-pagemodel" aria-hidden="true" class="anchor" id="use-a-partial-view-in-a-razor-pages-pagemodel"></a>Use a partial view in a Razor Pages PageModel</h3>
+<pre><code class="language-csharp">public IActionResult OnGetPartial() =&gt;
+    new PartialViewResult
+    {
+        ViewName = &quot;_AuthorPartialRP&quot;,
+        ViewData = ViewData,
+    };
+</code></pre>
+<pre><code class="language-csharp">public IActionResult OnGetPartial() =&gt;
+    Partial(&quot;_AuthorPartialRP&quot;);
+</code></pre>
+<h3><a href="#use-a-partial-view-in-a-markup-file" aria-hidden="true" class="anchor" id="use-a-partial-view-in-a-markup-file"></a>Use a partial view in a markup file</h3>
+<ul>
+<li>
+<p><code>Partial</code> Tag Helper</p>
+</li>
+<li>
+<p>Asynchronous HTML Helper</p>
+</li>
+</ul>
+<h3><a href="#partial-tag-helper" aria-hidden="true" class="anchor" id="partial-tag-helper"></a><code>Partial</code> Tag Helper</h3>
+<pre><code class="language-cshtml">&lt;partial name=&quot;_PartialName&quot; /&gt;
+</code></pre>
+<pre><code class="language-cshtml">&lt;partial name=&quot;_PartialName.cshtml&quot; /&gt;
+</code></pre>
+<pre><code class="language-cshtml">&lt;partial name=&quot;~/Pages/Folder/_PartialName.cshtml&quot; /&gt;
+&lt;partial name=&quot;/Pages/Folder/_PartialName.cshtml&quot; /&gt;
+</code></pre>
+<pre><code class="language-cshtml">&lt;partial name=&quot;~/Views/Folder/_PartialName.cshtml&quot; /&gt;
+&lt;partial name=&quot;/Views/Folder/_PartialName.cshtml&quot; /&gt;
+</code></pre>
+<pre><code class="language-cshtml">&lt;partial name=&quot;../Account/_PartialName.cshtml&quot; /&gt;
+</code></pre>
+<h3><a href="#asynchronous-html-helper" aria-hidden="true" class="anchor" id="asynchronous-html-helper"></a>Asynchronous HTML Helper</h3>
+<p>When using an HTML Helper, the best practice is to use <code>PartialAsync</code>. <code>PartialAsync</code> returns an IHtmlContent type wrapped in a <code>Task&lt;TResult&gt;</code>. The method is referenced by prefixing the awaited call with an <code>@</code> character:</p>
+<pre><code class="language-cshtml">@await Html.PartialAsync(&quot;_PartialName&quot;)
+</code></pre>
+<p>When the file extension is present, the HTML Helper references a partial view that must be in the same folder as the markup file calling the partial view:</p>
+<pre><code class="language-cshtml">@await Html.PartialAsync(&quot;_PartialName.cshtml&quot;)
+</code></pre>
+<p>The following example references a partial view from the app root. Paths that start with a tilde-slash (~/) or a slash (/) refer to the app root:</p>
+<pre><code class="language-cshtml">@await Html.PartialAsync(&quot;~/Pages/Folder/_PartialName.cshtml&quot;)
+@await Html.PartialAsync(&quot;/Pages/Folder/_PartialName.cshtml&quot;)
+</code></pre>
+<pre><code class="language-cshtml">@await Html.PartialAsync(&quot;~/Views/Folder/_PartialName.cshtml&quot;)
+@await Html.PartialAsync(&quot;/Views/Folder/_PartialName.cshtml&quot;)
+</code></pre>
+<p>The following example references a partial view with a relative path:</p>
+<pre><code class="language-cshtml">@await Html.PartialAsync(&quot;../Account/_LoginPartial.cshtml&quot;)
+</code></pre>
+<p>Alternatively, you can render a partial view with <code>RenderPartialAsync</code>. This method doesn't return an IHtmlContent. It streams the rendered output directly to the response. Because the method doesn't return a result, it must be called within a Razor code block:</p>
+<pre><code class="language-cshtml">@{
+    await Html.RenderPartialAsync(&quot;_AuthorPartial&quot;);
+}
+</code></pre>
+<p>Since <code>RenderPartialAsync</code> streams rendered content, it provides better performance in some scenarios. In performance-critical situations, benchmark the page using both approaches and use the approach that generates a faster response.</p>
+<h3><a href="#synchronous-html-helper" aria-hidden="true" class="anchor" id="synchronous-html-helper"></a>Synchronous HTML Helper</h3>
+<p><code>Partial</code> and <code>RenderPartial</code> are the synchronous equivalents of <code>PartialAsync</code> and <code>RenderPartialAsync</code>, respectively. The synchronous equivalents aren't recommended because there are scenarios in which they deadlock. The synchronous methods are targeted for removal in a future release.</p>
+<blockquote>
+<p class='important'>Important
+If you need to execute code, use a view component instead of a partial view.</p>
+</blockquote>
+<h2><a href="#partial-view-discovery" aria-hidden="true" class="anchor" id="partial-view-discovery"></a><code>Partial</code> view discovery</h2>
+<p>When a partial view is referenced by name without a file extension, the following locations are searched in the stated order:</p>
+<ul>
+<li>
+<p>Currently executing page's folder</p>
+</li>
+<li>
+<p>Directory graph above the page's folder</p>
+</li>
+<li>
+<p><code>/Shared</code></p>
+</li>
+<li>
+<p><code>/Pages/Shared</code></p>
+</li>
+<li>
+<p><code>/Views/Shared</code></p>
+</li>
+<li>
+<p><code>/</code>Areas/<Area-Name>/Views/<Controller-Name></p>
+</li>
+<li>
+<p><code>/Areas/&lt;Area-Name&gt;/Views/Shared</code></p>
+</li>
+<li>
+<p><code>/Views/Shared</code></p>
+</li>
+<li>
+<p><code>/Pages/Shared</code></p>
+</li>
+</ul>
+<p>The following conventions apply to partial view discovery:</p>
+<ul>
+<li>
+<p>Different partial views with the same file name are allowed when the partial views are in different folders.</p>
+</li>
+<li>
+<p>When referencing a partial view by name without a file extension and the partial view is present in both the caller's folder and the Shared folder, the partial view in the caller's folder supplies the partial view. If the partial view isn't present in the caller's folder, the partial view is provided from the Shared folder. <code>Partial</code> views in the Shared folder are called shared partial views or default partial views.</p>
+</li>
+<li>
+<p><code>Partial</code> views can be chained—a partial view can call another partial view if a circular reference isn't formed by the calls. Relative paths are always relative to the current file, not to the root or parent of the file.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+A Razor <code>section</code> defined in a partial view is invisible to parent markup files. The <code>section</code> is only visible to the partial view in which it's defined.</p>
+</blockquote>
+<h2><a href="#access-data-from-partial-views" aria-hidden="true" class="anchor" id="access-data-from-partial-views"></a>Access data from partial views</h2>
+<p>When a partial view is instantiated, it receives a copy of the parent's <code>ViewData</code> dictionary. Updates made to the data within the partial view aren't persisted to the parent view. <code>ViewData</code> changes in a partial view are lost when the partial view returns.</p>
+<p>The following example demonstrates how to pass an instance of <code>ViewDataDictionary</code> to a partial view:</p>
+<pre><code class="language-cshtml">@await Html.PartialAsync(&quot;_PartialName&quot;, customViewData)
+</code></pre>
+<p>You can pass a model into a partial view. The model can be a custom object. You can pass a model with <code>PartialAsync</code> (renders a block of content to the caller) or <code>RenderPartialAsync</code> (streams the content to the output):</p>
+<pre><code class="language-cshtml">@await Html.PartialAsync(&quot;_PartialName&quot;, model)
+</code></pre>
+<pre><code class="language-cshtml">@model ReadRPModel
+
+&lt;h2&gt;@Model.Article.Title&lt;/h2&gt;
+@* Pass the author's name to Pages\Shared\_AuthorPartialRP.cshtml *@
+@await Html.PartialAsync(&quot;../Shared/_AuthorPartialRP&quot;, Model.Article.AuthorName)
+@Model.Article.PublicationDate
+
+@* Loop over the Sections and pass in a section and additional ViewData to 
+   the strongly typed Pages\ArticlesRP\_ArticleSectionRP.cshtml partial view. *@
+@{
+    var index = 0;
+
+    foreach (var section in Model.Article.Sections)
+    {
+        await Html.PartialAsync(&quot;_ArticleSectionRP&quot;, 
+                                section,
+                                new ViewDataDictionary(ViewData)
+                                {
+                                    { &quot;index&quot;, index }
+                                });
+
+        index++;
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@model string
+&lt;div&gt;
+    &lt;h3&gt;@Model&lt;/h3&gt;
+    This partial view from /Pages/Shared/_AuthorPartialRP.cshtml.
+&lt;/div&gt;
+</code></pre>
+<pre><code class="language-cshtml">@using PartialViewsSample.ViewModels
+@model ArticleSection
+
+&lt;h3&gt;@Model.Title Index: @ViewData[&quot;index&quot;]&lt;/h3&gt;
+&lt;div&gt;
+    @Model.Content
+&lt;/div&gt;
+</code></pre>
+<p>The following markup in the sample app shows the <code>Views/Articles/Read.cshtml</code> view. The view contains two partial views. The second partial view passes in a model and <code>ViewData</code> to the partial view. The <code>ViewDataDictionary</code> constructor overload is used to pass a new <code>ViewData</code> dictionary while retaining the existing <code>ViewData</code> dictionary.</p>
+<pre><code class="language-cshtml">@model PartialViewsSample.ViewModels.Article
+
+&lt;h2&gt;@Model.Title&lt;/h2&gt;
+@* Pass the author's name to Views\Shared\_AuthorPartial.cshtml *@
+@await Html.PartialAsync(&quot;_AuthorPartial&quot;, Model.AuthorName)
+@Model.PublicationDate
+
+@* Loop over the Sections and pass in a section and additional ViewData to 
+   the strongly typed Views\Articles\_ArticleSection.cshtml partial view. *@
+@{
+    var index = 0;
+
+    foreach (var section in Model.Sections)
+    {
+        @(await Html.PartialAsync(&quot;_ArticleSection&quot;, 
+                                section,
+                                new ViewDataDictionary(ViewData)
+                                {
+                                    { &quot;index&quot;, index }
+                                }))
+
+        index++;
+    }
+}
+</code></pre>
+<p><code>Views/Shared/_AuthorPartial.cshtml</code> is the first partial view referenced by the <code>Read.cshtml</code> markup file:</p>
+<pre><code class="language-cshtml">@model string
+&lt;div&gt;
+    &lt;h3&gt;@Model&lt;/h3&gt;
+    This partial view from /Views/Shared/_AuthorPartial.cshtml.
+&lt;/div&gt;
+</code></pre>
+<p><code>Views/Articles/_ArticleSection.cshtml</code> is the second partial view referenced by the <code>Read.cshtml</code> markup file:</p>
+<pre><code class="language-cshtml">@using PartialViewsSample.ViewModels
+@model ArticleSection
+
+&lt;h3&gt;@Model.Title Index: @ViewData[&quot;index&quot;]&lt;/h3&gt;
+&lt;div&gt;
+    @Model.Content
+&lt;/div&gt;
+</code></pre>
+<p>At runtime, the partials are rendered into the parent markup file's rendered output, which itself is rendered within the shared <code>_Layout.cshtml</code>. The first partial view renders the article author's name and publication date:</p>
+<p>The second partial view renders the article's sections:</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Razor syntax reference for ASP.NET Core</p>
+</li>
+<li>
+<p>Tag Helpers in ASP.NET Core</p>
+</li>
+<li>
+<p><code>Partial</code> Tag Helper in ASP.NET Core</p>
+</li>
+<li>
+<p>View components in ASP.NET Core</p>
+</li>
+<li>
+<p>Areas in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/views/partial?view=aspnetcore-8.0">Partial views in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
