@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Test with HttpRepl - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The HTTP Read-Eval-Print Loop (REPL) is:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Test with HttpRepl - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The HTTP Read-Eval-Print Loop (REPL) is:</p>
+<ul>
+<li>
+<p>A lightweight, cross-platform command-line tool that's supported everywhere .NET Core is supported.</p>
+</li>
+<li>
+<p>Used for making HTTP requests to test ASP.NET Core web APIs (and non-ASP.NET Core web APIs) and view their results.</p>
+</li>
+<li>
+<p>Capable of testing web APIs hosted in any environment, including localhost and Azure App Service.</p>
+</li>
+</ul>
+<p>The following HTTP verbs are supported:</p>
+<ul>
+<li>
+<p>DELETE</p>
+</li>
+<li>
+<p>GET</p>
+</li>
+<li>
+<p>HEAD</p>
+</li>
+<li>
+<p>OPTIONS</p>
+</li>
+<li>
+<p>PATCH</p>
+</li>
+<li>
+<p>POST</p>
+</li>
+<li>
+<p>PUT</p>
+</li>
+</ul>
+<p>To follow along, view or download the sample ASP.NET Core web API (how to download).</p>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<ul>
+<li>.NET Core 3.1 SDK</li>
+</ul>
+<h2><a href="#installation" aria-hidden="true" class="anchor" id="installation"></a>Installation</h2>
+<p>To install the HttpRepl, <code>run</code> the following command:</p>
+<pre><code class="language-dotnetcli">dotnet tool install -g Microsoft.dotnet-httprepl
+</code></pre>
+<p>A .NET Core Global Tool is installed from the Microsoft.dotnet-httprepl NuGet package.</p>
+<blockquote>
+<p class='note'>Note
+By default the architecture of the .NET binaries to install represents the currently running OS architecture. To specify a different OS architecture, see dotnet tool install, --arch option.
+For more information, see GitHub issue dotnet/AspNetCore.Docs #29262.</p>
+</blockquote>
+<p>On macOS, update the path:</p>
+<pre><code class="language-bash">export PATH=&quot;$HOME/.dotnet/tools:$PATH&quot;
+</code></pre>
+<h2><a href="#usage" aria-hidden="true" class="anchor" id="usage"></a>Usage</h2>
+<p>After successful installation of the tool, <code>run</code> the following command to start the HttpRepl:</p>
+<pre><code class="language-console">httprepl
+</code></pre>
+<p>To view the available HttpRepl commands, <code>run</code> one of the following commands:</p>
+<pre><code class="language-console">httprepl -h
+</code></pre>
+<pre><code class="language-console">httprepl --help
+</code></pre>
+<p>The following output is displayed:</p>
+<pre><code class="language-console">Usage:
+  httprepl [&lt;BASE_ADDRESS&gt;] [options]
+
+Arguments:
+  &lt;BASE_ADDRESS&gt; - The initial base address for the REPL.
+
+Options:
+  -h|--help - Show help information.
+
+Once the REPL starts, these commands are valid:
+
+Setup Commands:
+Use these commands to configure the tool for your API server
+
+connect        Configures the directory structure and base address of the api server
+set header     Sets or clears a header for all requests. e.g. `set header content-type application/json`
+
+HTTP Commands:
+Use these commands to execute requests against your application.
+
+GET            get - Issues a GET request
+POST           post - Issues a POST request
+PUT            put - Issues a PUT request
+DELETE         delete - Issues a DELETE request
+PATCH          patch - Issues a PATCH request
+HEAD           head - Issues a HEAD request
+OPTIONS        options - Issues a OPTIONS request
+
+Navigation Commands:
+The REPL allows you to navigate your URL space and focus on specific APIs that you are working on.
+
+ls             Show all endpoints for the current path
+cd             Append the given directory to the currently selected path, or move up a path when using `cd ..`
+
+Shell Commands:
+Use these commands to interact with the REPL shell.
+
+clear          Removes all text from the shell
+echo [on/off]  Turns request echoing on or off, show the request that was made when using request commands
+exit           Exit the shell
+
+REPL Customization Commands:
+Use these commands to customize the REPL behavior.
+
+pref [get/set] Allows viewing or changing preferences, e.g. 'pref set editor.command.default 'C:\\Program Files\\Microsoft VS Code\\Code.exe'`
+run            Runs the script at the given path. A script is a set of commands that can be typed with one command per line
+ui             Displays the Swagger UI page, if available, in the default browser
+
+Use `help &lt;COMMAND&gt;` for more detail on an individual command. e.g. `help get`.
+For detailed tool info, see https://aka.ms/http-repl-doc.
+</code></pre>
+<p>You can use the Command Line Interface (CLI) to control the Python interpreter.</p>
+<h2><a href="#connect-to-the-web-api" aria-hidden="true" class="anchor" id="connect-to-the-web-api"></a>Connect to the web API</h2>
+<p>Connect to a web API by running the following command:</p>
+<pre><code class="language-console">httprepl &lt;ROOT URI&gt;
+</code></pre>
+<p><ROOT URI> is the base URI for the web API. For example:</p>
+<pre><code class="language-console">httprepl https://localhost:5001
+</code></pre>
+<p>Alternatively, <code>run</code> the following command at any time while the HttpRepl is running:</p>
+<pre><code class="language-console">connect &lt;ROOT URI&gt;
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-console">(Disconnected)&gt; connect https://localhost:5001
+</code></pre>
+<h3><a href="#manually-point-to-the-openapi-description-for-the-web-api" aria-hidden="true" class="anchor" id="manually-point-to-the-openapi-description-for-the-web-api"></a>Manually point to the OpenAPI description for the web API</h3>
+<p>The <code>connect</code> command above will attempt to find the OpenAPI description automatically. If for some reason it's unable to do so, you can specify the URI of the OpenAPI description for the web API by using the <code>--openapi</code> option:</p>
+<pre><code class="language-console">connect &lt;ROOT URI&gt; --openapi &lt;OPENAPI DESCRIPTION ADDRESS&gt;
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-console">(Disconnected)&gt; connect https://localhost:5001 --openapi /swagger/v1/swagger.json
+</code></pre>
+<h3><a href="#enable-verbose-output-for-details-on-openapi-description-searching-parsing,-and-validation" aria-hidden="true" class="anchor" id="enable-verbose-output-for-details-on-openapi-description-searching-parsing,-and-validation"></a>Enable verbose output for details on OpenAPI description searching, parsing, and validation</h3>
+<p>Specifying the <code>--verbose</code> option with the <code>connect</code> command will produce more details when the tool searches for the OpenAPI description, parses, and validates it.</p>
+<pre><code class="language-console">connect &lt;ROOT URI&gt; --verbose
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-console">(Disconnected)&gt; connect https://localhost:5001 --verbose
+Checking https://localhost:5001/swagger.json... 404 NotFound
+Checking https://localhost:5001/swagger/v1/swagger.json... 404 NotFound
+Checking https://localhost:5001/openapi.json... Found
+Parsing... Successful (with warnings)
+The field 'info' in 'document' object is REQUIRED [#/info]
+The field 'paths' in 'document' object is REQUIRED [#/paths]
+</code></pre>
+<h2><a href="#navigate-the-web-api" aria-hidden="true" class="anchor" id="navigate-the-web-api"></a>Navigate the web API</h2>
+<h3><a href="#view-available-endpoints" aria-hidden="true" class="anchor" id="view-available-endpoints"></a>View available endpoints</h3>
+<p>To list the different endpoints (controllers) at the current path of the web API address, <code>run</code> the <code>ls</code> or <code>dir</code> command:</p>
+<pre><code class="language-console">https://localhost:5001/&gt; ls
+</code></pre>
+<p>The following output format is displayed:</p>
+<pre><code class="language-console">.        []
+Fruits   [get|post]
+People   [get|post]
+
+https://localhost:5001/&gt;
+</code></pre>
+<p>The preceding output indicates that there are two controllers available: <code>Fruits</code> and <code>People</code>. Both controllers support parameterless HTTP GET and POST operations.</p>
+<p>Navigating into a specific controller reveals more detail. For example, the following command's output shows the <code>Fruits</code> controller also supports HTTP GET, PUT, and DELETE operations. Each of these operations expects an <code>id</code> parameter in the route:</p>
+<pre><code class="language-console">https://localhost:5001/fruits&gt; ls
+.      [get|post]
+..     []
+{id}   [get|put|delete]
+
+https://localhost:5001/fruits&gt;
+</code></pre>
+<p>Alternatively, <code>run</code> the <code>ui</code> command to open the web API's Swagger UI page in a browser. For example:</p>
+<pre><code class="language-console">https://localhost:5001/&gt; ui
+</code></pre>
+<h3><a href="#navigate-to-an-endpoint" aria-hidden="true" class="anchor" id="navigate-to-an-endpoint"></a>Navigate to an endpoint</h3>
+<p>To navigate to a different endpoint on the web API, <code>run</code> the <code>cd</code> command:</p>
+<pre><code class="language-console">https://localhost:5001/&gt; cd people
+</code></pre>
+<p>The path following the <code>cd</code> command is case insensitive. The following output format is displayed:</p>
+<pre><code class="language-console">/people    [get|post]
+
+https://localhost:5001/people&gt;
+</code></pre>
+<h2><a href="#customize-the-httprepl" aria-hidden="true" class="anchor" id="customize-the-httprepl"></a>Customize the HttpRepl</h2>
+<p>TheRepl graphical user interface allows users to define their own preferences.</p>
+<ul>
+<li>
+<p>Linux</p>
+</li>
+<li>
+<p>macOS</p>
+</li>
+<li>
+<p>Windows</p>
+</li>
+</ul>
+<p>The .httpreplprefs file is loaded on startup and not monitored for changes at runtime. Manual modifications to the file take effect only after restarting the tool.</p>
+<h3><a href="#view-the-settings" aria-hidden="true" class="anchor" id="view-the-settings"></a>View the settings</h3>
+<p>To view the available settings, <code>run</code> the <code>pref get</code> command. For example:</p>
+<pre><code class="language-console">https://localhost:5001/&gt; pref get
+</code></pre>
+<p>The preceding command displays the available key-value pairs:</p>
+<pre><code class="language-console">colors.json=Green
+colors.json.arrayBrace=BoldCyan
+colors.json.comma=BoldYellow
+colors.json.name=BoldMagenta
+colors.json.nameSeparator=BoldWhite
+colors.json.objectBrace=Cyan
+colors.protocol=BoldGreen
+colors.status=BoldYellow
+</code></pre>
+<h3><a href="#set-color-preferences" aria-hidden="true" class="anchor" id="set-color-preferences"></a>Set color preferences</h3>
+<p>Response colorization is currently supported for JSON only. To customize the default HttpRepl tool coloring, locate the key corresponding to the color to be changed. For instructions on how to find the keys, see the View the settings section. For example, change the <code>colors.json</code> key value from <code>Green</code> to <code>White</code> as follows:</p>
+<pre><code class="language-console">https://localhost:5001/people&gt; pref set colors.json White
+</code></pre>
+<p>Only the allowed colors may be used. Subsequent HTTP requests display output with the new coloring.</p>
+<p>When specific color keys aren't set, more generic keys are considered. To demonstrate this fallback behavior, consider the following example:</p>
+<ul>
+<li>
+<p>If <code>colors.json.name</code> doesn't have a value, <code>colors.json.string</code> is used.</p>
+</li>
+<li>
+<p>If <code>colors.json.string</code> doesn't have a value, <code>colors.json.literal</code> is used.</p>
+</li>
+<li>
+<p>If <code>colors.json.literal</code> doesn't have a value, <code>colors.json</code> is used.</p>
+</li>
+<li>
+<p>If <code>colors.json</code> doesn't have a value, the command shell's default text color (AllowedColors.None) is used.</p>
+</li>
+</ul>
+<h3><a href="#set-indentation-size" aria-hidden="true" class="anchor" id="set-indentation-size"></a>Set indentation size</h3>
+<p>Response indentation size customization is currently supported for JSON only. The default size is two spaces. For example:</p>
+<pre><code class="language-json">[
+  {
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;Apple&quot;
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;name&quot;: &quot;Orange&quot;
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;name&quot;: &quot;Strawberry&quot;
+  }
+]
+</code></pre>
+<p>To change the default size, set the <code>formatting.json.indentSize</code> key. For example, to always use four spaces:</p>
+<pre><code class="language-console">pref set formatting.json.indentSize 4
+</code></pre>
+<p>Subsequent responses honor the setting of four spaces:</p>
+<pre><code class="language-json">[
+    {
+        &quot;id&quot;: 1,
+        &quot;name&quot;: &quot;Apple&quot;
+    },
+    {
+        &quot;id&quot;: 2,
+        &quot;name&quot;: &quot;Orange&quot;
+    },
+    {
+        &quot;id&quot;: 3,
+        &quot;name&quot;: &quot;Strawberry&quot;
+    }
+]
+</code></pre>
+<h3><a href="#set-the-default-text-editor" aria-hidden="true" class="anchor" id="set-the-default-text-editor"></a>Set the default text editor</h3>
+<p>By default, the HttpRepl has no text editor configured for use. To test web API methods requiring an HTTP request body, a default text editor must be set. The HttpRepl tool launches the configured text editor for the sole purpose of composing the request body. Run the following command to set your preferred text editor as the default:</p>
+<pre><code class="language-console">pref set editor.command.default &quot;&lt;EXECUTABLE&gt;&quot;
+</code></pre>
+<p>In the preceding command, <EXECUTABLE> is the full path to the text editor's executable file. For example, <code>run</code> the following command to set Visual Studio Code as the default text editor:</p>
+<ul>
+<li>
+<p>Linux</p>
+</li>
+<li>
+<p>macOS</p>
+</li>
+<li>
+<p>Windows</p>
+</li>
+</ul>
+<pre><code class="language-console">pref set editor.command.default &quot;/usr/bin/code&quot;
+</code></pre>
+<pre><code class="language-console">pref set editor.command.default &quot;/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code&quot;
+</code></pre>
+<pre><code class="language-console">pref set editor.command.default &quot;C:\Program Files\Microsoft VS Code\Code.exe&quot;
+</code></pre>
+<p>To launch the default text editor with specific CLI arguments, set the <code>editor.command.default.arguments</code> key. For example, assume Visual Studio Code is the default text editor and that you always want the HttpRepl to open Visual Studio Code in a new session with extensions disabled. Run the following command:</p>
+<pre><code class="language-console">pref set editor.command.default.arguments &quot;--disable-extensions --new-window&quot;
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+If your default editor is Visual Studio Code, you'll usually want to pass the <code>-w</code> or <code>--wait</code> argument to force Visual Studio Code to wait for you to close the file before returning.</p>
+</blockquote>
+<h3><a href="#set-the-openapi-description-search-paths" aria-hidden="true" class="anchor" id="set-the-openapi-description-search-paths"></a>Set the OpenAPI Description search paths</h3>
+<p>By default, the HttpRepl has a set of relative paths that it uses to find the OpenAPI description when executing the <code>connect</code> command without the <code>--openapi</code> option. These relative paths are combined with the root and base paths specified in the <code>connect</code> command. The default relative paths are:</p>
+<ul>
+<li>
+<p><code>swagger.json</code></p>
+</li>
+<li>
+<p><code>swagger/v1/swagger.json</code></p>
+</li>
+<li>
+<p><code>/swagger.json</code></p>
+</li>
+<li>
+<p><code>/swagger/v1/swagger.json</code></p>
+</li>
+<li>
+<p><code>openapi.json</code></p>
+</li>
+<li>
+<p><code>/openapi.json</code></p>
+</li>
+</ul>
+<p>To use a different set of search paths in your environment, set the <code>swagger.searchPaths</code> preference. The value must be a pipe-delimited list of relative paths. For example:</p>
+<pre><code class="language-console">pref set swagger.searchPaths &quot;swagger/v2/swagger.json|swagger/v3/swagger.json&quot;
+</code></pre>
+<p>Instead of replacing the default list altogether, the list can also be modified by adding or removing paths.</p>
+<p>To add one or more search paths to the default list, set the <code>swagger.addToSearchPaths</code> preference. The value must be a pipe-delimited list of relative paths. For example:</p>
+<pre><code class="language-console">pref set swagger.addToSearchPaths &quot;openapi/v2/openapi.json|openapi/v3/openapi.json&quot;
+</code></pre>
+<p>To remove one or more search paths from the default list, set the <code>swagger.addToSearchPaths</code> preference. The value must be a pipe-delimited list of relative paths. For example:</p>
+<pre><code class="language-console">pref set swagger.removeFromSearchPaths &quot;swagger.json|/swagger.json&quot;
+</code></pre>
+<h2><a href="#test-http-get-requests" aria-hidden="true" class="anchor" id="test-http-get-requests"></a>Test HTTP GET requests</h2>
+<h3><a href="#synopsis" aria-hidden="true" class="anchor" id="synopsis"></a>Synopsis</h3>
+<pre><code class="language-console">get &lt;PARAMETER&gt; [-F|--no-formatting] [-h|--header] [--response:body] [--response:headers] [-s|--streaming]
+</code></pre>
+<h3><a href="#arguments" aria-hidden="true" class="anchor" id="arguments"></a>Arguments</h3>
+<p><code>PARAMETER</code></p>
+<p>The route parameter, if any, expected by the associated controller action method.</p>
+<h3><a href="#options" aria-hidden="true" class="anchor" id="options"></a>Options</h3>
+<p>The following options are available for the <code>get</code> command:</p>
+<ul>
+<li>
+<p><code>-F|--no-formatting</code>
+A flag whose presence suppresses HTTP response formatting.</p>
+</li>
+<li>
+<p><code>-h|--header</code>
+Sets an HTTP request header. The following two value formats are supported:</p>
+<ul>
+<li>
+<p>{header}={value}</p>
+</li>
+<li>
+<p>{header}:{value}</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>--response:body</code>
+Specifies a file to which the HTTP response body should be written. For example, <code>--response:body</code> &quot;C:\response.json&quot;. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>--response:headers</code>
+Specifies a file to which the HTTP response headers should be written. For example, <code>--response:headers</code> &quot;C:\response.txt&quot;. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>-s|--streaming</code>
+A flag whose presence enables streaming of the HTTP response.</p>
+</li>
+</ul>
+<h3><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h3>
+<p>To issue an HTTP GET request:</p>
+<ul>
+<li>Run the <code>get</code> command on an endpoint that supports it:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/people&gt; get
+</code></pre>
+<pre><code class="language-console">HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Fri, 21 Jun 2019 03:38:45 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+[
+  {
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;Scott Hunter&quot;
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;name&quot;: &quot;Scott Hanselman&quot;
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;name&quot;: &quot;Scott Guthrie&quot;
+  }
+]
+
+
+https://localhost:5001/people&gt;
+</code></pre>
+<ul>
+<li>Retrieve a specific record by passing a parameter to the <code>get</code> command:
+The preceding command displays the following output format:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/people&gt; get 2
+</code></pre>
+<pre><code class="language-console">HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Fri, 21 Jun 2019 06:17:57 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+[
+  {
+    &quot;id&quot;: 2,
+    &quot;name&quot;: &quot;Scott Hanselman&quot;
+  }
+]
+
+
+https://localhost:5001/people&gt;
+</code></pre>
+<h2><a href="#test-http-post-requests" aria-hidden="true" class="anchor" id="test-http-post-requests"></a>Test HTTP POST requests</h2>
+<h3><a href="#synopsis-1" aria-hidden="true" class="anchor" id="synopsis-1"></a>Synopsis</h3>
+<pre><code class="language-console">post &lt;PARAMETER&gt; [-c|--content] [-f|--file] [-h|--header] [--no-body] [-F|--no-formatting] [--response] [--response:body] [--response:headers] [-s|--streaming]
+</code></pre>
+<h3><a href="#arguments-1" aria-hidden="true" class="anchor" id="arguments-1"></a>Arguments</h3>
+<p><code>PARAMETER</code></p>
+<p>The route parameter, if any, expected by the associated controller action method.</p>
+<h3><a href="#options-1" aria-hidden="true" class="anchor" id="options-1"></a>Options</h3>
+<ul>
+<li>
+<p><code>-F|--no-formatting</code>
+A flag whose presence suppresses HTTP response formatting.</p>
+</li>
+<li>
+<p><code>-h|--header</code>
+Sets an HTTP request header. The following two value formats are supported:</p>
+<ul>
+<li>
+<p>{header}={value}</p>
+</li>
+<li>
+<p>{header}:{value}</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>--response:body</code>
+Specifies a file to which the HTTP response body should be written. For example, <code>--response:body &quot;C:\response.json&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>--response:headers</code>
+Specifies a file to which the HTTP response headers should be written. For example, <code>--response:headers &quot;C:\response.txt&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>-s|--streaming</code>
+A flag whose presence enables streaming of the HTTP response.</p>
+</li>
+<li>
+<p><code>-c|--content</code>
+Provides an inline HTTP request body. For example, -c &quot;{&quot;id&quot;:2,&quot;name&quot;:&quot;Cherry&quot;}&quot;.</p>
+</li>
+<li>
+<p><code>-f|--file</code>
+Provides a path to a file containing the HTTP request body. For example, -f &quot;C:\request.json&quot;.</p>
+</li>
+<li>
+<p><code>--no-body</code>
+Indicates that no HTTP request body is needed.</p>
+</li>
+</ul>
+<h3><a href="#example-1" aria-hidden="true" class="anchor" id="example-1"></a>Example</h3>
+<p>To issue an HTTP POST request:</p>
+<ul>
+<li>Run the <code>post</code> command on an endpoint that supports it:
+https://localhost:5001/people&gt; <code>post -h Content-Type=application/json</code></li>
+</ul>
+<p>In the preceding command, the <code>Content-Type</code> HTTP request header is set to indicate a request body media type of JSON. The default text editor opens a .tmp file with a JSON template representing the HTTP request body. For example:</p>
+<p class='tip'>Tip
+To set the default text editor, see the Set the default text editor section.</p>
+<pre><code class="language-console">https://localhost:5001/people&gt; post -h Content-Type=application/json
+</code></pre>
+<pre><code class="language-json">{
+  &quot;id&quot;: 0,
+  &quot;name&quot;: &quot;&quot;
+}
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+To set the default text editor, see the Set the default text editor section.</p>
+</blockquote>
+<ul>
+<li>Modify the JSON template to satisfy model validation requirements:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;id&quot;: 0,
+  &quot;name&quot;: &quot;Scott Addie&quot;
+}
+</code></pre>
+<ul>
+<li>Save the .tmp file, and close the text editor. The following output appears in the command shell:</li>
+</ul>
+<pre><code class="language-console">HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Date: Thu, 27 Jun 2019 21:24:18 GMT
+Location: https://localhost:5001/people/4
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{
+  &quot;id&quot;: 4,
+  &quot;name&quot;: &quot;Scott Addie&quot;
+}
+
+
+https://localhost:5001/people&gt;
+</code></pre>
+<h2><a href="#test-http-put-requests" aria-hidden="true" class="anchor" id="test-http-put-requests"></a>Test HTTP PUT requests</h2>
+<h3><a href="#synopsis-2" aria-hidden="true" class="anchor" id="synopsis-2"></a>Synopsis</h3>
+<pre><code class="language-console">put &lt;PARAMETER&gt; [-c|--content] [-f|--file] [-h|--header] [--no-body] [-F|--no-formatting] [--response] [--response:body] [--response:headers] [-s|--streaming]
+</code></pre>
+<h3><a href="#arguments-2" aria-hidden="true" class="anchor" id="arguments-2"></a>Arguments</h3>
+<p><code>PARAMETER</code></p>
+<p>The route parameter, if any, expected by the associated controller action method.</p>
+<h3><a href="#options-2" aria-hidden="true" class="anchor" id="options-2"></a>Options</h3>
+<ul>
+<li>
+<p><code>-F|--no-formatting</code>
+A flag whose presence suppresses HTTP response formatting.</p>
+</li>
+<li>
+<p><code>-h|--header</code>
+Sets an HTTP request header. The following two value formats are supported:</p>
+<ul>
+<li>
+<p>{header}={value}</p>
+</li>
+<li>
+<p>{header}:{value}</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>--response:body</code>
+Specifies a file to which the HTTP response body should be written. For example, <code>--response:body &quot;C:\response.json&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>--response:headers</code>
+Specifies a file to which the HTTP response headers should be written. For example, <code>--response:headers &quot;C:\response.txt&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>-s|--streaming</code>
+A flag whose presence enables streaming of the HTTP response.</p>
+</li>
+<li>
+<p><code>-c|--content</code>
+Provides an inline HTTP request body. For example, -c &quot;{&quot;id&quot;:2,&quot;name&quot;:&quot;Cherry&quot;}&quot;.</p>
+</li>
+<li>
+<p><code>-f|--file</code>
+Provides a path to a file containing the HTTP request body. For example, -f &quot;C:\request.json&quot;.</p>
+</li>
+<li>
+<p><code>--no-body</code>
+Indicates that no HTTP request body is needed.</p>
+</li>
+</ul>
+<h3><a href="#example-2" aria-hidden="true" class="anchor" id="example-2"></a>Example</h3>
+<p>To issue an HTTP PUT request:</p>
+<ul>
+<li>Optional: Run the <code>get</code> command to view the data before modifying it:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/fruits&gt; get
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 22 Jun 2019 00:07:32 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+[
+  {
+    &quot;id&quot;: 1,
+    &quot;data&quot;: &quot;Apple&quot;
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;data&quot;: &quot;Orange&quot;
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;data&quot;: &quot;Strawberry&quot;
+  }
+]
+</code></pre>
+<ul>
+<li>Run the <code>put</code> command on an endpoint that supports it:
+https://localhost:5001/fruits&gt; <code>put</code> 2 <code>-h</code> <code>Content-Type</code>=application/json</li>
+</ul>
+<p>In the preceding command, the <code>Content-Type</code> HTTP request header is set to indicate a request body media type of JSON. The default text editor opens a .tmp file with a JSON template representing the HTTP request body. For example:</p>
+<p class='tip'>Tip
+To set the default text editor, see the Set the default text editor section.</p>
+<pre><code class="language-console">https://localhost:5001/fruits&gt; put 2 -h Content-Type=application/json
+</code></pre>
+<pre><code class="language-json">{
+  &quot;id&quot;: 0,
+  &quot;name&quot;: &quot;&quot;
+}
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+To set the default text editor, see the Set the default text editor section.</p>
+</blockquote>
+<ul>
+<li>Modify the JSON template to satisfy model validation requirements:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;id&quot;: 2,
+  &quot;name&quot;: &quot;Cherry&quot;
+}
+</code></pre>
+<ul>
+<li>Save the .tmp file, and close the text editor. The following output appears in the command shell:</li>
+</ul>
+<pre><code class="language-console">[main 2019-06-28T17:27:01.805Z] update#setState idle
+HTTP/1.1 204 No Content
+Date: Fri, 28 Jun 2019 17:28:21 GMT
+Server: Kestrel
+</code></pre>
+<ul>
+<li>Optional: Issue a <code>get</code> command to see the modifications. For example, if you typed &quot;Cherry&quot; in the text editor, a <code>get</code> returns the following output:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/fruits&gt; get
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 22 Jun 2019 00:08:20 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+[
+  {
+    &quot;id&quot;: 1,
+    &quot;data&quot;: &quot;Apple&quot;
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;data&quot;: &quot;Cherry&quot;
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;data&quot;: &quot;Strawberry&quot;
+  }
+]
+
+
+https://localhost:5001/fruits&gt;
+</code></pre>
+<h2><a href="#test-http-delete-requests" aria-hidden="true" class="anchor" id="test-http-delete-requests"></a>Test HTTP DELETE requests</h2>
+<h3><a href="#synopsis-3" aria-hidden="true" class="anchor" id="synopsis-3"></a>Synopsis</h3>
+<pre><code class="language-console">delete &lt;PARAMETER&gt; [-F|--no-formatting] [-h|--header] [--response] [--response:body] [--response:headers] [-s|--streaming]
+</code></pre>
+<h3><a href="#arguments-3" aria-hidden="true" class="anchor" id="arguments-3"></a>Arguments</h3>
+<p><code>PARAMETER</code></p>
+<p>The route parameter, if any, expected by the associated controller action method.</p>
+<h3><a href="#options-3" aria-hidden="true" class="anchor" id="options-3"></a>Options</h3>
+<ul>
+<li>
+<p><code>-F|--no-formatting</code>
+A flag whose presence suppresses HTTP response formatting.</p>
+</li>
+<li>
+<p><code>-h|--header</code>
+Sets an HTTP request header. The following two value formats are supported:</p>
+<ul>
+<li>
+<p>{header}={value}</p>
+</li>
+<li>
+<p>{header}:{value}</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>--response:body</code>
+Specifies a file to which the HTTP response body should be written. For example, <code>--response:body &quot;C:\response.json&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>--response:headers</code>
+Specifies a file to which the HTTP response headers should be written. For example, <code>--response:headers &quot;C:\response.txt&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>-s|--streaming</code>
+A flag whose presence enables streaming of the HTTP response.</p>
+</li>
+</ul>
+<h3><a href="#example-3" aria-hidden="true" class="anchor" id="example-3"></a>Example</h3>
+<p>To issue an HTTP DELETE request:</p>
+<ul>
+<li>Optional: Run the <code>get</code> command to view the data before modifying it:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/fruits&gt; get
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 22 Jun 2019 00:07:32 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+[
+  {
+    &quot;id&quot;: 1,
+    &quot;data&quot;: &quot;Apple&quot;
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;data&quot;: &quot;Orange&quot;
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;data&quot;: &quot;Strawberry&quot;
+  }
+]
+</code></pre>
+<ul>
+<li>Run the <code>delete</code> command on an endpoint that supports it:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/fruits&gt; delete 2
+</code></pre>
+<pre><code class="language-console">HTTP/1.1 204 No Content
+Date: Fri, 28 Jun 2019 17:36:42 GMT
+Server: Kestrel
+</code></pre>
+<ul>
+<li>Optional: Issue a <code>get</code> command to see the modifications. In this example, a <code>get</code> returns the following output:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/fruits&gt; get
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 22 Jun 2019 00:16:30 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+[
+  {
+    &quot;id&quot;: 1,
+    &quot;data&quot;: &quot;Apple&quot;
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;data&quot;: &quot;Strawberry&quot;
+  }
+]
+
+
+https://localhost:5001/fruits&gt;
+</code></pre>
+<h2><a href="#test-http-patch-requests" aria-hidden="true" class="anchor" id="test-http-patch-requests"></a>Test HTTP PATCH requests</h2>
+<h3><a href="#synopsis-4" aria-hidden="true" class="anchor" id="synopsis-4"></a>Synopsis</h3>
+<pre><code class="language-console">patch &lt;PARAMETER&gt; [-c|--content] [-f|--file] [-h|--header] [--no-body] [-F|--no-formatting] [--response] [--response:body] [--response:headers] [-s|--streaming]
+</code></pre>
+<h3><a href="#arguments-4" aria-hidden="true" class="anchor" id="arguments-4"></a>Arguments</h3>
+<p><code>PARAMETER</code></p>
+<p>The route parameter, if any, expected by the associated controller action method.</p>
+<h3><a href="#options-4" aria-hidden="true" class="anchor" id="options-4"></a>Options</h3>
+<ul>
+<li>
+<p><code>-F|--no-formatting</code>
+A flag whose presence suppresses HTTP response formatting.</p>
+</li>
+<li>
+<p><code>-h|--header</code>
+Sets an HTTP request header. The following two value formats are supported:</p>
+<ul>
+<li>
+<p>{header}={value}</p>
+</li>
+<li>
+<p>{header}:{value}</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>--response:body</code>
+Specifies a file to which the HTTP response body should be written. For example, <code>--response:body &quot;C:\response.json&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>--response:headers</code>
+Specifies a file to which the HTTP response headers should be written. For example, <code>--response:headers &quot;C:\response.txt&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>-s|--streaming</code>
+A flag whose presence enables streaming of the HTTP response.</p>
+</li>
+<li>
+<p><code>-c|--content</code>
+Provides an inline HTTP request body. For example, -c &quot;{&quot;id&quot;:2,&quot;name&quot;:&quot;Cherry&quot;}&quot;.</p>
+</li>
+<li>
+<p><code>-f|--file</code>
+Provides a path to a file containing the HTTP request body. For example, -f &quot;C:\request.json&quot;.</p>
+</li>
+<li>
+<p><code>--no-body</code>
+Indicates that no HTTP request body is needed.</p>
+</li>
+</ul>
+<h2><a href="#test-http-head-requests" aria-hidden="true" class="anchor" id="test-http-head-requests"></a>Test HTTP HEAD requests</h2>
+<h3><a href="#synopsis-5" aria-hidden="true" class="anchor" id="synopsis-5"></a>Synopsis</h3>
+<pre><code class="language-console">head &lt;PARAMETER&gt; [-F|--no-formatting] [-h|--header] [--response] [--response:body] [--response:headers] [-s|--streaming]
+</code></pre>
+<h3><a href="#arguments-5" aria-hidden="true" class="anchor" id="arguments-5"></a>Arguments</h3>
+<p><code>PARAMETER</code></p>
+<p>The route parameter, if any, expected by the associated controller action method.</p>
+<h3><a href="#options-5" aria-hidden="true" class="anchor" id="options-5"></a>Options</h3>
+<ul>
+<li>
+<p><code>-F|--no-formatting</code>
+A flag whose presence suppresses HTTP response formatting.</p>
+</li>
+<li>
+<p><code>-h|--header</code>
+Sets an HTTP request header. The following two value formats are supported:</p>
+<ul>
+<li>
+<p>{header}={value}</p>
+</li>
+<li>
+<p>{header}:{value}</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>--response:body</code>
+Specifies a file to which the HTTP response body should be written. For example, <code>--response:body &quot;C:\response.json&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>--response:headers</code>
+Specifies a file to which the HTTP response headers should be written. For example, <code>--response:headers &quot;C:\response.txt&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>-s|--streaming</code>
+A flag whose presence enables streaming of the HTTP response.</p>
+</li>
+</ul>
+<h2><a href="#test-http-options-requests" aria-hidden="true" class="anchor" id="test-http-options-requests"></a>Test HTTP OPTIONS requests</h2>
+<h3><a href="#synopsis-6" aria-hidden="true" class="anchor" id="synopsis-6"></a>Synopsis</h3>
+<pre><code class="language-console">options &lt;PARAMETER&gt; [-F|--no-formatting] [-h|--header] [--response] [--response:body] [--response:headers] [-s|--streaming]
+</code></pre>
+<h3><a href="#arguments-6" aria-hidden="true" class="anchor" id="arguments-6"></a>Arguments</h3>
+<p><code>PARAMETER</code></p>
+<p>The route parameter, if any, expected by the associated controller action method.</p>
+<h3><a href="#options-6" aria-hidden="true" class="anchor" id="options-6"></a>Options</h3>
+<ul>
+<li>
+<p><code>-F|--no-formatting</code>
+A flag whose presence suppresses HTTP response formatting.</p>
+</li>
+<li>
+<p><code>-h|--header</code>
+Sets an HTTP request header. The following two value formats are supported:</p>
+<ul>
+<li>
+<p>{header}={value}</p>
+</li>
+<li>
+<p>{header}:{value}</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>--response:body</code>
+Specifies a file to which the HTTP response body should be written. For example, <code>--response:body &quot;C:\response.json&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>--response:headers</code>
+Specifies a file to which the HTTP response headers should be written. For example, <code>--response:headers &quot;C:\response.txt&quot;</code>. The file is created if it doesn't exist.</p>
+</li>
+<li>
+<p><code>-s|--streaming</code>
+A flag whose presence enables streaming of the HTTP response.</p>
+</li>
+</ul>
+<h2><a href="#set-http-request-headers" aria-hidden="true" class="anchor" id="set-http-request-headers"></a>Set HTTP request headers</h2>
+<p>To set an HTTP request header, use one of the following approaches:</p>
+<ul>
+<li>Set inline with the HTTP request. For example:</li>
+</ul>
+<p>With the preceding approach, each distinct HTTP request header requires its own <code>-h</code> option.</p>
+<pre><code class="language-console">https://localhost:5001/people&gt; post -h Content-Type=application/json
+</code></pre>
+<ul>
+<li>Set before sending the HTTP request. For example:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/people&gt; set header Content-Type application/json
+</code></pre>
+<p>When setting the header before sending a request, the header remains set for the duration of the command shell session. To <code>clear</code> the header, provide an empty value. For example:</p>
+<pre><code class="language-console">https://localhost:5001/people&gt; set header Content-Type
+</code></pre>
+<h2><a href="#test-secured-endpoints" aria-hidden="true" class="anchor" id="test-secured-endpoints"></a>Test secured endpoints</h2>
+<p>The HttpRepl supports the testing of secured endpoints in the following ways:</p>
+<ul>
+<li>
+<p>Via the default credentials of the logged in user.</p>
+</li>
+<li>
+<p>Through the use of HTTP request headers.</p>
+</li>
+</ul>
+<h3><a href="#default-credentials" aria-hidden="true" class="anchor" id="default-credentials"></a>Default credentials</h3>
+<p>Consider a web API you're testing that's hosted in IIS and secured with Windows authentication. You want the credentials of the user running the tool to flow across to the HTTP endpoints being tested. To pass the default credentials of the logged in user:</p>
+<ul>
+<li>Set the <code>httpClient.useDefaultCredentials</code> preference to <code>true</code>:</li>
+</ul>
+<pre><code class="language-console">pref set httpClient.useDefaultCredentials true
+</code></pre>
+<ul>
+<li>Exit and restart the tool before sending another request to the web API.</li>
+</ul>
+<h3><a href="#default-proxy-credentials" aria-hidden="true" class="anchor" id="default-proxy-credentials"></a>Default proxy credentials</h3>
+<p>Consider a scenario in which the web API you're testing is behind a proxy secured with Windows authentication. You want the credentials of the user running the tool to flow to the proxy. To pass the default credentials of the logged in user:</p>
+<ul>
+<li>Set the <code>httpClient.proxy.useDefaultCredentials</code> preference to <code>true</code>:</li>
+</ul>
+<pre><code class="language-console">pref set httpClient.proxy.useDefaultCredentials true
+</code></pre>
+<ul>
+<li>Exit and restart the tool before sending another request to the web API.</li>
+</ul>
+<h3><a href="#http-request-headers" aria-hidden="true" class="anchor" id="http-request-headers"></a>HTTP request headers</h3>
+<p>Examples of supported authentication and authorization schemes include:</p>
+<ul>
+<li>
+<p>basic authentication</p>
+</li>
+<li>
+<p>JWT bearer tokens</p>
+</li>
+<li>
+<p>digest authentication</p>
+</li>
+</ul>
+<p>For example, you can send a bearer token to an endpoint with the following command:</p>
+<pre><code class="language-console">set header Authorization &quot;bearer &lt;TOKEN VALUE&gt;&quot;
+</code></pre>
+<p>To access an Azure-hosted endpoint or to use the Azure REST API, you need a bearer token. Use the following steps to obtain a bearer token for your Azure subscription via the Azure CLI. The HttpRepl sets the bearer token in an HTTP request header. A list of Azure App Service Web Apps is retrieved.</p>
+<ul>
+<li>Sign in to Azure:</li>
+</ul>
+<pre><code class="language-azurecli">az login
+</code></pre>
+<ul>
+<li>Get your subscription ID with the following command:</li>
+</ul>
+<pre><code class="language-azurecli">az account show --query id
+</code></pre>
+<ul>
+<li>Copy your subscription ID and <code>run</code> the following command:</li>
+</ul>
+<pre><code class="language-azurecli">az account set --subscription &quot;&lt;SUBSCRIPTION ID&gt;&quot;
+</code></pre>
+<ul>
+<li>Get your bearer token with the following command:</li>
+</ul>
+<pre><code class="language-azurecli">az account get-access-token --query accessToken
+</code></pre>
+<ul>
+<li>Connect to the Azure REST API via the HttpRepl:</li>
+</ul>
+<pre><code class="language-console">httprepl https://management.azure.com
+</code></pre>
+<ul>
+<li>Set the <code>Authorization</code> HTTP request header:</li>
+</ul>
+<pre><code class="language-console">https://management.azure.com/&gt; set header Authorization &quot;bearer &lt;ACCESS TOKEN&gt;&quot;
+</code></pre>
+<ul>
+<li>Navigate to the subscription:</li>
+</ul>
+<pre><code class="language-console">https://management.azure.com/&gt; cd subscriptions/&lt;SUBSCRIPTION ID&gt;
+</code></pre>
+<ul>
+<li>Get a list of your subscription's Azure App Service Web Apps:</li>
+</ul>
+<pre><code class="language-console">https://management.azure.com/subscriptions/{SUBSCRIPTION ID}&gt; get providers/Microsoft.Web/sites?api-version=2016-08-01
+</code></pre>
+<p>The following response is displayed:</p>
+<pre><code class="language-console">HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Length: 35948
+Content-Type: application/json; charset=utf-8
+Date: Thu, 19 Sep 2019 23:04:03 GMT
+Expires: -1
+Pragma: no-cache
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+x-ms-correlation-request-id: &lt;em&gt;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&lt;/em&gt;
+x-ms-original-request-ids: &lt;em&gt;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&lt;/em&gt;
+x-ms-ratelimit-remaining-subscription-reads: 11999
+x-ms-request-id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+x-ms-routing-request-id: WESTUS:xxxxxxxxxxxxxxxx:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx
+{
+  &quot;value&quot;: [
+    &lt;AZURE RESOURCES LIST&gt;
+  ]
+}
+</code></pre>
+<h2><a href="#toggle-http-request-display" aria-hidden="true" class="anchor" id="toggle-http-request-display"></a>Toggle HTTP request display</h2>
+<p>By default, display of the HTTP request being sent is suppressed. It's possible to change the corresponding setting for the duration of the command shell session.</p>
+<h3><a href="#enable-request-display" aria-hidden="true" class="anchor" id="enable-request-display"></a>Enable request display</h3>
+<p>View the HTTP request being sent by running the <code>echo on</code> command. For example:</p>
+<pre><code class="language-console">https://localhost:5001/people&gt; echo on
+Request echoing is on
+</code></pre>
+<p>Subsequent HTTP requests in the current session display the request headers. For example:</p>
+<pre><code class="language-console">https://localhost:5001/people&gt; post
+
+[main 2019-06-28T18:50:11.930Z] update#setState idle
+Request to https://localhost:5001...
+
+POST /people HTTP/1.1
+Content-Length: 41
+Content-Type: application/json
+User-Agent: HTTP-REPL
+
+{
+  &quot;id&quot;: 0,
+  &quot;name&quot;: &quot;Scott Addie&quot;
+}
+
+Response from https://localhost:5001...
+
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Date: Fri, 28 Jun 2019 18:50:21 GMT
+Location: https://localhost:5001/people/4
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{
+  &quot;id&quot;: 4,
+  &quot;name&quot;: &quot;Scott Addie&quot;
+}
+
+
+https://localhost:5001/people&gt;
+</code></pre>
+<h3><a href="#disable-request-display" aria-hidden="true" class="anchor" id="disable-request-display"></a>Disable request display</h3>
+<p>Suppress display of the HTTP request being sent by running the <code>echo off</code> command. For example:</p>
+<pre><code class="language-console">https://localhost:5001/people&gt; echo off
+Request echoing is off
+</code></pre>
+<h2><a href="#run-a-script" aria-hidden="true" class="anchor" id="run-a-script"></a>Run a script</h2>
+<p>If you frequently execute the same set of HttpRepl commands, consider storing them in a text file. Commands in the file take the same form as commands executed manually on the command line. The commands can be executed in a batched fashion using the <code>run</code> command. For example:</p>
+<ul>
+<li>Create a text file containing a set of newline-delimited commands. To illustrate, consider a people-script.txt file containing the following commands:</li>
+</ul>
+<pre><code class="language-text">set base https://localhost:5001
+ls
+cd People
+ls
+get 1
+</code></pre>
+<ul>
+<li>Execute the <code>run</code> command, passing in the text file's path. For example:</li>
+</ul>
+<pre><code class="language-console">https://localhost:5001/&gt; run C:\http-repl-scripts\people-script.txt
+</code></pre>
+<pre><code class="language-console">https://localhost:5001/&gt; set base https://localhost:5001
+Using OpenAPI description at https://localhost:5001/swagger/v1/swagger.json
+
+https://localhost:5001/&gt; ls
+.        []
+Fruits   [get|post]
+People   [get|post]
+
+https://localhost:5001/&gt; cd People
+/People    [get|post]
+
+https://localhost:5001/People&gt; ls
+.      [get|post]
+..     []
+{id}   [get|put|delete]
+
+https://localhost:5001/People&gt; get 1
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Fri, 12 Jul 2019 19:20:10 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;Scott Hunter&quot;
+}
+
+
+https://localhost:5001/People&gt;
+</code></pre>
+<h2><a href="#clear-the-output" aria-hidden="true" class="anchor" id="clear-the-output"></a>Clear the output</h2>
+<p>To remove all output written to the command shell by the HttpRepl tool, <code>run</code> the <code>clear</code> or <code>cls</code> command. To illustrate, imagine the command shell contains the following output:</p>
+<pre><code class="language-console">httprepl https://localhost:5001
+(Disconnected)&gt; set base &quot;https://localhost:5001&quot;
+Using OpenAPI description at https://localhost:5001/swagger/v1/swagger.json
+
+https://localhost:5001/&gt; ls
+.        []
+Fruits   [get|post]
+People   [get|post]
+
+https://localhost:5001/&gt;
+</code></pre>
+<p>Run the following command to <code>clear</code> the output:</p>
+<pre><code class="language-console">https://localhost:5001/&gt; clear
+</code></pre>
+<p>After running the preceding command, the command shell contains only the following output:</p>
+<pre><code class="language-console">https://localhost:5001/&gt;
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>REST API requests</p>
+</li>
+<li>
+<p>HttpRepl GitHub repository</p>
+</li>
+<li>
+<p>Configure Visual Studio to launch HttpRepl</p>
+</li>
+<li>
+<p>Configure Visual Studio Code to launch HttpRepl</p>
+</li>
+<li>
+<p>Configure Visual Studio for Mac to launch HttpRepl</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/web-api/http-repl/?view=aspnetcore-8.0">Test web APIs with the HttpRepl</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

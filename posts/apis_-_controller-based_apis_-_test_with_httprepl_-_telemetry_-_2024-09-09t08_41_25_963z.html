@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Test with HttpRepl - Telemetry | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The HttpRepl includes a telemetry feature that collects usage data. It's important that the HttpRepl team understands how the tool is used so it can be improved.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Test with HttpRepl - Telemetry</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>04/11/2023</p>
+</li>
+<li>
+<p>4 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The HttpRepl includes a telemetry feature that collects usage data. It's important that the HttpRepl team understands how the tool is used so it can be improved.</p>
+<h2><a href="#how-to-opt-out" aria-hidden="true" class="anchor" id="how-to-opt-out"></a>How to opt out</h2>
+<p>The HttpRepl telemetry feature is enabled by default. To opt out of the telemetry feature, <code>set</code> the <code>DOTNET_HTTPREPL_TELEMETRY_OPTOUT</code> environment variable to <code>1</code> or <code>true</code>.</p>
+<h2><a href="#disclosure" aria-hidden="true" class="anchor" id="disclosure"></a>Disclosure</h2>
+<p>The HttpRepl displays text similar to the following when you first <code>run</code> the tool. Text may vary slightly depending on the version of the tool you're running. This &quot;first <code>run</code>&quot; experience is how Microsoft notifies you about data collection.</p>
+<pre><code class="language-console">Telemetry
+---------
+The .NET tools collect usage data in order to help us improve your experience. It is collected by Microsoft and shared with the community. You can opt-out of telemetry by setting the DOTNET_HTTPREPL_TELEMETRY_OPTOUT environment variable to '1' or 'true' using your favorite shell.
+</code></pre>
+<p>To suppress the &quot;first <code>run</code>&quot; experience text, <code>set</code> the <code>DOTNET_HTTPREPL_SKIP_FIRST_TIME_EXPERIENCE</code> environment variable to <code>1</code> or <code>true</code>.</p>
+<h2><a href="#data-points" aria-hidden="true" class="anchor" id="data-points"></a>Data points</h2>
+<p>The telemetry feature doesn't:</p>
+<ul>
+<li>
+<p>Collect personal data, such as usernames, email addresses, or URLs.</p>
+</li>
+<li>
+<p>Scan your HTTP requests or responses.</p>
+</li>
+</ul>
+<p>The data is sent securely to Microsoft servers and held under restricted access.</p>
+<p>If you have any concerns about the security of your personal data, please contact us.</p>
+<ul>
+<li>
+<p>File an issue in the dotnet/httprepl repository.</p>
+</li>
+<li>
+<p>Send an email to <a href="mailto:dotnet@microsoft.com">dotnet@microsoft.com</a> for investigation.</p>
+</li>
+</ul>
+<p>The telemetry feature collects the following data.</p>
+<table><thead>
+<tr>
+<th>.NET SDK versions</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&gt;=5.0</td>
+<td>Timestamp of invocation.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Three-octet IP address used to determine the geographical location.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Operating system and version.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Runtime ID (RID) the tool is running on.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Whether the tool is running in a container.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Hashed Media Access Control (MAC) address: a cryptographically (SHA256) hashed and unique ID for a machine.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Kernel version.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>HttpRepl version.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Whether the tool was started with <code>help</code>, <code>run</code>, or <code>connect</code> arguments. Actual argument values aren't collected.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>Command invoked (for example, <code>get</code>) and whether it succeeded.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>For the <code>connect</code> command, whether the <code>root</code>, <code>base</code>, or <code>openapi</code> arguments were supplied. Actual argument values aren't collected.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>For the <code>pref</code> command, whether a <code>get</code> or <code>set</code> was issued and which preference was accessed. If not a well-known preference, the name is hashed. The value isn't collected.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>For the <code>set header</code> command, the header name being ```set```. If not a well-known header, the name is hashed. The value isn't collected.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>For the <code>connect</code> command, whether a special case for <code>dotnet new webapi</code> was used and, whether it was bypassed via preference.</td>
+</tr>
+<tr>
+<td>&gt;=5.0</td>
+<td>For all HTTP commands (for example, GET, POST, PUT), whether each of the options was specified. The values of the options aren't collected.</td>
+</tr>
+</tbody></table>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>.NET Core SDK telemetry</p>
+</li>
+<li>
+<p>.NET CLI telemetry data</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/web-api/http-repl/telemetry?view=aspnetcore-8.0">HttpRepl telemetry</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

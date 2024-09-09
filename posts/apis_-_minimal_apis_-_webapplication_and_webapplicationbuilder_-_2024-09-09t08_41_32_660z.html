@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Minimal APIs - WebApplication and WebApplicationBuilder | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Minimal APIs - WebApplication and WebApplicationBuilder</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#webapplication" aria-hidden="true" class="anchor" id="webapplication"></a><code>WebApplication</code></h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#working-with-ports" aria-hidden="true" class="anchor" id="working-with-ports"></a>Working with ports</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run(&quot;http://localhost:3000&quot;);
+</code></pre>
+<h4><a href="#multiple-ports" aria-hidden="true" class="anchor" id="multiple-ports"></a>Multiple ports</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://localhost:3000&quot;);
+app.Urls.Add(&quot;http://localhost:4000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#set-the-port-from-the-command-line" aria-hidden="true" class="anchor" id="set-the-port-from-the-command-line"></a>Set the port from the command line</h4>
+<pre><code class="language-dotnetcli">dotnet run --urls=&quot;https://localhost:7777&quot;
+</code></pre>
+<h4><a href="#read-the-port-from-environment" aria-hidden="true" class="anchor" id="read-the-port-from-environment"></a>Read the port from environment</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+var port = Environment.GetEnvironmentVariable(&quot;PORT&quot;) ?? &quot;3000&quot;;
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run($&quot;http://localhost:{port}&quot;);
+</code></pre>
+<h4><a href="#set-the-ports-via-the-aspnetcore_urls-environment-variable" aria-hidden="true" class="anchor" id="set-the-ports-via-the-aspnetcore_urls-environment-variable"></a>Set the ports via the <code>ASPNETCORE_URLS</code> environment variable</h4>
+<h3><a href="#listen-on-all-interfaces" aria-hidden="true" class="anchor" id="listen-on-all-interfaces"></a>Listen on all interfaces</h3>
+<h4><a href="#http//*:3000" aria-hidden="true" class="anchor" id="http//*:3000"></a>http://*:3000</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://*:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#http//+:3000" aria-hidden="true" class="anchor" id="http//+:3000"></a>http://+:3000</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://+:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#http//0.0.0.0:3000" aria-hidden="true" class="anchor" id="http//0.0.0.0:3000"></a><code>http://0.0.0.0:3000</code></h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://0.0.0.0:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#listen-on-all-interfaces-using-aspnetcore_urls" aria-hidden="true" class="anchor" id="listen-on-all-interfaces-using-aspnetcore_urls"></a>Listen on all interfaces using <code>ASPNETCORE_URLS</code></h3>
+<h3><a href="#listen-on-all-interfaces-using-aspnetcore_https_ports" aria-hidden="true" class="anchor" id="listen-on-all-interfaces-using-aspnetcore_https_ports"></a>Listen on all interfaces using <code>ASPNETCORE_HTTPS_PORTS</code></h3>
+<h3><a href="#specify-https-with-development-certificate" aria-hidden="true" class="anchor" id="specify-https-with-development-certificate"></a>Specify HTTPS with development certificate</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;https://localhost:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#specify-https-using-a-custom-certificate" aria-hidden="true" class="anchor" id="specify-https-using-a-custom-certificate"></a>Specify HTTPS using a custom certificate</h3>
+<h4><a href="#specify-the-custom-certificate-with-appsettingsjson" aria-hidden="true" class="anchor" id="specify-the-custom-certificate-with-appsettingsjson"></a>Specify the custom certificate with <code>appsettings.json</code></h4>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;,
+  &quot;Kestrel&quot;: {
+    &quot;Certificates&quot;: {
+      &quot;Default&quot;: {
+        &quot;Path&quot;: &quot;cert.pem&quot;,
+        &quot;KeyPath&quot;: &quot;key.pem&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h4><a href="#specify-the-custom-certificate-via-configuration" aria-hidden="true" class="anchor" id="specify-the-custom-certificate-via-configuration"></a>Specify the custom certificate via configuration</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Configure the cert and the key
+builder.Configuration[&quot;Kestrel:Certificates:Default:Path&quot;] = &quot;cert.pem&quot;;
+builder.Configuration[&quot;Kestrel:Certificates:Default:KeyPath&quot;] = &quot;key.pem&quot;;
+
+var app = builder.Build();
+
+app.Urls.Add(&quot;https://localhost:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#use-the-certificate-apis" aria-hidden="true" class="anchor" id="use-the-certificate-apis"></a>Use the certificate APIs</h4>
+<pre><code class="language-csharp">using System.Security.Cryptography.X509Certificates;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =&gt;
+{
+    options.ConfigureHttpsDefaults(httpsOptions =&gt;
+    {
+        var certPath = Path.Combine(builder.Environment.ContentRootPath, &quot;cert.pem&quot;);
+        var keyPath = Path.Combine(builder.Environment.ContentRootPath, &quot;key.pem&quot;);
+
+        httpsOptions.ServerCertificate = X509Certificate2.CreateFromPemFile(certPath, 
+                                         keyPath);
+    });
+});
+
+var app = builder.Build();
+
+app.Urls.Add(&quot;https://localhost:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#read-the-environment" aria-hidden="true" class="anchor" id="read-the-environment"></a>Read the environment</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/oops&quot;);
+}
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+app.MapGet(&quot;/oops&quot;, () =&gt; &quot;Oops! An error happened.&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#configuration" aria-hidden="true" class="anchor" id="configuration"></a>Configuration</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+var message = app.Configuration[&quot;HelloKey&quot;] ?? &quot;Config failed!&quot;;
+
+app.MapGet(&quot;/&quot;, () =&gt; message);
+
+app.Run();
+</code></pre>
+<h3><a href="#logging" aria-hidden="true" class="anchor" id="logging"></a>Logging</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Logger.LogInformation(&quot;The app started&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#access-the-dependency-injection-di)-container" aria-hidden="true" class="anchor" id="access-the-dependency-injection-di)-container"></a>Access the Dependency Injection (DI) container</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddScoped&lt;SampleService&gt;();
+
+var app = builder.Build();
+
+app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var sampleService = scope.ServiceProvider.GetRequiredService&lt;SampleService&gt;();
+    sampleService.DoSomething();
+}
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddKeyedSingleton&lt;ICache, BigCache&gt;(&quot;big&quot;);
+builder.Services.AddKeyedSingleton&lt;ICache, SmallCache&gt;(&quot;small&quot;);
+
+var app = builder.Build();
+
+app.MapGet(&quot;/big&quot;, ([FromKeyedServices(&quot;big&quot;)] ICache bigCache) =&gt; bigCache.Get(&quot;date&quot;));
+
+app.MapGet(&quot;/small&quot;, ([FromKeyedServices(&quot;small&quot;)] ICache smallCache) =&gt; smallCache.Get(&quot;date&quot;));
+
+app.Run();
+
+public interface ICache
+{
+    object Get(string key);
+}
+public class BigCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from big cache.&quot;;
+}
+
+public class SmallCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from small cache.&quot;;
+}
+</code></pre>
+<h2><a href="#webapplicationbuilder" aria-hidden="true" class="anchor" id="webapplicationbuilder"></a>WebApplicationBuilder</h2>
+<h3><a href="#change-the-content-root-application-name,-and-environment" aria-hidden="true" class="anchor" id="change-the-content-root-application-name,-and-environment"></a>Change the content root, application name, and environment</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ApplicationName = typeof(Program).Assembly.FullName,
+    ContentRootPath = Directory.GetCurrentDirectory(),
+    EnvironmentName = Environments.Staging,
+    WebRootPath = &quot;customwwwroot&quot;
+});
+
+Console.WriteLine($&quot;Application Name: {builder.Environment.ApplicationName}&quot;);
+Console.WriteLine($&quot;Environment Name: {builder.Environment.EnvironmentName}&quot;);
+Console.WriteLine($&quot;ContentRoot Path: {builder.Environment.ContentRootPath}&quot;);
+Console.WriteLine($&quot;WebRootPath: {builder.Environment.WebRootPath}&quot;);
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#change-the-content-root-app-name,-and-environment-by-using-environment-variables-or-command-line" aria-hidden="true" class="anchor" id="change-the-content-root-app-name,-and-environment-by-using-environment-variables-or-command-line"></a>Change the content root, <code>app</code> name, and environment by using environment variables or command line</h3>
+<table><thead>
+<tr>
+<th>feature</th>
+<th>Environment variable</th>
+<th>Command-line argument</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Application name</td>
+<td>ASPNETCORE_APPLICATIONNAME</td>
+<td>--applicationName</td>
+</tr>
+<tr>
+<td>Environment name</td>
+<td>ASPNETCORE_ENVIRONMENT</td>
+<td>--environment</td>
+</tr>
+<tr>
+<td>Content root</td>
+<td>ASPNETCORE_CONTENTROOT</td>
+<td>--contentRoot</td>
+</tr>
+</tbody></table>
+<h3><a href="#add-configuration-providers" aria-hidden="true" class="anchor" id="add-configuration-providers"></a>Add configuration providers</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddIniFile(&quot;appsettings.ini&quot;);
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#read-configuration" aria-hidden="true" class="anchor" id="read-configuration"></a>Read configuration</h3>
+<ul>
+<li>
+<p><code>appSettings.json</code> and <code>appSettings.{environment}.json</code></p>
+</li>
+<li>
+<p>Environment variables</p>
+</li>
+<li>
+<p>The command line</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var message = builder.Configuration[&quot;HelloKey&quot;] ?? &quot;Hello&quot;;
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; message);
+
+app.Run();
+</code></pre>
+<h3><a href="#read-the-environment-1" aria-hidden="true" class="anchor" id="read-the-environment-1"></a>Read the environment</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    Console.WriteLine($&quot;Running in development.&quot;);
+}
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#add-logging-providers" aria-hidden="true" class="anchor" id="add-logging-providers"></a>Add logging providers</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Configure JSON logging to the console.
+builder.Logging.AddJsonConsole();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello JSON console!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#add-services" aria-hidden="true" class="anchor" id="add-services"></a>Add services</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add the memory cache services.
+builder.Services.AddMemoryCache();
+
+// Add a custom scoped service.
+builder.Services.AddScoped&lt;ITodoRepository, TodoRepository&gt;();
+var app = builder.Build();
+</code></pre>
+<h3><a href="#customize-the-ihostbuilder" aria-hidden="true" class="anchor" id="customize-the-ihostbuilder"></a>Customize the IHostBuilder</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Wait 30 seconds for graceful shutdown.
+builder.Host.ConfigureHostOptions(o =&gt; o.ShutdownTimeout = TimeSpan.FromSeconds(30));
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#customize-the-iwebhostbuilder" aria-hidden="true" class="anchor" id="customize-the-iwebhostbuilder"></a>Customize the IWebHostBuilder</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Change the HTTP server implemenation to be HTTP.sys based
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello HTTP.sys&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#change-the-web-root" aria-hidden="true" class="anchor" id="change-the-web-root"></a>Change the web root</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    // Look for static files in webroot
+    WebRootPath = &quot;webroot&quot;
+});
+
+var app = builder.Build();
+
+app.Run();
+</code></pre>
+<h3><a href="#custom-dependency-injection-di)-container" aria-hidden="true" class="anchor" id="custom-dependency-injection-di)-container"></a>Custom dependency injection (DI) container</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+
+// Register services directly with Autofac here. Don't
+// call builder.Populate(), that happens in AutofacServiceProviderFactory.
+builder.Host.ConfigureContainer&lt;ContainerBuilder&gt;(builder =&gt; builder.RegisterModule(new MyApplicationModule()));
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#add-middleware" aria-hidden="true" class="anchor" id="add-middleware"></a>Add Middleware</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+// Setup the file server to serve static files.
+app.UseFileServer();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#developer-exception-page" aria-hidden="true" class="anchor" id="developer-exception-page"></a>Developer exception page</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt;
+{
+    throw new InvalidOperationException(&quot;Oops, the '/' route has thrown an exception.&quot;);
+});
+
+app.Run();
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/webapplication?view=aspnetcore-8.0">WebApplication and WebApplicationBuilder in Minimal API apps</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

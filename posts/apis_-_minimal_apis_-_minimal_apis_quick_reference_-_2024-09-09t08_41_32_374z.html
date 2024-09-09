@@ -1,0 +1,2544 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Minimal APIs - Minimal APIs quick reference | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Minimal APIs - Minimal APIs quick reference</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Provides a quick reference for minimal APIs.</p>
+</li>
+<li>
+<p>Is intended for experienced developers. For an introduction, see Tutorial: Create a minimal API with ASP.NET Core.</p>
+</li>
+<li>
+<p><code>WebApplication</code> and <code>WebApplicationBuilder</code></p>
+</li>
+<li>
+<p>Route Handlers</p>
+</li>
+</ul>
+<h2><a href="#webapplication" aria-hidden="true" class="anchor" id="webapplication"></a><code>WebApplication</code></h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#working-with-ports" aria-hidden="true" class="anchor" id="working-with-ports"></a>Working with ports</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run(&quot;http://localhost:3000&quot;);
+</code></pre>
+<h4><a href="#multiple-ports" aria-hidden="true" class="anchor" id="multiple-ports"></a>Multiple ports</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://localhost:3000&quot;);
+app.Urls.Add(&quot;http://localhost:4000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#set-the-port-from-the-command-line" aria-hidden="true" class="anchor" id="set-the-port-from-the-command-line"></a>Set the port from the command line</h4>
+<pre><code class="language-dotnetcli">dotnet run --urls=&quot;https://localhost:7777&quot;
+</code></pre>
+<h4><a href="#read-the-port-from-environment" aria-hidden="true" class="anchor" id="read-the-port-from-environment"></a>Read the port from environment</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+var port = Environment.GetEnvironmentVariable(&quot;PORT&quot;) ?? &quot;3000&quot;;
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run($&quot;http://localhost:{port}&quot;);
+</code></pre>
+<h4><a href="#set-the-ports-via-the-aspnetcore_urls-environment-variable" aria-hidden="true" class="anchor" id="set-the-ports-via-the-aspnetcore_urls-environment-variable"></a>Set the ports via the <code>ASPNETCORE_URLS</code> environment variable</h4>
+<h3><a href="#listen-on-all-interfaces" aria-hidden="true" class="anchor" id="listen-on-all-interfaces"></a>Listen on all interfaces</h3>
+<h4><a href="#http//*:3000" aria-hidden="true" class="anchor" id="http//*:3000"></a>http://*:3000</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://*:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#http//+:3000" aria-hidden="true" class="anchor" id="http//+:3000"></a>http://+:3000</h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://+:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#http//0.0.0.0:3000" aria-hidden="true" class="anchor" id="http//0.0.0.0:3000"></a><code>http://0.0.0.0:3000</code></h4>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;http://0.0.0.0:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#listen-on-all-interfaces-using-aspnetcore_urls" aria-hidden="true" class="anchor" id="listen-on-all-interfaces-using-aspnetcore_urls"></a>Listen on all interfaces using <code>ASPNETCORE_URLS</code></h3>
+<h3><a href="#listen-on-all-interfaces-using-aspnetcore_https_ports" aria-hidden="true" class="anchor" id="listen-on-all-interfaces-using-aspnetcore_https_ports"></a>Listen on all interfaces using <code>ASPNETCORE_HTTPS_PORTS</code></h3>
+<h3><a href="#specify-https-with-development-certificate" aria-hidden="true" class="anchor" id="specify-https-with-development-certificate"></a>Specify HTTPS with development certificate</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Urls.Add(&quot;https://localhost:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#specify-https-using-a-custom-certificate" aria-hidden="true" class="anchor" id="specify-https-using-a-custom-certificate"></a>Specify HTTPS using a custom certificate</h3>
+<h4><a href="#specify-the-custom-certificate-with-appsettingsjson" aria-hidden="true" class="anchor" id="specify-the-custom-certificate-with-appsettingsjson"></a>Specify the custom certificate with <code>appsettings.json</code></h4>
+<pre><code class="language-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;,
+  &quot;Kestrel&quot;: {
+    &quot;Certificates&quot;: {
+      &quot;Default&quot;: {
+        &quot;Path&quot;: &quot;cert.pem&quot;,
+        &quot;KeyPath&quot;: &quot;key.pem&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h4><a href="#specify-the-custom-certificate-via-configuration" aria-hidden="true" class="anchor" id="specify-the-custom-certificate-via-configuration"></a>Specify the custom certificate via configuration</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Configure the cert and the key
+builder.Configuration[&quot;Kestrel:Certificates:Default:Path&quot;] = &quot;cert.pem&quot;;
+builder.Configuration[&quot;Kestrel:Certificates:Default:KeyPath&quot;] = &quot;key.pem&quot;;
+
+var app = builder.Build();
+
+app.Urls.Add(&quot;https://localhost:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h4><a href="#use-the-certificate-apis" aria-hidden="true" class="anchor" id="use-the-certificate-apis"></a>Use the certificate APIs</h4>
+<pre><code class="language-csharp">using System.Security.Cryptography.X509Certificates;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =&gt;
+{
+    options.ConfigureHttpsDefaults(httpsOptions =&gt;
+    {
+        var certPath = Path.Combine(builder.Environment.ContentRootPath, &quot;cert.pem&quot;);
+        var keyPath = Path.Combine(builder.Environment.ContentRootPath, &quot;key.pem&quot;);
+
+        httpsOptions.ServerCertificate = X509Certificate2.CreateFromPemFile(certPath, 
+                                         keyPath);
+    });
+});
+
+var app = builder.Build();
+
+app.Urls.Add(&quot;https://localhost:3000&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#read-the-environment" aria-hidden="true" class="anchor" id="read-the-environment"></a>Read the environment</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/oops&quot;);
+}
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+app.MapGet(&quot;/oops&quot;, () =&gt; &quot;Oops! An error happened.&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#configuration" aria-hidden="true" class="anchor" id="configuration"></a>Configuration</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+var message = app.Configuration[&quot;HelloKey&quot;] ?? &quot;Config failed!&quot;;
+
+app.MapGet(&quot;/&quot;, () =&gt; message);
+
+app.Run();
+</code></pre>
+<h3><a href="#logging" aria-hidden="true" class="anchor" id="logging"></a>Logging</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+app.Logger.LogInformation(&quot;The app started&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#access-the-dependency-injection-di)-container" aria-hidden="true" class="anchor" id="access-the-dependency-injection-di)-container"></a>Access the Dependency Injection (DI) container</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddScoped&lt;SampleService&gt;();
+
+var app = builder.Build();
+
+app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var sampleService = scope.ServiceProvider.GetRequiredService&lt;SampleService&gt;();
+    sampleService.DoSomething();
+}
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddKeyedSingleton&lt;ICache, BigCache&gt;(&quot;big&quot;);
+builder.Services.AddKeyedSingleton&lt;ICache, SmallCache&gt;(&quot;small&quot;);
+
+var app = builder.Build();
+
+app.MapGet(&quot;/big&quot;, ([FromKeyedServices(&quot;big&quot;)] ICache bigCache) =&gt; bigCache.Get(&quot;date&quot;));
+
+app.MapGet(&quot;/small&quot;, ([FromKeyedServices(&quot;small&quot;)] ICache smallCache) =&gt; smallCache.Get(&quot;date&quot;));
+
+app.Run();
+
+public interface ICache
+{
+    object Get(string key);
+}
+public class BigCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from big cache.&quot;;
+}
+
+public class SmallCache : ICache
+{
+    public object Get(string key) =&gt; $&quot;Resolving {key} from small cache.&quot;;
+}
+</code></pre>
+<h2><a href="#webapplicationbuilder" aria-hidden="true" class="anchor" id="webapplicationbuilder"></a>WebApplicationBuilder</h2>
+<h3><a href="#change-the-content-root-application-name,-and-environment" aria-hidden="true" class="anchor" id="change-the-content-root-application-name,-and-environment"></a>Change the content root, application name, and environment</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ApplicationName = typeof(Program).Assembly.FullName,
+    ContentRootPath = Directory.GetCurrentDirectory(),
+    EnvironmentName = Environments.Staging,
+    WebRootPath = &quot;customwwwroot&quot;
+});
+
+Console.WriteLine($&quot;Application Name: {builder.Environment.ApplicationName}&quot;);
+Console.WriteLine($&quot;Environment Name: {builder.Environment.EnvironmentName}&quot;);
+Console.WriteLine($&quot;ContentRoot Path: {builder.Environment.ContentRootPath}&quot;);
+Console.WriteLine($&quot;WebRootPath: {builder.Environment.WebRootPath}&quot;);
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#change-the-content-root-app-name,-and-environment-by-using-environment-variables-or-command-line" aria-hidden="true" class="anchor" id="change-the-content-root-app-name,-and-environment-by-using-environment-variables-or-command-line"></a>Change the content root, <code>app</code> name, and environment by using environment variables or command line</h3>
+<table><thead>
+<tr>
+<th>feature</th>
+<th>Environment variable</th>
+<th>Command-line argument</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Application name</td>
+<td>ASPNETCORE_APPLICATIONNAME</td>
+<td>--applicationName</td>
+</tr>
+<tr>
+<td>Environment name</td>
+<td>ASPNETCORE_ENVIRONMENT</td>
+<td>--environment</td>
+</tr>
+<tr>
+<td>Content root</td>
+<td>ASPNETCORE_CONTENTROOT</td>
+<td>--contentRoot</td>
+</tr>
+</tbody></table>
+<h3><a href="#add-configuration-providers" aria-hidden="true" class="anchor" id="add-configuration-providers"></a>Add configuration providers</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddIniFile(&quot;appsettings.ini&quot;);
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#read-configuration" aria-hidden="true" class="anchor" id="read-configuration"></a>Read configuration</h3>
+<ul>
+<li>
+<p><code>appSettings.json</code> and <code>appSettings.{environment}.json</code></p>
+</li>
+<li>
+<p>Environment variables</p>
+</li>
+<li>
+<p>The command line</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var message = builder.Configuration[&quot;HelloKey&quot;] ?? &quot;Hello&quot;;
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; message);
+
+app.Run();
+</code></pre>
+<h3><a href="#read-the-environment-1" aria-hidden="true" class="anchor" id="read-the-environment-1"></a>Read the environment</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    Console.WriteLine($&quot;Running in development.&quot;);
+}
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#add-logging-providers" aria-hidden="true" class="anchor" id="add-logging-providers"></a>Add logging providers</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Configure JSON logging to the console.
+builder.Logging.AddJsonConsole();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello JSON console!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#add-services" aria-hidden="true" class="anchor" id="add-services"></a>Add services</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add the memory cache services.
+builder.Services.AddMemoryCache();
+
+// Add a custom scoped service.
+builder.Services.AddScoped&lt;ITodoRepository, TodoRepository&gt;();
+var app = builder.Build();
+</code></pre>
+<h3><a href="#customize-the-ihostbuilder" aria-hidden="true" class="anchor" id="customize-the-ihostbuilder"></a>Customize the IHostBuilder</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Wait 30 seconds for graceful shutdown.
+builder.Host.ConfigureHostOptions(o =&gt; o.ShutdownTimeout = TimeSpan.FromSeconds(30));
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#customize-the-iwebhostbuilder" aria-hidden="true" class="anchor" id="customize-the-iwebhostbuilder"></a>Customize the IWebHostBuilder</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Change the HTTP server implemenation to be HTTP.sys based
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello HTTP.sys&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#change-the-web-root" aria-hidden="true" class="anchor" id="change-the-web-root"></a>Change the web root</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    // Look for static files in webroot
+    WebRootPath = &quot;webroot&quot;
+});
+
+var app = builder.Build();
+
+app.Run();
+</code></pre>
+<h3><a href="#custom-dependency-injection-di)-container" aria-hidden="true" class="anchor" id="custom-dependency-injection-di)-container"></a>Custom dependency injection (DI) container</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+
+// Register services directly with Autofac here. Don't
+// call builder.Populate(), that happens in AutofacServiceProviderFactory.
+builder.Host.ConfigureContainer&lt;ContainerBuilder&gt;(builder =&gt; builder.RegisterModule(new MyApplicationModule()));
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#add-middleware" aria-hidden="true" class="anchor" id="add-middleware"></a>Add Middleware</h3>
+<pre><code class="language-csharp">var app = WebApplication.Create(args);
+
+// Setup the file server to serve static files.
+app.UseFileServer();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#developer-exception-page" aria-hidden="true" class="anchor" id="developer-exception-page"></a>Developer exception <code>page</code></h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt;
+{
+    throw new InvalidOperationException(&quot;Oops, the '/' route has thrown an exception.&quot;);
+});
+
+app.Run();
+</code></pre>
+<h2><a href="#aspnet-core-middleware" aria-hidden="true" class="anchor" id="aspnet-core-middleware"></a>ASP.NET Core Middleware</h2>
+<table><thead>
+<tr>
+<th>Middleware</th>
+<th>Description</th>
+<th>API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../security/authentication/?view=aspnetcore-6.0" data-linktype="relative-path">Authentication</a></td>
+<td>Provides authentication support.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.authappbuilderextensions.useauthentication" class="no-loc" data-linktype="absolute-path">UseAuthentication</a></td>
+</tr>
+<tr>
+<td><a href="../security/authorization/introduction?view=aspnetcore-8.0" data-linktype="relative-path">Authorization</a></td>
+<td>Provides authorization support.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.authorizationappbuilderextensions.useauthorization" class="no-loc" data-linktype="absolute-path">UseAuthorization</a></td>
+</tr>
+<tr>
+<td><a href="../security/cors?view=aspnetcore-6.0" data-linktype="relative-path">CORS</a></td>
+<td>Configures Cross-Origin Resource Sharing.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.corsmiddlewareextensions.usecors" class="no-loc" data-linktype="absolute-path">UseCors</a></td>
+</tr>
+<tr>
+<td><a href="../web-api/handle-errors?view=aspnetcore-6.0" data-linktype="relative-path">Exception Handler</a></td>
+<td>Globally handles exceptions thrown by the middleware pipeline.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.exceptionhandlerextensions.useexceptionhandler" class="no-loc" data-linktype="absolute-path">UseExceptionHandler</a></td>
+</tr>
+<tr>
+<td><a href="middleware/?view=aspnetcore-6.0#forwarded-headers-middleware-order" data-linktype="relative-path">Forwarded Headers</a></td>
+<td>Forwards proxied headers onto the current request.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.forwardedheadersextensions.useforwardedheaders" class="no-loc" data-linktype="absolute-path">UseForwardedHeaders</a></td>
+</tr>
+<tr>
+<td><a href="../security/enforcing-ssl?view=aspnetcore-6.0" data-linktype="relative-path">HTTPS Redirection</a></td>
+<td>Redirects all HTTP requests to HTTPS.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.httpspolicybuilderextensions.usehttpsredirection" class="no-loc" data-linktype="absolute-path">UseHttpsRedirection</a></td>
+</tr>
+<tr>
+<td><a href="middleware/?view=aspnetcore-6.0#middleware-order" data-linktype="relative-path">HTTP Strict Transport Security (HSTS)</a></td>
+<td>Security enhancement middleware that adds a special response header.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.hstsbuilderextensions.usehsts" class="no-loc" data-linktype="absolute-path">UseHsts</a></td>
+</tr>
+<tr>
+<td><a href="logging/?view=aspnetcore-6.0" data-linktype="relative-path">Request Logging</a></td>
+<td>Provides support for logging HTTP requests and responses.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.httploggingbuilderextensions.usehttplogging" class="no-loc" data-linktype="absolute-path">UseHttpLogging</a></td>
+</tr>
+<tr>
+<td><a href="../performance/timeouts?view=aspnetcore-8.0" data-linktype="relative-path">Request Timeouts</a></td>
+<td>Provides support for configuring request timeouts, global default and per endpoint.</td>
+<td><code>UseRequestTimeouts</code></td>
+</tr>
+<tr>
+<td><a href="https://www.w3.org/TR/WD-logfile.html" data-linktype="external">W3C Request Logging</a></td>
+<td>Provides support for logging HTTP requests and responses in the <a href="https://www.w3.org/TR/WD-logfile.html" data-linktype="external">W3C format</a>.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.httploggingbuilderextensions.usew3clogging" class="no-loc" data-linktype="absolute-path">UseW3CLogging</a></td>
+</tr>
+<tr>
+<td><a href="../performance/caching/middleware?view=aspnetcore-8.0" data-linktype="relative-path">Response Caching</a></td>
+<td>Provides support for caching responses.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.responsecachingextensions.useresponsecaching" class="no-loc" data-linktype="absolute-path">UseResponseCaching</a></td>
+</tr>
+<tr>
+<td><a href="../performance/response-compression?view=aspnetcore-8.0" data-linktype="relative-path">Response Compression</a></td>
+<td>Provides support for compressing responses.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.responsecompressionbuilderextensions.useresponsecompression" class="no-loc" data-linktype="absolute-path">UseResponseCompression</a></td>
+</tr>
+<tr>
+<td><a href="app-state?view=aspnetcore-8.0" data-linktype="relative-path">Session</a></td>
+<td>Provides support for managing ```user``` sessions.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.sessionmiddlewareextensions.usesession" class="no-loc" data-linktype="absolute-path">UseSession</a></td>
+</tr>
+<tr>
+<td><a href="static-files?view=aspnetcore-8.0" data-linktype="relative-path">Static Files</a></td>
+<td>Provides support for serving static files and directory browsing.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.staticfileextensions.usestaticfiles" class="no-loc" data-linktype="absolute-path">UseStaticFiles</a>, <a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.fileserverextensions.usefileserver" class="no-loc" data-linktype="absolute-path">UseFileServer</a></td>
+</tr>
+<tr>
+<td><a href="websockets?view=aspnetcore-8.0" data-linktype="relative-path">WebSockets</a></td>
+<td>Enables the WebSockets protocol.</td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.websocketmiddlewareextensions.usewebsockets" class="no-loc" data-linktype="absolute-path">UseWebSockets</a></td>
+</tr>
+</tbody></table>
+<h2><a href="#routing" aria-hidden="true" class="anchor" id="routing"></a>Routing</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;This is a GET&quot;);
+app.MapPost(&quot;/&quot;, () =&gt; &quot;This is a POST&quot;);
+app.MapPut(&quot;/&quot;, () =&gt; &quot;This is a PUT&quot;);
+app.MapDelete(&quot;/&quot;, () =&gt; &quot;This is a DELETE&quot;);
+
+app.MapMethods(&quot;/options-or-head&quot;, new[] { &quot;OPTIONS&quot;, &quot;HEAD&quot; }, 
+                          () =&gt; &quot;This is an options or head request &quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#route-handlers" aria-hidden="true" class="anchor" id="route-handlers"></a>Route Handlers</h3>
+<h3><a href="#lambda-expression" aria-hidden="true" class="anchor" id="lambda-expression"></a>Lambda expression</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/inline&quot;, () =&gt; &quot;This is an inline lambda&quot;);
+
+var handler = () =&gt; &quot;This is a lambda variable&quot;;
+
+app.MapGet(&quot;/&quot;, handler);
+
+app.Run();
+</code></pre>
+<h3><a href="#local-function" aria-hidden="true" class="anchor" id="local-function"></a>Local function</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+string LocalFunction() =&gt; &quot;This is local function&quot;;
+
+app.MapGet(&quot;/&quot;, LocalFunction);
+
+app.Run();
+</code></pre>
+<h3><a href="#instance-method" aria-hidden="true" class="anchor" id="instance-method"></a>Instance method</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+var handler = new HelloHandler();
+
+app.MapGet(&quot;/&quot;, handler.Hello);
+
+app.Run();
+
+class HelloHandler
+{
+    public string Hello()
+    {
+        return &quot;Hello Instance method&quot;;
+    }
+}
+</code></pre>
+<h3><a href="#static-method" aria-hidden="true" class="anchor" id="static-method"></a>Static method</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, HelloHandler.Hello);
+
+app.Run();
+
+class HelloHandler
+{
+    public static string Hello()
+    {
+        return &quot;Hello static method&quot;;
+    }
+}
+</code></pre>
+<h3><a href="#endpoint-defined-outside-of-programcs" aria-hidden="true" class="anchor" id="endpoint-defined-outside-of-programcs"></a>Endpoint defined outside of <code>Program.cs</code></h3>
+<pre><code class="language-csharp">using MinAPISeparateFile;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+
+var app = builder.Build();
+
+TodoEndpoints.Map(app);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">namespace MinAPISeparateFile;
+
+public static class TodoEndpoints
+{
+    public static void Map(WebApplication app)
+    {
+        app.MapGet(&quot;/&quot;, async context =&gt;
+        {
+            // Get all todo items
+            await context.Response.WriteAsJsonAsync(new { Message = &quot;All todo items&quot; });
+        });
+
+        app.MapGet(&quot;/{id}&quot;, async context =&gt;
+        {
+            // Get one todo item
+            await context.Response.WriteAsJsonAsync(new { Message = &quot;One todo item&quot; });
+        });
+    }
+}
+</code></pre>
+<h3><a href="#named-endpoints-and-link-generation" aria-hidden="true" class="anchor" id="named-endpoints-and-link-generation"></a>Named endpoints and link generation</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/hello&quot;, () =&gt; &quot;Hello named route&quot;)
+   .WithName(&quot;hi&quot;);
+
+app.MapGet(&quot;/&quot;, (LinkGenerator linker) =&gt; 
+        $&quot;The link to the hello route is {linker.GetPathByName(&quot;hi&quot;, values: null)}&quot;);
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Must be globally unique.</p>
+</li>
+<li>
+<p>Are used as the OpenAPI operation <code>id</code> when OpenAPI support is enabled. For more information, see OpenAPI.</p>
+</li>
+</ul>
+<h3><a href="#route-parameters" aria-hidden="true" class="anchor" id="route-parameters"></a>Route Parameters</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/users/{userId}/books/{bookId}&quot;, 
+    (int userId, int bookId) =&gt; $&quot;The user id is {userId} and book id is {bookId}&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#wildcard-and-catch-all-routes" aria-hidden="true" class="anchor" id="wildcard-and-catch-all-routes"></a>Wildcard and catch all routes</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/posts/{*rest}&quot;, (string rest) =&gt; $&quot;Routing to {rest}&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#route-constraints" aria-hidden="true" class="anchor" id="route-constraints"></a>Route constraints</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/todos/{id:int}&quot;, (int id) =&gt; db.Todos.Find(id));
+app.MapGet(&quot;/todos/{text}&quot;, (string text) =&gt; db.Todos.Where(t =&gt; t.Text.Contains(text));
+app.MapGet(&quot;/posts/{slug:regex(^[a-z0-9_-]+$)}&quot;, (string slug) =&gt; $&quot;Post {slug}&quot;);
+
+app.Run();
+</code></pre>
+<table><thead>
+<tr>
+<th>Route Template</th>
+<th>Example Matching URI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/todos/{id:int}</code></td>
+<td><code>/todos/1</code></td>
+</tr>
+<tr>
+<td><code>/todos/{text}</code></td>
+<td><code>/todos/something</code></td>
+</tr>
+<tr>
+<td><code>/posts/{slug:regex(^[a-z0-9_-]+$)}</code></td>
+<td><code>/posts/mypost</code></td>
+</tr>
+</tbody></table>
+<h3><a href="#route-groups" aria-hidden="true" class="anchor" id="route-groups"></a>Route groups</h3>
+<pre><code class="language-csharp">app.MapGroup(&quot;/public/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Public&quot;);
+
+app.MapGroup(&quot;/private/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Private&quot;)
+    .AddEndpointFilterFactory(QueryPrivateTodos)
+    .RequireAuthorization();
+
+
+EndpointFilterDelegate QueryPrivateTodos(EndpointFilterFactoryContext factoryContext, EndpointFilterDelegate next)
+{
+    var dbContextIndex = -1;
+
+    foreach (var argument in factoryContext.MethodInfo.GetParameters())
+    {
+        if (argument.ParameterType == typeof(TodoDb))
+        {
+            dbContextIndex = argument.Position;
+            break;
+        }
+    }
+
+    // Skip filter if the method doesn't have a TodoDb parameter.
+    if (dbContextIndex &lt; 0)
+    {
+        return next;
+    }
+
+    return async invocationContext =&gt;
+    {
+        var dbContext = invocationContext.GetArgument&lt;TodoDb&gt;(dbContextIndex);
+        dbContext.IsPrivate = true;
+
+        try
+        {
+            return await next(invocationContext);
+        }
+        finally
+        {
+            // This should only be relevant if you're pooling or otherwise reusing the DbContext instance.
+            dbContext.IsPrivate = false;
+        }
+    };
+}
+</code></pre>
+<pre><code class="language-csharp">public static RouteGroupBuilder MapTodosApi(this RouteGroupBuilder group)
+{
+    group.MapGet(&quot;/&quot;, GetAllTodos);
+    group.MapGet(&quot;/{id}&quot;, GetTodo);
+    group.MapPost(&quot;/&quot;, CreateTodo);
+    group.MapPut(&quot;/{id}&quot;, UpdateTodo);
+    group.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+    return group;
+}
+</code></pre>
+<pre><code class="language-csharp">public static async Task&lt;Created&lt;Todo&gt;&gt; CreateTodo(Todo todo, TodoDb database)
+{
+    await database.AddAsync(todo);
+    await database.SaveChangesAsync();
+
+    return TypedResults.Created($&quot;{todo.Id}&quot;, todo);
+}
+</code></pre>
+<pre><code class="language-csharp">var all = app.MapGroup(&quot;&quot;).WithOpenApi();
+var org = all.MapGroup(&quot;{org}&quot;);
+var user = org.MapGroup(&quot;{user}&quot;);
+user.MapGet(&quot;&quot;, (string org, string user) =&gt; $&quot;{org}/{user}&quot;);
+</code></pre>
+<pre><code class="language-csharp">var outer = app.MapGroup(&quot;/outer&quot;);
+var inner = outer.MapGroup(&quot;/inner&quot;);
+
+inner.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/inner group filter&quot;);
+    return next(context);
+});
+
+outer.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/outer group filter&quot;);
+    return next(context);
+});
+
+inner.MapGet(&quot;/&quot;, () =&gt; &quot;Hi!&quot;).AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;MapGet filter&quot;);
+    return next(context);
+});
+</code></pre>
+<pre><code class="language-dotnetcli">/outer group filter
+/inner group filter
+MapGet filter
+</code></pre>
+<h2><a href="#parameter-binding" aria-hidden="true" class="anchor" id="parameter-binding"></a>Parameter binding</h2>
+<ul>
+<li>
+<p>Route values</p>
+</li>
+<li>
+<p>Query string</p>
+</li>
+<li>
+<p>Header</p>
+</li>
+<li>
+<p>Body (as JSON)</p>
+</li>
+<li>
+<p>Form values</p>
+</li>
+<li>
+<p>Services provided by dependency injection</p>
+</li>
+<li>
+<p>Custom</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Added as service
+builder.Services.AddSingleton&lt;Service&gt;();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/{id}&quot;, (int id,
+                     int page,
+                     [FromHeader(Name = &quot;X-CUSTOM-HEADER&quot;)] string customHeader,
+                     Service service) =&gt; { });
+
+class Service { }
+</code></pre>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Binding Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>route value</td>
+</tr>
+<tr>
+<td><code>page</code></td>
+<td>query string</td>
+</tr>
+<tr>
+<td><code>customHeader</code></td>
+<td>header</td>
+</tr>
+<tr>
+<td><code>service</code></td>
+<td>Provided by dependency injection</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var app = builder.Build();
+
+app.MapPost(&quot;/&quot;, (Person person) =&gt; { });
+
+record Person(string Name, int Age);
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/{id}&quot;, (HttpRequest request) =&gt;
+{
+    var id = request.RouteValues[&quot;id&quot;];
+    var page = request.Query[&quot;page&quot;];
+    var customHeader = request.Headers[&quot;X-CUSTOM-HEADER&quot;];
+
+    // ...
+});
+
+app.MapPost(&quot;/&quot;, async (HttpRequest request) =&gt;
+{
+    var person = await request.ReadFromJsonAsync&lt;Person&gt;();
+
+    // ...
+});
+</code></pre>
+<h3><a href="#explicit-parameter-binding" aria-hidden="true" class="anchor" id="explicit-parameter-binding"></a>Explicit Parameter Binding</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Added as service
+builder.Services.AddSingleton&lt;Service&gt;();
+
+var app = builder.Build();
+
+
+app.MapGet(&quot;/{id}&quot;, ([FromRoute] int id,
+                     [FromQuery(Name = &quot;p&quot;)] int page,
+                     [FromServices] Service service,
+                     [FromHeader(Name = &quot;Content-Type&quot;)] string contentType) 
+                     =&gt; {});
+
+class Service { }
+
+record Person(string Name, int Age);
+</code></pre>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Binding Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>route value with the name <code>id</code></td>
+</tr>
+<tr>
+<td><code>page</code></td>
+<td>query string with the name <code>"p"</code></td>
+</tr>
+<tr>
+<td><code>service</code></td>
+<td>Provided by dependency injection</td>
+</tr>
+<tr>
+<td><code>contentType</code></td>
+<td>header with the name <code>"Content-Type"</code></td>
+</tr>
+</tbody></table>
+<h4><a href="#explicit-binding-from-form-values" aria-hidden="true" class="anchor" id="explicit-binding-from-form-values"></a>Explicit binding from form values</h4>
+<pre><code class="language-csharp">app.MapPost(&quot;/todos&quot;, async ([FromForm] string name,
+    [FromForm] Visibility visibility, IFormFile? attachment, TodoDb db) =&gt;
+{
+    var todo = new Todo
+    {
+        Name = name,
+        Visibility = visibility
+    };
+
+    if (attachment is not null)
+    {
+        var attachmentName = Path.GetRandomFileName();
+
+        using var stream = File.Create(Path.Combine(&quot;wwwroot&quot;, attachmentName));
+        await attachment.CopyToAsync(stream);
+    }
+
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Ok();
+});
+
+// Remaining code removed for brevity.
+</code></pre>
+<pre><code class="language-csharp">app.MapPost(&quot;/ap/todos&quot;, async ([AsParameters] NewTodoRequest request, TodoDb db) =&gt;
+{
+    var todo = new Todo
+    {
+        Name = request.Name,
+        Visibility = request.Visibility
+    };
+
+    if (request.Attachment is not null)
+    {
+        var attachmentName = Path.GetRandomFileName();
+
+        using var stream = File.Create(Path.Combine(&quot;wwwroot&quot;, attachmentName));
+        await request.Attachment.CopyToAsync(stream);
+
+        todo.Attachment = attachmentName;
+    }
+
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Ok();
+});
+
+// Remaining code removed for brevity.
+</code></pre>
+<pre><code class="language-csharp">public record struct NewTodoRequest([FromForm] string Name,
+    [FromForm] Visibility Visibility, IFormFile? Attachment);
+</code></pre>
+<h4><a href="#secure-binding-from-iformfile-and-iformfilecollection" aria-hidden="true" class="anchor" id="secure-binding-from-iformfile-and-iformfilecollection"></a>Secure binding from <code>IFormFile</code> and <code>IFormFileCollection</code></h4>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddAntiforgery();
+
+var app = builder.Build();
+app.UseAntiforgery();
+
+// Generate a form with an anti-forgery token and an /upload endpoint.
+app.MapGet(&quot;/&quot;, (HttpContext context, IAntiforgery antiforgery) =&gt;
+{
+    var token = antiforgery.GetAndStoreTokens(context);
+    var html = MyUtils.GenerateHtmlForm(token.FormFieldName, token.RequestToken!);
+    return Results.Content(html, &quot;text/html&quot;);
+});
+
+app.MapPost(&quot;/upload&quot;, async Task&lt;Results&lt;Ok&lt;string&gt;, BadRequest&lt;string&gt;&gt;&gt;
+    ([FromForm] FileUploadForm fileUploadForm, HttpContext context,
+                                                IAntiforgery antiforgery) =&gt;
+{
+    await MyUtils.SaveFileWithName(fileUploadForm.FileDocument!,
+              fileUploadForm.Name!, app.Environment.ContentRootPath);
+    return TypedResults.Ok($&quot;Your file with the description:&quot; +
+        $&quot; {fileUploadForm.Description} has been uploaded successfully&quot;);
+});
+
+app.Run();
+</code></pre>
+<h3><a href="#parameter-binding-with-dependency-injection" aria-hidden="true" class="anchor" id="parameter-binding-with-dependency-injection"></a>Parameter binding with dependency injection</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton&lt;IDateTime, SystemDateTime&gt;();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;,   (               IDateTime dateTime) =&gt; dateTime.Now);
+app.MapGet(&quot;/fs&quot;, ([FromServices] IDateTime dateTime) =&gt; dateTime.Now);
+app.Run();
+</code></pre>
+<h3><a href="#optional-parameters" aria-hidden="true" class="anchor" id="optional-parameters"></a>Optional parameters</h3>
+<ul>
+<li>
+<p>If a request matches the route, the route handler only runs if all required parameters are provided in the request.</p>
+</li>
+<li>
+<p>Failure to provide all required parameters results in an error.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/products&quot;, (int pageNumber) =&gt; $&quot;Requesting page {pageNumber}&quot;);
+
+app.Run();
+</code></pre>
+<table><thead>
+<tr>
+<th>URI</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/products?pageNumber=3</code></td>
+<td>3 returned</td>
+</tr>
+<tr>
+<td><code>/products</code></td>
+<td><code>BadHttpRequestException</code>: Required parameter "int ```pageNumber```" wasn't provided from query string.</td>
+</tr>
+<tr>
+<td><code>/products/1</code></td>
+<td>HTTP 404 error, no matching route</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/products&quot;, (int? pageNumber) =&gt; $&quot;Requesting page {pageNumber ?? 1}&quot;);
+
+string ListProducts(int pageNumber = 1) =&gt; $&quot;Requesting page {pageNumber}&quot;;
+
+app.MapGet(&quot;/products2&quot;, ListProducts);
+
+app.Run();
+</code></pre>
+<table><thead>
+<tr>
+<th>URI</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/products?pageNumber=3</code></td>
+<td>3 returned</td>
+</tr>
+<tr>
+<td><code>/products</code></td>
+<td>1 returned</td>
+</tr>
+<tr>
+<td><code>/products2</code></td>
+<td>1 returned</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapPost(&quot;/products&quot;, (Product? product) =&gt; { });
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/products&quot;, (int? pageNumber) =&gt; $&quot;Requesting page {pageNumber ?? 1}&quot;);
+
+app.Run();
+</code></pre>
+<table><thead>
+<tr>
+<th>URI</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/products?pageNumber=3</code></td>
+<td><code>3</code> returned</td>
+</tr>
+<tr>
+<td><code>/products</code></td>
+<td><code>1</code> returned</td>
+</tr>
+<tr>
+<td><code>/products?pageNumber=two</code></td>
+<td><code>BadHttpRequestException</code>: Failed to bind parameter <code>"Nullable&lt;int&gt; ```pageNumber```"</code> from "two".</td>
+</tr>
+<tr>
+<td><code>/products/two</code></td>
+<td>HTTP 404 error, no matching route</td>
+</tr>
+</tbody></table>
+<h3><a href="#special-types" aria-hidden="true" class="anchor" id="special-types"></a>Special types</h3>
+<ul>
+<li><code>HttpContext</code>: The context which holds all the information about the current HTTP request or response:</li>
+</ul>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, (HttpContext context) =&gt; context.Response.WriteAsync(&quot;Hello World&quot;));
+</code></pre>
+<ul>
+<li><code>HttpRequest</code> and <code>HttpResponse</code>: The HTTP request and HTTP response:</li>
+</ul>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, (HttpRequest request, HttpResponse response) =&gt;
+    response.WriteAsync($&quot;Hello World {request.Query[&quot;name&quot;]}&quot;));
+</code></pre>
+<ul>
+<li><code>CancellationToken</code>: The cancellation token associated with the current HTTP request:</li>
+</ul>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, async (CancellationToken cancellationToken) =&gt; 
+    await MakeLongRunningRequestAsync(cancellationToken));
+</code></pre>
+<ul>
+<li><code>ClaimsPrincipal</code>: The <code>user</code> associated with the request, bound from <code>HttpContext.User</code>:</li>
+</ul>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, (ClaimsPrincipal user) =&gt; user.Identity.Name);
+</code></pre>
+<h4><a href="#bind-the-request-body-as-a-stream-or-pipereader" aria-hidden="true" class="anchor" id="bind-the-request-body-as-a-stream-or-pipereader"></a>Bind the request body as a <code>Stream</code> or <code>PipeReader</code></h4>
+<ul>
+<li>
+<p>Store the data to blob storage or enqueue the data to a queue provider.</p>
+</li>
+<li>
+<p>Process the stored data with a worker process or cloud function.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.Text.Json;
+using System.Threading.Channels;
+
+namespace BackgroundQueueService;
+
+class BackgroundQueue : BackgroundService
+{
+    private readonly Channel&lt;ReadOnlyMemory&lt;byte&gt;&gt; _queue;
+    private readonly ILogger&lt;BackgroundQueue&gt; _logger;
+
+    public BackgroundQueue(Channel&lt;ReadOnlyMemory&lt;byte&gt;&gt; queue,
+                               ILogger&lt;BackgroundQueue&gt; logger)
+    {
+        _queue = queue;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await foreach (var dataStream in _queue.Reader.ReadAllAsync(stoppingToken))
+        {
+            try
+            {
+                var person = JsonSerializer.Deserialize&lt;Person&gt;(dataStream.Span)!;
+                _logger.LogInformation($&quot;{person.Name} is {person.Age} &quot; +
+                                       $&quot;years and from {person.Country}&quot;);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+        }
+    }
+}
+
+class Person
+{
+    public string Name { get; set; } = String.Empty;
+    public int Age { get; set; }
+    public string Country { get; set; } = String.Empty;
+}
+</code></pre>
+<pre><code class="language-csharp">app.MapPost(&quot;/register&quot;, async (HttpRequest req, Stream body,
+                                 Channel&lt;ReadOnlyMemory&lt;byte&gt;&gt; queue) =&gt;
+{
+    if (req.ContentLength is not null &amp;&amp; req.ContentLength &gt; maxMessageSize)
+    {
+        return Results.BadRequest();
+    }
+
+    // We're not above the message size and we have a content length, or
+    // we're a chunked request and we're going to read up to the maxMessageSize + 1. 
+    // We add one to the message size so that we can detect when a chunked request body
+    // is bigger than our configured max.
+    var readSize = (int?)req.ContentLength ?? (maxMessageSize + 1);
+
+    var buffer = new byte[readSize];
+
+    // Read at least that many bytes from the body.
+    var read = await body.ReadAtLeastAsync(buffer, readSize, throwOnEndOfStream: false);
+
+    // We read more than the max, so this is a bad request.
+    if (read &gt; maxMessageSize)
+    {
+        return Results.BadRequest();
+    }
+
+    // Attempt to send the buffer to the background queue.
+    if (queue.Writer.TryWrite(buffer.AsMemory(0..read)))
+    {
+        return Results.Accepted();
+    }
+
+    // We couldn't accept the message since we're overloaded.
+    return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+});
+</code></pre>
+<pre><code class="language-csharp">using System.Threading.Channels;
+using BackgroundQueueService;
+
+var builder = WebApplication.CreateBuilder(args);
+// The max memory to use for the upload endpoint on this instance.
+var maxMemory = 500 * 1024 * 1024;
+
+// The max size of a single message, staying below the default LOH size of 85K.
+var maxMessageSize = 80 * 1024;
+
+// The max size of the queue based on those restrictions
+var maxQueueSize = maxMemory / maxMessageSize;
+
+// Create a channel to send data to the background queue.
+builder.Services.AddSingleton&lt;Channel&lt;ReadOnlyMemory&lt;byte&gt;&gt;&gt;((_) =&gt;
+                     Channel.CreateBounded&lt;ReadOnlyMemory&lt;byte&gt;&gt;(maxQueueSize));
+
+// Create a background queue service.
+builder.Services.AddHostedService&lt;BackgroundQueue&gt;();
+var app = builder.Build();
+
+// curl --request POST 'https://localhost:&lt;port&gt;/register' --header 'Content-Type: application/json' --data-raw '{ &quot;Name&quot;:&quot;Samson&quot;, &quot;Age&quot;: 23, &quot;Country&quot;:&quot;Nigeria&quot; }'
+// curl --request POST &quot;https://localhost:&lt;port&gt;/register&quot; --header &quot;Content-Type: application/json&quot; --data-raw &quot;{ \&quot;Name\&quot;:\&quot;Samson\&quot;, \&quot;Age\&quot;: 23, \&quot;Country\&quot;:\&quot;Nigeria\&quot; }&quot;
+app.MapPost(&quot;/register&quot;, async (HttpRequest req, Stream body,
+                                 Channel&lt;ReadOnlyMemory&lt;byte&gt;&gt; queue) =&gt;
+{
+    if (req.ContentLength is not null &amp;&amp; req.ContentLength &gt; maxMessageSize)
+    {
+        return Results.BadRequest();
+    }
+
+    // We're not above the message size and we have a content length, or
+    // we're a chunked request and we're going to read up to the maxMessageSize + 1. 
+    // We add one to the message size so that we can detect when a chunked request body
+    // is bigger than our configured max.
+    var readSize = (int?)req.ContentLength ?? (maxMessageSize + 1);
+
+    var buffer = new byte[readSize];
+
+    // Read at least that many bytes from the body.
+    var read = await body.ReadAtLeastAsync(buffer, readSize, throwOnEndOfStream: false);
+
+    // We read more than the max, so this is a bad request.
+    if (read &gt; maxMessageSize)
+    {
+        return Results.BadRequest();
+    }
+
+    // Attempt to send the buffer to the background queue.
+    if (queue.Writer.TryWrite(buffer.AsMemory(0..read)))
+    {
+        return Results.Accepted();
+    }
+
+    // We couldn't accept the message since we're overloaded.
+    return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+});
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>When reading data, the <code>Stream</code> is the same object as <code>HttpRequest.Body</code>.</p>
+</li>
+<li>
+<p>The request body isn't buffered by default. After the body is read, it's not rewindable. The stream can't be read multiple times.</p>
+</li>
+<li>
+<p>The <code>Stream</code> and <code>PipeReader</code> aren't usable outside of the minimal action handler as the underlying buffers will be disposed or reused.</p>
+</li>
+</ul>
+<h4><a href="#file-uploads-using-iformfile-and-iformfilecollection" aria-hidden="true" class="anchor" id="file-uploads-using-iformfile-and-iformfilecollection"></a>File uploads using <code>IFormFile</code> and <code>IFormFileCollection</code></h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.MapPost(&quot;/upload&quot;, async (IFormFile file) =&gt;
+{
+    var tempFile = Path.GetTempFileName();
+    app.Logger.LogInformation(tempFile);
+    using var stream = File.OpenWrite(tempFile);
+    await file.CopyToAsync(stream);
+});
+
+app.MapPost(&quot;/upload_many&quot;, async (IFormFileCollection myFiles) =&gt;
+{
+    foreach (var file in myFiles)
+    {
+        var tempFile = Path.GetTempFileName();
+        app.Logger.LogInformation(tempFile);
+        using var stream = File.OpenWrite(tempFile);
+        await file.CopyToAsync(stream);
+    }
+});
+
+app.Run();
+</code></pre>
+<h4><a href="#binding-to-forms-with-iformcollection-iformfile,-and-iformfilecollection" aria-hidden="true" class="anchor" id="binding-to-forms-with-iformcollection-iformfile,-and-iformfilecollection"></a>Binding to forms with <code>IFormCollection</code>, <code>IFormFile</code>, and <code>IFormFileCollection</code></h4>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http.HttpResults;
+
+var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddAntiforgery();
+
+var app = builder.Build();
+app.UseAntiforgery();
+
+string GetOrCreateFilePath(string fileName, string filesDirectory = &quot;uploadFiles&quot;)
+{
+    var directoryPath = Path.Combine(app.Environment.ContentRootPath, filesDirectory);
+    Directory.CreateDirectory(directoryPath);
+    return Path.Combine(directoryPath, fileName);
+}
+
+async Task UploadFileWithName(IFormFile file, string fileSaveName)
+{
+    var filePath = GetOrCreateFilePath(fileSaveName);
+    await using var fileStream = new FileStream(filePath, FileMode.Create);
+    await file.CopyToAsync(fileStream);
+}
+
+app.MapGet(&quot;/&quot;, (HttpContext context, IAntiforgery antiforgery) =&gt;
+{
+    var token = antiforgery.GetAndStoreTokens(context);
+    var html = $&quot;&quot;&quot;
+      &lt;html&gt;
+        &lt;body&gt;
+          &lt;form action=&quot;/upload&quot; method=&quot;POST&quot; enctype=&quot;multipart/form-data&quot;&gt;
+            &lt;input name=&quot;{token.FormFieldName}&quot; type=&quot;hidden&quot; value=&quot;{token.RequestToken}&quot;/&gt;
+            &lt;input type=&quot;file&quot; name=&quot;file&quot; placeholder=&quot;Upload an image...&quot; accept=&quot;.jpg, 
+                                                                            .jpeg, .png&quot; /&gt;
+            &lt;input type=&quot;submit&quot; /&gt;
+          &lt;/form&gt; 
+        &lt;/body&gt;
+      &lt;/html&gt;
+    &quot;&quot;&quot;;
+
+    return Results.Content(html, &quot;text/html&quot;);
+});
+
+app.MapPost(&quot;/upload&quot;, async Task&lt;Results&lt;Ok&lt;string&gt;,
+   BadRequest&lt;string&gt;&gt;&gt; (IFormFile file, HttpContext context, IAntiforgery antiforgery) =&gt;
+{
+    var fileSaveName = Guid.NewGuid().ToString(&quot;N&quot;) + Path.GetExtension(file.FileName);
+    await UploadFileWithName(file, fileSaveName);
+    return TypedResults.Ok(&quot;File uploaded successfully!&quot;);
+});
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http.HttpResults;
+
+var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddAntiforgery();
+
+var app = builder.Build();
+app.UseAntiforgery();
+
+string GetOrCreateFilePath(string fileName, string filesDirectory = &quot;uploadFiles&quot;)
+{
+    var directoryPath = Path.Combine(app.Environment.ContentRootPath, filesDirectory);
+    Directory.CreateDirectory(directoryPath);
+    return Path.Combine(directoryPath, fileName);
+}
+
+async Task UploadFileWithName(IFormFile file, string fileSaveName)
+{
+    var filePath = GetOrCreateFilePath(fileSaveName);
+    await using var fileStream = new FileStream(filePath, FileMode.Create);
+    await file.CopyToAsync(fileStream);
+}
+
+app.MapGet(&quot;/&quot;, (HttpContext context, IAntiforgery antiforgery) =&gt;
+{
+    var token = antiforgery.GetAndStoreTokens(context);
+    var html = $&quot;&quot;&quot;
+      &lt;html&gt;
+        &lt;body&gt;
+          &lt;form action=&quot;/upload&quot; method=&quot;POST&quot; enctype=&quot;multipart/form-data&quot;&gt;
+            &lt;input name=&quot;{token.FormFieldName}&quot; type=&quot;hidden&quot; value=&quot;{token.RequestToken}&quot;/&gt;
+            &lt;input type=&quot;file&quot; name=&quot;file&quot; placeholder=&quot;Upload an image...&quot; accept=&quot;.jpg, 
+                                                                            .jpeg, .png&quot; /&gt;
+            &lt;input type=&quot;submit&quot; /&gt;
+          &lt;/form&gt; 
+        &lt;/body&gt;
+      &lt;/html&gt;
+    &quot;&quot;&quot;;
+
+    return Results.Content(html, &quot;text/html&quot;);
+});
+
+app.MapPost(&quot;/upload&quot;, async Task&lt;Results&lt;Ok&lt;string&gt;,
+   BadRequest&lt;string&gt;&gt;&gt; (IFormFile file, HttpContext context, IAntiforgery antiforgery) =&gt;
+{
+    var fileSaveName = Guid.NewGuid().ToString(&quot;N&quot;) + Path.GetExtension(file.FileName);
+    await UploadFileWithName(file, fileSaveName);
+    return TypedResults.Ok(&quot;File uploaded successfully!&quot;);
+});
+
+app.Run();
+</code></pre>
+<h3><a href="#bind-to-collections-and-complex-types-from-forms" aria-hidden="true" class="anchor" id="bind-to-collections-and-complex-types-from-forms"></a>Bind to collections and complex types from forms</h3>
+<ul>
+<li>
+<p>Collections, for example List and Dictionary</p>
+</li>
+<li>
+<p>Complex types, for example, <code>Todo</code> or <code>Project</code></p>
+</li>
+<li>
+<p>A minimal endpoint that binds a multi-part form input to a complex object.</p>
+</li>
+<li>
+<p>How to use the anti-forgery services to support the generation and validation of anti-forgery tokens.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAntiforgery();
+
+var app = builder.Build();
+
+app.UseAntiforgery();
+
+app.MapGet(&quot;/&quot;, (HttpContext context, IAntiforgery antiforgery) =&gt;
+{
+    var token = antiforgery.GetAndStoreTokens(context);
+    var html = $&quot;&quot;&quot;
+        &lt;html&gt;&lt;body&gt;
+           &lt;form action=&quot;/todo&quot; method=&quot;POST&quot; enctype=&quot;multipart/form-data&quot;&gt;
+               &lt;input name=&quot;{token.FormFieldName}&quot; 
+                                type=&quot;hidden&quot; value=&quot;{token.RequestToken}&quot; /&gt;
+               &lt;input type=&quot;text&quot; name=&quot;name&quot; /&gt;
+               &lt;input type=&quot;date&quot; name=&quot;dueDate&quot; /&gt;
+               &lt;input type=&quot;checkbox&quot; name=&quot;isCompleted&quot; value=&quot;true&quot; /&gt;
+               &lt;input type=&quot;submit&quot; /&gt;
+               &lt;input name=&quot;isCompleted&quot; type=&quot;hidden&quot; value=&quot;false&quot; /&gt; 
+           &lt;/form&gt;
+        &lt;/body&gt;&lt;/html&gt;
+    &quot;&quot;&quot;;
+    return Results.Content(html, &quot;text/html&quot;);
+});
+
+app.MapPost(&quot;/todo&quot;, async Task&lt;Results&lt;Ok&lt;Todo&gt;, BadRequest&lt;string&gt;&gt;&gt; 
+               ([FromForm] Todo todo, HttpContext context, IAntiforgery antiforgery) =&gt;
+{
+    try
+    {
+        await antiforgery.ValidateRequestAsync(context);
+        return TypedResults.Ok(todo);
+    }
+    catch (AntiforgeryValidationException e)
+    {
+        return TypedResults.BadRequest(&quot;Invalid anti-forgery token&quot;);
+    }
+});
+
+app.Run();
+
+class Todo
+{
+    public string Name { get; set; } = string.Empty;
+    public bool IsCompleted { get; set; } = false;
+    public DateTime DueDate { get; set; } = DateTime.Now.Add(TimeSpan.FromDays(1));
+}
+</code></pre>
+<ul>
+<li>
+<p>The target parameter must be annotated with the [FromForm] attribute to disambiguate from parameters that should be read from the JSON body.</p>
+</li>
+<li>
+<p>Binding from complex or collection types is not supported for minimal APIs that are compiled with the Request Delegate Generator.</p>
+</li>
+<li>
+<p>The markup shows an additional hidden input with a name of <code>isCompleted</code> and a value of <code>false</code>. If the <code>isCompleted</code> checkbox is checked when the form is submitted, both values <code>true</code> and <code>false</code> are submitted as values. If the checkbox is unchecked, only the hidden input value <code>false</code> is submitted. The ASP.NET Core model-binding process reads only the first value when binding to a <code>bool</code> value, which results in <code>true</code> for checked checkboxes and <code>false</code> for unchecked checkboxes.</p>
+</li>
+</ul>
+<pre><code class="language-txt">__RequestVerificationToken: CfDJ8Bveip67DklJm5vI2PF2VOUZ594RC8kcGWpTnVV17zCLZi1yrs-CSz426ZRRrQnEJ0gybB0AD7hTU-0EGJXDU-OaJaktgAtWLIaaEWMOWCkoxYYm-9U9eLV7INSUrQ6yBHqdMEE_aJpD4AI72gYiCqc
+name: Walk the dog
+dueDate: 2024-04-06
+isCompleted: true
+isCompleted: false
+</code></pre>
+<h3><a href="#bind-arrays-and-string-values-from-headers-and-query-strings" aria-hidden="true" class="anchor" id="bind-arrays-and-string-values-from-headers-and-query-strings"></a>Bind arrays and string values from headers and query strings</h3>
+<pre><code class="language-csharp">// Bind query string values to a primitive type array.
+// GET  /tags?q=1&amp;q=2&amp;q=3
+app.MapGet(&quot;/tags&quot;, (int[] q) =&gt;
+                      $&quot;tag1: {q[0]} , tag2: {q[1]}, tag3: {q[2]}&quot;);
+
+// Bind to a string array.
+// GET /tags2?names=john&amp;names=jack&amp;names=jane
+app.MapGet(&quot;/tags2&quot;, (string[] names) =&gt;
+            $&quot;tag1: {names[0]} , tag2: {names[1]}, tag3: {names[2]}&quot;);
+
+// Bind to StringValues.
+// GET /tags3?names=john&amp;names=jack&amp;names=jane
+app.MapGet(&quot;/tags3&quot;, (StringValues names) =&gt;
+            $&quot;tag1: {names[0]} , tag2: {names[1]}, tag3: {names[2]}&quot;);
+</code></pre>
+<pre><code class="language-csharp">// GET /todoitems/tags?tags=home&amp;tags=work
+app.MapGet(&quot;/todoitems/tags&quot;, async (Tag[] tags, TodoDb db) =&gt;
+{
+    return await db.Todos
+        .Where(t =&gt; tags.Select(i =&gt; i.Name).Contains(t.Tag.Name))
+        .ToListAsync();
+});
+</code></pre>
+<pre><code class="language-csharp">public class Todo
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public bool IsComplete { get; set; }
+
+    // This is an owned entity. 
+    public Tag Tag { get; set; } = new();
+}
+
+[Owned]
+public class Tag
+{
+    public string? Name { get; set; } = &quot;n/a&quot;;
+
+    public static bool TryParse(string? name, out Tag tag)
+    {
+        if (name is null)
+        {
+            tag = default!;
+            return false;
+        }
+
+        tag = new Tag { Name = name };
+        return true;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">// GET /todoitems/query-string-ids?ids=1&amp;ids=3
+app.MapGet(&quot;/todoitems/query-string-ids&quot;, async (int[] ids, TodoDb db) =&gt;
+{
+    return await db.Todos
+        .Where(t =&gt; ids.Contains(t.Id))
+        .ToListAsync();
+});
+</code></pre>
+<pre><code class="language-csharp">// POST /todoitems/batch
+app.MapPost(&quot;/todoitems/batch&quot;, async (Todo[] todos, TodoDb db) =&gt;
+{
+    await db.Todos.AddRangeAsync(todos);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(todos);
+});
+</code></pre>
+<pre><code class="language-csharp">[
+    {
+        &quot;id&quot;: 1,
+        &quot;name&quot;: &quot;Have Breakfast&quot;,
+        &quot;isComplete&quot;: true,
+        &quot;tag&quot;: {
+            &quot;name&quot;: &quot;home&quot;
+        }
+    },
+    {
+        &quot;id&quot;: 2,
+        &quot;name&quot;: &quot;Have Lunch&quot;,
+        &quot;isComplete&quot;: true,
+        &quot;tag&quot;: {
+            &quot;name&quot;: &quot;work&quot;
+        }
+    },
+    {
+        &quot;id&quot;: 3,
+        &quot;name&quot;: &quot;Have Supper&quot;,
+        &quot;isComplete&quot;: true,
+        &quot;tag&quot;: {
+            &quot;name&quot;: &quot;home&quot;
+        }
+    },
+    {
+        &quot;id&quot;: 4,
+        &quot;name&quot;: &quot;Have Snacks&quot;,
+        &quot;isComplete&quot;: true,
+        &quot;tag&quot;: {
+            &quot;name&quot;: &quot;N/A&quot;
+        }
+    }
+]
+</code></pre>
+<pre><code class="language-csharp">// GET /todoitems/header-ids
+// The keys of the headers should all be X-Todo-Id with different values
+app.MapGet(&quot;/todoitems/header-ids&quot;, async ([FromHeader(Name = &quot;X-Todo-Id&quot;)] int[] ids, TodoDb db) =&gt;
+{
+    return await db.Todos
+        .Where(t =&gt; ids.Contains(t.Id))
+        .ToListAsync();
+});
+</code></pre>
+<blockquote>
+<p class='note'>Note
+When binding a <code>string[]</code> from a query string, the absence of any matching query string value will result in an empty array instead of a <code>null</code> value.</p>
+</blockquote>
+<h3><a href="#parameter-binding-for-argument-lists-with-asparameters]" aria-hidden="true" class="anchor" id="parameter-binding-for-argument-lists-with-asparameters]"></a>Parameter binding for argument lists with <code>[AsParameters]</code></h3>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+using TodoApi.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+var app = builder.Build();
+
+app.MapGet(&quot;/todoitems&quot;, async (TodoDb db) =&gt;
+    await db.Todos.Select(x =&gt; new TodoItemDTO(x)).ToListAsync());
+
+app.MapGet(&quot;/todoitems/{id}&quot;,
+                             async (int Id, TodoDb Db) =&gt;
+    await Db.Todos.FindAsync(Id)
+        is Todo todo
+            ? Results.Ok(new TodoItemDTO(todo))
+            : Results.NotFound());
+// Remaining code removed for brevity.
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/todoitems/{id}&quot;,
+                             async (int Id, TodoDb Db) =&gt;
+    await Db.Todos.FindAsync(Id)
+        is Todo todo
+            ? Results.Ok(new TodoItemDTO(todo))
+            : Results.NotFound());
+</code></pre>
+<pre><code class="language-csharp">struct TodoItemRequest
+{
+    public int Id { get; set; }
+    public TodoDb Db { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/ap/todoitems/{id}&quot;,
+                                async ([AsParameters] TodoItemRequest request) =&gt;
+    await request.Db.Todos.FindAsync(request.Id)
+        is Todo todo
+            ? Results.Ok(new TodoItemDTO(todo))
+            : Results.NotFound());
+</code></pre>
+<pre><code class="language-csharp">app.MapPost(&quot;/todoitems&quot;, async (TodoItemDTO Dto, TodoDb Db) =&gt;
+{
+    var todoItem = new Todo
+    {
+        IsComplete = Dto.IsComplete,
+        Name = Dto.Name
+    };
+
+    Db.Todos.Add(todoItem);
+    await Db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todoItem.Id}&quot;, new TodoItemDTO(todoItem));
+});
+
+app.MapPut(&quot;/todoitems/{id}&quot;, async (int Id, TodoItemDTO Dto, TodoDb Db) =&gt;
+{
+    var todo = await Db.Todos.FindAsync(Id);
+
+    if (todo is null) return Results.NotFound();
+
+    todo.Name = Dto.Name;
+    todo.IsComplete = Dto.IsComplete;
+
+    await Db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+app.MapDelete(&quot;/todoitems/{id}&quot;, async (int Id, TodoDb Db) =&gt;
+{
+    if (await Db.Todos.FindAsync(Id) is Todo todo)
+    {
+        Db.Todos.Remove(todo);
+        await Db.SaveChangesAsync();
+        return Results.Ok(new TodoItemDTO(todo));
+    }
+
+    return Results.NotFound();
+});
+</code></pre>
+<pre><code class="language-csharp">class CreateTodoItemRequest
+{
+    public TodoItemDTO Dto { get; set; } = default!;
+    public TodoDb Db { get; set; } = default!;
+}
+
+class EditTodoItemRequest
+{
+    public int Id { get; set; }
+    public TodoItemDTO Dto { get; set; } = default!;
+    public TodoDb Db { get; set; } = default!;
+}
+</code></pre>
+<pre><code class="language-csharp">app.MapPost(&quot;/ap/todoitems&quot;, async ([AsParameters] CreateTodoItemRequest request) =&gt;
+{
+    var todoItem = new Todo
+    {
+        IsComplete = request.Dto.IsComplete,
+        Name = request.Dto.Name
+    };
+
+    request.Db.Todos.Add(todoItem);
+    await request.Db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todoItem.Id}&quot;, new TodoItemDTO(todoItem));
+});
+
+app.MapPut(&quot;/ap/todoitems/{id}&quot;, async ([AsParameters] EditTodoItemRequest request) =&gt;
+{
+    var todo = await request.Db.Todos.FindAsync(request.Id);
+
+    if (todo is null) return Results.NotFound();
+
+    todo.Name = request.Dto.Name;
+    todo.IsComplete = request.Dto.IsComplete;
+
+    await request.Db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+app.MapDelete(&quot;/ap/todoitems/{id}&quot;, async ([AsParameters] TodoItemRequest request) =&gt;
+{
+    if (await request.Db.Todos.FindAsync(request.Id) is Todo todo)
+    {
+        request.Db.Todos.Remove(todo);
+        await request.Db.SaveChangesAsync();
+        return Results.Ok(new TodoItemDTO(todo));
+    }
+
+    return Results.NotFound();
+});
+</code></pre>
+<pre><code class="language-csharp">record TodoItemRequest(int Id, TodoDb Db);
+record CreateTodoItemRequest(TodoItemDTO Dto, TodoDb Db);
+record EditTodoItemRequest(int Id, TodoItemDTO Dto, TodoDb Db);
+</code></pre>
+<h3><a href="#custom-binding" aria-hidden="true" class="anchor" id="custom-binding"></a>Custom Binding</h3>
+<ul>
+<li>
+<p>For route, query, and header binding sources, bind custom types by adding a static <code>TryParse</code> method for the type.</p>
+</li>
+<li>
+<p>Control the binding process by implementing a <code>BindAsync</code> method on a type.</p>
+</li>
+</ul>
+<h4><a href="#tryparse" aria-hidden="true" class="anchor" id="tryparse"></a><code>TryParse</code></h4>
+<pre><code class="language-csharp">public static bool TryParse(string value, out T result);
+public static bool TryParse(string value, IFormatProvider provider, out T result);
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+// GET /map?Point=12.3,10.1
+app.MapGet(&quot;/map&quot;, (Point point) =&gt; $&quot;Point: {point.X}, {point.Y}&quot;);
+
+app.Run();
+
+public class Point
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+
+    public static bool TryParse(string? value, IFormatProvider? provider,
+                                out Point? point)
+    {
+        // Format is &quot;(12.3,10.1)&quot;
+        var trimmedValue = value?.TrimStart('(').TrimEnd(')');
+        var segments = trimmedValue?.Split(',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments?.Length == 2
+            &amp;&amp; double.TryParse(segments[0], out var x)
+            &amp;&amp; double.TryParse(segments[1], out var y))
+        {
+            point = new Point { X = x, Y = y };
+            return true;
+        }
+
+        point = null;
+        return false;
+    }
+}
+</code></pre>
+<h4><a href="#bindasync" aria-hidden="true" class="anchor" id="bindasync"></a><code>BindAsync</code></h4>
+<pre><code class="language-csharp">public static ValueTask&lt;T?&gt; BindAsync(HttpContext context, ParameterInfo parameter);
+public static ValueTask&lt;T?&gt; BindAsync(HttpContext context);
+</code></pre>
+<pre><code class="language-csharp">using System.Reflection;
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+// GET /products?SortBy=xyz&amp;SortDir=Desc&amp;Page=99
+app.MapGet(&quot;/products&quot;, (PagingData pageData) =&gt; $&quot;SortBy:{pageData.SortBy}, &quot; +
+       $&quot;SortDirection:{pageData.SortDirection}, CurrentPage:{pageData.CurrentPage}&quot;);
+
+app.Run();
+
+public class PagingData
+{
+    public string? SortBy { get; init; }
+    public SortDirection SortDirection { get; init; }
+    public int CurrentPage { get; init; } = 1;
+
+    public static ValueTask&lt;PagingData?&gt; BindAsync(HttpContext context,
+                                                   ParameterInfo parameter)
+    {
+        const string sortByKey = &quot;sortBy&quot;;
+        const string sortDirectionKey = &quot;sortDir&quot;;
+        const string currentPageKey = &quot;page&quot;;
+
+        Enum.TryParse&lt;SortDirection&gt;(context.Request.Query[sortDirectionKey],
+                                     ignoreCase: true, out var sortDirection);
+        int.TryParse(context.Request.Query[currentPageKey], out var page);
+        page = page == 0 ? 1 : page;
+
+        var result = new PagingData
+        {
+            SortBy = context.Request.Query[sortByKey],
+            SortDirection = sortDirection,
+            CurrentPage = page
+        };
+
+        return ValueTask.FromResult&lt;PagingData?&gt;(result);
+    }
+}
+
+public enum SortDirection
+{
+    Default,
+    Asc,
+    Desc
+}
+</code></pre>
+<h3><a href="#binding-failures" aria-hidden="true" class="anchor" id="binding-failures"></a>Binding failures</h3>
+<table><thead>
+<tr>
+<th>Failure mode</th>
+<th>Nullable Parameter Type</th>
+<th>Binding Source</th>
+<th>Status code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{ParameterType}.TryParse</code> returns <code>false</code></td>
+<td>yes</td>
+<td>route/query/header</td>
+<td>400</td>
+</tr>
+<tr>
+<td><code>{ParameterType}.BindAsync</code> returns <code>null</code></td>
+<td>yes</td>
+<td>custom</td>
+<td>400</td>
+</tr>
+<tr>
+<td><code>{ParameterType}.BindAsync</code> throws</td>
+<td>doesn't matter</td>
+<td>custom</td>
+<td>500</td>
+</tr>
+<tr>
+<td>Failure to deserialize JSON body</td>
+<td>doesn't matter</td>
+<td>body</td>
+<td>400</td>
+</tr>
+<tr>
+<td>Wrong content type (not <code>application/json</code>)</td>
+<td>doesn't matter</td>
+<td>body</td>
+<td>415</td>
+</tr>
+</tbody></table>
+<h3><a href="#binding-precedence" aria-hidden="true" class="anchor" id="binding-precedence"></a>Binding Precedence</h3>
+<ul>
+<li>Explicit attribute defined on parameter (From* attributes) in the following order:</li>
+</ul>
+<p>Route values: [FromRoute]
+Query string: [FromQuery]
+Header: [FromHeader]
+Body: [FromBody]
+Form: [FromForm]
+Service: [FromServices]
+Parameter values: [AsParameters]</p>
+<pre><code>- Route values: [FromRoute]
+
+- Query string: [FromQuery]
+
+- Header: [FromHeader]
+
+- Body: [FromBody]
+
+- Form: [FromForm]
+
+- Service: [FromServices]
+
+- Parameter values: [AsParameters]
+</code></pre>
+<ul>
+<li>Special types</li>
+</ul>
+<p>HttpContext
+HttpRequest (HttpContext.Request)
+HttpResponse (HttpContext.Response)
+ClaimsPrincipal (HttpContext.User)
+CancellationToken (HttpContext.RequestAborted)
+IFormCollection (HttpContext.Request.Form)
+IFormFileCollection (HttpContext.Request.Form.Files)
+IFormFile (HttpContext.Request.Form.Files[paramName])
+Stream (HttpContext.Request.Body)
+PipeReader (HttpContext.Request.BodyReader)</p>
+<pre><code>- ```HttpContext```
+
+- ```HttpRequest``` (HttpContext.Request)
+
+- ```HttpResponse``` (HttpContext.Response)
+
+- ```ClaimsPrincipal``` (HttpContext.User)
+
+- ```CancellationToken``` (HttpContext.RequestAborted)
+
+- ```IFormCollection``` (HttpContext.Request.Form)
+
+- ```IFormFileCollection``` (HttpContext.Request.Form.Files)
+
+- ```IFormFile``` (HttpContext.Request.Form.Files[paramName])
+
+- ```Stream``` (HttpContext.Request.Body)
+
+- ```PipeReader``` (HttpContext.Request.BodyReader)
+</code></pre>
+<ul>
+<li>
+<p>Parameter type has a valid static <code>BindAsync</code> method.</p>
+</li>
+<li>
+<p>Parameter type is a string or has a valid static <code>TryParse</code> method.</p>
+</li>
+</ul>
+<p>If the parameter name exists in the route template for example, app.Map(&quot;/todo/{id}&quot;, (int id) =&gt; {});, then it's bound from the route.
+Bound from the query string.</p>
+<pre><code>- If the parameter name exists in the route template for example, app.Map(&quot;/todo/{id}&quot;, (int id) =&gt; {});, then it's bound from the route.
+
+- Bound from the query string.
+</code></pre>
+<ul>
+<li>
+<p>If the parameter type is a service provided by dependency injection, it uses that service as the source.</p>
+</li>
+<li>
+<p>The parameter is from the body.</p>
+</li>
+</ul>
+<h3><a href="#configure-json-deserialization-options-for-body-binding" aria-hidden="true" class="anchor" id="configure-json-deserialization-options-for-body-binding"></a>Configure JSON deserialization options for body binding</h3>
+<h4><a href="#configure-json-deserialization-options-globally" aria-hidden="true" class="anchor" id="configure-json-deserialization-options-globally"></a>Configure JSON deserialization options globally</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.ConfigureHttpJsonOptions(options =&gt; {
+    options.SerializerOptions.WriteIndented = true;
+    options.SerializerOptions.IncludeFields = true;
+});
+
+var app = builder.Build();
+
+app.MapPost(&quot;/&quot;, (Todo todo) =&gt; {
+    if (todo is not null) {
+        todo.Name = todo.NameField;
+    }
+    return todo;
+});
+
+app.Run();
+
+class Todo {
+    public string? Name { get; set; }
+    public string? NameField;
+    public bool IsComplete { get; set; }
+}
+// If the request body contains the following JSON:
+//
+// {&quot;nameField&quot;:&quot;Walk dog&quot;, &quot;isComplete&quot;:false}
+//
+// The endpoint returns the following JSON:
+//
+// {
+//    &quot;name&quot;:&quot;Walk dog&quot;,
+//    &quot;nameField&quot;:&quot;Walk dog&quot;,
+//    &quot;isComplete&quot;:false
+// }
+</code></pre>
+<h4><a href="#configure-json-deserialization-options-for-an-endpoint" aria-hidden="true" class="anchor" id="configure-json-deserialization-options-for-an-endpoint"></a>Configure JSON deserialization options for an endpoint</h4>
+<pre><code class="language-csharp">using System.Text.Json;
+
+var app = WebApplication.Create();
+
+var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { 
+    IncludeFields = true, 
+    WriteIndented = true
+};
+
+app.MapPost(&quot;/&quot;, async (HttpContext context) =&gt; {
+    if (context.Request.HasJsonContentType()) {
+        var todo = await context.Request.ReadFromJsonAsync&lt;Todo&gt;(options);
+        if (todo is not null) {
+            todo.Name = todo.NameField;
+        }
+        return Results.Ok(todo);
+    }
+    else {
+        return Results.BadRequest();
+    }
+});
+
+app.Run();
+
+class Todo
+{
+    public string? Name { get; set; }
+    public string? NameField;
+    public bool IsComplete { get; set; }
+}
+// If the request body contains the following JSON:
+//
+// {&quot;nameField&quot;:&quot;Walk dog&quot;, &quot;isComplete&quot;:false}
+//
+// The endpoint returns the following JSON:
+//
+// {
+//    &quot;name&quot;:&quot;Walk dog&quot;,
+//    &quot;isComplete&quot;:false
+// }
+</code></pre>
+<h3><a href="#read-the-request-body" aria-hidden="true" class="anchor" id="read-the-request-body"></a>Read the request body</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapPost(&quot;/uploadstream&quot;, async (IConfiguration config, HttpRequest request) =&gt;
+{
+    var filePath = Path.Combine(config[&quot;StoredFilesPath&quot;], Path.GetRandomFileName());
+
+    await using var writeStream = File.Create(filePath);
+    await request.BodyReader.CopyToAsync(writeStream);
+});
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Accesses the request body using <code>HttpRequest.BodyReader</code>.</p>
+</li>
+<li>
+<p>Copies the request body to a local file.</p>
+</li>
+</ul>
+<h2><a href="#responses" aria-hidden="true" class="anchor" id="responses"></a>Responses</h2>
+<ul>
+<li>
+<p><code>IResult</code> based - This includes <code>Task&lt;IResult&gt;</code> and <code>ValueTask&lt;IResult&gt;</code></p>
+</li>
+<li>
+<p>string - This includes <code>Task&lt;string&gt;</code> and <code>ValueTask&lt;string&gt;</code></p>
+</li>
+<li>
+<p><code>T</code> (Any other type) - This includes <code>Task&lt;T&gt;</code> and <code>ValueTask&lt;T&gt;</code></p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Return value</th>
+<th>Behavior</th>
+<th>Content-Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IResult</code></td>
+<td>The framework calls <a href="/en-us/dotnet/api/microsoft.aspnetcore.http.iresult.executeasync" data-linktype="absolute-path">IResult.ExecuteAsync</a></td>
+<td>Decided by the <code>IResult</code> implementation</td>
+</tr>
+<tr>
+<td><code>string</code></td>
+<td>The framework writes the string directly to the response</td>
+<td><code>text/plain</code></td>
+</tr>
+<tr>
+<td><code>T</code> (Any other type)</td>
+<td>The framework JSON-serializes the response</td>
+<td><code>application/json</code></td>
+</tr>
+</tbody></table>
+<h3><a href="#example-return-values" aria-hidden="true" class="anchor" id="example-return-values"></a>Example return values</h3>
+<h4><a href="#string-return-values" aria-hidden="true" class="anchor" id="string-return-values"></a>string return values</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/hello&quot;, () =&gt; &quot;Hello World&quot;);
+</code></pre>
+<h4><a href="#json-return-values" aria-hidden="true" class="anchor" id="json-return-values"></a>JSON return values</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/hello&quot;, () =&gt; new { Message = &quot;Hello World&quot; });
+</code></pre>
+<h4><a href="#return-typedresults" aria-hidden="true" class="anchor" id="return-typedresults"></a>Return <code>TypedResults</code></h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/hello&quot;, () =&gt; TypedResults.Ok(new Message() {  Text = &quot;Hello World!&quot; }));
+</code></pre>
+<h4><a href="#iresult-return-values" aria-hidden="true" class="anchor" id="iresult-return-values"></a><code>IResult</code> return values</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/hello&quot;, () =&gt; Results.Ok(new { Message = &quot;Hello World&quot; }));
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/api/todoitems/{id}&quot;, async (int id, TodoDb db) =&gt;
+         await db.Todos.FindAsync(id) 
+         is Todo todo
+         ? Results.Ok(todo) 
+         : Results.NotFound())
+   .Produces&lt;Todo&gt;(StatusCodes.Status200OK)
+   .Produces(StatusCodes.Status404NotFound);
+</code></pre>
+<h4><a href="#json" aria-hidden="true" class="anchor" id="json"></a>JSON</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/hello&quot;, () =&gt; Results.Json(new { Message = &quot;Hello World&quot; }));
+</code></pre>
+<h4><a href="#custom-status-code" aria-hidden="true" class="anchor" id="custom-status-code"></a>Custom Status Code</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/405&quot;, () =&gt; Results.StatusCode(405));
+</code></pre>
+<h4><a href="#text" aria-hidden="true" class="anchor" id="text"></a>Text</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/text&quot;, () =&gt; Results.Text(&quot;This is some text&quot;));
+</code></pre>
+<h4><a href="#stream" aria-hidden="true" class="anchor" id="stream"></a><code>Stream</code></h4>
+<pre><code class="language-csharp">var proxyClient = new HttpClient();
+app.MapGet(&quot;/pokemon&quot;, async () =&gt; 
+{
+    var stream = await proxyClient.GetStreamAsync(&quot;http://contoso/pokedex.json&quot;);
+    // Proxy the response as JSON
+    return Results.Stream(stream, &quot;application/json&quot;);
+});
+</code></pre>
+<h4><a href="#redirect" aria-hidden="true" class="anchor" id="redirect"></a>Redirect</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/old-path&quot;, () =&gt; Results.Redirect(&quot;/new-path&quot;));
+</code></pre>
+<h4><a href="#file" aria-hidden="true" class="anchor" id="file"></a>File</h4>
+<pre><code class="language-csharp">app.MapGet(&quot;/download&quot;, () =&gt; Results.File(&quot;myfile.text&quot;));
+</code></pre>
+<h3><a href="#built-in-results" aria-hidden="true" class="anchor" id="built-in-results"></a>Built-in results</h3>
+<h3><a href="#customizing-results" aria-hidden="true" class="anchor" id="customizing-results"></a>Customizing results</h3>
+<pre><code class="language-csharp">using System.Net.Mime;
+using System.Text;
+static class ResultsExtensions
+{
+    public static IResult Html(this IResultExtensions resultExtensions, string html)
+    {
+        ArgumentNullException.ThrowIfNull(resultExtensions);
+
+        return new HtmlResult(html);
+    }
+}
+
+class HtmlResult : IResult
+{
+    private readonly string _html;
+
+    public HtmlResult(string html)
+    {
+        _html = html;
+    }
+
+    public Task ExecuteAsync(HttpContext httpContext)
+    {
+        httpContext.Response.ContentType = MediaTypeNames.Text.Html;
+        httpContext.Response.ContentLength = Encoding.UTF8.GetByteCount(_html);
+        return httpContext.Response.WriteAsync(_html);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/html&quot;, () =&gt; Results.Extensions.Html(@$&quot;&lt;!doctype html&gt;
+&lt;html&gt;
+    &lt;head&gt;&lt;title&gt;miniHTML&lt;/title&gt;&lt;/head&gt;
+    &lt;body&gt;
+        &lt;h1&gt;Hello World&lt;/h1&gt;
+        &lt;p&gt;The time on the server is {DateTime.Now:O}&lt;/p&gt;
+    &lt;/body&gt;
+&lt;/html&gt;&quot;));
+
+app.Run();
+</code></pre>
+<h3><a href="#typed-results" aria-hidden="true" class="anchor" id="typed-results"></a>Typed results</h3>
+<pre><code class="language-csharp">[TestClass()]
+public class WeatherApiTests
+{
+    [TestMethod()]
+    public void MapWeatherApiTest()
+    {
+        var result = WeatherApi.GetAllWeathers();
+        Assert.IsInstanceOfType(result, typeof(Ok&lt;WeatherForecast[]&gt;));
+    }      
+}
+</code></pre>
+<h2><a href="#filters" aria-hidden="true" class="anchor" id="filters"></a>Filters</h2>
+<h2><a href="#authorization" aria-hidden="true" class="anchor" id="authorization"></a>Authorization</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using WebRPauth.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAuthorization(o =&gt; o.AddPolicy(&quot;AdminsOnly&quot;, 
+                                  b =&gt; b.RequireClaim(&quot;admin&quot;, &quot;true&quot;)));
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+var app = builder.Build();
+
+app.UseAuthorization();
+
+app.MapGet(&quot;/auth&quot;, [Authorize] () =&gt; &quot;This endpoint requires authorization.&quot;);
+app.MapGet(&quot;/&quot;, () =&gt; &quot;This endpoint doesn't require authorization.&quot;);
+app.MapGet(&quot;/Identity/Account/Login&quot;, () =&gt; &quot;Sign in page at this endpoint.&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/auth&quot;, () =&gt; &quot;This endpoint requires authorization&quot;)
+   .RequireAuthorization();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using WebRPauth.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAuthorization(o =&gt; o.AddPolicy(&quot;AdminsOnly&quot;, 
+                                  b =&gt; b.RequireClaim(&quot;admin&quot;, &quot;true&quot;)));
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+var app = builder.Build();
+
+app.UseAuthorization();
+
+app.MapGet(&quot;/admin&quot;, [Authorize(&quot;AdminsOnly&quot;)] () =&gt; 
+                             &quot;The /admin endpoint is for admins only.&quot;);
+
+app.MapGet(&quot;/admin2&quot;, () =&gt; &quot;The /admin2 endpoint is for admins only.&quot;)
+   .RequireAuthorization(&quot;AdminsOnly&quot;);
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;This endpoint doesn't require authorization.&quot;);
+app.MapGet(&quot;/Identity/Account/Login&quot;, () =&gt; &quot;Sign in page at this endpoint.&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#allow-unauthenticated-users-to-access-an-endpoint" aria-hidden="true" class="anchor" id="allow-unauthenticated-users-to-access-an-endpoint"></a>Allow unauthenticated users to access an endpoint</h3>
+<pre><code class="language-csharp">app.MapGet(&quot;/login&quot;, [AllowAnonymous] () =&gt; &quot;This endpoint is for all roles.&quot;);
+
+
+app.MapGet(&quot;/login2&quot;, () =&gt; &quot;This endpoint also for all roles.&quot;)
+   .AllowAnonymous();
+</code></pre>
+<h2><a href="#cors" aria-hidden="true" class="anchor" id="cors"></a>CORS</h2>
+<pre><code class="language-csharp">const string MyAllowSpecificOrigins = &quot;_myAllowSpecificOrigins&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      builder =&gt;
+                      {
+                          builder.WithOrigins(&quot;http://example.com&quot;,
+                                              &quot;http://www.contoso.com&quot;);
+                      });
+});
+
+var app = builder.Build();
+app.UseCors();
+
+app.MapGet(&quot;/&quot;,() =&gt; &quot;Hello CORS!&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Cors;
+
+const string MyAllowSpecificOrigins = &quot;_myAllowSpecificOrigins&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      builder =&gt;
+                      {
+                          builder.WithOrigins(&quot;http://example.com&quot;,
+                                              &quot;http://www.contoso.com&quot;);
+                      });
+});
+
+var app = builder.Build();
+app.UseCors();
+
+app.MapGet(&quot;/cors&quot;, [EnableCors(MyAllowSpecificOrigins)] () =&gt; 
+                           &quot;This endpoint allows cross origin requests!&quot;);
+app.MapGet(&quot;/cors2&quot;, () =&gt; &quot;This endpoint allows cross origin requests!&quot;)
+                     .RequireCors(MyAllowSpecificOrigins);
+
+app.Run();
+</code></pre>
+<h2><a href="#validatescopes-and-validateonbuild" aria-hidden="true" class="anchor" id="validatescopes-and-validateonbuild"></a><code>ValidateScopes</code> and <code>ValidateOnBuild</code></h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped&lt;MyScopedService&gt;();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    Console.WriteLine(&quot;Development environment&quot;);
+}
+else
+{
+    Console.WriteLine(&quot;Release environment&quot;);
+}
+
+app.MapGet(&quot;/&quot;, context =&gt;
+{
+    // Intentionally getting service provider from app, not from the request
+    // This causes an exception from attempting to resolve a scoped service
+    // outside of a scope.
+    // Throws System.InvalidOperationException:
+    // 'Cannot resolve scoped service 'MyScopedService' from root provider.'
+    var service = app.Services.GetRequiredService&lt;MyScopedService&gt;();
+    return context.Response.WriteAsync(&quot;Service resolved&quot;);
+});
+
+app.Run();
+
+public class MyScopedService { }
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped&lt;MyScopedService&gt;();
+builder.Services.AddScoped&lt;AnotherService&gt;();
+
+// System.AggregateException: 'Some services are not able to be constructed (Error
+// while validating the service descriptor 'ServiceType: AnotherService Lifetime:
+// Scoped ImplementationType: AnotherService': Unable to resolve service for type
+// 'BrokenService' while attempting to activate 'AnotherService'.)'
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    Console.WriteLine(&quot;Development environment&quot;);
+}
+else
+{
+    Console.WriteLine(&quot;Release environment&quot;);
+}
+
+app.MapGet(&quot;/&quot;, context =&gt;
+{
+    var service = context.RequestServices.GetRequiredService&lt;MyScopedService&gt;();
+    return context.Response.WriteAsync(&quot;Service resolved correctly!&quot;);
+});
+
+app.Run();
+
+public class MyScopedService { }
+
+public class AnotherService
+{
+    public AnotherService(BrokenService brokenService) { }
+}
+
+public class BrokenService { }
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    Console.WriteLine(&quot;Development environment&quot;);
+    // Doesn't detect the validation problems because ValidateScopes is false.
+    builder.Host.UseDefaultServiceProvider(options =&gt;
+    {
+        options.ValidateScopes = false;
+        options.ValidateOnBuild = false;
+    });
+}
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Minimal APIs quick reference</p>
+</li>
+<li>
+<p>Work with OpenAPI documents</p>
+</li>
+<li>
+<p>Create responses in Minimal API applications</p>
+</li>
+<li>
+<p>Filters in Minimal API apps</p>
+</li>
+<li>
+<p>Handle errors in minimal APIs</p>
+</li>
+<li>
+<p>Authentication and authorization in minimal APIs</p>
+</li>
+<li>
+<p>Test Minimal API apps</p>
+</li>
+<li>
+<p>Short-circuit routing</p>
+</li>
+<li>
+<p>Identity API endpoints</p>
+</li>
+<li>
+<p>Keyed service dependency injection container support</p>
+</li>
+<li>
+<p>A look behind the scenes of minimal API endpoints</p>
+</li>
+<li>
+<p>Organizing ASP.NET Core Minimal APIs</p>
+</li>
+<li>
+<p>Fluent validation discussion on GitHub</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis?view=aspnetcore-8.0">Minimal APIs quick reference</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

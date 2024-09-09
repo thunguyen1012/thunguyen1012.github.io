@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Minimal APIs - Route Handlers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A configured WebApplication supports Map{Verb} and MapMethods where {Verb} is a Pascal-cased HTTP method like Get, Post, Put or Delete:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Minimal APIs - Route Handlers</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A configured <code>WebApplication</code> supports Map{Verb} and MapMethods where {Verb} is a Pascal-cased HTTP method like <code>Get</code>, <code>Post</code>, <code>Put</code> or <code>Delete</code>:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;This is a GET&quot;);
+app.MapPost(&quot;/&quot;, () =&gt; &quot;This is a POST&quot;);
+app.MapPut(&quot;/&quot;, () =&gt; &quot;This is a PUT&quot;);
+app.MapDelete(&quot;/&quot;, () =&gt; &quot;This is a DELETE&quot;);
+
+app.MapMethods(&quot;/options-or-head&quot;, new[] { &quot;OPTIONS&quot;, &quot;HEAD&quot; }, 
+                          () =&gt; &quot;This is an options or head request &quot;);
+
+app.Run();
+</code></pre>
+<p>The Delegate arguments passed to these methods are called &quot;route handlers&quot;.</p>
+<h2><a href="#route-handlers" aria-hidden="true" class="anchor" id="route-handlers"></a>Route handlers</h2>
+<p>Route handlers are methods that execute when the route matches.</p>
+<h3><a href="#lambda-expression" aria-hidden="true" class="anchor" id="lambda-expression"></a>Lambda expression</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/inline&quot;, () =&gt; &quot;This is an inline lambda&quot;);
+
+var handler = () =&gt; &quot;This is a lambda variable&quot;;
+
+app.MapGet(&quot;/&quot;, handler);
+
+app.Run();
+</code></pre>
+<h3><a href="#local-function" aria-hidden="true" class="anchor" id="local-function"></a>Local function</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+string LocalFunction() =&gt; &quot;This is local function&quot;;
+
+app.MapGet(&quot;/&quot;, LocalFunction);
+
+app.Run();
+</code></pre>
+<h3><a href="#instance-method" aria-hidden="true" class="anchor" id="instance-method"></a>Instance method</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+var handler = new HelloHandler();
+
+app.MapGet(&quot;/&quot;, handler.Hello);
+
+app.Run();
+
+class HelloHandler
+{
+    public string Hello()
+    {
+        return &quot;Hello Instance method&quot;;
+    }
+}
+</code></pre>
+<h3><a href="#static-method" aria-hidden="true" class="anchor" id="static-method"></a>Static method</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, HelloHandler.Hello);
+
+app.Run();
+
+class HelloHandler
+{
+    public static string Hello()
+    {
+        return &quot;Hello static method&quot;;
+    }
+}
+</code></pre>
+<h3><a href="#endpoint-defined-outside-of-programcs" aria-hidden="true" class="anchor" id="endpoint-defined-outside-of-programcs"></a>Endpoint defined outside of <code>Program.cs</code></h3>
+<p>Minimal APIs don't have to be located in <code>Program.cs</code>.</p>
+<p><code>Program.cs</code></p>
+<pre><code class="language-csharp">using MinAPISeparateFile;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+
+var app = builder.Build();
+
+TodoEndpoints.Map(app);
+
+app.Run();
+</code></pre>
+<p><code>TodoEndpoints.cs</code></p>
+<pre><code class="language-csharp">namespace MinAPISeparateFile;
+
+public static class TodoEndpoints
+{
+    public static void Map(WebApplication app)
+    {
+        app.MapGet(&quot;/&quot;, async context =&gt;
+        {
+            // Get all todo items
+            await context.Response.WriteAsJsonAsync(new { Message = &quot;All todo items&quot; });
+        });
+
+        app.MapGet(&quot;/{id}&quot;, async context =&gt;
+        {
+            // Get one todo item
+            await context.Response.WriteAsJsonAsync(new { Message = &quot;One todo item&quot; });
+        });
+    }
+}
+</code></pre>
+<p>See also Route groups later in this article.</p>
+<h3><a href="#named-endpoints-and-link-generation" aria-hidden="true" class="anchor" id="named-endpoints-and-link-generation"></a>Named endpoints and link generation</h3>
+<p>Endpoints can be given names in order to generate URLs to the endpoint. Using a named endpoint avoids having to hard code paths in an app:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/hello&quot;, () =&gt; &quot;Hello named route&quot;)
+   .WithName(&quot;hi&quot;);
+
+app.MapGet(&quot;/&quot;, (LinkGenerator linker) =&gt; 
+        $&quot;The link to the hello route is {linker.GetPathByName(&quot;hi&quot;, values: null)}&quot;);
+
+app.Run();
+</code></pre>
+<p>The preceding code displays <code>The link to the hello route is</code>/<code>hello</code> from the / endpoint.</p>
+<p>NOTE: Endpoint names are case sensitive.</p>
+<p>Endpoint names:</p>
+<ul>
+<li>
+<p>Must be globally unique.</p>
+</li>
+<li>
+<p>Are used as the OpenAPI operation id when OpenAPI support is enabled. For more information, see OpenAPI.</p>
+</li>
+</ul>
+<h3><a href="#route-parameters" aria-hidden="true" class="anchor" id="route-parameters"></a>Route Parameters</h3>
+<p>Route parameters can be captured as part of the route pattern definition:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/users/{userId}/books/{bookId}&quot;, 
+    (int userId, int bookId) =&gt; $&quot;The user id is {userId} and book id is {bookId}&quot;);
+
+app.Run();
+</code></pre>
+<p>The preceding code returns <code>The user id is 3 and book id is 7</code> from the URI <code>/users/3/books/7</code>.</p>
+<p>The route handler can declare the parameters to capture. When a request is made to a route with parameters declared to capture, the parameters are parsed and passed to the handler. This makes it easy to capture the values in a type safe way. In the preceding code, <code>userId</code> and <code>bookId</code> are both <code>int</code>.</p>
+<p>In the preceding code, if either route value cannot be converted to an <code>int</code>, an exception is thrown. The GET request <code>/users/hello/books/3</code> throws the following exception:</p>
+<p>BadHttpRequestException: Failed to bind parameter &quot;int <code>userId</code>&quot; from &quot;hello&quot;.</p>
+<h3><a href="#wildcard-and-catch-all-routes" aria-hidden="true" class="anchor" id="wildcard-and-catch-all-routes"></a>Wildcard and catch all routes</h3>
+<p>The following catch all route returns <code>Routing to hello</code> from the `/posts/hello' endpoint:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/posts/{*rest}&quot;, (string rest) =&gt; $&quot;Routing to {rest}&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#route-constraints" aria-hidden="true" class="anchor" id="route-constraints"></a>Route constraints</h3>
+<p>Route constraints constrain the matching behavior of a route.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/todos/{id:int}&quot;, (int id) =&gt; db.Todos.Find(id));
+app.MapGet(&quot;/todos/{text}&quot;, (string text) =&gt; db.Todos.Where(t =&gt; t.Text.Contains(text));
+app.MapGet(&quot;/posts/{slug:regex(^[a-z0-9_-]+$)}&quot;, (string slug) =&gt; $&quot;Post {slug}&quot;);
+
+app.Run();
+</code></pre>
+<p>The following table demonstrates the preceding route templates and their behavior:</p>
+<table><thead>
+<tr>
+<th>Route Template</th>
+<th>Example Matching URI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/todos/{id:int}</code></td>
+<td><code>/todos/1</code></td>
+</tr>
+<tr>
+<td><code>/todos/{text}</code></td>
+<td><code>/todos/something</code></td>
+</tr>
+<tr>
+<td><code>/posts/{slug:regex(^[a-z0-9_-]+$)}</code></td>
+<td><code>/posts/mypost</code></td>
+</tr>
+</tbody></table>
+<p>For more information, see Route constraint reference in Routing in ASP.NET Core.</p>
+<h3><a href="#route-groups" aria-hidden="true" class="anchor" id="route-groups"></a>Route groups</h3>
+<p>The MapGroup extension method helps organize groups of endpoints with a common prefix. It reduces repetitive code and allows for customizing entire groups of endpoints with a single call to methods like RequireAuthorization and WithMetadata which add endpoint metadata.</p>
+<p>For example, the following code creates two similar groups of endpoints:</p>
+<pre><code class="language-csharp">app.MapGroup(&quot;/public/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Public&quot;);
+
+app.MapGroup(&quot;/private/todos&quot;)
+    .MapTodosApi()
+    .WithTags(&quot;Private&quot;)
+    .AddEndpointFilterFactory(QueryPrivateTodos)
+    .RequireAuthorization();
+
+
+EndpointFilterDelegate QueryPrivateTodos(EndpointFilterFactoryContext factoryContext, EndpointFilterDelegate next)
+{
+    var dbContextIndex = -1;
+
+    foreach (var argument in factoryContext.MethodInfo.GetParameters())
+    {
+        if (argument.ParameterType == typeof(TodoDb))
+        {
+            dbContextIndex = argument.Position;
+            break;
+        }
+    }
+
+    // Skip filter if the method doesn't have a TodoDb parameter.
+    if (dbContextIndex &lt; 0)
+    {
+        return next;
+    }
+
+    return async invocationContext =&gt;
+    {
+        var dbContext = invocationContext.GetArgument&lt;TodoDb&gt;(dbContextIndex);
+        dbContext.IsPrivate = true;
+
+        try
+        {
+            return await next(invocationContext);
+        }
+        finally
+        {
+            // This should only be relevant if you're pooling or otherwise reusing the DbContext instance.
+            dbContext.IsPrivate = false;
+        }
+    };
+}
+</code></pre>
+<pre><code class="language-csharp">public static RouteGroupBuilder MapTodosApi(this RouteGroupBuilder group)
+{
+    group.MapGet(&quot;/&quot;, GetAllTodos);
+    group.MapGet(&quot;/{id}&quot;, GetTodo);
+    group.MapPost(&quot;/&quot;, CreateTodo);
+    group.MapPut(&quot;/{id}&quot;, UpdateTodo);
+    group.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+    return group;
+}
+</code></pre>
+<p>In this scenario, you can use a relative address for the <code>Location</code> header in the <code>201 Created</code> result:</p>
+<pre><code class="language-csharp">public static async Task&lt;Created&lt;Todo&gt;&gt; CreateTodo(Todo todo, TodoDb database)
+{
+    await database.AddAsync(todo);
+    await database.SaveChangesAsync();
+
+    return TypedResults.Created($&quot;{todo.Id}&quot;, todo);
+}
+</code></pre>
+<p>The first group of endpoints will only match requests prefixed with <code>/public/todos</code> and are accessible without any authentication. The second group of endpoints will only match requests prefixed with <code>/private/todos</code> and require authentication.</p>
+<p>The <code>QueryPrivateTodos</code> endpoint filter factory is a local function that modifies the route handler's <code>TodoDb</code> parameters to allow to access and store private todo data.</p>
+<p>Route groups also support nested groups and complex prefix patterns with route parameters and constraints. In the following example, and route handler mapped to the <code>user</code> group can capture the {org} and {group} route parameters defined in the outer group prefixes.</p>
+<p>The prefix can also be empty. This can be useful for adding endpoint metadata or filters to a group of endpoints without changing the route pattern.</p>
+<pre><code class="language-csharp">var all = app.MapGroup(&quot;&quot;).WithOpenApi();
+var org = all.MapGroup(&quot;{org}&quot;);
+var user = org.MapGroup(&quot;{user}&quot;);
+user.MapGet(&quot;&quot;, (string org, string user) =&gt; $&quot;{org}/{user}&quot;);
+</code></pre>
+<p>Adding filters or metadata to a group behaves the same way as adding them individually to each endpoint before adding any extra filters or metadata that may have been added to an inner group or specific endpoint.</p>
+<pre><code class="language-csharp">var outer = app.MapGroup(&quot;/outer&quot;);
+var inner = outer.MapGroup(&quot;/inner&quot;);
+
+inner.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/inner group filter&quot;);
+    return next(context);
+});
+
+outer.AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;/outer group filter&quot;);
+    return next(context);
+});
+
+inner.MapGet(&quot;/&quot;, () =&gt; &quot;Hi!&quot;).AddEndpointFilter((context, next) =&gt;
+{
+    app.Logger.LogInformation(&quot;MapGet filter&quot;);
+    return next(context);
+});
+</code></pre>
+<p>In the above example, the outer filter will log the incoming request before the inner filter even though it was added second. Because the filters were applied to different groups, the order they were added relative to each other does not matter. The order filters are added does matter if applied to the same group or specific endpoint.</p>
+<p>A request to <code>/outer/inner/</code> will log the following:</p>
+<pre><code class="language-dotnetcli">/outer group filter
+/inner group filter
+MapGet filter
+</code></pre>
+<h2><a href="#parameter-binding" aria-hidden="true" class="anchor" id="parameter-binding"></a>Parameter binding</h2>
+<p>Parameter binding in Minimal API applications describes the rules in detail for how route handler parameters are populated.</p>
+<h2><a href="#responses" aria-hidden="true" class="anchor" id="responses"></a>Responses</h2>
+<p>Create responses in Minimal API applications describes in detail how values returned from route handlers are converted into responses.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/route-handlers?view=aspnetcore-8.0">Route Handlers in Minimal API apps</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

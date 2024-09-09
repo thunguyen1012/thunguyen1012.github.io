@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Minimal APIs - Tutorial: Create a minimal API | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Minimal APIs - Tutorial: Create a minimal API</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#overview" aria-hidden="true" class="anchor" id="overview"></a>Overview</h2>
+<table><thead>
+<tr>
+<th>API</th>
+<th>Description</th>
+<th>Request body</th>
+<th>Response body</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET ```/todoitems```</code></td>
+<td>Get all to-do items</td>
+<td>None</td>
+<td>Array of to-do items</td>
+</tr>
+<tr>
+<td><code>GET ```/todoitems```/complete</code></td>
+<td>Get completed to-do items</td>
+<td>None</td>
+<td>Array of to-do items</td>
+</tr>
+<tr>
+<td><code>GET ```/todoitems```/{id}</code></td>
+<td>Get an item by ID</td>
+<td>None</td>
+<td>To-do item</td>
+</tr>
+<tr>
+<td><code>POST ```/todoitems```</code></td>
+<td>Add a new item</td>
+<td>To-do item</td>
+<td>To-do item</td>
+</tr>
+<tr>
+<td><code>PUT ```/todoitems```/{id}</code></td>
+<td>Update an existing item &nbsp;</td>
+<td>To-do item</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>DELETE ```/todoitems```/{id}</code> &nbsp; &nbsp;</td>
+<td>Delete an item &nbsp; &nbsp;</td>
+<td>None</td>
+<td>None</td>
+</tr>
+</tbody></table>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>Visual Studio 2022 with the ASP.NET and web development workload.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/asp-net-web-dev.png?view=aspnetcore-8.0" alt="VS22 installer workloads!" title="VS22 installer workloads" /></p>
+<ul>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>C# for Visual Studio Code (latest version)</p>
+</li>
+<li>
+<p>.NET 8.0 SDK</p>
+</li>
+</ul>
+<h2><a href="#create-an-api-project" aria-hidden="true" class="anchor" id="create-an-api-project"></a>Create an API project</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>Start Visual Studio 2022 and select Create a new project.</p>
+</li>
+<li>
+<p>In the Create a new project dialog:</p>
+<ul>
+<li>
+<p>Enter <code>Empty</code> in the Search for templates search box.</p>
+</li>
+<li>
+<p>Select the ASP.NET Core <code>Empty</code> template and select Next.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/create-new-project-empty-vs17.8.0.png?view=aspnetcore-8.0" alt="Visual Studio Create a new project!" title="Visual Studio Create a new project" /></p>
+<ul>
+<li>
+<p>Name the project TodoApi and select Next.</p>
+</li>
+<li>
+<p>In the Additional information dialog:</p>
+<ul>
+<li>
+<p>Select .NET 8.0 (Long Term Support)</p>
+</li>
+<li>
+<p>Uncheck Do not use top-level statements</p>
+</li>
+<li>
+<p>Select Create</p>
+</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/add-info-vs17.9.0.png?view=aspnetcore-8.0" alt="Additional information!" title="Additional information" /></p>
+<ul>
+<li>
+<p>Open the integrated terminal.</p>
+</li>
+<li>
+<p>Change directories (cd) to the folder that will contain the project folder.</p>
+</li>
+<li>
+<p>Run the following commands:
+dotnet new web -o TodoApi
+cd TodoApi
+code -r ../TodoApi</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new web -o TodoApi
+cd TodoApi
+code -r ../TodoApi
+</code></pre>
+<ul>
+<li>
+<p>When a dialog box asks if you want to trust the authors, select Yes.</p>
+</li>
+<li>
+<p>When a dialog box asks if you want to add required assets to the project, select Yes.
+The preceding commands create a new web minimal API project and open it in Visual Studio Code.</p>
+</li>
+</ul>
+<h3><a href="#examine-the-code" aria-hidden="true" class="anchor" id="examine-the-code"></a>Examine the code</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Creates a WebApplicationBuilder and a WebApplication with preconfigured defaults.</p>
+</li>
+<li>
+<p>Creates an <code>HTTP</code> <code>GET</code> endpoint / that returns Hello World!:</p>
+</li>
+</ul>
+<h3><a href="#run-the-app" aria-hidden="true" class="anchor" id="run-the-app"></a>Run the app</h3>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/../getting-started/_static/trustcertvs22.png?view=aspnetcore-8.0" alt="This project is configured to use SSL. To avoid SSL warnings in the browser you can choose to trust the self-signed certificate that IIS Express has generated. Would you like to trust the IIS Express SSL certificate?!" title="This project is configured to use SSL. To avoid SSL warnings in the browser you can choose to trust the self-signed certificate that IIS Express has generated. Would you like to trust the IIS Express SSL certificate?" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/../getting-started/_static/cert.png?view=aspnetcore-8.0" alt="Security warning dialog!" title="Security warning dialog" /></p>
+<ul>
+<li>Trust the HTTPS development certificate by running the following command:
+dotnet dev-certs https --trust</li>
+</ul>
+<p>The preceding command doesn't work on Linux. See your Linux distribution's documentation for trusting a certificate.
+The preceding command displays the following dialog, provided the certificate was not previously trusted:</p>
+<pre><code class="language-dotnetcli">dotnet dev-certs https --trust
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/../getting-started/_static/cert.png?view=aspnetcore-8.0" alt="Security warning dialog!" title="Security warning dialog" /></p>
+<ul>
+<li>Select Yes if you agree to trust the development certificate.
+See Trust the ASP.NET Core HTTPS development certificate for more information.</li>
+</ul>
+<h2><a href="#add-nuget-packages" aria-hidden="true" class="anchor" id="add-nuget-packages"></a>Add NuGet packages</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>From the Tools menu, select NuGet Package Manager &gt; Manage NuGet Packages for Solution.</p>
+</li>
+<li>
+<p>Select the Browse tab.</p>
+</li>
+<li>
+<p>Enter <code>Microsoft.EntityFrameworkCore.InMemory</code> in the search box, and then select <code>Microsoft.EntityFrameworkCore.InMemory</code>.</p>
+</li>
+<li>
+<p>Select the Project checkbox in the right pane and then select Install.</p>
+</li>
+<li>
+<p>Follow the preceding instructions to add the <code>Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore</code> package.</p>
+</li>
+<li>
+<p>Run the following commands:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet add package Microsoft.EntityFrameworkCore.InMemory
+dotnet add package Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore
+</code></pre>
+<h2><a href="#the-model-and-database-context-classes" aria-hidden="true" class="anchor" id="the-model-and-database-context-classes"></a>The model and database context classes</h2>
+<ul>
+<li>In the project folder, create a file named <code>Todo.cs</code> with the following code:</li>
+</ul>
+<pre><code class="language-csharp">public class Todo
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public bool IsComplete { get; set; }
+}
+</code></pre>
+<ul>
+<li>Create a file named <code>TodoDb.cs</code> with the following code:</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+class TodoDb : DbContext
+{
+    public TodoDb(DbContextOptions&lt;TodoDb&gt; options)
+        : base(options) { }
+
+    public DbSet&lt;Todo&gt; Todos =&gt; Set&lt;Todo&gt;();
+}
+</code></pre>
+<h2><a href="#add-the-api-code" aria-hidden="true" class="anchor" id="add-the-api-code"></a>Add the API code</h2>
+<ul>
+<li>Replace the contents of the <code>Program.cs</code> file with the following code:</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+var app = builder.Build();
+
+app.MapGet(&quot;/todoitems&quot;, async (TodoDb db) =&gt;
+    await db.Todos.ToListAsync());
+
+app.MapGet(&quot;/todoitems/complete&quot;, async (TodoDb db) =&gt;
+    await db.Todos.Where(t =&gt; t.IsComplete).ToListAsync());
+
+app.MapGet(&quot;/todoitems/{id}&quot;, async (int id, TodoDb db) =&gt;
+    await db.Todos.FindAsync(id)
+        is Todo todo
+            ? Results.Ok(todo)
+            : Results.NotFound());
+
+app.MapPost(&quot;/todoitems&quot;, async (Todo todo, TodoDb db) =&gt;
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+});
+
+app.MapPut(&quot;/todoitems/{id}&quot;, async (int id, Todo inputTodo, TodoDb db) =&gt;
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return Results.NotFound();
+
+    todo.Name = inputTodo.Name;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+app.MapDelete(&quot;/todoitems/{id}&quot;, async (int id, TodoDb db) =&gt;
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    return Results.NotFound();
+});
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+</ul>
+<h2><a href="#create-api-testing-ui-with-swagger" aria-hidden="true" class="anchor" id="create-api-testing-ui-with-swagger"></a>Create API testing UI with Swagger</h2>
+<ul>
+<li>
+<p>NSwag: A .NET library that integrates Swagger directly into ASP.NET Core applications, providing middleware and configuration.</p>
+</li>
+<li>
+<p>Swagger: A set of open-source tools such as OpenAPIGenerator and SwaggerUI that generate API testing pages that follow the OpenAPI specification.</p>
+</li>
+<li>
+<p>OpenAPI specification: A document that describes the capabilities of the API, based on the XML and attribute annotations within the controllers and models.</p>
+</li>
+</ul>
+<h3><a href="#install-swagger-tooling" aria-hidden="true" class="anchor" id="install-swagger-tooling"></a>Install Swagger tooling</h3>
+<ul>
+<li>Run the following command:
+dotnet add package NSwag.AspNetCore</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet add package NSwag.AspNetCore
+</code></pre>
+<h3><a href="#configure-swagger-middleware" aria-hidden="true" class="anchor" id="configure-swagger-middleware"></a>Configure Swagger middleware</h3>
+<ul>
+<li>Add the following highlighted code before app is defined in line var app = builder.Build();</li>
+</ul>
+<pre><code class="language-csharp">using NSwag.AspNetCore;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApiDocument(config =&gt;
+{
+    config.DocumentName = &quot;TodoAPI&quot;;
+    config.Title = &quot;TodoAPI v1&quot;;
+    config.Version = &quot;v1&quot;;
+});
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>builder.Services.AddEndpointsApiExplorer();: Enables the API Explorer, which is a service that provides metadata about the <code>HTTP</code> API. The API Explorer is used by Swagger to generate the Swagger document.</p>
+</li>
+<li>
+<p>builder.Services.AddOpenApiDocument(config =&gt; {...});: Adds the Swagger OpenAPI document generator to the application services and configures it to provide more information about the API, such as its title and version. For information on providing more robust API details, see Get started with NSwag and ASP.NET Core</p>
+</li>
+<li>
+<p>Add the following highlighted code to the next line after app is defined in line var <code>app = builder.Build();</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseOpenApi();
+    app.UseSwaggerUi(config =&gt;
+    {
+        config.DocumentTitle = &quot;TodoAPI&quot;;
+        config.Path = &quot;/swagger&quot;;
+        config.DocumentPath = &quot;/swagger/{documentName}/swagger.json&quot;;
+        config.DocExpansion = &quot;list&quot;;
+    });
+}
+</code></pre>
+<p>The previous code enables the Swagger middleware for serving the generated JSON document and the Swagger UI. Swagger is only enabled in a development environment. Enabling Swagger in a production environment could expose potentially sensitive details about the API's structure and implementation.</p>
+<h2><a href="#test-posting-data" aria-hidden="true" class="anchor" id="test-posting-data"></a>Test posting data</h2>
+<pre><code class="language-csharp">app.MapPost(&quot;/todoitems&quot;, async (Todo todo, TodoDb db) =&gt;
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+});
+</code></pre>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>Select View &gt; Other Windows &gt; Endpoints Explorer.</p>
+</li>
+<li>
+<p>Right-click the <code>POST</code> endpoint and select Generate request.</p>
+</li>
+</ul>
+<p>A new file is created in the project folder named <code>TodoApi.http</code>, with contents similar to the following example:
+@TodoApi_HostAddress = https://localhost:7031</p>
+<p>Post {{TodoApi_HostAddress}}/todoitems</p>
+<h3><a href="#" aria-hidden="true" class="anchor" id=""></a></h3>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/generate-request-vs17.8.0.png?view=aspnetcore-8.0" alt="Endpoints Explorer context menu highlighting Generate Request menu item.!" title="Endpoints Explorer context menu highlighting Generate Request menu item." /></p>
+<pre><code> - The first line creates a variable that is used for all of the endpoints.
+
+ - The next line defines a ```POST``` request.
+
+ - The triple hashtag (###) line is a request delimiter: what comes after it is for a different request.
+</code></pre>
+<ul>
+<li>The <code>POST</code> request needs headers and a body. To define those parts of the request, add the following lines immediately after the <code>POST</code> request line:
+Content-Type: application/json</li>
+</ul>
+<p>{
+&quot;name&quot;:&quot;walk dog&quot;,
+&quot;isComplete&quot;:true
+}</p>
+<p>The preceding code adds a Content-Type header and a JSON request body. The <code>TodoApi.http</code> file should now look like the following example, but with your port number:
+@TodoApi_HostAddress = https://localhost:7057</p>
+<p>Post {{TodoApi_HostAddress}}/todoitems
+Content-Type: application/json</p>
+<p>{
+&quot;name&quot;:&quot;walk dog&quot;,
+&quot;isComplete&quot;:true
+}</p>
+<h3><a href="#-1" aria-hidden="true" class="anchor" id="-1"></a></h3>
+<ul>
+<li>
+<p>Run the app.</p>
+</li>
+<li>
+<p>Select the Send request link that is above the <code>POST</code> request line.</p>
+</li>
+</ul>
+<p>The <code>POST</code> request is sent to the app and the response is displayed in the Response pane.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/http-file-run-button-vs17.8.0.png?view=aspnetcore-8.0" alt=".http file window with run link highlighted.!" title=".http file window with run link highlighted." /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/http-file-window-with-response-vs17.8.0.png?view=aspnetcore-8.0" alt=".http file window with response from the POST request.!" title=".http file window with response from the POST request." /></p>
+<ul>
+<li>With the app still running, in the browser, navigate to <code>https://localhost:&lt;port&gt;/swagger</code> to display the API testing page generated by Swagger.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/swagger.png?view=aspnetcore-8.0" alt="Swagger generated API testing page!" title="Swagger generated API testing page" /></p>
+<ul>
+<li>
+<p>On the Swagger API testing page, select Post <code>/todoitems</code> &gt; Try it out.</p>
+</li>
+<li>
+<p class='note'>Note that the Request body field contains a generated example format reflecting the parameters for the API.</p>
+</li>
+<li>
+<p>In the request body enter JSON for a to-do item, without specifying the optional <code>id</code>:</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;name&quot;:&quot;walk dog&quot;,
+  &quot;isComplete&quot;:true
+}
+</code></pre>
+<ul>
+<li>Select Execute.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/swagger-post-1.png?view=aspnetcore-8.0" alt="Swagger with Post request!" title="Swagger with Post request" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api/min-web-api/_static/8.x/swagger-post-responses.png?view=aspnetcore-8.0" alt="Swagger with Post resonse!" title="Swagger with Post resonse" /></p>
+<ul>
+<li>
+<p>cURL: Swagger provides an example cURL command in Unix/Linux syntax, which can be run at the command line with any bash shell that uses Unix/Linux syntax, including Git Bash from Git for Windows.</p>
+</li>
+<li>
+<p>Request URL: A simplified representation of the <code>HTTP</code> request made by Swagger UI's JavaScript code for the API call. Actual requests can include details such as headers and query parameters and a request body.</p>
+</li>
+<li>
+<p>Server response: Includes the response body and headers. The response body shows the <code>id</code> was set to <code>1</code>.</p>
+</li>
+<li>
+<p>Response Code: A 201 <code>HTTP</code> status code was returned, indicating that the request was successfully processed and resulted in the creation of a new resource.</p>
+</li>
+</ul>
+<h2><a href="#examine-the-get-endpoints" aria-hidden="true" class="anchor" id="examine-the-get-endpoints"></a>Examine the <code>GET</code> endpoints</h2>
+<table><thead>
+<tr>
+<th>API</th>
+<th>Description</th>
+<th>Request body</th>
+<th>Response body</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET ```/todoitems```</code></td>
+<td>Get all to-do items</td>
+<td>None</td>
+<td>Array of to-do items</td>
+</tr>
+<tr>
+<td><code>GET ```/todoitems```/complete</code></td>
+<td>Get all completed to-do items</td>
+<td>None</td>
+<td>Array of to-do items</td>
+</tr>
+<tr>
+<td><code>GET ```/todoitems```/{id}</code></td>
+<td>Get an item by ID</td>
+<td>None</td>
+<td>To-do item</td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">app.MapGet(&quot;/todoitems&quot;, async (TodoDb db) =&gt;
+    await db.Todos.ToListAsync());
+
+app.MapGet(&quot;/todoitems/complete&quot;, async (TodoDb db) =&gt;
+    await db.Todos.Where(t =&gt; t.IsComplete).ToListAsync());
+
+app.MapGet(&quot;/todoitems/{id}&quot;, async (int id, TodoDb db) =&gt;
+    await db.Todos.FindAsync(id)
+        is Todo todo
+            ? Results.Ok(todo)
+            : Results.NotFound());
+</code></pre>
+<h2><a href="#test-the-get-endpoints" aria-hidden="true" class="anchor" id="test-the-get-endpoints"></a>Test the <code>GET</code> endpoints</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>In Endpoints Explorer, right-click the first <code>GET</code> endpoint, and select Generate request.
+The following content is added to the <code>TodoApi.http</code> file:
+Get {{TodoApi_HostAddress}}/todoitems</p>
+</li>
+</ul>
+<h3><a href="#-2" aria-hidden="true" class="anchor" id="-2"></a></h3>
+<ul>
+<li>
+<p>Select the Send request link that is above the new <code>GET</code> request line.
+The <code>GET</code> request is sent to the app and the response is displayed in the Response pane.</p>
+</li>
+<li>
+<p>The response body is similar to the following JSON:</p>
+</li>
+</ul>
+<pre><code class="language-json">[
+  {
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;walk dog&quot;,
+    &quot;isComplete&quot;: true
+  }
+]
+</code></pre>
+<ul>
+<li>In Endpoints Explorer, right-click the <code>/todoitems</code>/{id} <code>GET</code> endpoint and select Generate request.
+The following content is added to the <code>TodoApi.http</code> file:
+GET {{TodoApi_HostAddress}}/todoitems/{id}</li>
+</ul>
+<h3><a href="#-3" aria-hidden="true" class="anchor" id="-3"></a></h3>
+<ul>
+<li>
+<p>Replace {id} with <code>1</code>.</p>
+</li>
+<li>
+<p>Select the Send request link that is above the new <code>GET</code> request line.
+The <code>GET</code> request is sent to the app and the response is displayed in the Response pane.</p>
+</li>
+<li>
+<p>The response body is similar to the following JSON:</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;walk dog&quot;,
+  &quot;isComplete&quot;: true
+}
+</code></pre>
+<ul>
+<li>
+<p>In Swagger select <code>GET /todoitems</code> &gt; Try it out &gt; Execute.</p>
+</li>
+<li>
+<p>Alternatively, call <code>GET /todoitems</code> from a browser by entering the URI <code>http://localhost:&lt;port&gt;/todoitems</code>. For example, <code>http://localhost:5001/todoitems</code></p>
+</li>
+</ul>
+<pre><code class="language-json">[
+  {
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;walk dog&quot;,
+    &quot;isComplete&quot;: true
+  }
+]
+</code></pre>
+<ul>
+<li>
+<p>Call <code>GET /todoitems/{id}</code> in Swagger to return data from a specific <code>id</code>:</p>
+<ul>
+<li>
+<p>Select <code>GET /todoitems</code> &gt; Try it out.</p>
+</li>
+<li>
+<p>Set the <code>id</code> field to <code>1</code> and select Execute.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Alternatively, call <code>GET /todoitems</code> from a browser by entering the URI <code>https://localhost:&lt;port&gt;/todoitems/1</code>. For example, <code>https://localhost:5001/todoitems/1</code></p>
+</li>
+<li>
+<p>The response is similar to the following:</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;walk dog&quot;,
+  &quot;isComplete&quot;: true
+}
+</code></pre>
+<h2><a href="#return-values" aria-hidden="true" class="anchor" id="return-values"></a>Return values</h2>
+<ul>
+<li>
+<p>If no item matches the requested ID, the method returns a 404 status NotFound error code.</p>
+</li>
+<li>
+<p>Otherwise, the method returns 200 with a JSON response body. Returning item results in an <code>HTTP</code> 200 response.</p>
+</li>
+</ul>
+<h2><a href="#examine-the-put-endpoint" aria-hidden="true" class="anchor" id="examine-the-put-endpoint"></a>Examine the PUT endpoint</h2>
+<pre><code class="language-csharp">app.MapPut(&quot;/todoitems/{id}&quot;, async (int id, Todo inputTodo, TodoDb db) =&gt;
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return Results.NotFound();
+
+    todo.Name = inputTodo.Name;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+</code></pre>
+<h2><a href="#test-the-put-endpoint" aria-hidden="true" class="anchor" id="test-the-put-endpoint"></a>Test the PUT endpoint</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>In Endpoints Explorer, right-click the PUT endpoint, and select Generate request.
+The following content is added to the <code>TodoApi.http</code> file:
+Put {{TodoApi_HostAddress}}/todoitems/{id}</p>
+</li>
+</ul>
+<h3><a href="#-4" aria-hidden="true" class="anchor" id="-4"></a></h3>
+<ul>
+<li>
+<p>In the PUT request line, replace {id} with <code>1</code>.</p>
+</li>
+<li>
+<p>Add the following lines immediately after the PUT request line:
+Content-Type: application/json</p>
+</li>
+</ul>
+<p>{
+&quot;name&quot;: &quot;feed fish&quot;,
+&quot;isComplete&quot;: false
+}</p>
+<p>The preceding code adds a Content-Type header and a JSON request body.</p>
+<ul>
+<li>
+<p>Select the Send request link that is above the new PUT request line.
+The PUT request is sent to the app and the response is displayed in the Response pane. The response body is empty, and the status code is 204.</p>
+</li>
+<li>
+<p>Select Put <code>/todoitems</code>/{id} &gt; Try it out.</p>
+</li>
+<li>
+<p>Set the <code>id</code> field to <code>1</code>.</p>
+</li>
+<li>
+<p>Set the request body to the following JSON:</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;feed fish&quot;,
+  &quot;isComplete&quot;: false
+}
+</code></pre>
+<ul>
+<li>Select Execute.</li>
+</ul>
+<h2><a href="#examine-and-test-the-delete-endpoint" aria-hidden="true" class="anchor" id="examine-and-test-the-delete-endpoint"></a>Examine and test the DELETE endpoint</h2>
+<pre><code class="language-csharp">app.MapDelete(&quot;/todoitems/{id}&quot;, async (int id, TodoDb db) =&gt;
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    return Results.NotFound();
+});
+</code></pre>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>In Endpoints Explorer, right-click the DELETE endpoint and select Generate request.
+A DELETE request is added to <code>TodoApi.http</code>.</p>
+</li>
+<li>
+<p>Replace {id} in the DELETE request line with <code>1</code>. The DELETE request should look like the following example:
+DELETE {{TodoApi_HostAddress}}/todoitems/1</p>
+</li>
+</ul>
+<h3><a href="#-5" aria-hidden="true" class="anchor" id="-5"></a></h3>
+<ul>
+<li>
+<p>Select the Send request link for the DELETE request.
+The DELETE request is sent to the app and the response is displayed in the Response pane. The response body is empty, and the status code is 204.</p>
+</li>
+<li>
+<p>Select DELETE <code>/todoitems</code>/{id} &gt; Try it out.</p>
+</li>
+<li>
+<p>Set the ID field to <code>1</code> and select Execute.
+The DELETE request is sent to the app and the response is displayed in the Responses pane. The response body is empty, and the Server response status code is 204.</p>
+</li>
+</ul>
+<h2><a href="#use-the-mapgroup-api" aria-hidden="true" class="anchor" id="use-the-mapgroup-api"></a>Use the MapGroup API</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+var app = builder.Build();
+
+var todoItems = app.MapGroup(&quot;/todoitems&quot;);
+
+todoItems.MapGet(&quot;/&quot;, async (TodoDb db) =&gt;
+    await db.Todos.ToListAsync());
+
+todoItems.MapGet(&quot;/complete&quot;, async (TodoDb db) =&gt;
+    await db.Todos.Where(t =&gt; t.IsComplete).ToListAsync());
+
+todoItems.MapGet(&quot;/{id}&quot;, async (int id, TodoDb db) =&gt;
+    await db.Todos.FindAsync(id)
+        is Todo todo
+            ? Results.Ok(todo)
+            : Results.NotFound());
+
+todoItems.MapPost(&quot;/&quot;, async (Todo todo, TodoDb db) =&gt;
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+});
+
+todoItems.MapPut(&quot;/{id}&quot;, async (int id, Todo inputTodo, TodoDb db) =&gt;
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return Results.NotFound();
+
+    todo.Name = inputTodo.Name;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+todoItems.MapDelete(&quot;/{id}&quot;, async (int id, TodoDb db) =&gt;
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    return Results.NotFound();
+});
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using NSwag.AspNetCore;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApiDocument(config =&gt;
+{
+    config.DocumentName = &quot;TodoAPI&quot;;
+    config.Title = &quot;TodoAPI v1&quot;;
+    config.Version = &quot;v1&quot;;
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseOpenApi();
+    app.UseSwaggerUi(config =&gt;
+    {
+        config.DocumentTitle = &quot;TodoAPI&quot;;
+        config.Path = &quot;/swagger&quot;;
+        config.DocumentPath = &quot;/swagger/{documentName}/swagger.json&quot;;
+        config.DocExpansion = &quot;list&quot;;
+    });
+}
+
+var todoItems = app.MapGroup(&quot;/todoitems&quot;);
+
+todoItems.MapGet(&quot;/&quot;, async (TodoDb db) =&gt;
+    await db.Todos.ToListAsync());
+
+todoItems.MapGet(&quot;/complete&quot;, async (TodoDb db) =&gt;
+    await db.Todos.Where(t =&gt; t.IsComplete).ToListAsync());
+
+todoItems.MapGet(&quot;/{id}&quot;, async (int id, TodoDb db) =&gt;
+    await db.Todos.FindAsync(id)
+        is Todo todo
+            ? Results.Ok(todo)
+            : Results.NotFound());
+
+todoItems.MapPost(&quot;/&quot;, async (Todo todo, TodoDb db) =&gt;
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+});
+
+todoItems.MapPut(&quot;/{id}&quot;, async (int id, Todo inputTodo, TodoDb db) =&gt;
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return Results.NotFound();
+
+    todo.Name = inputTodo.Name;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+todoItems.MapDelete(&quot;/{id}&quot;, async (int id, TodoDb db) =&gt;
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    return Results.NotFound();
+});
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Adds var todoItems = <code>app.MapGroup(&quot;/todoitems&quot;);</code> to set up the group using the URL prefix <code>/todoitems</code>.</p>
+</li>
+<li>
+<p>Changes all the <code>app.Map&lt;HttpVerb&gt;</code> methods to <code>todoItems.Map&lt;HttpVerb&gt;</code>.</p>
+</li>
+<li>
+<p>Removes the URL prefix <code>/todoitems</code> from the <code>Map&lt;HttpVerb&gt;</code> method calls.</p>
+</li>
+</ul>
+<h2><a href="#use-the-typedresults-api" aria-hidden="true" class="anchor" id="use-the-typedresults-api"></a>Use the TypedResults API</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+var app = builder.Build();
+
+var todoItems = app.MapGroup(&quot;/todoitems&quot;);
+
+todoItems.MapGet(&quot;/&quot;, GetAllTodos);
+todoItems.MapGet(&quot;/complete&quot;, GetCompleteTodos);
+todoItems.MapGet(&quot;/{id}&quot;, GetTodo);
+todoItems.MapPost(&quot;/&quot;, CreateTodo);
+todoItems.MapPut(&quot;/{id}&quot;, UpdateTodo);
+todoItems.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+app.Run();
+
+static async Task&lt;IResult&gt; GetAllTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.ToArrayAsync());
+}
+
+static async Task&lt;IResult&gt; GetCompleteTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.Where(t =&gt; t.IsComplete).ToListAsync());
+}
+
+static async Task&lt;IResult&gt; GetTodo(int id, TodoDb db)
+{
+    return await db.Todos.FindAsync(id)
+        is Todo todo
+            ? TypedResults.Ok(todo)
+            : TypedResults.NotFound();
+}
+
+static async Task&lt;IResult&gt; CreateTodo(Todo todo, TodoDb db)
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return TypedResults.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+}
+
+static async Task&lt;IResult&gt; UpdateTodo(int id, Todo inputTodo, TodoDb db)
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return TypedResults.NotFound();
+
+    todo.Name = inputTodo.Name;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return TypedResults.NoContent();
+}
+
+static async Task&lt;IResult&gt; DeleteTodo(int id, TodoDb db)
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    return TypedResults.NotFound();
+}
+</code></pre>
+<pre><code class="language-csharp">using NSwag.AspNetCore;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApiDocument(config =&gt;
+{
+    config.DocumentName = &quot;TodoAPI&quot;;
+    config.Title = &quot;TodoAPI v1&quot;;
+    config.Version = &quot;v1&quot;;
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseOpenApi();
+    app.UseSwaggerUi(config =&gt;
+    {
+        config.DocumentTitle = &quot;TodoAPI&quot;;
+        config.Path = &quot;/swagger&quot;;
+        config.DocumentPath = &quot;/swagger/{documentName}/swagger.json&quot;;
+        config.DocExpansion = &quot;list&quot;;
+    });
+}
+
+var todoItems = app.MapGroup(&quot;/todoitems&quot;);
+
+todoItems.MapGet(&quot;/&quot;, GetAllTodos);
+todoItems.MapGet(&quot;/complete&quot;, GetCompleteTodos);
+todoItems.MapGet(&quot;/{id}&quot;, GetTodo);
+todoItems.MapPost(&quot;/&quot;, CreateTodo);
+todoItems.MapPut(&quot;/{id}&quot;, UpdateTodo);
+todoItems.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+app.Run();
+
+static async Task&lt;IResult&gt; GetAllTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.ToArrayAsync());
+}
+
+static async Task&lt;IResult&gt; GetCompleteTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.Where(t =&gt; t.IsComplete).ToListAsync());
+}
+
+static async Task&lt;IResult&gt; GetTodo(int id, TodoDb db)
+{
+    return await db.Todos.FindAsync(id)
+        is Todo todo
+            ? TypedResults.Ok(todo)
+            : TypedResults.NotFound();
+}
+
+static async Task&lt;IResult&gt; CreateTodo(Todo todo, TodoDb db)
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return TypedResults.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+}
+
+static async Task&lt;IResult&gt; UpdateTodo(int id, Todo inputTodo, TodoDb db)
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return TypedResults.NotFound();
+
+    todo.Name = inputTodo.Name;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return TypedResults.NoContent();
+}
+
+static async Task&lt;IResult&gt; DeleteTodo(int id, TodoDb db)
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    return TypedResults.NotFound();
+}
+</code></pre>
+<pre><code class="language-csharp">var todoItems = app.MapGroup(&quot;/todoitems&quot;);
+
+todoItems.MapGet(&quot;/&quot;, GetAllTodos);
+todoItems.MapGet(&quot;/complete&quot;, GetCompleteTodos);
+todoItems.MapGet(&quot;/{id}&quot;, GetTodo);
+todoItems.MapPost(&quot;/&quot;, CreateTodo);
+todoItems.MapPut(&quot;/{id}&quot;, UpdateTodo);
+todoItems.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+</code></pre>
+<pre><code class="language-csharp">static async Task&lt;IResult&gt; GetAllTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.ToArrayAsync());
+}
+
+static async Task&lt;IResult&gt; GetCompleteTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.Where(t =&gt; t.IsComplete).ToListAsync());
+}
+
+static async Task&lt;IResult&gt; GetTodo(int id, TodoDb db)
+{
+    return await db.Todos.FindAsync(id)
+        is Todo todo
+            ? TypedResults.Ok(todo)
+            : TypedResults.NotFound();
+}
+
+static async Task&lt;IResult&gt; CreateTodo(Todo todo, TodoDb db)
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return TypedResults.Created($&quot;/todoitems/{todo.Id}&quot;, todo);
+}
+
+static async Task&lt;IResult&gt; UpdateTodo(int id, Todo inputTodo, TodoDb db)
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return TypedResults.NotFound();
+
+    todo.Name = inputTodo.Name;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return TypedResults.NoContent();
+}
+
+static async Task&lt;IResult&gt; DeleteTodo(int id, TodoDb db)
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    return TypedResults.NotFound();
+}
+</code></pre>
+<pre><code class="language-csharp">static async Task&lt;IResult&gt; GetAllTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.ToArrayAsync());
+}
+</code></pre>
+<pre><code class="language-csharp">public async Task GetAllTodos_ReturnsOkOfTodosResult()
+{
+    // Arrange
+    var db = CreateDbContext();
+
+    // Act
+    var result = await TodosApi.GetAllTodos(db);
+
+    // Assert: Check for the correct returned type
+    Assert.IsType&lt;Ok&lt;Todo[]&gt;&gt;(result);
+}
+</code></pre>
+<h2><a href="#prevent-over-posting" aria-hidden="true" class="anchor" id="prevent-over-posting"></a>Prevent over-posting</h2>
+<ul>
+<li>
+<p>Prevent over-posting.</p>
+</li>
+<li>
+<p>Hide properties that clients aren't supposed to view.</p>
+</li>
+<li>
+<p>Omit some properties to reduce payload size.</p>
+</li>
+<li>
+<p>Flatten object graphs that contain nested objects. Flattened object graphs can be more convenient for clients.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Todo
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public bool IsComplete { get; set; }
+    public string? Secret { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class TodoItemDTO
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public bool IsComplete { get; set; }
+
+    public TodoItemDTO() { }
+    public TodoItemDTO(Todo todoItem) =&gt;
+    (Id, Name, IsComplete) = (todoItem.Id, todoItem.Name, todoItem.IsComplete);
+}
+</code></pre>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+var app = builder.Build();
+
+RouteGroupBuilder todoItems = app.MapGroup(&quot;/todoitems&quot;);
+
+todoItems.MapGet(&quot;/&quot;, GetAllTodos);
+todoItems.MapGet(&quot;/complete&quot;, GetCompleteTodos);
+todoItems.MapGet(&quot;/{id}&quot;, GetTodo);
+todoItems.MapPost(&quot;/&quot;, CreateTodo);
+todoItems.MapPut(&quot;/{id}&quot;, UpdateTodo);
+todoItems.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+app.Run();
+
+static async Task&lt;IResult&gt; GetAllTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.Select(x =&gt; new TodoItemDTO(x)).ToArrayAsync());
+}
+
+static async Task&lt;IResult&gt; GetCompleteTodos(TodoDb db) {
+    return TypedResults.Ok(await db.Todos.Where(t =&gt; t.IsComplete).Select(x =&gt; new TodoItemDTO(x)).ToListAsync());
+}
+
+static async Task&lt;IResult&gt; GetTodo(int id, TodoDb db)
+{
+    return await db.Todos.FindAsync(id)
+        is Todo todo
+            ? TypedResults.Ok(new TodoItemDTO(todo))
+            : TypedResults.NotFound();
+}
+
+static async Task&lt;IResult&gt; CreateTodo(TodoItemDTO todoItemDTO, TodoDb db)
+{
+    var todoItem = new Todo
+    {
+        IsComplete = todoItemDTO.IsComplete,
+        Name = todoItemDTO.Name
+    };
+
+    db.Todos.Add(todoItem);
+    await db.SaveChangesAsync();
+
+    todoItemDTO = new TodoItemDTO(todoItem);
+
+    return TypedResults.Created($&quot;/todoitems/{todoItem.Id}&quot;, todoItemDTO);
+}
+
+static async Task&lt;IResult&gt; UpdateTodo(int id, TodoItemDTO todoItemDTO, TodoDb db)
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return TypedResults.NotFound();
+
+    todo.Name = todoItemDTO.Name;
+    todo.IsComplete = todoItemDTO.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return TypedResults.NoContent();
+}
+
+static async Task&lt;IResult&gt; DeleteTodo(int id, TodoDb db)
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    return TypedResults.NotFound();
+}
+</code></pre>
+<pre><code class="language-csharp">using NSwag.AspNetCore;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext&lt;TodoDb&gt;(opt =&gt; opt.UseInMemoryDatabase(&quot;TodoList&quot;));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApiDocument(config =&gt;
+{
+    config.DocumentName = &quot;TodoAPI&quot;;
+    config.Title = &quot;TodoAPI v1&quot;;
+    config.Version = &quot;v1&quot;;
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseOpenApi();
+    app.UseSwaggerUi(config =&gt;
+    {
+        config.DocumentTitle = &quot;TodoAPI&quot;;
+        config.Path = &quot;/swagger&quot;;
+        config.DocumentPath = &quot;/swagger/{documentName}/swagger.json&quot;;
+        config.DocExpansion = &quot;list&quot;;
+    });
+}
+
+RouteGroupBuilder todoItems = app.MapGroup(&quot;/todoitems&quot;);
+
+todoItems.MapGet(&quot;/&quot;, GetAllTodos);
+todoItems.MapGet(&quot;/complete&quot;, GetCompleteTodos);
+todoItems.MapGet(&quot;/{id}&quot;, GetTodo);
+todoItems.MapPost(&quot;/&quot;, CreateTodo);
+todoItems.MapPut(&quot;/{id}&quot;, UpdateTodo);
+todoItems.MapDelete(&quot;/{id}&quot;, DeleteTodo);
+
+app.Run();
+
+static async Task&lt;IResult&gt; GetAllTodos(TodoDb db)
+{
+    return TypedResults.Ok(await db.Todos.Select(x =&gt; new TodoItemDTO(x)).ToArrayAsync());
+}
+
+static async Task&lt;IResult&gt; GetCompleteTodos(TodoDb db) {
+    return TypedResults.Ok(await db.Todos.Where(t =&gt; t.IsComplete).Select(x =&gt; new TodoItemDTO(x)).ToListAsync());
+}
+
+static async Task&lt;IResult&gt; GetTodo(int id, TodoDb db)
+{
+    return await db.Todos.FindAsync(id)
+        is Todo todo
+            ? TypedResults.Ok(new TodoItemDTO(todo))
+            : TypedResults.NotFound();
+}
+
+static async Task&lt;IResult&gt; CreateTodo(TodoItemDTO todoItemDTO, TodoDb db)
+{
+    var todoItem = new Todo
+    {
+        IsComplete = todoItemDTO.IsComplete,
+        Name = todoItemDTO.Name
+    };
+
+    db.Todos.Add(todoItem);
+    await db.SaveChangesAsync();
+
+    todoItemDTO = new TodoItemDTO(todoItem);
+
+    return TypedResults.Created($&quot;/todoitems/{todoItem.Id}&quot;, todoItemDTO);
+}
+
+static async Task&lt;IResult&gt; UpdateTodo(int id, TodoItemDTO todoItemDTO, TodoDb db)
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return TypedResults.NotFound();
+
+    todo.Name = todoItemDTO.Name;
+    todo.IsComplete = todoItemDTO.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return TypedResults.NoContent();
+}
+
+static async Task&lt;IResult&gt; DeleteTodo(int id, TodoDb db)
+{
+    if (await db.Todos.FindAsync(id) is Todo todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    return TypedResults.NotFound();
+}
+</code></pre>
+<h2><a href="#troubleshooting-with-the-completed-sample" aria-hidden="true" class="anchor" id="troubleshooting-with-the-completed-sample"></a>Troubleshooting with the completed sample</h2>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>Configure JSON serialization options.</p>
+</li>
+<li>
+<p>Handle errors and exceptions: The developer exception page is enabled by default in the development environment for minimal API apps. For information about how to handle errors and exceptions, see Handle errors in ASP.NET Core APIs.</p>
+</li>
+<li>
+<p>For an example of testing a minimal API app, see this GitHub sample.</p>
+</li>
+<li>
+<p>OpenAPI support in minimal APIs.</p>
+</li>
+<li>
+<p>Quickstart: Publish to Azure.</p>
+</li>
+<li>
+<p>Organizing ASP.NET Core Minimal APIs.</p>
+</li>
+</ul>
+<h3><a href="#learn-more" aria-hidden="true" class="anchor" id="learn-more"></a>Learn more</h3>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api?view=aspnetcore-8.0">Tutorial: Create a minimal API with ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
