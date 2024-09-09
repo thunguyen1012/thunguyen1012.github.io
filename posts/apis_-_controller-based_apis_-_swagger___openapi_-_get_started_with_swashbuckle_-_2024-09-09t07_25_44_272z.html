@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Swagger / OpenAPI - Get started with Swashbuckle | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Swagger / OpenAPI - Get started with Swashbuckle</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Swashbuckle.AspNetCore.Swagger: a Swagger object model and middleware to expose <code>SwaggerDocument</code> objects as JSON endpoints.</p>
+</li>
+<li>
+<p>Swashbuckle.AspNetCore.SwaggerGen: a Swagger generator that builds <code>SwaggerDocument</code> objects directly from your routes, controllers, and models. It's typically combined with the Swagger endpoint middleware to automatically expose Swagger JSON.</p>
+</li>
+<li>
+<p>Swashbuckle.AspNetCore.SwaggerUI: an embedded version of the Swagger UI tool. It interprets Swagger JSON to build a rich, customizable experience for describing the web API functionality. It includes built-in test harnesses for the public methods.</p>
+</li>
+</ul>
+<h2><a href="#package-installation" aria-hidden="true" class="anchor" id="package-installation"></a>Package installation</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio for Mac</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>From the Package Manager Console window:</p>
+<ul>
+<li>
+<p>Go to View &gt; Other Windows &gt; Package Manager Console</p>
+</li>
+<li>
+<p>Navigate to the directory in which the <code>.csproj</code> file exists</p>
+</li>
+<li>
+<p>Execute the following command:
+Install-Package Swashbuckle.AspNetCore -Version 6.6.2</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-powershell">Install-Package Swashbuckle.AspNetCore -Version 6.6.2
+</code></pre>
+<ul>
+<li>
+<p>From the Manage NuGet Packages dialog:</p>
+<ul>
+<li>
+<p>Right-click the project in Solution Explorer &gt; Manage NuGet Packages</p>
+</li>
+<li>
+<p>Set the Package source to &quot;nuget.org&quot;</p>
+</li>
+<li>
+<p>Ensure the &quot;Include prerelease&quot; option is enabled</p>
+</li>
+<li>
+<p>Enter &quot;Swashbuckle.AspNetCore&quot; in the search box</p>
+</li>
+<li>
+<p>Select the latest &quot;Swashbuckle.AspNetCore&quot; package from the Browse tab and click Install</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Right-click the Packages folder in Solution Pad &gt; Add Packages...</p>
+</li>
+<li>
+<p>Set the Add Packages window's Source drop-down to &quot;nuget.org&quot;</p>
+</li>
+<li>
+<p>Ensure the &quot;Show pre-release packages&quot; option is enabled</p>
+</li>
+<li>
+<p>Enter &quot;Swashbuckle.AspNetCore&quot; in the search box</p>
+</li>
+<li>
+<p>Select the latest &quot;Swashbuckle.AspNetCore&quot; package from the results pane and click Add Package</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet add TodoApi.csproj package Swashbuckle.AspNetCore -v 6.6.2
+</code></pre>
+<h2><a href="#add-and-configure-swagger-middleware" aria-hidden="true" class="anchor" id="add-and-configure-swagger-middleware"></a>Add and configure Swagger middleware</h2>
+<pre><code class="language-csharp">builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+</code></pre>
+<pre><code class="language-csharp">if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+To serve the Swagger UI at the app's root (https://localhost:<port>/), set the <code>RoutePrefix</code> property to an empty string:
+if (builder.Environment.IsDevelopment())
+{
+app.UseSwaggerUI(options =&gt; // <code>UseSwaggerUI</code> is called only in Development.
+{
+options.SwaggerEndpoint(&quot;/swagger/v1/swagger.json&quot;, &quot;v1&quot;);
+options.RoutePrefix = string.Empty;
+});
+}</p>
+</blockquote>
+<pre><code class="language-csharp">if (builder.Environment.IsDevelopment())
+{
+    app.UseSwaggerUI(options =&gt; // UseSwaggerUI is called only in Development.
+    {
+        options.SwaggerEndpoint(&quot;/swagger/v1/swagger.json&quot;, &quot;v1&quot;);
+        options.RoutePrefix = string.Empty;
+    });
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+By default, Swashbuckle generates and exposes Swagger JSON in version 3.0 of the specification—officially called the OpenAPI Specification. To support backwards compatibility, you can opt into exposing JSON in the 2.0 format instead. This 2.0 format is important for integrations such as Microsoft Power Apps and Microsoft Flow that currently support OpenAPI version 2.0. To opt into the 2.0 format, set the <code>SerializeAsV2</code> property in <code>Program.cs</code>:</p>
+</blockquote>
+<pre><code class="language-csharp">app.UseSwagger(options =&gt;
+{
+    options.SerializeAsV2 = true;
+});
+</code></pre>
+<h2><a href="#customize-and-extend" aria-hidden="true" class="anchor" id="customize-and-extend"></a>Customize and extend</h2>
+<h3><a href="#api-info-and-description" aria-hidden="true" class="anchor" id="api-info-and-description"></a>API info and description</h3>
+<pre><code class="language-csharp">using Microsoft.OpenApi.Models;
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddSwaggerGen(options =&gt;
+{
+    options.SwaggerDoc(&quot;v1&quot;, new OpenApiInfo
+    {
+        Version = &quot;v1&quot;,
+        Title = &quot;ToDo API&quot;,
+        Description = &quot;An ASP.NET Core Web API for managing ToDo items&quot;,
+        TermsOfService = new Uri(&quot;https://example.com/terms&quot;),
+        Contact = new OpenApiContact
+        {
+            Name = &quot;Example Contact&quot;,
+            Url = new Uri(&quot;https://example.com/contact&quot;)
+        },
+        License = new OpenApiLicense
+        {
+            Name = &quot;Example License&quot;,
+            Url = new Uri(&quot;https://example.com/license&quot;)
+        }
+    });
+});
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-swagger-info.png?view=aspnetcore-8.0" alt="Swagger UI with version information: description, author, and license.!" title="Swagger UI with version information: description, author, and license." /></p>
+<h3><a href="#xml-comments" aria-hidden="true" class="anchor" id="xml-comments"></a>XML comments</h3>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio for Mac</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>Right-click the project in Solution Explorer and select <code>Edit &lt;project_name&gt;.csproj</code>.</p>
+</li>
+<li>
+<p>Add GenerateDocumentationFile  to the <code>.csproj</code> file:</p>
+</li>
+</ul>
+<pre><code class="language-XML">&lt;PropertyGroup&gt;
+  &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<ul>
+<li>
+<p>From the Solution Pad, press control and click the project name. Navigate to Tools &gt; Edit File.</p>
+</li>
+<li>
+<p>Add GenerateDocumentationFile  to the <code>.csproj</code> file:</p>
+</li>
+</ul>
+<pre><code class="language-XML">&lt;PropertyGroup&gt;
+  &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<pre><code class="language-text">warning CS1591: Missing XML comment for publicly visible type or member 'TodoController'
+</code></pre>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;
+  &lt;NoWarn&gt;$(NoWarn);1591&lt;/NoWarn&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<pre><code class="language-csharp">namespace SwashbuckleSample.Models;
+
+#pragma warning disable CS1591
+public class TodoContext : DbContext
+{
+    public TodoContext(DbContextOptions&lt;TodoContext&gt; options) : base(options) { }
+
+    public DbSet&lt;TodoItem&gt; TodoItems =&gt; Set&lt;TodoItem&gt;();
+}
+#pragma warning restore CS1591
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddSwaggerGen(options =&gt;
+{
+    options.SwaggerDoc(&quot;v1&quot;, new OpenApiInfo
+    {
+        Version = &quot;v1&quot;,
+        Title = &quot;ToDo API&quot;,
+        Description = &quot;An ASP.NET Core Web API for managing ToDo items&quot;,
+        TermsOfService = new Uri(&quot;https://example.com/terms&quot;),
+        Contact = new OpenApiContact
+        {
+            Name = &quot;Example Contact&quot;,
+            Url = new Uri(&quot;https://example.com/contact&quot;)
+        },
+        License = new OpenApiLicense
+        {
+            Name = &quot;Example License&quot;,
+            Url = new Uri(&quot;https://example.com/license&quot;)
+        }
+    });
+
+    // using System.Reflection;
+    var xmlFilename = $&quot;{Assembly.GetExecutingAssembly().GetName().Name}.xml&quot;;
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+});
+</code></pre>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Deletes a specific TodoItem.
+/// &lt;/summary&gt;
+/// &lt;param name=&quot;id&quot;&gt;&lt;/param&gt;
+/// &lt;returns&gt;&lt;/returns&gt;
+[HttpDelete(&quot;{id}&quot;)]
+public async Task&lt;IActionResult&gt; Delete(long id)
+{
+    var item = await _context.TodoItems.FindAsync(id);
+
+    if (item is null)
+    {
+        return NotFound();
+    }
+
+    _context.TodoItems.Remove(item);
+    await _context.SaveChangesAsync();
+
+    return NoContent();
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-swagger-delete-summary.png?view=aspnetcore-8.0" alt="Swagger UI showing XML comment 'Deletes a specific TodoItem.' for the DELETE method.!" title="Swagger UI showing XML comment 'Deletes a specific TodoItem.' for the DELETE method." /></p>
+<pre><code class="language-json">&quot;delete&quot;: {
+    &quot;tags&quot;: [
+        &quot;Todo&quot;
+    ],
+    &quot;summary&quot;: &quot;Deletes a specific TodoItem.&quot;,
+    &quot;parameters&quot;: [
+        {
+            &quot;name&quot;: &quot;id&quot;,
+            &quot;in&quot;: &quot;path&quot;,
+            &quot;description&quot;: &quot;&quot;,
+            &quot;required&quot;: true,
+            &quot;schema&quot;: {
+                &quot;type&quot;: &quot;integer&quot;,
+                &quot;format&quot;: &quot;int64&quot;
+            }
+        }
+    ],
+    &quot;responses&quot;: {
+        &quot;200&quot;: {
+            &quot;description&quot;: &quot;Success&quot;
+        }
+    }
+},
+</code></pre>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Creates a TodoItem.
+/// &lt;/summary&gt;
+/// &lt;param name=&quot;item&quot;&gt;&lt;/param&gt;
+/// &lt;returns&gt;A newly created TodoItem&lt;/returns&gt;
+/// &lt;remarks&gt;
+/// Sample request:
+///
+///     POST /Todo
+///     {
+///        &quot;id&quot;: 1,
+///        &quot;name&quot;: &quot;Item #1&quot;,
+///        &quot;isComplete&quot;: true
+///     }
+///
+/// &lt;/remarks&gt;
+/// &lt;response code=&quot;201&quot;&gt;Returns the newly created item&lt;/response&gt;
+/// &lt;response code=&quot;400&quot;&gt;If the item is null&lt;/response&gt;
+[HttpPost]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task&lt;IActionResult&gt; Create(TodoItem item)
+{
+    _context.TodoItems.Add(item);
+    await _context.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(Get), new { id = item.Id }, item);
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-swagger-post-remarks.png?view=aspnetcore-8.0" alt="Swagger UI with additional comments shown.!" title="Swagger UI with additional comments shown." /></p>
+<h3><a href="#data-annotations" aria-hidden="true" class="anchor" id="data-annotations"></a>Data annotations</h3>
+<pre><code class="language-csharp">using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
+namespace SwashbuckleSample.Models;
+
+public class TodoItem
+{
+    public long Id { get; set; }
+
+    [Required]
+    public string Name { get; set; } = null!;
+
+    [DefaultValue(false)]
+    public bool IsComplete { get; set; }
+}
+</code></pre>
+<pre><code class="language-json">&quot;schemas&quot;: {
+    &quot;TodoItem&quot;: {
+        &quot;required&quot;: [
+            &quot;name&quot;
+        ],
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {
+            &quot;id&quot;: {
+                &quot;type&quot;: &quot;integer&quot;,
+                &quot;format&quot;: &quot;int64&quot;
+            },
+            &quot;name&quot;: {
+                &quot;type&quot;: &quot;string&quot;
+            },
+            &quot;isComplete&quot;: {
+                &quot;type&quot;: &quot;boolean&quot;,
+                &quot;default&quot;: false
+            }
+        },
+        &quot;additionalProperties&quot;: false
+    }
+},
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;api/[controller]&quot;)]
+[Produces(&quot;application/json&quot;)]
+public class TodoController : ControllerBase
+{
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-swagger-get-media-type.png?view=aspnetcore-8.0" alt="Swagger UI with default response content type!" title="Swagger UI with default response content type" /></p>
+<h3><a href="#describe-response-types" aria-hidden="true" class="anchor" id="describe-response-types"></a>Describe response types</h3>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Creates a TodoItem.
+/// &lt;/summary&gt;
+/// &lt;param name=&quot;item&quot;&gt;&lt;/param&gt;
+/// &lt;returns&gt;A newly created TodoItem&lt;/returns&gt;
+/// &lt;remarks&gt;
+/// Sample request:
+///
+///     POST /Todo
+///     {
+///        &quot;id&quot;: 1,
+///        &quot;name&quot;: &quot;Item #1&quot;,
+///        &quot;isComplete&quot;: true
+///     }
+///
+/// &lt;/remarks&gt;
+/// &lt;response code=&quot;201&quot;&gt;Returns the newly created item&lt;/response&gt;
+/// &lt;response code=&quot;400&quot;&gt;If the item is null&lt;/response&gt;
+[HttpPost]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task&lt;IActionResult&gt; Create(TodoItem item)
+{
+    _context.TodoItems.Add(item);
+    await _context.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(Get), new { id = item.Id }, item);
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-swagger-post-responses.png?view=aspnetcore-8.0" alt="Swagger UI showing POST Response Class description 'Returns the newly created Todo item' and '400 - If the item is null' for status code and reason under Response Messages.!" title="Swagger UI showing POST Response Class description 'Returns the newly created Todo item' and '400 - If the item is null' for status code and reason under Response Messages." /></p>
+<h3><a href="#customize-the-ui" aria-hidden="true" class="anchor" id="customize-the-ui"></a>Customize the UI</h3>
+<pre><code class="language-csharp">app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.MapControllers();
+</code></pre>
+<pre><code class="language-csharp">if (app.Environment.IsDevelopment())
+{
+    app.UseSwaggerUI(options =&gt; // UseSwaggerUI is called only in Development.
+    {
+        options.InjectStylesheet(&quot;/swagger-ui/custom.css&quot;);
+    });
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Improve the developer experience of an API with Swagger documentation</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/tutorials/getting-started-with-swashbuckle?view=aspnetcore-8.0">Get started with Swashbuckle and ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Swagger / OpenAPI - Get started with NSwag | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Swagger / OpenAPI - Get started with NSwag</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>The ability to utilize the Swagger UI and Swagger generator.</p>
+</li>
+<li>
+<p>Flexible code generation capabilities.</p>
+</li>
+</ul>
+<h2><a href="#package-installation" aria-hidden="true" class="anchor" id="package-installation"></a>Package installation</h2>
+<ul>
+<li>
+<p>Generate the Swagger specification for the implemented web API.</p>
+</li>
+<li>
+<p>Serve the Swagger UI to browse and test the web API.</p>
+</li>
+<li>
+<p>Serve the Redoc to add API documentation for the Web API.</p>
+</li>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio for Mac</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>From the Package Manager Console window:</p>
+<ul>
+<li>
+<p>Go to View &gt; Other Windows &gt; Package Manager Console</p>
+</li>
+<li>
+<p>Navigate to the directory in which the <code>NSwagSample.csproj</code> file exists</p>
+</li>
+<li>
+<p>Execute the following command:
+Install-Package <code>NSwag</code>.AspNetCore</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-powershell">Install-Package NSwag.AspNetCore
+</code></pre>
+<ul>
+<li>
+<p>From the Manage NuGet Packages dialog:</p>
+<ul>
+<li>
+<p>Right-click the project in Solution Explorer &gt; Manage NuGet Packages</p>
+</li>
+<li>
+<p>Set the Package source to &quot;nuget.org&quot;</p>
+</li>
+<li>
+<p>Enter &quot;NSwag.AspNetCore&quot; in the search box</p>
+</li>
+<li>
+<p>Select the &quot;NSwag.AspNetCore&quot; package from the Browse tab and click Install</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Right-click the Packages folder in Solution Pad &gt; Add Packages...</p>
+</li>
+<li>
+<p>Set the Add Packages window's Source drop-down to &quot;nuget.org&quot;</p>
+</li>
+<li>
+<p>Enter &quot;NSwag.AspNetCore&quot; in the search box</p>
+</li>
+<li>
+<p>Select the &quot;NSwag.AspNetCore&quot; package from the results pane and click Add Package</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet add NSwagSample.csproj package NSwag.AspNetCore
+</code></pre>
+<h2><a href="#add-and-configure-swagger-middleware" aria-hidden="true" class="anchor" id="add-and-configure-swagger-middleware"></a>Add and configure Swagger middleware</h2>
+<ul>
+<li>Add the <code>OpenApi</code> generator to the services collection in <code>Program.cs</code>:</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddOpenApiDocument();
+</code></pre>
+<ul>
+<li>Enable the middleware for serving the generated <code>OpenApi</code> specification, the Swagger UI, and the Redoc UI, also in <code>Program.cs</code>:</li>
+</ul>
+<pre><code class="language-csharp">if (app.Environment.IsDevelopment())
+{
+    // Add OpenAPI 3.0 document serving middleware
+    // Available at: http://localhost:&lt;port&gt;/swagger/v1/swagger.json
+    app.UseOpenApi();
+
+    // Add web UIs to interact with the document
+    // Available at: http://localhost:&lt;port&gt;/swagger
+    app.UseSwaggerUi(); // UseSwaggerUI Protected by if (env.IsDevelopment())
+}
+</code></pre>
+<ul>
+<li>
+<p>Launch the app. Navigate to:</p>
+<ul>
+<li>
+<p><code>http://localhost:&lt;port&gt;/swagger</code> to view the Swagger UI.</p>
+</li>
+<li>
+<p><code>http://localhost:&lt;port&gt;/swagger/v1/swagger.json</code> to view the Swagger specification.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#code-generation" aria-hidden="true" class="anchor" id="code-generation"></a>Code generation</h2>
+<ul>
+<li>
+<p>NSwagStudio: A Windows desktop app for generating API client code in C# or TypeScript.</p>
+</li>
+<li>
+<p>The <code>NSwag</code>.CodeGeneration.CSharp or <code>NSwag</code>.CodeGeneration.TypeScript NuGet packages for code generation inside your project.</p>
+</li>
+<li>
+<p><code>NSwag</code> from the command line.</p>
+</li>
+<li>
+<p>The <code>NSwag</code>.MSBuild NuGet package.</p>
+</li>
+<li>
+<p>The Unchase OpenAPI (Swagger) Connected Service: A Visual Studio Connected Service for generating API client code in C# or TypeScript. Also generates C# controllers for OpenAPI services with <code>NSwag</code>.</p>
+</li>
+</ul>
+<h3><a href="#generate-code-with-nswagstudio" aria-hidden="true" class="anchor" id="generate-code-with-nswagstudio"></a>Generate code with NSwagStudio</h3>
+<ul>
+<li>
+<p>Install NSwagStudio by following the instructions at the NSwagStudio GitHub repository. On the <code>NSwag</code> release page, you can download an xcopy version which can be started without installation and admin privileges.</p>
+</li>
+<li>
+<p>Launch NSwagStudio and enter the <code>swagger.json</code> file URL in the Swagger Specification URL text box. For example, <code>http://localhost:5232/swagger/v1/swagger.json</code>.</p>
+</li>
+<li>
+<p>Click the <code>Create</code> local Copy button to generate a JSON representation of your Swagger specification.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-nswag-nswagstudio.png?view=aspnetcore-8.0" alt="NSwag Studio imports the specification and exports a CSharp Client.!" title="NSwag Studio imports the specification and exports a CSharp Client." /></p>
+<ul>
+<li>
+<p>In the Outputs area, click the CSharp Client checkbox. Depending on your project, you can also choose TypeScript Client or CSharp Web API Controller. If you select CSharp Web API Controller, a service specification rebuilds the service, serving as a reverse generation.</p>
+</li>
+<li>
+<p>Click Generate Outputs to produce a complete C# client implementation of the TodoApi.NSwag project. To see the generated client code, click the CSharp Client tab:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">namespace MyNamespace
+{
+    using System = global::System;
+
+    [System.CodeDom.Compiler.GeneratedCode(&quot;NSwag&quot;, &quot;14.0.1.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))&quot;)]
+    public partial class TodoClient
+    {
+    #pragma warning disable 8618 // Set by constructor via BaseUrl property
+        private string _baseUrl;
+    #pragma warning restore 8618 // Set by constructor via BaseUrl property
+        private System.Net.Http.HttpClient _httpClient;
+        private static System.Lazy&lt;Newtonsoft.Json.JsonSerializerSettings&gt; _settings = new System.Lazy&lt;Newtonsoft.Json.JsonSerializerSettings&gt;(CreateSerializerSettings, true);
+
+        public TodoClient(System.Net.Http.HttpClient httpClient)
+        {
+            BaseUrl = &quot;http://localhost:5232&quot;;
+            _httpClient = httpClient;
+        }
+
+        private static Newtonsoft.Json.JsonSerializerSettings CreateSerializerSettings()
+        {
+            var settings = new Newtonsoft.Json.JsonSerializerSettings();
+            UpdateJsonSerializerSettings(settings);
+            return settings;
+        }
+
+        public string BaseUrl
+        {
+            get { return _baseUrl; }
+            set
+            {
+                _baseUrl = value;
+                if (!string.IsNullOrEmpty(_baseUrl) &amp;&amp; !_baseUrl.EndsWith(&quot;/&quot;))
+                    _baseUrl += '/';
+            }
+        }
+        // code omitted for brevity
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+The C# client code is generated based on selections in the Settings tab. Modify the settings to perform tasks such as default namespace renaming and synchronous method generation.</p>
+</blockquote>
+<ul>
+<li>
+<p>Copy the generated C# code into a file in the client project that will consume the API.</p>
+</li>
+<li>
+<p>Start consuming the web API:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var todoClient = new TodoClient(new HttpClient());
+
+// Gets all to-dos from the API
+var allTodos = await todoClient.GetAsync();
+
+// Create a new TodoItem, and save it via the API.
+await todoClient.CreateAsync(new TodoItem());
+
+// Get a single to-do by ID
+var foundTodo = await todoClient.GetByIdAsync(1);
+</code></pre>
+<h2><a href="#customize-api-documentation" aria-hidden="true" class="anchor" id="customize-api-documentation"></a>Customize API documentation</h2>
+<h3><a href="#api-info-and-description" aria-hidden="true" class="anchor" id="api-info-and-description"></a>API info and description</h3>
+<pre><code class="language-csharp">using NSwag;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenApiDocument(options =&gt; {
+     options.PostProcess = document =&gt;
+     {
+         document.Info = new OpenApiInfo
+         {
+             Version = &quot;v1&quot;,
+             Title = &quot;ToDo API&quot;,
+             Description = &quot;An ASP.NET Core Web API for managing ToDo items&quot;,
+             TermsOfService = &quot;https://example.com/terms&quot;,
+             Contact = new OpenApiContact
+             {
+                 Name = &quot;Example Contact&quot;,
+                 Url = &quot;https://example.com/contact&quot;
+             },
+             License = new OpenApiLicense
+             {
+                 Name = &quot;Example License&quot;,
+                 Url = &quot;https://example.com/license&quot;
+             }
+         };
+     };
+});
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-nswag-custom-info-swagger.png?view=aspnetcore-8.0" alt="Swagger UI with version information.!" title="Swagger UI with version information." /></p>
+<h3><a href="#xml-comments" aria-hidden="true" class="anchor" id="xml-comments"></a>XML comments</h3>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio for Mac</p>
+</li>
+<li>
+<p>Visual Studio Code</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>Right-click the project in Solution Explorer and select <code>Edit &lt;project_name&gt;.csproj</code>.</p>
+</li>
+<li>
+<p>Manually add the highlighted lines to the <code>.csproj</code> file:</p>
+</li>
+</ul>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<ul>
+<li>
+<p>From the Solution Pad, press control and click the project name. Navigate to Tools &gt; Edit File.</p>
+</li>
+<li>
+<p>Manually add the highlighted lines to the <code>.csproj</code> file:</p>
+</li>
+</ul>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<pre><code class="language-text">warning CS1591: Missing XML comment for publicly visible type or member 'TodoContext'
+</code></pre>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;
+  &lt;NoWarn&gt;$(NoWarn);1591&lt;/NoWarn&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<pre><code class="language-csharp">namespace NSwagSample.Models;
+
+#pragma warning disable CS1591
+public class TodoContext : DbContext
+{
+    public TodoContext(DbContextOptions&lt;TodoContext&gt; options) : base(options) { }
+
+    public DbSet&lt;TodoItem&gt; TodoItems =&gt; Set&lt;TodoItem&gt;();
+}
+#pragma warning restore CS1591
+</code></pre>
+<h3><a href="#data-annotations" aria-hidden="true" class="anchor" id="data-annotations"></a>Data annotations</h3>
+<pre><code class="language-csharp">using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
+namespace NSwagSample.Models;
+
+public class TodoItem
+{
+    public long Id { get; set; }
+
+    [Required]
+    public string Name { get; set; } = null!;
+
+    [DefaultValue(false)]
+    public bool IsComplete { get; set; }
+}
+</code></pre>
+<pre><code class="language-json">&quot;TodoItem&quot;: {
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;additionalProperties&quot;: false,
+  &quot;required&quot;: [
+    &quot;name&quot;
+  ],
+  &quot;properties&quot;: {
+    &quot;id&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;format&quot;: &quot;int64&quot;
+    },
+    &quot;name&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;minLength&quot;: 1
+    },
+    &quot;isComplete&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false
+    }
+  }
+}
+</code></pre>
+<h3><a href="#describe-response-types" aria-hidden="true" class="anchor" id="describe-response-types"></a>Describe response types</h3>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Creates a TodoItem.
+/// &lt;/summary&gt;
+/// &lt;param name=&quot;item&quot;&gt;&lt;/param&gt;
+/// &lt;returns&gt;A newly created TodoItem&lt;/returns&gt;
+/// &lt;remarks&gt;
+/// Sample request:
+///
+///     POST /Todo
+///     {
+///        &quot;id&quot;: 1,
+///        &quot;name&quot;: &quot;Item #1&quot;,
+///        &quot;isComplete&quot;: true
+///     }
+///
+/// &lt;/remarks&gt;
+/// &lt;response code=&quot;201&quot;&gt;Returns the newly created item&lt;/response&gt;
+/// &lt;response code=&quot;400&quot;&gt;If the item is null&lt;/response&gt;
+[HttpPost]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task&lt;IActionResult&gt; Create(TodoItem item)
+{
+    _context.TodoItems.Add(item);
+    await _context.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(Get), new { id = item.Id }, item);
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/v6-nswag-swagger-post.png?view=aspnetcore-8.0" alt="Swagger UI showing POST Response Class description 'Returns the newly created Todo item' and '400 - If the item is null' for status code and reason under Response Messages.!" title="Swagger UI showing POST Response Class description 'Returns the newly created Todo item' and '400 - If the item is null' for status code and reason under Response Messages." /></p>
+<h3><a href="#redoc" aria-hidden="true" class="anchor" id="redoc"></a>Redoc</h3>
+<pre><code class="language-csharp">if (app.Environment.IsDevelopment())
+{
+    // Add OpenAPI 3.0 document serving middleware
+    // Available at: http://localhost:&lt;port&gt;/swagger/v1/swagger.json
+    app.UseOpenApi();
+
+    // Add web UIs to interact with the document
+    // Available at: http://localhost:&lt;port&gt;/swagger
+    app.UseSwaggerUi(); // UseSwaggerUI is called only in Development.
+    
+    // Add ReDoc UI to interact with the document
+    // Available at: http://localhost:&lt;port&gt;/redoc
+    app.UseReDoc(options =&gt;
+    {
+        options.Path = &quot;/redoc&quot;;
+    });
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/getting-started-with-nswag/web-api-help-pages-using-swagger/_static/v6-nswag-redoc.png?view=aspnetcore-8.0" alt="Redoc documentation for the Sample API.!" title="Redoc documentation for the Sample API." /></p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/tutorials/getting-started-with-nswag?view=aspnetcore-8.0">Get started with <code>NSwag</code> and ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Swagger / OpenAPI - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Swagger / OpenAPI - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Minimize the amount of work needed to connect decoupled services.</p>
+</li>
+<li>
+<p>Reduce the amount of time needed to accurately document a service.</p>
+</li>
+<li>
+<p>Getting Started with Swashbuckle</p>
+</li>
+<li>
+<p>Getting Started with NSwag</p>
+</li>
+</ul>
+<h2><a href="#openapi-vs-swagger" aria-hidden="true" class="anchor" id="openapi-vs-swagger"></a>OpenAPI vs. Swagger</h2>
+<ul>
+<li>
+<p>OpenAPI is a specification.</p>
+</li>
+<li>
+<p>Swagger is tooling that uses the OpenAPI specification. For example, OpenAPIGenerator and SwaggerUI.</p>
+</li>
+</ul>
+<h2><a href="#openapi-specification-openapi.json)" aria-hidden="true" class="anchor" id="openapi-specification-openapi.json)"></a>OpenAPI specification (openapi.json)</h2>
+<pre><code class="language-json">{
+  &quot;openapi&quot;: &quot;3.0.1&quot;,
+  &quot;info&quot;: {
+    &quot;title&quot;: &quot;API V1&quot;,
+    &quot;version&quot;: &quot;v1&quot;
+  },
+  &quot;paths&quot;: {
+    &quot;/api/Todo&quot;: {
+      &quot;get&quot;: {
+        &quot;tags&quot;: [
+          &quot;Todo&quot;
+        ],
+        &quot;operationId&quot;: &quot;ApiTodoGet&quot;,
+        &quot;responses&quot;: {
+          &quot;200&quot;: {
+            &quot;description&quot;: &quot;Success&quot;,
+            &quot;content&quot;: {
+              &quot;text/plain&quot;: {
+                &quot;schema&quot;: {
+                  &quot;type&quot;: &quot;array&quot;,
+                  &quot;items&quot;: {
+                    &quot;$ref&quot;: &quot;#/components/schemas/ToDoItem&quot;
+                  }
+                }
+              },
+              &quot;application/json&quot;: {
+                &quot;schema&quot;: {
+                  &quot;type&quot;: &quot;array&quot;,
+                  &quot;items&quot;: {
+                    &quot;$ref&quot;: &quot;#/components/schemas/ToDoItem&quot;
+                  }
+                }
+              },
+              &quot;text/json&quot;: {
+                &quot;schema&quot;: {
+                  &quot;type&quot;: &quot;array&quot;,
+                  &quot;items&quot;: {
+                    &quot;$ref&quot;: &quot;#/components/schemas/ToDoItem&quot;
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      &quot;post&quot;: {
+        …
+      }
+    },
+    &quot;/api/Todo/{id}&quot;: {
+      &quot;get&quot;: {
+        …
+      },
+      &quot;put&quot;: {
+        …
+      },
+      &quot;delete&quot;: {
+        …
+      }
+    }
+  },
+  &quot;components&quot;: {
+    &quot;schemas&quot;: {
+      &quot;ToDoItem&quot;: {
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {
+          &quot;id&quot;: {
+            &quot;type&quot;: &quot;integer&quot;,
+            &quot;format&quot;: &quot;int32&quot;
+          },
+          &quot;name&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;nullable&quot;: true
+          },
+          &quot;isCompleted&quot;: {
+            &quot;type&quot;: &quot;boolean&quot;
+          }
+        },
+        &quot;additionalProperties&quot;: false
+      }
+    }
+  }
+}
+</code></pre>
+<h2><a href="#swagger-ui" aria-hidden="true" class="anchor" id="swagger-ui"></a>Swagger UI</h2>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/swagger-ui.png?view=aspnetcore-8.0" alt="Swagger UI!" title="Swagger UI" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger/_static/get-try-it-out.png?view=aspnetcore-8.0" alt="Example Swagger GET test!" title="Example Swagger GET test" /></p>
+<blockquote>
+<p class='note'>Note
+The Swagger UI version used for the screenshots is version 2. For a version 3 example, see Petstore example.</p>
+</blockquote>
+<h2><a href="#securing-swagger-ui-endpoints" aria-hidden="true" class="anchor" id="securing-swagger-ui-endpoints"></a>Securing Swagger UI endpoints</h2>
+<pre><code class="language-csharp">using System.Security.Claims;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(&quot;Bearer&quot;).AddJwtBearer();
+
+var app = builder.Build();
+
+  if (app.Environment.IsDevelopment())
+  {
+    app.UseSwagger();
+    app.UseSwaggerUI();
+  }
+
+app.UseHttpsRedirection();
+
+var summaries = new[]
+{
+    &quot;Freezing&quot;, &quot;Bracing&quot;, &quot;Chilly&quot;, &quot;Cool&quot;, &quot;Mild&quot;, &quot;Warm&quot;, &quot;Balmy&quot;, &quot;Hot&quot;, &quot;Sweltering&quot;, &quot;Scorching&quot;
+};
+
+app.MapSwagger().RequireAuthorization();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello, World!&quot;);
+app.MapGet(&quot;/secret&quot;, (ClaimsPrincipal user) =&gt; $&quot;Hello {user.Identity?.Name}. My secret&quot;)
+    .RequireAuthorization();
+
+app.MapGet(&quot;/weatherforecast&quot;, () =&gt;
+{
+    var forecast = Enumerable.Range(1, 5).Select(index =&gt;
+        new WeatherForecast
+        (
+            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+            Random.Shared.Next(-20, 55),
+            summaries[Random.Shared.Next(summaries.Length)]
+        ))
+        .ToArray();
+    return forecast;
+})
+.WithName(&quot;GetWeatherForecast&quot;)
+.WithOpenApi();
+
+app.Run();
+
+internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+{
+    public int TemperatureF =&gt; 32 + (int)(TemperatureC / 0.5556);
+}
+</code></pre>
+<pre><code class="language-bash">curl -i -H &quot;Authorization: Bearer {token}&quot; https://localhost:{port}/swagger/v1/swagger.json
+</code></pre>
+<h2><a href="#generate-an-xml-documentation-file-at-compile-time" aria-hidden="true" class="anchor" id="generate-an-xml-documentation-file-at-compile-time"></a>Generate an XML documentation file at compile time.</h2>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>Get started with Swashbuckle</p>
+</li>
+<li>
+<p>Get started with NSwag</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger?view=aspnetcore-8.0">ASP.NET Core web API documentation with Swagger / OpenAPI</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

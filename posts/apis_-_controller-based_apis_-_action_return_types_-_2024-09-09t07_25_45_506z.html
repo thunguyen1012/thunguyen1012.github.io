@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Action return types | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Action return types</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Specific type</p>
+</li>
+<li>
+<p><code>IActionResult</code></p>
+</li>
+<li>
+<p><code>ActionResult&lt;T&gt;</code></p>
+</li>
+<li>
+<p><code>HttpResults</code></p>
+</li>
+</ul>
+<h2><a href="#specific-type" aria-hidden="true" class="anchor" id="specific-type"></a>Specific type</h2>
+<pre><code class="language-csharp">[HttpGet]
+public Task&lt;List&lt;Product&gt;&gt; Get() =&gt;
+    _productContext.Products.OrderBy(p =&gt; p.Name).ToListAsync();
+</code></pre>
+<h3><a href="#return-ienumerable-or-iasyncenumerable" aria-hidden="true" class="anchor" id="return-ienumerable-or-iasyncenumerable"></a>Return <code>IEnumerable</code><T> or IAsyncEnumerable<T></h3>
+<ul>
+<li>
+<p>When using <code>System.Text.Json</code> formatter, MVC relies on the support that <code>System.Text.Json</code> added to stream the result.</p>
+</li>
+<li>
+<p>When using <code>Newtonsoft.Json</code> or with <code>XML-based</code> formatters the result is buffered.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;syncsale&quot;)]
+public IEnumerable&lt;Product&gt; GetOnSaleProducts()
+{
+    var products = _productContext.Products.OrderBy(p =&gt; p.Name).ToList();
+
+    foreach (var product in products)
+    {
+        if (product.IsOnSale)
+        {
+            yield return product;
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpGet(&quot;asyncsale&quot;)]
+public async IAsyncEnumerable&lt;Product&gt; GetOnSaleProductsAsync()
+{
+    var products = _productContext.Products.OrderBy(p =&gt; p.Name).AsAsyncEnumerable();
+
+    await foreach (var product in products)
+    {
+        if (product.IsOnSale)
+        {
+            yield return product;
+        }
+    }
+}
+</code></pre>
+<h2><a href="#iactionresult-type" aria-hidden="true" class="anchor" id="iactionresult-type"></a><code>IActionResult</code> type</h2>
+<h3><a href="#synchronous-action" aria-hidden="true" class="anchor" id="synchronous-action"></a>Synchronous action</h3>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+[ProducesResponseType&lt;Product&gt;(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public IActionResult GetById_IActionResult(int id)
+{
+    var product = _productContext.Products.Find(id);
+    return product == null ? NotFound() : Ok(product);
+}
+</code></pre>
+<ul>
+<li>
+<p>A 404 status code is returned when the product represented by <code>id</code> doesn't exist in the underlying data store. The NotFound convenience method is invoked as shorthand for return new NotFoundResult();.</p>
+</li>
+<li>
+<p>A 200 status code is returned with the <code>Product</code> object when the product does exist. The Ok convenience method is invoked as shorthand for return new OkObjectResult(product);.</p>
+</li>
+</ul>
+<h3><a href="#asynchronous-action" aria-hidden="true" class="anchor" id="asynchronous-action"></a>Asynchronous action</h3>
+<pre><code class="language-csharp">[HttpPost()]
+[Consumes(MediaTypeNames.Application.Json)]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task&lt;IActionResult&gt; CreateAsync_IActionResult(Product product)
+{
+    if (product.Description.Contains(&quot;XYZ Widget&quot;))
+    {
+        return BadRequest();
+    }
+
+    _productContext.Products.Add(product);
+    await _productContext.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(CreateAsync_IActionResult), new { id = product.Id }, product);
+}
+</code></pre>
+<ul>
+<li>
+<p>A 400 status code is returned when the product description contains &quot;XYZ Widget&quot;. The BadRequest convenience method is invoked as shorthand for return new BadRequestResult();.</p>
+</li>
+<li>
+<p>A 201 status code is generated by the <code>CreatedAtAction</code> convenience method when a product is created. The following code is an alternative to calling</p>
+</li>
+</ul>
+<pre><code class="language-csharp">return new CreatedAtActionResult(nameof(CreateAsync), 
+                                &quot;Products&quot;, 
+                                new { id = product.Id }, 
+                                product);
+</code></pre>
+<p>In the preceding code path, the <code>Product</code> object is provided in the response body. A <code>Location</code> response header containing the newly created product's URL is provided.</p>
+<pre><code class="language-csharp">public class Product
+{
+    public int Id { get; set; }
+
+    [Required]
+    public string Name { get; set; } = string.Empty;
+
+    [Required]
+    public string Description { get; set; } = string.Empty;
+
+    public bool IsOnSale { get; set; }
+}
+</code></pre>
+<h2><a href="#actionresult-vs-iactionresult" aria-hidden="true" class="anchor" id="actionresult-vs-iactionresult"></a><code>ActionResult</code> vs <code>IActionResult</code></h2>
+<h3><a href="#actionresultt>-type" aria-hidden="true" class="anchor" id="actionresultt>-type"></a><code>ActionResult&lt;T&gt;</code> type</h3>
+<ul>
+<li>
+<p>The <code>[ProducesResponseType]</code> attribute's <code>Type</code> property can be excluded. For example, <code>[ProducesResponseType(200, Type = typeof(Product))]</code> is simplified to <code>[ProducesResponseType(200)]</code>. The action's expected return type is inferred from the <code>T</code> in <code>ActionResult&lt;T&gt;</code>.</p>
+</li>
+<li>
+<p>Implicit cast operators support the conversion of both <code>T</code> and <code>ActionResult</code> to <code>ActionResult&lt;T&gt;</code>. <code>T</code> converts to ObjectResult, which means return new ObjectResult(T); is simplified to return <code>T</code>;.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet]
+public ActionResult&lt;IEnumerable&lt;Product&gt;&gt; Get() =&gt;
+    _repository.GetProducts();
+</code></pre>
+<h3><a href="#synchronous-action-1" aria-hidden="true" class="anchor" id="synchronous-action-1"></a>Synchronous action</h3>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public ActionResult&lt;Product&gt; GetById_ActionResultOfT(int id)
+{
+    var product = _productContext.Products.Find(id);
+    return product == null ? NotFound() : product;
+}
+</code></pre>
+<ul>
+<li>
+<p>A 404 status code is returned when the product doesn't exist in the database.</p>
+</li>
+<li>
+<p>A 200 status code is returned with the corresponding <code>Product</code> object when the product does exist.</p>
+</li>
+</ul>
+<h3><a href="#asynchronous-action-1" aria-hidden="true" class="anchor" id="asynchronous-action-1"></a>Asynchronous action</h3>
+<pre><code class="language-csharp">[HttpPost()]
+[Consumes(MediaTypeNames.Application.Json)]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task&lt;ActionResult&lt;Product&gt;&gt; CreateAsync_ActionResultOfT(Product product)
+{
+    if (product.Description.Contains(&quot;XYZ Widget&quot;))
+    {
+        return BadRequest();
+    }
+
+    _productContext.Products.Add(product);
+    await _productContext.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(CreateAsync_ActionResultOfT), new { id = product.Id }, product);
+}
+</code></pre>
+<ul>
+<li>
+<p>A 400 status code (BadRequest) is returned by the ASP.NET Core runtime when:</p>
+<ul>
+<li>
+<p>The <code>[ApiController]</code> attribute has been applied and model validation fails.</p>
+</li>
+<li>
+<p>The product description contains &quot;XYZ Widget&quot;.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>A 201 status code is generated by the <code>CreatedAtAction</code> method when a product is created. In this code path, the <code>Product</code> object is provided in the response body. A <code>Location</code> response header containing the newly created product's URL is provided.</p>
+</li>
+</ul>
+<h2><a href="#httpresults-type" aria-hidden="true" class="anchor" id="httpresults-type"></a><code>HttpResults</code> type</h2>
+<ul>
+<li>
+<p>Are a results implementation that is processed by a call to <code>IResult</code>.ExecuteAsync.</p>
+</li>
+<li>
+<p>Does not leverage the configured Formatters. Not leveraging the configured formatters means:</p>
+<ul>
+<li>
+<p>Some features like <code>Content negotiation</code> aren't available.</p>
+</li>
+<li>
+<p>The produced <code>Content-Type</code> is decided by the <code>HttpResults</code> implementation.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#iresult-type" aria-hidden="true" class="anchor" id="iresult-type"></a><code>IResult</code> type</h3>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+[ProducesResponseType&lt;Product&gt;(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public IResult GetById(int id)
+{
+    var product = _productContext.Products.Find(id);
+    return product == null ? Results.NotFound() : Results.Ok(product);
+}
+</code></pre>
+<ul>
+<li>
+<p>A 404 status code is returned when the product doesn't exist in the database.</p>
+</li>
+<li>
+<p>A 200 status code is returned with the corresponding <code>Product</code> object when the product does exist, generated by the <code>Results.Ok&lt;T&gt;()</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpPost]
+[Consumes(MediaTypeNames.Application.Json)]
+[ProducesResponseType&lt;Product&gt;(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task&lt;IResult&gt; CreateAsync(Product product)
+{
+    if (product.Description.Contains(&quot;XYZ Widget&quot;))
+    {
+        return Results.BadRequest();
+    }
+
+    _productContext.Products.Add(product);
+    await _productContext.SaveChangesAsync();
+
+    var location = Url.Action(nameof(CreateAsync), new { id = product.Id }) ?? $&quot;/{product.Id}&quot;;
+    return Results.Created(location, product);
+}
+</code></pre>
+<ul>
+<li>
+<p>A 400 status code is returned when:</p>
+<ul>
+<li>
+<p>The <code>[ApiController]</code> attribute has been applied and model validation fails.</p>
+</li>
+<li>
+<p>The product description contains &quot;XYZ Widget&quot;.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>A 201 status code is generated by the <code>Results.Create</code> method when a product is created. In this code path, the <code>Product</code> object is provided in the response body. A <code>Location</code> response header containing the newly created product's URL is provided.</p>
+</li>
+</ul>
+<h3><a href="#resultstresult1,-tresultn>-type" aria-hidden="true" class="anchor" id="resultstresult1,-tresultn>-type"></a><code>Results&lt;TResult1, TResultN&gt;</code> type</h3>
+<ul>
+<li>All the <code>[ProducesResponseType]</code> attributes can be excluded, since the <code>HttpResult</code> implementation contributes automatically to the endpoint metadata.</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public Results&lt;NotFound, Ok&lt;Product&gt;&gt; GetById(int id)
+{
+    var product = _productContext.Products.Find(id);
+    return product == null ? TypedResults.NotFound() : TypedResults.Ok(product);
+}
+</code></pre>
+<ul>
+<li>
+<p>A 404 status code is returned when the product doesn't exist in the database.</p>
+</li>
+<li>
+<p>A 200 status code is returned with the corresponding <code>Product</code> object when the product does exist, generated by the <code>TypedResults.Ok&lt;T&gt;</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpPost]
+public async Task&lt;Results&lt;BadRequest, Created&lt;Product&gt;&gt;&gt; CreateAsync(Product product)
+{
+    if (product.Description.Contains(&quot;XYZ Widget&quot;))
+    {
+        return TypedResults.BadRequest();
+    }
+
+    _productContext.Products.Add(product);
+    await _productContext.SaveChangesAsync();
+
+    var location = Url.Action(nameof(CreateAsync), new { id = product.Id }) ?? $&quot;/{product.Id}&quot;;
+    return TypedResults.Created(location, product);
+}
+</code></pre>
+<ul>
+<li>
+<p>A 400 status code is returned when:</p>
+<ul>
+<li>
+<p>The <code>[ApiController]</code> attribute was applied and model validation fails.</p>
+</li>
+<li>
+<p>The product description contains &quot;XYZ Widget&quot;.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>A 201 status code is generated by the <code>TypedResults.Created</code> method when a product is created. In this code path, the <code>Product</code> object is provided in the response body. A <code>Location</code> response header containing the newly created product's URL is provided.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Handle requests with controllers in ASP.NET Core MVC</p>
+</li>
+<li>
+<p>Model validation in ASP.NET Core MVC</p>
+</li>
+<li>
+<p>ASP.NET Core web API documentation with Swagger / OpenAPI</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types?view=aspnetcore-8.0">Controller action return types in ASP.NET Core web API</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

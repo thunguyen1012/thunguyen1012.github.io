@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#controllerbase-class" aria-hidden="true" class="anchor" id="controllerbase-class"></a><code>ControllerBase</code> class</h2>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;[controller]&quot;)]
+public class WeatherForecastController : ControllerBase
+</code></pre>
+<pre><code class="language-csharp">[HttpPost]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public ActionResult&lt;Pet&gt; Create(Pet pet)
+{
+    pet.Id = _petsInMemoryStore.Any() ? 
+             _petsInMemoryStore.Max(p =&gt; p.Id) + 1 : 1;
+    _petsInMemoryStore.Add(pet);
+
+    return CreatedAtAction(nameof(GetById), new { id = pet.Id }, pet);
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>Method</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.badrequest" class="no-loc" data-linktype="absolute-path">BadRequest</a></td>
+<td>Returns 400 status code.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.notfound" class="no-loc" data-linktype="absolute-path">NotFound</a></td>
+<td>Returns 404 status code.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.physicalfile" class="no-loc" data-linktype="absolute-path">PhysicalFile</a></td>
+<td>Returns a file.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.tryupdatemodelasync" class="no-loc" data-linktype="absolute-path">TryUpdateModelAsync</a></td>
+<td>Invokes <a href="../mvc/models/model-binding?view=aspnetcore-8.0" data-linktype="relative-path">model binding</a>.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.tryvalidatemodel" class="no-loc" data-linktype="absolute-path">TryValidateModel</a></td>
+<td>Invokes <a href="../mvc/models/validation?view=aspnetcore-8.0" data-linktype="relative-path">model validation</a>.</td>
+</tr>
+</tbody></table>
+<h2><a href="#attributes" aria-hidden="true" class="anchor" id="attributes"></a>Attributes</h2>
+<pre><code class="language-csharp">[HttpPost]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public ActionResult&lt;Pet&gt; Create(Pet pet)
+{
+    pet.Id = _petsInMemoryStore.Any() ? 
+             _petsInMemoryStore.Max(p =&gt; p.Id) + 1 : 1;
+    _petsInMemoryStore.Add(pet);
+
+    return CreatedAtAction(nameof(GetById), new { id = pet.Id }, pet);
+}
+</code></pre>
+<table><thead>
+<tr>
+<th>Attribute</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.routeattribute" data-linktype="absolute-path"><code>[Route]</code></a></td>
+<td>Specifies URL pattern for a controller or action.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.bindattribute" data-linktype="absolute-path"><code>[Bind]</code></a></td>
+<td>Specifies prefix and properties to include for model binding.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.httpgetattribute" data-linktype="absolute-path"><code>[HttpGet]</code></a></td>
+<td>Identifies an action that supports the HTTP GET action verb.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.consumesattribute" data-linktype="absolute-path"><code>[Consumes]</code></a></td>
+<td>Specifies data types that an action accepts.</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.producesattribute" data-linktype="absolute-path"><code>[Produces]</code></a></td>
+<td>Specifies data types that an action returns.</td>
+</tr>
+</tbody></table>
+<h2><a href="#apicontroller-attribute" aria-hidden="true" class="anchor" id="apicontroller-attribute"></a>ApiController attribute</h2>
+<ul>
+<li>
+<p>Attribute routing requirement</p>
+</li>
+<li>
+<p>Automatic HTTP 400 responses</p>
+</li>
+<li>
+<p>Binding source parameter inference</p>
+</li>
+<li>
+<p>Multipart/form-data request inference</p>
+</li>
+<li>
+<p>Problem details for error status codes</p>
+</li>
+</ul>
+<h3><a href="#attribute-on-specific-controllers" aria-hidden="true" class="anchor" id="attribute-on-specific-controllers"></a>Attribute on specific controllers</h3>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;[controller]&quot;)]
+public class WeatherForecastController : ControllerBase
+</code></pre>
+<h3><a href="#attribute-on-multiple-controllers" aria-hidden="true" class="anchor" id="attribute-on-multiple-controllers"></a>Attribute on multiple controllers</h3>
+<pre><code class="language-csharp">[ApiController]
+public class MyControllerBase : ControllerBase
+{
+}
+</code></pre>
+<pre><code class="language-csharp">[Produces(MediaTypeNames.Application.Json)]
+[Route(&quot;[controller]&quot;)]
+public class PetsController : MyControllerBase
+</code></pre>
+<h3><a href="#attribute-on-an-assembly" aria-hidden="true" class="anchor" id="attribute-on-an-assembly"></a>Attribute on an assembly</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+[assembly: ApiController]
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#attribute-routing-requirement" aria-hidden="true" class="anchor" id="attribute-routing-requirement"></a>Attribute routing requirement</h2>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;[controller]&quot;)]
+public class WeatherForecastController : ControllerBase
+</code></pre>
+<h2><a href="#automatic-http-400-responses" aria-hidden="true" class="anchor" id="automatic-http-400-responses"></a>Automatic HTTP 400 responses</h2>
+<pre><code class="language-csharp">if (!ModelState.IsValid)
+{
+    return BadRequest(ModelState);
+}
+</code></pre>
+<h3><a href="#default-badrequest-response" aria-hidden="true" class="anchor" id="default-badrequest-response"></a>Default BadRequest response</h3>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;https://tools.ietf.org/html/rfc7231#section-6.5.1&quot;,
+  &quot;title&quot;: &quot;One or more validation errors occurred.&quot;,
+  &quot;status&quot;: 400,
+  &quot;traceId&quot;: &quot;|7fb5e16a-4c8f23bbfc974667.&quot;,
+  &quot;errors&quot;: {
+    &quot;&quot;: [
+      &quot;A non-empty request body is required.&quot;
+    ]
+  }
+}
+</code></pre>
+<ul>
+<li>
+<p>Provides a machine-readable format for specifying errors in web API responses.</p>
+</li>
+<li>
+<p>Complies with the RFC 7807 specification.</p>
+</li>
+</ul>
+<h3><a href="#log-automatic-400-responses" aria-hidden="true" class="anchor" id="log-automatic-400-responses"></a>Log automatic 400 responses</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+      // To preserve the default behavior, capture the original delegate to call later.
+        var builtInFactory = options.InvalidModelStateResponseFactory;
+
+        options.InvalidModelStateResponseFactory = context =&gt;
+        {
+            var logger = context.HttpContext.RequestServices
+                                .GetRequiredService&lt;ILogger&lt;Program&gt;&gt;();
+
+            // Perform logging here.
+            // ...
+
+            // Invoke the default behavior, which produces a ValidationProblemDetails
+            // response.
+            // To produce a custom response, return a different implementation of 
+            // IActionResult instead.
+            return builtInFactory(context);
+        };
+    });
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h3><a href="#disable-automatic-400-response" aria-hidden="true" class="anchor" id="disable-automatic-400-response"></a>Disable automatic 400 response</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+        options.SuppressConsumesConstraintForFormFileParameters = true;
+        options.SuppressInferBindingSourcesForParameters = true;
+        options.SuppressModelStateInvalidFilter = true;
+        options.SuppressMapClientErrors = true;
+        options.ClientErrorMapping[StatusCodes.Status404NotFound].Link =
+            &quot;https://httpstatuses.com/404&quot;;
+    });
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#binding-source-parameter-inference" aria-hidden="true" class="anchor" id="binding-source-parameter-inference"></a>Binding source parameter inference</h2>
+<table><thead>
+<tr>
+<th>Attribute</th>
+<th>Binding source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.frombodyattribute" data-linktype="absolute-path"><code>[FromBody]</code></a></td>
+<td>Request body</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.fromformattribute" data-linktype="absolute-path"><code>[FromForm]</code></a></td>
+<td>Form data in the request body</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.fromheaderattribute" data-linktype="absolute-path"><code>[FromHeader]</code></a></td>
+<td>Request header</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.fromqueryattribute" data-linktype="absolute-path"><code>[FromQuery]</code></a></td>
+<td>Request query ```string``` parameter</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.fromrouteattribute" data-linktype="absolute-path"><code>[FromRoute]</code></a></td>
+<td>Route data from the current request</td>
+</tr>
+<tr>
+<td><a href="../mvc/controllers/dependency-injection?view=aspnetcore-8.0#action-injection-with-fromservices" data-linktype="relative-path"><code>[FromServices]</code></a></td>
+<td>The request service injected as an action parameter</td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.asparametersattribute" data-linktype="absolute-path"><code>[AsParameters]</code></a></td>
+<td><a href="../fundamentals/minimal-apis?view=aspnetcore-8.0#asparam7" data-linktype="relative-path">Method parameters</a></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p class='warning'>Warning
+Don't use <code>[FromRoute]</code> when values might contain <code>%2f</code> (that is /). <code>%2f</code> won't be unescaped to /. Use <code>[FromQuery]</code> if the value might contain <code>%2f</code>.</p>
+</blockquote>
+<pre><code class="language-csharp">[HttpGet]
+public ActionResult&lt;List&lt;Product&gt;&gt; Get(
+    [FromQuery] bool discontinuedOnly = false)
+{
+    List&lt;Product&gt; products = null;
+
+    if (discontinuedOnly)
+    {
+        products = _productsInMemoryStore.Where(p =&gt; p.IsDiscontinued).ToList();
+    }
+    else
+    {
+        products = _productsInMemoryStore;
+    }
+
+    return products;
+}
+</code></pre>
+<ul>
+<li>
+<p><code>[FromServices]</code> is inferred for complex type parameters registered in the DI Container.</p>
+</li>
+<li>
+<p><code>[FromBody]</code> is inferred for complex type parameters not registered in the DI Container. An exception to the <code>[FromBody]</code> inference rule is any complex, built-in type with a special meaning, such as IFormCollection and CancellationToken. The binding source inference code ignores those special types.</p>
+</li>
+<li>
+<p><code>[FromForm]</code> is inferred for action parameters of type IFormFile and IFormFileCollection. It's not inferred for any simple or user-defined types.</p>
+</li>
+<li>
+<p><code>[FromRoute]</code> is inferred for any action parameter name matching a parameter in the route template. When more than one route matches an action parameter, any route value is considered <code>[FromRoute]</code>.</p>
+</li>
+<li>
+<p><code>[FromQuery]</code> is inferred for any other action parameters.</p>
+</li>
+</ul>
+<h3><a href="#frombody-inference-notes" aria-hidden="true" class="anchor" id="frombody-inference-notes"></a>FromBody inference notes</h3>
+<ul>
+<li><code>[FromBody]</code> inferred on both because they're complex types.</li>
+</ul>
+<pre><code class="language-csharp">[HttpPost]
+public IActionResult Action1(Product product, Order order)
+</code></pre>
+<ul>
+<li><code>[FromBody]</code> attribute on one, inferred on the other because it's a complex type.</li>
+</ul>
+<pre><code class="language-csharp">[HttpPost]
+public IActionResult Action2(Product product, [FromBody] Order order)
+</code></pre>
+<ul>
+<li><code>[FromBody]</code> attribute on both.</li>
+</ul>
+<pre><code class="language-csharp">[HttpPost]
+public IActionResult Action3([FromBody] Product product, [FromBody] Order order)
+</code></pre>
+<h3><a href="#fromservices-inference-notes" aria-hidden="true" class="anchor" id="fromservices-inference-notes"></a>FromServices inference notes</h3>
+<pre><code class="language-csharp">[Route(&quot;[controller]&quot;)]
+[ApiController]
+public class MyController : ControllerBase
+{
+    public ActionResult GetWithAttribute([FromServices] IDateTime dateTime) 
+                                                        =&gt; Ok(dateTime.Now);
+
+    [Route(&quot;noAttribute&quot;)]
+    public ActionResult Get(IDateTime dateTime) =&gt; Ok(dateTime.Now);
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddSingleton&lt;IDateTime, SystemDateTime&gt;();
+
+builder.Services.Configure&lt;ApiBehaviorOptions&gt;(options =&gt;
+{
+    options.DisableImplicitFromServicesParameters = true;
+});
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>A previously specified <code>BindingInfo.BindingSource</code> is never overwritten.</p>
+</li>
+<li>
+<p>A complex type parameter, registered in the DI container, is assigned <code>BindingSource.Services</code>.</p>
+</li>
+<li>
+<p>A complex type parameter, not registered in the DI container, is assigned <code>BindingSource.Body</code>.</p>
+</li>
+<li>
+<p>A parameter with a name that appears as a route value in any route template is assigned <code>BindingSource.Path</code>.</p>
+</li>
+<li>
+<p>All other parameters are <code>BindingSource.Query</code>.</p>
+</li>
+</ul>
+<h3><a href="#disable-inference-rules" aria-hidden="true" class="anchor" id="disable-inference-rules"></a>Disable inference rules</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+        options.SuppressConsumesConstraintForFormFileParameters = true;
+        options.SuppressInferBindingSourcesForParameters = true;
+        options.SuppressModelStateInvalidFilter = true;
+        options.SuppressMapClientErrors = true;
+        options.ClientErrorMapping[StatusCodes.Status404NotFound].Link =
+            &quot;https://httpstatuses.com/404&quot;;
+        options.DisableImplicitFromServicesParameters = true;
+    });
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#multipartform-data-request-inference" aria-hidden="true" class="anchor" id="multipartform-data-request-inference"></a>Multipart/form-data request inference</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+        options.SuppressConsumesConstraintForFormFileParameters = true;
+        options.SuppressInferBindingSourcesForParameters = true;
+        options.SuppressModelStateInvalidFilter = true;
+        options.SuppressMapClientErrors = true;
+        options.ClientErrorMapping[StatusCodes.Status404NotFound].Link =
+            &quot;https://httpstatuses.com/404&quot;;
+    });
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#problem-details-for-error-status-codes" aria-hidden="true" class="anchor" id="problem-details-for-error-status-codes"></a>Problem details for error status codes</h2>
+<pre><code class="language-csharp">if (pet == null)
+{
+    return NotFound();
+}
+</code></pre>
+<pre><code class="language-json">{
+  type: &quot;https://tools.ietf.org/html/rfc7231#section-6.5.4&quot;,
+  title: &quot;Not Found&quot;,
+  status: 404,
+  traceId: &quot;0HLHLV31KRN83:00000001&quot;
+}
+</code></pre>
+<h3><a href="#disable-problemdetails-response" aria-hidden="true" class="anchor" id="disable-problemdetails-response"></a>Disable <code>ProblemDetails</code> response</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+        options.SuppressConsumesConstraintForFormFileParameters = true;
+        options.SuppressInferBindingSourcesForParameters = true;
+        options.SuppressModelStateInvalidFilter = true;
+        options.SuppressMapClientErrors = true;
+        options.ClientErrorMapping[StatusCodes.Status404NotFound].Link =
+            &quot;https://httpstatuses.com/404&quot;;
+    });
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#define-supported-request-content-types-with-the-consumes]-attribute" aria-hidden="true" class="anchor" id="define-supported-request-content-types-with-the-consumes]-attribute"></a>Define supported request content types with the <code>[Consumes]</code> attribute</h2>
+<pre><code class="language-csharp">[HttpPost]
+[Consumes(&quot;application/xml&quot;)]
+public IActionResult CreateProduct(Product product)
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;api/[controller]&quot;)]
+public class ConsumesController : ControllerBase
+{
+    [HttpPost]
+    [Consumes(&quot;application/json&quot;)]
+    public IActionResult PostJson(IEnumerable&lt;int&gt; values) =&gt;
+        Ok(new { Consumes = &quot;application/json&quot;, Values = values });
+
+    [HttpPost]
+    [Consumes(&quot;application/x-www-form-urlencoded&quot;)]
+    public IActionResult PostForm([FromForm] IEnumerable&lt;int&gt; values) =&gt;
+        Ok(new { Consumes = &quot;application/x-www-form-urlencoded&quot;, Values = values });
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>View or download sample code. (How to download).</p>
+</li>
+<li>
+<p><code>Controller</code> action return types in ASP.NET Core web API</p>
+</li>
+<li>
+<p>Handle errors in ASP.NET Core controller-based web APIs</p>
+</li>
+<li>
+<p>Custom formatters in ASP.NET Core Web API</p>
+</li>
+<li>
+<p>Format response data in ASP.NET Core Web API</p>
+</li>
+<li>
+<p>ASP.NET Core web API documentation with Swagger / OpenAPI</p>
+</li>
+<li>
+<p>Routing to controller actions in ASP.NET Core</p>
+</li>
+<li>
+<p>Use port tunneling Visual Studio to debug web APIs</p>
+</li>
+<li>
+<p>Create a web API with ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/web-api/?view=aspnetcore-8.0">Create web APIs with ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

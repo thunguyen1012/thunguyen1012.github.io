@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Handle errors | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Handle errors</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#developer-exception-page" aria-hidden="true" class="anchor" id="developer-exception-page"></a>Developer Exception Page</h2>
+<ul>
+<li>
+<p>Running in the Development environment.</p>
+</li>
+<li>
+<p>The app was created with the current templates, that is, by using WebApplication.CreateBuilder.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Don't enable the Developer Exception Page unless the app is running in the Development environment. Don't share detailed exception information publicly when the app runs in production. For more information on configuring environments, see Use multiple environments in ASP.NET Core.</p>
+</blockquote>
+<ul>
+<li>
+<p>Stack trace</p>
+</li>
+<li>
+<p>Query string parameters, if any</p>
+</li>
+<li>
+<p>Cookies, if any</p>
+</li>
+<li>
+<p>Headers</p>
+</li>
+<li>
+<p>Endpoint metadata, if any</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/error-handling/_static/aspnetcore-developer-page-improvements.gif?view=aspnetcore-8.0" alt="Developer exception page animated to show each tab selected.!" title="Developer exception page animated to show each tab selected." /></p>
+<pre><code class="language-text">Status: 500 Internal Server Error
+Time: 9.39 msSize: 480 bytes
+FormattedRawHeadersRequest
+Body
+text/plain; charset=utf-8, 480 bytes
+System.InvalidOperationException: Sample Exception
+   at WebApplicationMinimal.Program.&lt;&gt;c.&lt;Main&gt;b__0_0() in C:\Source\WebApplicationMinimal\Program.cs:line 12
+   at lambda_method1(Closure, Object, HttpContext)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+
+HEADERS
+=======
+Accept: text/plain
+Host: localhost:7267
+traceparent: 00-0eab195ea19d07b90a46cd7d6bf2f
+</code></pre>
+<ul>
+<li>Add the following controller action to a controller-based API. The action throws an exception when the endpoint is requested.</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;Throw&quot;)]
+public IActionResult Throw() =&gt;
+    throw new Exception(&quot;Sample exception.&quot;);
+</code></pre>
+<ul>
+<li>
+<p>Run the app in the development environment.</p>
+</li>
+<li>
+<p>Go to the endpoint defined by the controller action.</p>
+</li>
+</ul>
+<h2><a href="#exception-handler" aria-hidden="true" class="anchor" id="exception-handler"></a>Exception handler</h2>
+<ul>
+<li>In <code>Program.cs</code>, call UseExceptionHandler to add the Exception Handling Middleware:</li>
+</ul>
+<pre><code class="language-csharp">var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/error&quot;);
+}
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<ul>
+<li>Configure a controller action to respond to the <code>/error</code> route:</li>
+</ul>
+<pre><code class="language-csharp">[Route(&quot;/error&quot;)]
+public IActionResult HandleError() =&gt;
+    Problem();
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Don't mark the error handler action method with HTTP method attributes, such as <code>HttpGet</code>. Explicit verbs prevent some requests from reaching the action method.
+For web APIs that use Swagger / OpenAPI, mark the error handler action with the <code>[ApiExplorerSettings]</code> attribute and set its IgnoreApi property to <code>true</code>. This attribute configuration excludes the error handler action from the app's OpenAPI specification:</p>
+</blockquote>
+<p>Allow anonymous access to the method if unauthenticated users should see the error.</p>
+<pre><code class="language-csharp">[ApiExplorerSettings(IgnoreApi = true)]
+</code></pre>
+<ul>
+<li>In <code>Program.cs</code>, register environment-specific Exception Handling Middleware instances:
+In the preceding code, the middleware is registered with:</li>
+</ul>
+<pre><code class="language-csharp">if (app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/error-development&quot;);
+}
+else
+{
+    app.UseExceptionHandler(&quot;/error&quot;);
+}
+</code></pre>
+<ul>
+<li>
+<p>A route of <code>/error-development</code> in the Development environment.</p>
+</li>
+<li>
+<p>A route of <code>/error</code> in non-Development environments.</p>
+</li>
+<li>
+<p>Add controller actions for both the Development and non-Development routes:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Route(&quot;/error-development&quot;)]
+public IActionResult HandleErrorDevelopment(
+    [FromServices] IHostEnvironment hostEnvironment)
+{
+    if (!hostEnvironment.IsDevelopment())
+    {
+        return NotFound();
+    }
+
+    var exceptionHandlerFeature =
+        HttpContext.Features.Get&lt;IExceptionHandlerFeature&gt;()!;
+
+    return Problem(
+        detail: exceptionHandlerFeature.Error.StackTrace,
+        title: exceptionHandlerFeature.Error.Message);
+}
+
+[Route(&quot;/error&quot;)]
+public IActionResult HandleError() =&gt;
+    Problem();
+</code></pre>
+<h2><a href="#use-exceptions-to-modify-the-response" aria-hidden="true" class="anchor" id="use-exceptions-to-modify-the-response"></a>Use exceptions to modify the response</h2>
+<ul>
+<li>Create a well-known exception <code>type</code> named <code>HttpResponseException</code>:</li>
+</ul>
+<pre><code class="language-csharp">public class HttpResponseException : Exception
+{
+    public HttpResponseException(int statusCode, object? value = null) =&gt;
+        (StatusCode, Value) = (statusCode, value);
+
+    public int StatusCode { get; }
+
+    public object? Value { get; }
+}
+</code></pre>
+<ul>
+<li>Create an action filter named <code>HttpResponseExceptionFilter</code>:
+The preceding filter specifies an <code>Order</code> of the maximum integer value minus 10. This <code>Order</code> allows other filters to run at the end of the pipeline.</li>
+</ul>
+<pre><code class="language-csharp">public class HttpResponseExceptionFilter : IActionFilter, IOrderedFilter
+{
+    public int Order =&gt; int.MaxValue - 10;
+
+    public void OnActionExecuting(ActionExecutingContext context) { }
+
+    public void OnActionExecuted(ActionExecutedContext context)
+    {
+        if (context.Exception is HttpResponseException httpResponseException)
+        {
+            context.Result = new ObjectResult(httpResponseException.Value)
+            {
+                StatusCode = httpResponseException.StatusCode
+            };
+
+            context.ExceptionHandled = true;
+        }
+    }
+}
+</code></pre>
+<ul>
+<li>In <code>Program.cs</code>, add the action filter to the filters collection:</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddControllers(options =&gt;
+{
+    options.Filters.Add&lt;HttpResponseExceptionFilter&gt;();
+});
+</code></pre>
+<h2><a href="#validation-failure-error-response" aria-hidden="true" class="anchor" id="validation-failure-error-response"></a>Validation failure error response</h2>
+<pre><code class="language-csharp">builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+        options.InvalidModelStateResponseFactory = context =&gt;
+            new BadRequestObjectResult(context.ModelState)
+            {
+                ContentTypes =
+                {
+                    // using static System.Net.Mime.MediaTypeNames;
+                    Application.Json,
+                    Application.Xml
+                }
+            };
+    })
+    .AddXmlSerializerFormatters();
+</code></pre>
+<h2><a href="#client-error-response" aria-hidden="true" class="anchor" id="client-error-response"></a>Client error response</h2>
+<ul>
+<li>
+<p>Use the problem details service</p>
+</li>
+<li>
+<p>Implement <code>ProblemDetailsFactory</code></p>
+</li>
+<li>
+<p>Use <code>ApiBehaviorOptions.ClientErrorMapping</code></p>
+</li>
+</ul>
+<h3><a href="#default-problem-details-response" aria-hidden="true" class="anchor" id="default-problem-details-response"></a>Default problem details response</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]/[action]&quot;)]
+[ApiController]
+public class Values2Controller : ControllerBase
+{
+    // /api/values2/divide/1/2
+    [HttpGet(&quot;{Numerator}/{Denominator}&quot;)]
+    public IActionResult Divide(double Numerator, double Denominator)
+    {
+        if (Denominator == 0)
+        {
+            return BadRequest();
+        }
+
+        return Ok(Numerator / Denominator);
+    }
+
+    // /api/values2 /squareroot/4
+    [HttpGet(&quot;{radicand}&quot;)]
+    public IActionResult Squareroot(double radicand)
+    {
+        if (radicand &lt; 0)
+        {
+            return BadRequest();
+        }
+
+        return Ok(Math.Sqrt(radicand));
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>The <code>/api/values2/divide</code> endpoint is called with a zero denominator.</p>
+</li>
+<li>
+<p>The <code>/api/values2/squareroot</code> endpoint is called with a radicand less than zero.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;https://tools.ietf.org/html/rfc7231#section-6.5.1&quot;,
+  &quot;title&quot;: &quot;Bad Request&quot;,
+  &quot;status&quot;: 400,
+  &quot;traceId&quot;: &quot;00-84c1fd4063c38d9f3900d06e56542d48-85d1d4-00&quot;
+}
+</code></pre>
+<h3><a href="#problem-details-service" aria-hidden="true" class="anchor" id="problem-details-service"></a>Problem details service</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+app.MapControllers();
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]/[action]&quot;)]
+[ApiController]
+public class Values2Controller : ControllerBase
+{
+    // /api/values2/divide/1/2
+    [HttpGet(&quot;{Numerator}/{Denominator}&quot;)]
+    public IActionResult Divide(double Numerator, double Denominator)
+    {
+        if (Denominator == 0)
+        {
+            return BadRequest();
+        }
+
+        return Ok(Numerator / Denominator);
+    }
+
+    // /api/values2 /squareroot/4
+    [HttpGet(&quot;{radicand}&quot;)]
+    public IActionResult Squareroot(double radicand)
+    {
+        if (radicand &lt; 0)
+        {
+            return BadRequest();
+        }
+
+        return Ok(Math.Sqrt(radicand));
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>An invalid input is supplied.</p>
+</li>
+<li>
+<p>The URI has no matching endpoint.</p>
+</li>
+<li>
+<p>An unhandled exception occurs.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+        options.SuppressMapClientErrors = true;
+    });
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h4><a href="#customize-problem-details-with-customizeproblemdetails" aria-hidden="true" class="anchor" id="customize-problem-details-with-customizeproblemdetails"></a>Customize problem details with <code>CustomizeProblemDetails</code></h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+
+builder.Services.AddProblemDetails(options =&gt;
+        options.CustomizeProblemDetails = (context) =&gt;
+        {
+
+            var mathErrorFeature = context.HttpContext.Features
+                                                       .Get&lt;MathErrorFeature&gt;();
+            if (mathErrorFeature is not null)
+            {
+                (string Detail, string Type) details = mathErrorFeature.MathError switch
+                {
+                    MathErrorType.DivisionByZeroError =&gt;
+                    (&quot;Divison by zero is not defined.&quot;,
+                                          &quot;https://wikipedia.org/wiki/Division_by_zero&quot;),
+                    _ =&gt; (&quot;Negative or complex numbers are not valid input.&quot;,
+                                          &quot;https://wikipedia.org/wiki/Square_root&quot;)
+                };
+
+                context.ProblemDetails.Type = details.Type;
+                context.ProblemDetails.Title = &quot;Bad Input&quot;;
+                context.ProblemDetails.Detail = details.Detail;
+            }
+        }
+    );
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseStatusCodePages();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]/[action]&quot;)]
+[ApiController]
+public class ValuesController : ControllerBase
+{
+    // /api/values/divide/1/2
+    [HttpGet(&quot;{Numerator}/{Denominator}&quot;)]
+    public IActionResult Divide(double Numerator, double Denominator)
+    {
+        if (Denominator == 0)
+        {
+            var errorType = new MathErrorFeature
+            {
+                MathError = MathErrorType.DivisionByZeroError
+            };
+            HttpContext.Features.Set(errorType);
+            return BadRequest();
+        }
+
+        return Ok(Numerator / Denominator);
+    }
+
+    // /api/values/squareroot/4
+    [HttpGet(&quot;{radicand}&quot;)]
+    public IActionResult Squareroot(double radicand)
+    {
+        if (radicand &lt; 0)
+        {
+            var errorType = new MathErrorFeature
+            {
+                MathError = MathErrorType.NegativeRadicandError
+            };
+            HttpContext.Features.Set(errorType);
+            return BadRequest();
+        }
+
+        return Ok(Math.Sqrt(radicand));
+    }
+
+}
+</code></pre>
+<pre><code class="language-csharp">// Custom Http Request Feature
+class MathErrorFeature
+{
+    public MathErrorType MathError { get; set; }
+}
+
+// Custom math errors
+enum MathErrorType
+{
+    DivisionByZeroError,
+    NegativeRadicandError
+}
+</code></pre>
+<ul>
+<li>
+<p>The <code>/divide</code> endpoint is called with a zero denominator.</p>
+</li>
+<li>
+<p>The <code>/squareroot</code> endpoint is called with a radicand less than zero.</p>
+</li>
+<li>
+<p>The URI has no matching endpoint.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;https://en.wikipedia.org/wiki/Square_root&quot;,
+  &quot;title&quot;: &quot;Bad Input&quot;,
+  &quot;status&quot;: 400,
+  &quot;detail&quot;: &quot;Negative or complex numbers are not allowed.&quot;
+}
+</code></pre>
+<h3><a href="#implement-problemdetailsfactory" aria-hidden="true" class="anchor" id="implement-problemdetailsfactory"></a>Implement <code>ProblemDetailsFactory</code></h3>
+<ul>
+<li>
+<p>Client error responses</p>
+</li>
+<li>
+<p>Validation failure error responses</p>
+</li>
+<li>
+<p>ControllerBase.Problem and ControllerBase.ValidationProblem</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddControllers();
+builder.Services.AddTransient&lt;ProblemDetailsFactory, SampleProblemDetailsFactory&gt;();
+</code></pre>
+<h3><a href="#use-apibehavioroptionsclienterrormapping" aria-hidden="true" class="anchor" id="use-apibehavioroptionsclienterrormapping"></a>Use <code>ApiBehaviorOptions.ClientErrorMapping</code></h3>
+<pre><code class="language-csharp">builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =&gt;
+    {
+        options.ClientErrorMapping[StatusCodes.Status404NotFound].Link =
+            &quot;https://httpstatuses.com/404&quot;;
+    });
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>How to Use ModelState Validation in ASP.NET Core Web API</p>
+</li>
+<li>
+<p>View or download sample code</p>
+</li>
+<li>
+<p>Hellang.Middleware.ProblemDetails</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/web-api/handle-errors?view=aspnetcore-8.0">Handle errors in ASP.NET Core controller-based web APIs</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

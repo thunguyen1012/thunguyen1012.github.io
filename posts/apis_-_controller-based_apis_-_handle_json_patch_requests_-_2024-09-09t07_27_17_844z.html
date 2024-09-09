@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Handle JSON Patch requests | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Handle JSON Patch requests</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#package-installation" aria-hidden="true" class="anchor" id="package-installation"></a>Package installation</h2>
+<ul>
+<li>
+<p>Install the <code>Microsoft.AspNetCore.Mvc.NewtonsoftJson</code> NuGet package.</p>
+</li>
+<li>
+<p>Call <code>AddNewtonsoftJson</code>. For example:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .AddNewtonsoftJson();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>AddRazorPages</p>
+</li>
+<li>
+<p>AddControllersWithViews</p>
+</li>
+<li>
+<p>AddControllers</p>
+</li>
+</ul>
+<h2><a href="#add-support-for-json-patch-when-using-systemtext.json" aria-hidden="true" class="anchor" id="add-support-for-json-patch-when-using-systemtext.json"></a>Add support for JSON Patch when using <code>System.Text.Json</code></h2>
+<ul>
+<li>
+<p>Install the <code>Microsoft.AspNetCore.Mvc.NewtonsoftJson</code> NuGet package.</p>
+</li>
+<li>
+<p>Update <code>Program.cs</code>:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using JsonPatchSample;
+using Microsoft.AspNetCore.Mvc.Formatters;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers(options =&gt;
+{
+    options.InputFormatters.Insert(0, MyJPIF.GetJsonPatchInputFormatter());
+});
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.Extensions.Options;
+
+namespace JsonPatchSample;
+
+public static class MyJPIF
+{
+    public static NewtonsoftJsonPatchInputFormatter GetJsonPatchInputFormatter()
+    {
+        var builder = new ServiceCollection()
+            .AddLogging()
+            .AddMvc()
+            .AddNewtonsoftJson()
+            .Services.BuildServiceProvider();
+
+        return builder
+            .GetRequiredService&lt;IOptions&lt;MvcOptions&gt;&gt;()
+            .Value
+            .InputFormatters
+            .OfType&lt;NewtonsoftJsonPatchInputFormatter&gt;()
+            .First();
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>NewtonsoftJsonPatchInputFormatter</code> processes JSON Patch requests.</p>
+</li>
+<li>
+<p>The existing <code>System.Text.Json</code>-based input and formatters process all other JSON requests and responses.</p>
+</li>
+</ul>
+<h2><a href="#patch-http-request-method" aria-hidden="true" class="anchor" id="patch-http-request-method"></a><code>PATCH</code> HTTP request method</h2>
+<h2><a href="#json-patch" aria-hidden="true" class="anchor" id="json-patch"></a>JSON Patch</h2>
+<h3><a href="#resource-example" aria-hidden="true" class="anchor" id="resource-example"></a>Resource example</h3>
+<pre><code class="language-json">{
+  &quot;customerName&quot;: &quot;John&quot;,
+  &quot;orders&quot;: [
+    {
+      &quot;orderName&quot;: &quot;Order0&quot;,
+      &quot;orderType&quot;: null
+    },
+    {
+      &quot;orderName&quot;: &quot;Order1&quot;,
+      &quot;orderType&quot;: null
+    }
+  ]
+}
+</code></pre>
+<h3><a href="#json-patch-example" aria-hidden="true" class="anchor" id="json-patch-example"></a>JSON patch example</h3>
+<pre><code class="language-json">[
+  {
+    &quot;op&quot;: &quot;add&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;,
+    &quot;value&quot;: &quot;Barry&quot;
+  },
+  {
+    &quot;op&quot;: &quot;add&quot;,
+    &quot;path&quot;: &quot;/orders/-&quot;,
+    &quot;value&quot;: {
+      &quot;orderName&quot;: &quot;Order2&quot;,
+      &quot;orderType&quot;: null
+    }
+  }
+]
+</code></pre>
+<ul>
+<li>
+<p>The <code>op</code> property indicates the type of operation.</p>
+</li>
+<li>
+<p>The <code>path</code> property indicates the element to update.</p>
+</li>
+<li>
+<p>The <code>value</code> property provides the new <code>value</code>.</p>
+</li>
+</ul>
+<h3><a href="#resource-after-patch" aria-hidden="true" class="anchor" id="resource-after-patch"></a>Resource after patch</h3>
+<pre><code class="language-json">{
+  &quot;customerName&quot;: &quot;Barry&quot;,
+  &quot;orders&quot;: [
+    {
+      &quot;orderName&quot;: &quot;Order0&quot;,
+      &quot;orderType&quot;: null
+    },
+    {
+      &quot;orderName&quot;: &quot;Order1&quot;,
+      &quot;orderType&quot;: null
+    },
+    {
+      &quot;orderName&quot;: &quot;Order2&quot;,
+      &quot;orderType&quot;: null
+    }
+  ]
+}
+</code></pre>
+<h2><a href="#path-syntax" aria-hidden="true" class="anchor" id="path-syntax"></a>Path syntax</h2>
+<h3><a href="#operations" aria-hidden="true" class="anchor" id="operations"></a>Operations</h3>
+<table><thead>
+<tr>
+<th>Operation</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add</code></td>
+<td>Add a property or array element. For existing property: set ```value```.</td>
+</tr>
+<tr>
+<td><code>remove</code></td>
+<td>Remove a property or array element.</td>
+</tr>
+<tr>
+<td><code>replace</code></td>
+<td>Same as <code>remove</code> followed by <code>add</code> at same location.</td>
+</tr>
+<tr>
+<td><code>move</code></td>
+<td>Same as <code>remove</code> ```from``` source followed by <code>add</code> to destination using ```value``` ```from``` source.</td>
+</tr>
+<tr>
+<td><code>copy</code></td>
+<td>Same as <code>add</code> to destination using ```value``` ```from``` source.</td>
+</tr>
+<tr>
+<td><code>test</code></td>
+<td>Return success status code if ```value``` at <code>path</code> = provided <code>value</code>.</td>
+</tr>
+</tbody></table>
+<h2><a href="#json-patch-in-aspnet-core" aria-hidden="true" class="anchor" id="json-patch-in-aspnet-core"></a>JSON Patch in ASP.NET Core</h2>
+<h2><a href="#action-method-code" aria-hidden="true" class="anchor" id="action-method-code"></a>Action method code</h2>
+<ul>
+<li>
+<p>Is annotated with the <code>HttpPatch</code> attribute.</p>
+</li>
+<li>
+<p>Accepts a <code>JsonPatchDocument&lt;TModel&gt;</code>, typically with [FromBody].</p>
+</li>
+<li>
+<p>Calls <code>ApplyTo(Object)</code> on the patch document to apply the changes.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpPatch]
+public IActionResult JsonPatchWithModelState(
+    [FromBody] JsonPatchDocument&lt;Customer&gt; patchDoc)
+{
+    if (patchDoc != null)
+    {
+        var customer = CreateCustomer();
+
+        patchDoc.ApplyTo(customer, ModelState);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        return new ObjectResult(customer);
+    }
+    else
+    {
+        return BadRequest(ModelState);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">namespace JsonPatchSample.Models;
+
+public class Customer
+{
+    public string? CustomerName { get; set; }
+    public List&lt;Order&gt;? Orders { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">namespace JsonPatchSample.Models;
+
+public class Order
+{
+    public string OrderName { get; set; }
+    public string OrderType { get; set; }
+}
+</code></pre>
+<ul>
+<li>
+<p>Constructs a <code>Customer</code>.</p>
+</li>
+<li>
+<p>Applies the patch.</p>
+</li>
+<li>
+<p>Returns the result in the body of the response.</p>
+</li>
+</ul>
+<h3><a href="#model-state" aria-hidden="true" class="anchor" id="model-state"></a>Model state</h3>
+<pre><code class="language-json">{
+  &quot;Customer&quot;: [
+    &quot;The current value 'John' at path 'customerName' != test value 'Nancy'.&quot;
+  ]
+}
+</code></pre>
+<h3><a href="#dynamic-objects" aria-hidden="true" class="anchor" id="dynamic-objects"></a>Dynamic objects</h3>
+<pre><code class="language-csharp">[HttpPatch]
+public IActionResult JsonPatchForDynamic([FromBody]JsonPatchDocument patch)
+{
+    dynamic obj = new ExpandoObject();
+    patch.ApplyTo(obj);
+
+    return Ok(obj);
+}
+</code></pre>
+<h2><a href="#the-add-operation" aria-hidden="true" class="anchor" id="the-add-operation"></a>The <code>add</code> operation</h2>
+<ul>
+<li>
+<p>If <code>path</code> points to an array element: inserts new element before the one specified by <code>path</code>.</p>
+</li>
+<li>
+<p>If <code>path</code> points to a property: sets the property <code>value</code>.</p>
+</li>
+<li>
+<p>If <code>path</code> points to a nonexistent location:</p>
+<ul>
+<li>
+<p>If the resource to patch is a dynamic object: adds a property.</p>
+</li>
+<li>
+<p>If the resource to patch is a static object: the request fails.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-json">[
+  {
+    &quot;op&quot;: &quot;add&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;,
+    &quot;value&quot;: &quot;Barry&quot;
+  },
+  {
+    &quot;op&quot;: &quot;add&quot;,
+    &quot;path&quot;: &quot;/orders/-&quot;,
+    &quot;value&quot;: {
+      &quot;orderName&quot;: &quot;Order2&quot;,
+      &quot;orderType&quot;: null
+    }
+  }
+]
+</code></pre>
+<h2><a href="#the-remove-operation" aria-hidden="true" class="anchor" id="the-remove-operation"></a>The <code>remove</code> operation</h2>
+<ul>
+<li>
+<p>If <code>path</code> points to an array element: removes the element.</p>
+</li>
+<li>
+<p>If <code>path</code> points to a property:</p>
+<ul>
+<li>
+<p>If resource to patch is a dynamic object: removes the property.</p>
+</li>
+<li>
+<p>If resource to patch is a static object:</p>
+<ul>
+<li>
+<p>If the property is nullable: sets it to null.</p>
+</li>
+<li>
+<p>If the property is non-nullable, sets it to default<T>.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-json">[
+  {
+    &quot;op&quot;: &quot;remove&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;
+  },
+  {
+    &quot;op&quot;: &quot;remove&quot;,
+    &quot;path&quot;: &quot;/orders/0&quot;
+  }
+]
+</code></pre>
+<h2><a href="#the-replace-operation" aria-hidden="true" class="anchor" id="the-replace-operation"></a>The <code>replace</code> operation</h2>
+<pre><code class="language-json">[
+  {
+    &quot;op&quot;: &quot;replace&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;,
+    &quot;value&quot;: &quot;Barry&quot;
+  },
+  {
+    &quot;op&quot;: &quot;replace&quot;,
+    &quot;path&quot;: &quot;/orders/0&quot;,
+    &quot;value&quot;: {
+      &quot;orderName&quot;: &quot;Order2&quot;,
+      &quot;orderType&quot;: null
+    }
+  }
+]
+</code></pre>
+<h2><a href="#the-move-operation" aria-hidden="true" class="anchor" id="the-move-operation"></a>The <code>move</code> operation</h2>
+<ul>
+<li>
+<p>If <code>path</code> points to an array element: copies <code>from</code> element to location of <code>path</code> element, then runs a <code>remove</code> operation on the <code>from</code> element.</p>
+</li>
+<li>
+<p>If <code>path</code> points to a property: copies <code>value</code> of <code>from</code> property to <code>path</code> property, then runs a <code>remove</code> operation on the <code>from</code> property.</p>
+</li>
+<li>
+<p>If <code>path</code> points to a nonexistent property:</p>
+<ul>
+<li>
+<p>If the resource to patch is a static object: the request fails.</p>
+</li>
+<li>
+<p>If the resource to patch is a dynamic object: copies <code>from</code> property to location indicated by <code>path</code>, then runs a <code>remove</code> operation on the <code>from</code> property.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Copies the <code>value</code> of <code>Orders[0].OrderName</code> to <code>CustomerName</code>.</p>
+</li>
+<li>
+<p>Sets <code>Orders[0].OrderName</code> to null.</p>
+</li>
+<li>
+<p>Moves <code>Orders</code>[1] to before <code>Orders</code>[0].</p>
+</li>
+</ul>
+<pre><code class="language-json">[
+  {
+    &quot;op&quot;: &quot;move&quot;,
+    &quot;from&quot;: &quot;/orders/0/orderName&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;
+  },
+  {
+    &quot;op&quot;: &quot;move&quot;,
+    &quot;from&quot;: &quot;/orders/1&quot;,
+    &quot;path&quot;: &quot;/orders/0&quot;
+  }
+]
+</code></pre>
+<h2><a href="#the-copy-operation" aria-hidden="true" class="anchor" id="the-copy-operation"></a>The <code>copy</code> operation</h2>
+<ul>
+<li>
+<p>Copies the <code>value</code> of <code>Orders[0].OrderName</code> to <code>CustomerName</code>.</p>
+</li>
+<li>
+<p>Inserts a <code>copy</code> of <code>Orders[1]</code> before <code>Orders[0]</code>.</p>
+</li>
+</ul>
+<pre><code class="language-json">[
+  {
+    &quot;op&quot;: &quot;copy&quot;,
+    &quot;from&quot;: &quot;/orders/0/orderName&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;
+  },
+  {
+    &quot;op&quot;: &quot;copy&quot;,
+    &quot;from&quot;: &quot;/orders/1&quot;,
+    &quot;path&quot;: &quot;/orders/0&quot;
+  }
+]
+</code></pre>
+<h2><a href="#the-test-operation" aria-hidden="true" class="anchor" id="the-test-operation"></a>The <code>test</code> operation</h2>
+<pre><code class="language-json">[
+  {
+    &quot;op&quot;: &quot;test&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;,
+    &quot;value&quot;: &quot;Nancy&quot;
+  },
+  {
+    &quot;op&quot;: &quot;add&quot;,
+    &quot;path&quot;: &quot;/customerName&quot;,
+    &quot;value&quot;: &quot;Barry&quot;
+  }
+]
+</code></pre>
+<h2><a href="#get-the-code" aria-hidden="true" class="anchor" id="get-the-code"></a>Get the code</h2>
+<ul>
+<li>
+<p>URL: <code>http://localhost:{port}/jsonpatch/jsonpatchwithmodelstate</code></p>
+</li>
+<li>
+<p>HTTP method: <code>PATCH</code></p>
+</li>
+<li>
+<p>Header: <code>Content-Type: application/json-patch+json</code></p>
+</li>
+<li>
+<p>Body: Copy and paste one of the JSON patch document samples <code>from</code> the JSON project folder.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>IETF RFC 5789 <code>PATCH</code> method specification</p>
+</li>
+<li>
+<p>IETF RFC 6902 JSON Patch specification</p>
+</li>
+<li>
+<p>IETF RFC 6901 JSON Pointer</p>
+</li>
+<li>
+<p>JSON Patch documentation. Includes links to resources for creating JSON Patch documents.</p>
+</li>
+<li>
+<p>ASP.NET Core JSON Patch source code</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/web-api/jsonpatch?view=aspnetcore-8.0">JsonPatch in ASP.NET Core web API</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

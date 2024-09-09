@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>APIs - Controller-based APIs - Custom formatters | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>APIs - Controller-based APIs - Custom formatters</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#when-to-use-a-custom-formatter" aria-hidden="true" class="anchor" id="when-to-use-a-custom-formatter"></a>When to use a custom formatter</h2>
+<h2><a href="#overview-of-how-to-create-a-custom-formatter" aria-hidden="true" class="anchor" id="overview-of-how-to-create-a-custom-formatter"></a>Overview of how to create a custom formatter</h2>
+<ul>
+<li>
+<p>For serializing data sent to the client, create an output formatter class.</p>
+</li>
+<li>
+<p>For deserializing data received from the client, create an input formatter class.</p>
+</li>
+<li>
+<p>Add instances of formatter classes to the InputFormatters and OutputFormatters collections in MvcOptions.</p>
+</li>
+</ul>
+<h2><a href="#create-a-custom-formatter" aria-hidden="true" class="anchor" id="create-a-custom-formatter"></a>Create a custom formatter</h2>
+<ul>
+<li>
+<p>Derive the class from the appropriate base class. The sample app derives from TextOutputFormatter and TextInputFormatter.</p>
+</li>
+<li>
+<p>Specify supported media types and encodings in the constructor.</p>
+</li>
+<li>
+<p>Override the CanReadType and <code>CanWriteType</code> methods.</p>
+</li>
+<li>
+<p>Override the ReadRequestBodyAsync and WriteResponseBodyAsync methods.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class VcardOutputFormatter : TextOutputFormatter
+{
+    public VcardOutputFormatter()
+    {
+        SupportedMediaTypes.Add(MediaTypeHeaderValue.Parse(&quot;text/vcard&quot;));
+
+        SupportedEncodings.Add(Encoding.UTF8);
+        SupportedEncodings.Add(Encoding.Unicode);
+    }
+
+    protected override bool CanWriteType(Type? type)
+        =&gt; typeof(Contact).IsAssignableFrom(type)
+            || typeof(IEnumerable&lt;Contact&gt;).IsAssignableFrom(type);
+
+    public override async Task WriteResponseBodyAsync(
+        OutputFormatterWriteContext context, Encoding selectedEncoding)
+    {
+        var httpContext = context.HttpContext;
+        var serviceProvider = httpContext.RequestServices;
+
+        var logger = serviceProvider.GetRequiredService&lt;ILogger&lt;VcardOutputFormatter&gt;&gt;();
+        var buffer = new StringBuilder();
+
+        if (context.Object is IEnumerable&lt;Contact&gt; contacts)
+        {
+            foreach (var contact in contacts)
+            {
+                FormatVcard(buffer, contact, logger);
+            }
+        }
+        else
+        {
+            FormatVcard(buffer, (Contact)context.Object!, logger);
+        }
+
+        await httpContext.Response.WriteAsync(buffer.ToString(), selectedEncoding);
+    }
+
+    private static void FormatVcard(
+        StringBuilder buffer, Contact contact, ILogger logger)
+    {
+        buffer.AppendLine(&quot;BEGIN:VCARD&quot;);
+        buffer.AppendLine(&quot;VERSION:2.1&quot;);
+        buffer.AppendLine($&quot;N:{contact.LastName};{contact.FirstName}&quot;);
+        buffer.AppendLine($&quot;FN:{contact.FirstName} {contact.LastName}&quot;);
+        buffer.AppendLine($&quot;UID:{contact.Id}&quot;);
+        buffer.AppendLine(&quot;END:VCARD&quot;);
+
+        logger.LogInformation(&quot;Writing {FirstName} {LastName}&quot;,
+            contact.FirstName, contact.LastName);
+    }
+}
+</code></pre>
+<h3><a href="#derive-from-the-appropriate-base-class" aria-hidden="true" class="anchor" id="derive-from-the-appropriate-base-class"></a>Derive from the appropriate base class</h3>
+<pre><code class="language-csharp">public class VcardOutputFormatter : TextOutputFormatter
+</code></pre>
+<h3><a href="#specify-supported-media-types-and-encodings" aria-hidden="true" class="anchor" id="specify-supported-media-types-and-encodings"></a>Specify supported media types and encodings</h3>
+<pre><code class="language-csharp">public VcardOutputFormatter()
+{
+    SupportedMediaTypes.Add(MediaTypeHeaderValue.Parse(&quot;text/vcard&quot;));
+
+    SupportedEncodings.Add(Encoding.UTF8);
+    SupportedEncodings.Add(Encoding.Unicode);
+}
+</code></pre>
+<h3><a href="#override-canreadtype-and-canwritetype" aria-hidden="true" class="anchor" id="override-canreadtype-and-canwritetype"></a>Override CanReadType and <code>CanWriteType</code></h3>
+<pre><code class="language-csharp">protected override bool CanWriteType(Type? type)
+    =&gt; typeof(Contact).IsAssignableFrom(type)
+        || typeof(IEnumerable&lt;Contact&gt;).IsAssignableFrom(type);
+</code></pre>
+<h4><a href="#the-canwriteresult-method" aria-hidden="true" class="anchor" id="the-canwriteresult-method"></a>The <code>CanWriteResult</code> method</h4>
+<ul>
+<li>
+<p>The action method returns a model class.</p>
+</li>
+<li>
+<p>There are derived classes that might be returned at runtime.</p>
+</li>
+<li>
+<p>The derived class returned by the action must be known at runtime.</p>
+</li>
+<li>
+<p>Signature returns a <code>Person</code> type.</p>
+</li>
+<li>
+<p>Can return a <code>Student</code> or <code>Instructor</code> type that derives from <code>Person</code>.</p>
+</li>
+<li>
+<p>It's not necessary to use <code>CanWriteResult</code>.</p>
+</li>
+<li>
+<p>The <code>CanWriteType</code> method receives the runtime type.</p>
+</li>
+</ul>
+<h3><a href="#override-readrequestbodyasync-and-writeresponsebodyasync" aria-hidden="true" class="anchor" id="override-readrequestbodyasync-and-writeresponsebodyasync"></a>Override ReadRequestBodyAsync and WriteResponseBodyAsync</h3>
+<pre><code class="language-csharp">public override async Task WriteResponseBodyAsync(
+    OutputFormatterWriteContext context, Encoding selectedEncoding)
+{
+    var httpContext = context.HttpContext;
+    var serviceProvider = httpContext.RequestServices;
+
+    var logger = serviceProvider.GetRequiredService&lt;ILogger&lt;VcardOutputFormatter&gt;&gt;();
+    var buffer = new StringBuilder();
+
+    if (context.Object is IEnumerable&lt;Contact&gt; contacts)
+    {
+        foreach (var contact in contacts)
+        {
+            FormatVcard(buffer, contact, logger);
+        }
+    }
+    else
+    {
+        FormatVcard(buffer, (Contact)context.Object!, logger);
+    }
+
+    await httpContext.Response.WriteAsync(buffer.ToString(), selectedEncoding);
+}
+
+private static void FormatVcard(
+    StringBuilder buffer, Contact contact, ILogger logger)
+{
+    buffer.AppendLine(&quot;BEGIN:VCARD&quot;);
+    buffer.AppendLine(&quot;VERSION:2.1&quot;);
+    buffer.AppendLine($&quot;N:{contact.LastName};{contact.FirstName}&quot;);
+    buffer.AppendLine($&quot;FN:{contact.FirstName} {contact.LastName}&quot;);
+    buffer.AppendLine($&quot;UID:{contact.Id}&quot;);
+    buffer.AppendLine(&quot;END:VCARD&quot;);
+
+    logger.LogInformation(&quot;Writing {FirstName} {LastName}&quot;,
+        contact.FirstName, contact.LastName);
+}
+</code></pre>
+<h2><a href="#configure-mvc-to-use-a-custom-formatter" aria-hidden="true" class="anchor" id="configure-mvc-to-use-a-custom-formatter"></a>Configure MVC to use a custom formatter</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers(options =&gt;
+{
+    options.InputFormatters.Insert(0, new VcardInputFormatter());
+    options.OutputFormatters.Insert(0, new VcardOutputFormatter());
+});
+</code></pre>
+<h2><a href="#the-complete-vcardinputformatter-class" aria-hidden="true" class="anchor" id="the-complete-vcardinputformatter-class"></a>The complete <code>VcardInputFormatter</code> class</h2>
+<pre><code class="language-csharp">public class VcardInputFormatter : TextInputFormatter
+{
+    public VcardInputFormatter()
+    {
+        SupportedMediaTypes.Add(MediaTypeHeaderValue.Parse(&quot;text/vcard&quot;));
+
+        SupportedEncodings.Add(Encoding.UTF8);
+        SupportedEncodings.Add(Encoding.Unicode);
+    }
+
+    protected override bool CanReadType(Type type)
+        =&gt; type == typeof(Contact);
+
+    public override async Task&lt;InputFormatterResult&gt; ReadRequestBodyAsync(
+        InputFormatterContext context, Encoding effectiveEncoding)
+    {
+        var httpContext = context.HttpContext;
+        var serviceProvider = httpContext.RequestServices;
+
+        var logger = serviceProvider.GetRequiredService&lt;ILogger&lt;VcardInputFormatter&gt;&gt;();
+
+        using var reader = new StreamReader(httpContext.Request.Body, effectiveEncoding);
+        string? nameLine = null;
+
+        try
+        {
+            await ReadLineAsync(&quot;BEGIN:VCARD&quot;, reader, context, logger);
+            await ReadLineAsync(&quot;VERSION:&quot;, reader, context, logger);
+
+            nameLine = await ReadLineAsync(&quot;N:&quot;, reader, context, logger);
+
+            var split = nameLine.Split(&quot;;&quot;.ToCharArray());
+            var contact = new Contact(FirstName: split[1], LastName: split[0].Substring(2));
+
+            await ReadLineAsync(&quot;FN:&quot;, reader, context, logger);
+            await ReadLineAsync(&quot;END:VCARD&quot;, reader, context, logger);
+
+            logger.LogInformation(&quot;nameLine = {nameLine}&quot;, nameLine);
+
+            return await InputFormatterResult.SuccessAsync(contact);
+        }
+        catch
+        {
+            logger.LogError(&quot;Read failed: nameLine = {nameLine}&quot;, nameLine);
+            return await InputFormatterResult.FailureAsync();
+        }
+    }
+
+    private static async Task&lt;string&gt; ReadLineAsync(
+        string expectedText, StreamReader reader, InputFormatterContext context,
+        ILogger logger)
+    {
+        var line = await reader.ReadLineAsync();
+
+        if (line is null || !line.StartsWith(expectedText))
+        {
+            var errorMessage = $&quot;Looked for '{expectedText}' and got '{line}'&quot;;
+
+            context.ModelState.TryAddModelError(context.ModelName, errorMessage);
+            logger.LogError(errorMessage);
+
+            throw new Exception(errorMessage);
+        }
+
+        return line;
+    }
+}
+</code></pre>
+<h2><a href="#test-the-app" aria-hidden="true" class="anchor" id="test-the-app"></a>Test the app</h2>
+<ul>
+<li>
+<p>Send a <code>Post</code> request to <code>/api/contacts</code> with a tool like http-repl.</p>
+</li>
+<li>
+<p>Set the <code>Content-Type</code> header to <code>text/vcard</code>.</p>
+</li>
+<li>
+<p>Set <code>vCard</code> text in the body, formatted like the preceding example.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Format response data in ASP.NET Core Web API</p>
+</li>
+<li>
+<p>Manage Protobuf references with dotnet-grpc</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/web-api/advanced/custom-formatters?view=aspnetcore-8.0">Custom formatters in ASP.NET Core Web API</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
