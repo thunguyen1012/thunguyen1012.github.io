@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - IIS - HTTP/2 | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='By Justin Kotalik'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - IIS - HTTP/2</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>07/31/2024</p>
+</li>
+<li>
+<p>5 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>By Justin Kotalik</p>
+<p><code>HTTP/2</code> is supported with ASP.NET Core in the following IIS deployment scenarios:</p>
+<ul>
+<li>
+<p>Windows Server 2016 or later / Windows 10 or later</p>
+</li>
+<li>
+<p>IIS 10 or later</p>
+</li>
+<li>
+<p>TLS 1.2 or later connection</p>
+</li>
+<li>
+<p>When hosting out-of-process: Public-facing edge server connections use <code>HTTP/2</code>, but the reverse proxy connection to the Kestrel server uses <code>HTTP/1.1</code>.</p>
+</li>
+</ul>
+<p>For an in-process deployment when an <code>HTTP/2</code> connection is established, <code>HttpRequest.Protocol</code> reports <code>HTTP/2</code>. For an out-of-process deployment when an <code>HTTP/2</code> connection is established, <code>HttpRequest.Protocol</code> reports <code>HTTP/1.1</code>.</p>
+<p>For more information on the in-process and out-of-process hosting models, see ASP.NET Core Module (ANCM) for IIS.</p>
+<p><code>HTTP/2</code> is enabled by default for HTTPS/TLS connections. Connections fall back to <code>HTTP/1.1</code> if an <code>HTTP/2</code> connection isn't established. For more information on <code>HTTP/2</code> configuration with IIS deployments, see <code>HTTP/2</code> on IIS.</p>
+<h2><a href="#advanced-http2-features-to-support-grpc" aria-hidden="true" class="anchor" id="advanced-http2-features-to-support-grpc"></a>Advanced <code>HTTP/2</code> features to support gRPC</h2>
+<p>Additional <code>HTTP/2</code> features in IIS support gRPC, including support for response trailers and sending reset frames.</p>
+<p>Requirements to run gRPC on IIS:</p>
+<ul>
+<li>
+<p>In-process hosting.</p>
+</li>
+<li>
+<p>Windows 11 Build 22000 or later, Windows Server 2022 Build 20348 or later.</p>
+</li>
+<li>
+<p>TLS 1.2 or later connection.</p>
+</li>
+</ul>
+<h3><a href="#trailers" aria-hidden="true" class="anchor" id="trailers"></a>Trailers</h3>
+<p>HTTP Trailers are similar to HTTP Headers, except they are sent after the response body is sent. For IIS and HTTP.sys, only <code>HTTP/2</code> response trailers are supported.</p>
+<pre><code class="language-csharp">if (httpContext.Response.SupportsTrailers())
+{
+    httpContext.Response.DeclareTrailer(&quot;trailername&quot;);	
+
+    // Write body
+    httpContext.Response.WriteAsync(&quot;Hello world&quot;);
+
+    httpContext.Response.AppendTrailer(&quot;trailername&quot;, &quot;TrailerValue&quot;);
+}
+</code></pre>
+<p>In the preceding example code:</p>
+<ul>
+<li>
+<p><code>SupportsTrailers</code> ensures that trailers are supported for the response.</p>
+</li>
+<li>
+<p><code>DeclareTrailer</code> adds the given trailer name to the <code>Trailer</code> response header. Declaring a response's trailers is optional, but recommended. If <code>DeclareTrailer</code> is called, it must be before the response headers are sent.</p>
+</li>
+<li>
+<p><code>AppendTrailer</code> appends the trailer.</p>
+</li>
+</ul>
+<h3><a href="#reset" aria-hidden="true" class="anchor" id="reset"></a><code>Reset</code></h3>
+<p><code>Reset</code> allows for the server to reset a <code>HTTP/2</code> request with a specified error code. A reset request is considered aborted.</p>
+<pre><code class="language-csharp">var resetFeature = httpContext.Features.Get&lt;IHttpResetFeature&gt;();
+resetFeature.Reset(errorCode: 2);
+</code></pre>
+<p><code>Reset</code> in the preceding code example specifies the <code>INTERNAL_ERROR</code> error code. For more information about <code>HTTP/2</code> error codes, visit the <code>HTTP/2</code> specification error code section.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/protocols?view=aspnetcore-8.0">Use ASP.NET Core with <code>HTTP/2</code> on IIS</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - HTTP.sys | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - HTTP.sys</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p class='important'>Important
+HTTP.sys isn't compatible with the ASP.NET Core Module and can't be used with IIS or IIS Express.</p>
+</blockquote>
+<ul>
+<li>
+<p>Windows Authentication</p>
+</li>
+<li>
+<p>Port sharing</p>
+</li>
+<li>
+<p>HTTPS with SNI</p>
+</li>
+<li>
+<p><code>HTTP/2</code> over TLS (Windows 10 or later)</p>
+</li>
+<li>
+<p>Direct file transmission</p>
+</li>
+<li>
+<p>Response caching</p>
+</li>
+<li>
+<p>WebSockets (Windows 8 or later)</p>
+</li>
+<li>
+<p>Windows 7 or later</p>
+</li>
+<li>
+<p>Windows Server 2008 R2 or later</p>
+</li>
+</ul>
+<h2><a href="#when-to-use-httpsys" aria-hidden="true" class="anchor" id="when-to-use-httpsys"></a>When to use <code>HTTP.sys</code></h2>
+<ul>
+<li>There's a need to expose the server directly to the Internet without using IIS.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys/_static/httpsys-to-internet.png?view=aspnetcore-8.0" alt="HTTP.sys communicates directly with the Internet!" title="HTTP.sys communicates directly with the Internet" /></p>
+<ul>
+<li>An internal deployment requires a feature not available in Kestrel. For more information, see Kestrel vs. <code>HTTP.sys</code></li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys/_static/httpsys-to-internal.png?view=aspnetcore-8.0" alt="HTTP.sys communicates directly with the internal network!" title="HTTP.sys communicates directly with the internal network" /></p>
+<h2><a href="#http2-support" aria-hidden="true" class="anchor" id="http2-support"></a><code>HTTP/2</code> support</h2>
+<ul>
+<li>
+<p>Windows Server 2016/Windows 10 or later</p>
+</li>
+<li>
+<p>Application-Layer Protocol Negotiation (ALPN) connection</p>
+</li>
+<li>
+<p>TLS 1.2 or later connection</p>
+</li>
+</ul>
+<h2><a href="#http3-support" aria-hidden="true" class="anchor" id="http3-support"></a>HTTP/3 support</h2>
+<ul>
+<li>
+<p>Windows Server 2022/Windows 11 or later</p>
+</li>
+<li>
+<p>An <code>https</code> url binding is used.</p>
+</li>
+<li>
+<p>The EnableHttp3 registry key is set.</p>
+</li>
+</ul>
+<pre><code class="language-C#">app.Use((context, next) =&gt;
+{
+    context.Response.Headers.AltSvc = &quot;h3=\&quot;:443\&quot;&quot;;
+    return next(context);
+});
+</code></pre>
+<h2><a href="#kernel-mode-authentication-with-kerberos" aria-hidden="true" class="anchor" id="kernel-mode-authentication-with-kerberos"></a>Kernel mode authentication with Kerberos</h2>
+<h3><a href="#support-for-kernel-mode-response-buffering" aria-hidden="true" class="anchor" id="support-for-kernel-mode-response-buffering"></a>Support for kernel-mode response buffering</h3>
+<h2><a href="#how-to-use-httpsys" aria-hidden="true" class="anchor" id="how-to-use-httpsys"></a>How to use <code>HTTP.sys</code></h2>
+<h3><a href="#configure-the-aspnet-core-app-to-use-http.sys" aria-hidden="true" class="anchor" id="configure-the-aspnet-core-app-to-use-http.sys"></a>Configure the ASP.NET Core app to use <code>HTTP.sys</code></h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys(options =&gt;
+{
+    options.AllowSynchronousIO = false;
+    options.Authentication.Schemes = AuthenticationSchemes.None;
+    options.Authentication.AllowAnonymous = true;
+    options.MaxConnections = null;
+    options.MaxRequestBodySize = 30_000_000;
+    options.UrlPrefixes.Add(&quot;http://localhost:5005&quot;);
+});
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">[RequestSizeLimit(100000000)]
+public IActionResult MyActionMethod()
+</code></pre>
+<pre><code class="language-csharp">app.Use((context, next) =&gt;
+{
+    context.Features.GetRequiredFeature&lt;IHttpMaxRequestBodySizeFeature&gt;()
+                                             .MaxRequestBodySize = 10 * 1024;
+
+    var server = context.RequestServices
+        .GetRequiredService&lt;IServer&gt;();
+    var serverAddressesFeature = server.Features
+                                 .GetRequiredFeature&lt;IServerAddressesFeature&gt;();
+
+    var addresses = string.Join(&quot;, &quot;, serverAddressesFeature.Addresses);
+
+    var loggerFactory = context.RequestServices
+        .GetRequiredService&lt;ILoggerFactory&gt;();
+    var logger = loggerFactory.CreateLogger(&quot;Sample&quot;);
+
+    logger.LogInformation(&quot;Addresses: {addresses}&quot;, addresses);
+
+    return next(context);
+});
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys/_static/vs-choose-profile.png?view=aspnetcore-8.0" alt="Select console app profile!" title="Select console app profile" /></p>
+<h3><a href="#configure-windows-server" aria-hidden="true" class="anchor" id="configure-windows-server"></a>Configure Windows Server</h3>
+<ul>
+<li>
+<p>Determine the ports to open for the app and use Windows Firewall or the New-NetFirewallRule PowerShell cmdlet to open firewall ports to allow traffic to reach <code>HTTP.sys</code>. In the following commands and app configuration, port 443 is used.</p>
+</li>
+<li>
+<p>When deploying to an Azure VM, open the ports in the Network Security Group. In the following commands and app configuration, port 443 is used.</p>
+</li>
+<li>
+<p>Obtain and install X.509 certificates, if required.
+On Windows, create self-signed certificates using the New-SelfSignedCertificate PowerShell cmdlet. For an unsupported example, see UpdateIISExpressSSLForChrome.ps1.
+Install either self-signed or CA-signed certificates in the server's Local Machine &gt; Personal store.</p>
+</li>
+<li>
+<p>If the app is a framework-dependent deployment, install .NET Core, .NET Framework, or both (if the app is a .NET Core app targeting the .NET Framework).</p>
+</li>
+</ul>
+<p>If the app is a self-contained deployment, the app includes the runtime in its deployment. No framework installation is required on the server.</p>
+<ul>
+<li>
+<p>.NET Core: If the app requires .NET Core, obtain and run the .NET Core Runtime installer from .NET Core Downloads. Don't install the full SDK on the server.</p>
+</li>
+<li>
+<p>.NET Framework: If the app requires .NET Framework, see the .NET Framework installation guide. Install the required .NET Framework. The installer for the latest .NET Framework is available from the .NET Core Downloads page.</p>
+</li>
+<li>
+<p>Configure URLs and ports in the app.
+By default, ASP.NET Core binds to <code>http://localhost:5000</code>. To configure URL prefixes and ports, options include:</p>
+</li>
+</ul>
+<p>The following code example shows how to use <code>UrlPrefixes</code> with the server's local IP address <code>10.0.0.4</code> on port 443:</p>
+<p>An advantage of <code>UrlPrefixes</code> is that an error message is generated immediately for improperly formatted prefixes.
+The settings in <code>UrlPrefixes</code> override <code>UseUrls</code>/urls/ASPNETCORE_URLS settings. Therefore, an advantage of <code>UseUrls</code>, <code>urls</code>, and the <code>ASPNETCORE_URLS</code> environment variable is that it's easier to switch between Kestrel and <code>HTTP.sys</code>.
+HTTP.sys recognizes two types of wild cards in URL prefixes:</p>
+<p>For more information, see UrlPrefix Strings.</p>
+<p class='warning'>Warning
+Top-level wildcard bindings (http://*:80/ and <code>http://+:80</code>) should not be used. Top-level wildcard bindings create app security vulnerabilities. This applies to both strong and weak wildcards. Use explicit host names or IP addresses rather than wildcards. Subdomain wildcard binding (for example, <code>*.mysub.com</code>) isn't a security risk if you control the entire parent domain (as opposed to <code>*.com</code>, which is vulnerable). For more information, see RFC 9110: Section 7.2: Host and :authority.</p>
+<p>Apps and containers are often given only a port to listen on, like port 80, without additional constraints like host or path. HTTP_PORTS and HTTPS_PORTS are config keys that specify the listening ports for the Kestrel and <code>HTTP.sys</code> servers. These keys may be specified as environment variables defined with the <code>DOTNET_</code> or <code>ASPNETCORE_</code> prefixes, or specified directly through any other config input, such as <code>appsettings.json</code>. Each is a semicolon-delimited list of port values, as shown in the following example:
+ASPNETCORE_HTTP_PORTS=80;8080
+ASPNETCORE_HTTPS_PORTS=443;8081</p>
+<p>The preceding example is shorthand for the following configuration, which specifies the scheme (HTTP or HTTPS) and any host or IP.
+ASPNETCORE_URLS=http://<em>:80/;http://</em>:8080/;https://<em>:443/;https://</em>:8081/</p>
+<p>The HTTP_PORTS and HTTPS_PORTS configuration keys are lower priority and are overridden by URLS or values provided directly in code. Certificates still need to be configured separately via server-specific mechanics for HTTPS.
+These configuration keys are equivalent to top-level wildcard bindings. They're convenient for development and container scenarios, but avoid wildcards when running on a machine that may also host other services.</p>
+<ul>
+<li>
+<p><code>UseUrls</code></p>
+</li>
+<li>
+<p><code>urls</code> command-line argument</p>
+</li>
+<li>
+<p><code>ASPNETCORE_URLS</code> environment variable</p>
+</li>
+<li>
+<p><code>UrlPrefixes</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys(options =&gt;
+{
+    options.UrlPrefixes.Add(&quot;https://10.0.0.4:443&quot;);
+});
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<ul>
+<li>is a weak binding, also known as a fallback binding. If the URL prefix is <code>http://*:5000</code>, and something else is bound to port 5000, this binding won't be used.</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>is a strong binding. If the URL prefix is <code>http://+:5000</code>, this binding will be used before other port 5000 bindings.</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Top-level wildcard bindings (http://*:80/ and <code>http://+:80</code>) should not be used. Top-level wildcard bindings create app security vulnerabilities. This applies to both strong and weak wildcards. Use explicit host names or IP addresses rather than wildcards. Subdomain wildcard binding (for example, <code>*.mysub.com</code>) isn't a security risk if you control the entire parent domain (as opposed to <code>*.com</code>, which is vulnerable). For more information, see RFC 9110: Section 7.2: Host and :authority.</p>
+</blockquote>
+<ul>
+<li>Preregister URL prefixes on the server.
+The built-in tool for configuring <code>HTTP.sys</code> is netsh.exe. netsh.exe is used to reserve URL prefixes and assign X.509 certificates. The tool requires administrator privileges.
+Use the netsh.exe tool to register URLs for the app:</li>
+</ul>
+<pre><code class="language-console">netsh http add urlacl url=&lt;URL&gt; user=&lt;USER&gt;
+</code></pre>
+<p>In the following example, the local IP address of the server is <code>10.0.0.4</code>:</p>
+<pre><code class="language-console">netsh http add urlacl url=https://10.0.0.4:443/ user=Users
+</code></pre>
+<p>When a URL is registered, the tool responds with <code>URL reservation successfully added</code>.
+To delete a registered URL, use the <code>delete urlacl</code> command:</p>
+<pre><code class="language-console">netsh http delete urlacl url=&lt;URL&gt;
+</code></pre>
+<ul>
+<li>
+<p><URL>: The fully qualified Uniform Resource Locator (URL). Don't use a wildcard binding. Use a valid hostname or local IP address. The URL must include a trailing slash.</p>
+</li>
+<li>
+<p><USER>: Specifies the user or user-group name.</p>
+</li>
+<li>
+<p>Register X.509 certificates on the server.
+Use the netsh.exe tool to register certificates for the app:</p>
+</li>
+</ul>
+<pre><code class="language-console">netsh http add sslcert 
+    ipport=10.0.0.4:443 
+    certhash=b66ee04419d4ee37464ab8785ff02449980eae10 
+    appid=&quot;{9412ee86-c21b-4eb8-bd89-f650fbf44931}&quot;
+</code></pre>
+<p>For reference purposes, store the GUID in the app as a package tag:</p>
+<p>In the following example:</p>
+<p>When a certificate is registered, the tool responds with <code>SSL Certificate successfully added</code>.
+To delete a certificate registration, use the <code>delete sslcert</code> command:</p>
+<pre><code class="language-console">netsh http delete sslcert ipport=&lt;IP&gt;:&lt;PORT&gt;
+</code></pre>
+<p>Reference documentation for netsh.exe:</p>
+<pre><code class="language-console">netsh http add sslcert ipport=&lt;IP&gt;:&lt;PORT&gt; certhash=&lt;THUMBPRINT&gt; appid=&quot;{&lt;GUID&gt;}&quot;
+</code></pre>
+<ul>
+<li>
+<p><IP>: Specifies the local IP address for the binding. Don't use a wildcard binding. Use a valid IP address.</p>
+</li>
+<li>
+<p><PORT>: Specifies the port for the binding.</p>
+</li>
+<li>
+<p><THUMBPRINT>: The X.509 certificate thumbprint.</p>
+</li>
+<li>
+<p><GUID>: A developer-generated GUID to represent the app for informational purposes.</p>
+</li>
+<li>
+<p>In Visual Studio:</p>
+<ul>
+<li>
+<p>Open the app's project properties by right-clicking on the app in Solution Explorer and selecting Properties.</p>
+</li>
+<li>
+<p>Select the Package tab.</p>
+</li>
+<li>
+<p>Enter the GUID that you created in the Tags field.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>When not using Visual Studio:</p>
+<ul>
+<li>
+<p>Open the app's project file.</p>
+</li>
+<li>
+<p>Add a <PackageTags> property to a new or existing <PropertyGroup> with the GUID that you created:</p>
+</li>
+</ul>
+</li>
+</ul>
+<PropertyGroup>
+  ```<PackageTags>```9412ee86-c21b-4eb8-bd89-f650fbf44931</PackageTags>
+</PropertyGroup>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;PackageTags&gt;9412ee86-c21b-4eb8-bd89-f650fbf44931&lt;/PackageTags&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<ul>
+<li>
+<p>The local IP address of the server is <code>10.0.0.4</code>.</p>
+</li>
+<li>
+<p>An online random GUID generator provides the <code>appid</code> value.</p>
+</li>
+<li>
+<p>Netsh Commands for Hypertext Transfer Protocol (HTTP)</p>
+</li>
+<li>
+<p>UrlPrefix Strings</p>
+</li>
+<li>
+<p>Run the app.
+Administrator privileges aren't required to run the app when binding to localhost using HTTP (not HTTPS) with a port number greater than 1024. For other configurations (for example, using a local IP address or binding to port 443), run the app with administrator privileges.
+The app responds at the server's public IP address. In this example, the server is reached from the Internet at its public IP address of <code>104.214.79.47</code>.
+A development certificate is used in this example. The page loads securely after bypassing the browser's untrusted certificate warning.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys/_static/browser.png?view=aspnetcore-8.0" alt="Browser window showing the app's Index page loaded!" title="Browser window showing the app's Index page loaded" /></p>
+<h2><a href="#proxy-server-and-load-balancer-scenarios" aria-hidden="true" class="anchor" id="proxy-server-and-load-balancer-scenarios"></a>Proxy server and load balancer scenarios</h2>
+<h2><a href="#get-detailed-timing-information-with-ihttpsysrequesttimingfeature" aria-hidden="true" class="anchor" id="get-detailed-timing-information-with-ihttpsysrequesttimingfeature"></a>Get detailed timing information with IHttpSysRequestTimingFeature</h2>
+<ul>
+<li>
+<p>Timestamps are obtained using QueryPerformanceCounter.</p>
+</li>
+<li>
+<p>The timestamp frequency can be obtained via QueryPerformanceFrequency.</p>
+</li>
+<li>
+<p>The index of the timing can be cast to HttpSysRequestTimingType to know what the timing represents.</p>
+</li>
+<li>
+<p>The value may be 0 if the timing isn't available for the current request.</p>
+</li>
+<li>
+<p>Requires Windows 10 version 2004, Windows Server 2022, or later.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =&gt;
+{
+    var feature = context.Features.GetRequiredFeature&lt;IHttpSysRequestTimingFeature&gt;();
+    
+    var loggerFactory = context.RequestServices.GetRequiredService&lt;ILoggerFactory&gt;();
+    var logger = loggerFactory.CreateLogger(&quot;Sample&quot;);
+
+    var timestamps = feature.Timestamps;
+
+    for (var i = 0; i &lt; timestamps.Length; i++)
+    {
+        var timestamp = timestamps[i];
+        var timingType = (HttpSysRequestTimingType)i;
+
+        logger.LogInformation(&quot;Timestamp {timingType}: {timestamp}&quot;,
+                                          timingType, timestamp);
+    }
+
+    return next(context);
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok());
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =&gt;
+{
+    var feature = context.Features.GetRequiredFeature&lt;IHttpSysRequestTimingFeature&gt;();
+
+    var loggerFactory = context.RequestServices.GetRequiredService&lt;ILoggerFactory&gt;();
+    var logger = loggerFactory.CreateLogger(&quot;Sample&quot;);
+
+    var timingType = HttpSysRequestTimingType.RequestRoutingEnd;
+
+    if (feature.TryGetTimestamp(timingType, out var timestamp))
+    {
+        logger.LogInformation(&quot;Timestamp {timingType}: {timestamp}&quot;,
+                                          timingType, timestamp);
+    }
+    else
+    {
+        logger.LogInformation(&quot;Timestamp {timingType}: not available for the &quot;
+                                           + &quot;current request&quot;,    timingType);
+    }
+
+    return next(context);
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok());
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.HttpSys;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseHttpSys();
+
+var app = builder.Build();
+
+app.Use((context, next) =&gt;
+{
+    var feature = context.Features.GetRequiredFeature&lt;IHttpSysRequestTimingFeature&gt;();
+
+    var loggerFactory = context.RequestServices.GetRequiredService&lt;ILoggerFactory&gt;();
+    var logger = loggerFactory.CreateLogger(&quot;Sample&quot;);
+
+    var startingTimingType = HttpSysRequestTimingType.RequestRoutingStart;
+    var endingTimingType = HttpSysRequestTimingType.RequestRoutingEnd;
+
+    if (feature.TryGetElapsedTime(startingTimingType, endingTimingType, out var elapsed))
+    {
+        logger.LogInformation(
+            &quot;Elapsed time {startingTimingType} to {endingTimingType}: {elapsed}&quot;,
+            startingTimingType,
+            endingTimingType,
+            elapsed);
+    }
+    else
+    {
+        logger.LogInformation(
+            &quot;Elapsed time {startingTimingType} to {endingTimingType}:&quot;
+            + &quot; not available for the current request.&quot;,
+            startingTimingType,
+            endingTimingType);
+    }
+
+    return next(context);
+});
+
+app.MapGet(&quot;/&quot;, () =&gt; Results.Ok());
+
+app.Run();
+</code></pre>
+<h2><a href="#advanced-http2-features-to-support-grpc" aria-hidden="true" class="anchor" id="advanced-http2-features-to-support-grpc"></a>Advanced <code>HTTP/2</code> features to support gRPC</h2>
+<ul>
+<li>
+<p>Windows 11 Build 22000 or later, Windows Server 2022 Build 20348 or later.</p>
+</li>
+<li>
+<p>TLS 1.2 or later connection.</p>
+</li>
+</ul>
+<h3><a href="#trailers" aria-hidden="true" class="anchor" id="trailers"></a>Trailers</h3>
+<pre><code class="language-csharp">if (httpContext.Response.SupportsTrailers())
+{
+    httpContext.Response.DeclareTrailer(&quot;trailername&quot;);	
+
+    // Write body
+    httpContext.Response.WriteAsync(&quot;Hello world&quot;);
+
+    httpContext.Response.AppendTrailer(&quot;trailername&quot;, &quot;TrailerValue&quot;);
+}
+</code></pre>
+<ul>
+<li>
+<p><code>SupportsTrailers</code> ensures that trailers are supported for the response.</p>
+</li>
+<li>
+<p><code>DeclareTrailer</code> adds the given trailer name to the <code>Trailer</code> response header. Declaring a response's trailers is optional, but recommended. If <code>DeclareTrailer</code> is called, it must be before the response headers are sent.</p>
+</li>
+<li>
+<p><code>AppendTrailer</code> appends the trailer.</p>
+</li>
+</ul>
+<h3><a href="#reset" aria-hidden="true" class="anchor" id="reset"></a><code>Reset</code></h3>
+<pre><code class="language-csharp">var resetFeature = httpContext.Features.Get&lt;IHttpResetFeature&gt;();
+resetFeature.Reset(errorCode: 2);
+</code></pre>
+<h2><a href="#tracing" aria-hidden="true" class="anchor" id="tracing"></a>Tracing</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Enable Windows Authentication with <code>HTTP.sys</code></p>
+</li>
+<li>
+<p>HTTP Server API</p>
+</li>
+<li>
+<p>aspnet/HttpSysServer GitHub repository (source code)</p>
+</li>
+<li>
+<p>The host</p>
+</li>
+<li>
+<p>Troubleshoot and debug ASP.NET Core projects</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys?view=aspnetcore-8.0">HTTP.sys web server implementation in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
