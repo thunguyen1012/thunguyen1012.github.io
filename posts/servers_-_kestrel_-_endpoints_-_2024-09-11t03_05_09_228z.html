@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Kestrel - Endpoints | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Kestrel - Endpoints</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>The address specifies the network interface that the server listens on for incoming requests, such as a TCP port.</p>
+</li>
+<li>
+<p>The protocol specifies the communication between the client and server, such as HTTP/1.1, HTTP/2, or HTTP/3.</p>
+</li>
+<li>
+<p>An endpoint can be secured using the <code>https</code> URL scheme or <code>UseHttps</code> method.</p>
+</li>
+<li>
+<p>Configure endpoints</p>
+</li>
+<li>
+<p>Configure <code>HTTPS</code></p>
+</li>
+<li>
+<p>Configure HTTP protocols</p>
+</li>
+</ul>
+<h2><a href="#default-endpoint" aria-hidden="true" class="anchor" id="default-endpoint"></a>Default endpoint</h2>
+<h2><a href="#configure-endpoints" aria-hidden="true" class="anchor" id="configure-endpoints"></a>Configure endpoints</h2>
+<ul>
+<li>
+<p>Configure endpoints with URLs</p>
+</li>
+<li>
+<p>Specify ports only</p>
+</li>
+<li>
+<p>Configure endpoints in <code>appsettings.json</code></p>
+</li>
+<li>
+<p>Configure endpoints in code</p>
+</li>
+</ul>
+<h3><a href="#configure-endpoints-with-urls" aria-hidden="true" class="anchor" id="configure-endpoints-with-urls"></a>Configure endpoints with URLs</h3>
+<ul>
+<li>
+<p><code>ASPNETCORE_URLS</code> environment variable.</p>
+</li>
+<li>
+<p><code>--urls</code> command-line argument.</p>
+</li>
+<li>
+<p><code>urls</code> host configuration key.</p>
+</li>
+<li>
+<p><code>UseUrls</code> extension method.</p>
+</li>
+<li>
+<p>WebApplication.Urls property.</p>
+</li>
+</ul>
+<h4><a href="#url-formats" aria-hidden="true" class="anchor" id="url-formats"></a>URL formats</h4>
+<ul>
+<li>IPv4 address with port number
+<a href="http://65.55.39.10:80/">http://65.55.39.10:80/</a></li>
+</ul>
+<p>0.0.0.0 is a special case that binds to all IPv4 addresses.</p>
+<ul>
+<li>IPv6 address with port number
+http://[0:0:0:0:0:ffff:4137:270a]:80/</li>
+</ul>
+<p>[::] is the IPv6 equivalent of IPv4 <code>0.0.0.0</code>.</p>
+<ul>
+<li>Wildcard host with port number
+<a href="http://contoso.com:80/">http://contoso.com:80/</a>
+http://*:80/</li>
+</ul>
+<p>Anything not recognized as a valid IP address or <code>localhost</code> is treated as a wildcard that binds to all IPv4 and IPv6 addresses. Some people like to use * or + to be more explicit. To bind different host names to different ASP.NET Core apps on the same port, use HTTP.sys or a reverse proxy server.
+Reverse proxy server examples include IIS, YARP, Nginx, and Apache.</p>
+<ul>
+<li>Host name <code>localhost</code> with port number or loopback IP with port number
+http://localhost:5000/
+<a href="http://127.0.0.1:5000/">http://127.0.0.1:5000/</a>
+http://[::1]:5000/</li>
+</ul>
+<p>When <code>localhost</code> is specified, <code>Kestrel</code> attempts to bind to both IPv4 and IPv6 loopback interfaces. If the requested port is in use by another service on either loopback interface, <code>Kestrel</code> fails to start. If either loopback interface is unavailable for any other reason (most commonly because IPv6 isn't supported), <code>Kestrel</code> logs a warning.</p>
+<h4><a href="#https-url-prefixes" aria-hidden="true" class="anchor" id="https-url-prefixes"></a><code>HTTPS</code> URL prefixes</h4>
+<h3><a href="#specify-ports-only" aria-hidden="true" class="anchor" id="specify-ports-only"></a>Specify ports only</h3>
+<h3><a href="#configure-endpoints-in-appsettingsjson" aria-hidden="true" class="anchor" id="configure-endpoints-in-appsettingsjson"></a>Configure endpoints in <code>appsettings.json</code></h3>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;Endpoints&quot;: {
+      &quot;MyHttpEndpoint&quot;: {
+        &quot;Url&quot;: &quot;http://localhost:8080&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<ul>
+<li>
+<p>Uses <code>appsettings.json</code> as the configuration source. However, any <code>IConfiguration</code> source can be used.</p>
+</li>
+<li>
+<p>Adds an endpoint named <code>MyHttpEndpoint</code> on port 8080.</p>
+</li>
+</ul>
+<h4><a href="#reloading-endpoints-from-configuration" aria-hidden="true" class="anchor" id="reloading-endpoints-from-configuration"></a>Reloading endpoints from configuration</h4>
+<ul>
+<li>
+<p>The new configuration is compared to the old one, and any endpoint without configuration changes isn't modified.</p>
+</li>
+<li>
+<p>Removed or modified endpoints are given 5 seconds to complete processing requests and shut down.</p>
+</li>
+<li>
+<p>New or modified endpoints are started.</p>
+</li>
+</ul>
+<h4><a href="#configurationloader" aria-hidden="true" class="anchor" id="configurationloader"></a>ConfigurationLoader</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    var kestrelSection = context.Configuration.GetSection(&quot;Kestrel&quot;);
+
+    serverOptions.Configure(kestrelSection)
+        .Endpoint(&quot;HTTPS&quot;, listenOptions =&gt;
+        {
+            // ...
+        });
+});
+</code></pre>
+<ul>
+<li>
+<p>The configuration section for each endpoint is available on the options in the <code>Endpoint</code> method so that custom settings may be read.</p>
+</li>
+<li>
+<p><code>KestrelServerOptions.Configure(IConfiguration)</code> can be called multiple times, but only the last configuration is used unless <code>Load</code> is explicitly called on prior instances. The default host doesn't call <code>Load</code> so that its default configuration section may be replaced.</p>
+</li>
+<li>
+<p><code>KestrelConfigurationLoader</code> mirrors the <code>Listen</code> family of APIs from <code>KestrelServerOptions</code> as <code>Endpoint</code> overloads, so code and config endpoints can be configured in the same place. These overloads don't use names and only consume default settings from configuration.</p>
+</li>
+</ul>
+<h3><a href="#configure-endpoints-in-code" aria-hidden="true" class="anchor" id="configure-endpoints-in-code"></a>Configure endpoints in code</h3>
+<ul>
+<li>
+<p><code>Listen</code></p>
+</li>
+<li>
+<p>ListenLocalhost</p>
+</li>
+<li>
+<p>ListenAnyIP</p>
+</li>
+<li>
+<p>ListenUnixSocket</p>
+</li>
+<li>
+<p>ListenNamedPipe</p>
+</li>
+</ul>
+<h4><a href="#bind-to-a-tcp-socket" aria-hidden="true" class="anchor" id="bind-to-a-tcp-socket"></a>Bind to a TCP socket</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    serverOptions.Listen(IPAddress.Loopback, 5000);
+    serverOptions.Listen(IPAddress.Loopback, 5001, listenOptions =&gt;
+    {
+        listenOptions.UseHttps(&quot;testCert.pfx&quot;, &quot;testPassword&quot;);
+    });
+});
+</code></pre>
+<ul>
+<li>
+<p>Configures endpoints that listen on port 5000 and 5001.</p>
+</li>
+<li>
+<p>Configures <code>HTTPS</code> for an endpoint with the <code>UseHttps</code> extension method on <code>ListenOptions</code>. For more information, see Configure <code>HTTPS</code> in code.</p>
+</li>
+</ul>
+<h4><a href="#bind-to-a-unix-socket" aria-hidden="true" class="anchor" id="bind-to-a-unix-socket"></a>Bind to a Unix socket</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    serverOptions.ListenUnixSocket(&quot;/tmp/kestrel-test.sock&quot;);
+});
+</code></pre>
+<ul>
+<li>
+<p>In the Nginx configuration file, set the <code>server &gt; location &gt; proxy_pass</code> entry to http://unix:/tmp/{KESTREL SOCKET}:/;. {KESTREL SOCKET} is the name of the socket provided to ListenUnixSocket (for example, <code>kestrel-test.sock</code> in the preceding example).</p>
+</li>
+<li>
+<p>Ensure that the socket is writeable by Nginx (for example, <code>chmod go+w /tmp/kestrel-test.sock</code>).</p>
+</li>
+</ul>
+<h4><a href="#configure-endpoint-defaults" aria-hidden="true" class="anchor" id="configure-endpoint-defaults"></a>Configure endpoint defaults</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.ConfigureEndpointDefaults(listenOptions =&gt;
+    {
+        // ...
+    });
+});
+</code></pre>
+<blockquote>
+<p class='note'>Note
+Endpoints created by calling <code>Listen</code> before calling <code>ConfigureEndpointDefaults</code> won't have the defaults applied.</p>
+</blockquote>
+<h3><a href="#dynamic-port-binding" aria-hidden="true" class="anchor" id="dynamic-port-binding"></a>Dynamic port binding</h3>
+<pre><code class="language-csharp">app.Run(async (context) =&gt;
+{
+    var serverAddressFeature = context.Features.Get&lt;IServerAddressesFeature&gt;();
+
+    if (serverAddressFeature is not null)
+    {
+        var listenAddresses = string.Join(&quot;, &quot;, serverAddressFeature.Addresses);
+
+        // ...
+    }
+});
+</code></pre>
+<ul>
+<li>
+<p><code>KestrelServerOptions.ListenLocalhost</code></p>
+</li>
+<li>
+<p>Binding TCP-based HTTP/1.1 or HTTP/2, and QUIC-based HTTP/3 together.</p>
+</li>
+</ul>
+<h2><a href="#configure-https" aria-hidden="true" class="anchor" id="configure-https"></a>Configure <code>HTTPS</code></h2>
+<ul>
+<li>
+<p>If URL prefixes or specify ports only are used to define endpoints, <code>HTTPS</code> can be used only if a default certificate is provided in <code>HTTPS</code> endpoint configuration. A default certificate can be configured with one of the following options:</p>
+</li>
+<li>
+<p>Configure <code>HTTPS</code> in <code>appsettings.json</code></p>
+</li>
+<li>
+<p>Configure <code>HTTPS</code> in code</p>
+</li>
+</ul>
+<h3><a href="#configure-https-in-appsettingsjson" aria-hidden="true" class="anchor" id="configure-https-in-appsettingsjson"></a>Configure <code>HTTPS</code> in <code>appsettings.json</code></h3>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;Endpoints&quot;: {
+      &quot;Http&quot;: {
+        &quot;Url&quot;: &quot;http://localhost:5000&quot;
+      },
+      &quot;HttpsInlineCertFile&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:5001&quot;,
+        &quot;Certificate&quot;: {
+          &quot;Path&quot;: &quot;&lt;path to .pfx file&gt;&quot;,
+          &quot;Password&quot;: &quot;$CREDENTIAL_PLACEHOLDER$&quot;
+        }
+      },
+      &quot;HttpsInlineCertAndKeyFile&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:5002&quot;,
+        &quot;Certificate&quot;: {
+          &quot;Path&quot;: &quot;&lt;path to .pem/.crt file&gt;&quot;,
+          &quot;KeyPath&quot;: &quot;&lt;path to .key file&gt;&quot;,
+          &quot;Password&quot;: &quot;$CREDENTIAL_PLACEHOLDER$&quot;
+        }
+      },
+      &quot;HttpsInlineCertStore&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:5003&quot;,
+        &quot;Certificate&quot;: {
+          &quot;Subject&quot;: &quot;&lt;subject; required&gt;&quot;,
+          &quot;Store&quot;: &quot;&lt;certificate store; required&gt;&quot;,
+          &quot;Location&quot;: &quot;&lt;location; defaults to CurrentUser&gt;&quot;,
+          &quot;AllowInvalid&quot;: &quot;&lt;true or false; defaults to false&gt;&quot;
+        }
+      },
+      &quot;HttpsDefaultCert&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:5004&quot;
+      }
+    },
+    &quot;Certificates&quot;: {
+      &quot;Default&quot;: {
+        &quot;Path&quot;: &quot;&lt;path to .pfx file&gt;&quot;,
+        &quot;Password&quot;: &quot;$CREDENTIAL_PLACEHOLDER$&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+In the preceding example, the certificate password is stored in plain-text in <code>appsettings.json</code>. The $CREDENTIAL_PLACEHOLDER$ token is used as a placeholder for the certificate's password. To store certificate passwords securely in development environments, see Protect secrets in development. To store certificate passwords securely in production environments, see Azure Key Vault configuration provider. Development secrets shouldn't be used for production or test.</p>
+</blockquote>
+<h4><a href="#schema-notes" aria-hidden="true" class="anchor" id="schema-notes"></a>Schema notes</h4>
+<ul>
+<li>
+<p><code>Endpoint</code> names are case-insensitive. For example, <code>HTTPS</code> and <code>Https</code> are equivalent.</p>
+</li>
+<li>
+<p>The <code>Url</code> parameter is required for each endpoint. The format for this parameter is the same as the top-level <code>Urls</code> configuration parameter except that it's limited to a single value. See URL formats earlier in this article.</p>
+</li>
+<li>
+<p>These endpoints replace the ones defined in the top-level <code>Urls</code> configuration rather than adding to them. Endpoints defined in code via <code>Listen</code> are cumulative with the endpoints defined in the configuration section.</p>
+</li>
+<li>
+<p>The <code>Certificate</code> section is optional. If the <code>Certificate</code> section isn't specified, the defaults defined in <code>Certificates:Default</code> are used. If no defaults are available, the development certificate is used. If there are no defaults and the development certificate isn't present, the server throws an exception and fails to start.</p>
+</li>
+<li>
+<p>The <code>Certificate</code> section supports multiple certificate sources.</p>
+</li>
+<li>
+<p>Any number of endpoints may be defined in <code>Configuration</code>, as long as they don't cause port conflicts.</p>
+</li>
+</ul>
+<h4><a href="#certificate-sources" aria-hidden="true" class="anchor" id="certificate-sources"></a><code>Certificate</code> sources</h4>
+<ul>
+<li>
+<p><code>Path</code> and <code>Password</code> to load .pfx files.</p>
+</li>
+<li>
+<p><code>Path</code>, <code>KeyPath</code> and <code>Password</code> to load .pem/.crt and .key files.</p>
+</li>
+<li>
+<p><code>Subject</code> and <code>Store</code> to load from the certificate store.</p>
+</li>
+</ul>
+<pre><code class="language-json">&quot;Default&quot;: {
+  &quot;Subject&quot;: &quot;&lt;subject; required&gt;&quot;,
+  &quot;Store&quot;: &quot;&lt;cert store; required&gt;&quot;,
+  &quot;Location&quot;: &quot;&lt;location; defaults to CurrentUser&gt;&quot;,
+  &quot;AllowInvalid&quot;: &quot;&lt;true or false; defaults to false&gt;&quot;
+}
+</code></pre>
+<h4><a href="#configure-client-certificates-in-appsettingsjson" aria-hidden="true" class="anchor" id="configure-client-certificates-in-appsettingsjson"></a>Configure client certificates in <code>appsettings.json</code></h4>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;Endpoints&quot;: {
+      &quot;MyHttpsEndpoint&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:5001&quot;,
+        &quot;ClientCertificateMode&quot;: &quot;AllowCertificate&quot;,
+        &quot;Certificate&quot;: {
+          &quot;Path&quot;: &quot;&lt;path to .pfx file&gt;&quot;,
+          &quot;Password&quot;: &quot;$CREDENTIAL_PLACEHOLDER$&quot;
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+In the preceding example, the certificate password is stored in plain-text in <code>appsettings.json</code>. The <code>$CREDENTIAL_PLACEHOLDER$</code> token is used as a placeholder for the certificate's password. To store certificate passwords securely in development environments, see Protect secrets in development. To store certificate passwords securely in production environments, see Azure Key Vault configuration provider. Development secrets shouldn't be used for production or test.</p>
+</blockquote>
+<h4><a href="#configure-ssltls-protocols-in-appsettings.json" aria-hidden="true" class="anchor" id="configure-ssltls-protocols-in-appsettings.json"></a>Configure SSL/TLS protocols in <code>appsettings.json</code></h4>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;Endpoints&quot;: {
+      &quot;MyHttpsEndpoint&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:5001&quot;,
+        &quot;SslProtocols&quot;: [&quot;Tls12&quot;, &quot;Tls13&quot;],
+        &quot;Certificate&quot;: {
+          &quot;Path&quot;: &quot;&lt;path to .pfx file&gt;&quot;,
+          &quot;Password&quot;: &quot;$CREDENTIAL_PLACEHOLDER$&quot;
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+In the preceding example, the certificate password is stored in plain-text in <code>appsettings.json</code>. The <code>$CREDENTIAL_PLACEHOLDER$</code> token is used as a placeholder for the certificate's password. To store certificate passwords securely in development environments, see Protect secrets in development. To store certificate passwords securely in production environments, see Azure Key Vault configuration provider. Development secrets shouldn't be used for production or test.</p>
+</blockquote>
+<h3><a href="#configure-https-in-code" aria-hidden="true" class="anchor" id="configure-https-in-code"></a>Configure <code>HTTPS</code> in code</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    serverOptions.Listen(IPAddress.Loopback, 5000);
+    serverOptions.Listen(IPAddress.Loopback, 5001, listenOptions =&gt;
+    {
+        listenOptions.UseHttps(&quot;testCert.pfx&quot;, &quot;testPassword&quot;);
+    });
+});
+</code></pre>
+<ul>
+<li>
+<p><code>filename</code> is the path and file name of a certificate file, relative to the directory that contains the app's content files.</p>
+</li>
+<li>
+<p>password is the password required to access the X.509 certificate data.</p>
+</li>
+<li>
+<p><code>configureOptions</code> is an <code>Action</code> to configure the <code>HttpsConnectionAdapterOptions</code>. Returns the <code>ListenOptions</code>.</p>
+</li>
+<li>
+<p><code>storeName</code> is the certificate store from which to load the certificate.</p>
+</li>
+<li>
+<p><code>subject</code> is the <code>subject</code> name for the certificate.</p>
+</li>
+<li>
+<p><code>allowInvalid</code> indicates if invalid certificates should be considered, such as self-signed certificates.</p>
+</li>
+<li>
+<p><code>location</code> is the store <code>location</code> to load the certificate from.</p>
+</li>
+<li>
+<p><code>serverCertificate</code> is the X.509 certificate.</p>
+</li>
+</ul>
+<h4><a href="#configure-client-certificates-in-code" aria-hidden="true" class="anchor" id="configure-client-certificates-in-code"></a>Configure client certificates in code</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.ConfigureHttpsDefaults(listenOptions =&gt;
+    {
+        listenOptions.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
+    });
+});
+</code></pre>
+<h4><a href="#configure-https-defaults-in-code" aria-hidden="true" class="anchor" id="configure-https-defaults-in-code"></a>Configure <code>HTTPS</code> defaults in code</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.ConfigureHttpsDefaults(listenOptions =&gt;
+    {
+        // ...
+    });
+});
+</code></pre>
+<blockquote>
+<p class='note'>Note
+Endpoints created by calling <code>Listen</code> before calling <code>ConfigureHttpsDefaults</code> won't have the defaults applied.</p>
+</blockquote>
+<h4><a href="#configure-ssltls-protocols-in-code" aria-hidden="true" class="anchor" id="configure-ssltls-protocols-in-code"></a>Configure SSL/TLS protocols in code</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.ConfigureHttpsDefaults(listenOptions =&gt;
+    {
+        listenOptions.SslProtocols = SslProtocols.Tls13;
+    });
+});
+</code></pre>
+<h4><a href="#configure-tls-cipher-suites-filter-in-code" aria-hidden="true" class="anchor" id="configure-tls-cipher-suites-filter-in-code"></a>Configure TLS cipher suites filter in code</h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    serverOptions.ConfigureHttpsDefaults(listenOptions =&gt;
+    {
+        listenOptions.OnAuthenticate = (context, sslOptions) =&gt;
+        {
+            sslOptions.CipherSuitesPolicy = new CipherSuitesPolicy(
+                new[]
+                {
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                    // ...
+                });
+        };
+    });
+});
+</code></pre>
+<h2><a href="#configure-server-name-indication" aria-hidden="true" class="anchor" id="configure-server-name-indication"></a>Configure Server Name Indication</h2>
+<ul>
+<li>
+<p>Configure a mapping between host names and <code>HTTPS</code> options in <code>Configuration</code>. For example, JSON in  the <code>appsettings.json</code> file.</p>
+</li>
+<li>
+<p>Create an endpoint in code and select a certificate using the host name with the <code>ServerCertificateSelector</code> callback.</p>
+</li>
+</ul>
+<h3><a href="#configure-sni-in-appsettingsjson" aria-hidden="true" class="anchor" id="configure-sni-in-appsettingsjson"></a>Configure SNI in <code>appsettings.json</code></h3>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;Endpoints&quot;: {
+      &quot;MySniEndpoint&quot;: {
+        &quot;Url&quot;: &quot;https://*&quot;,
+        &quot;SslProtocols&quot;: [&quot;Tls11&quot;, &quot;Tls12&quot;],
+        &quot;Sni&quot;: {
+          &quot;a.example.org&quot;: {
+            &quot;Protocols&quot;: &quot;Http1AndHttp2&quot;,
+            &quot;SslProtocols&quot;: [&quot;Tls11&quot;, &quot;Tls12&quot;, &quot;Tls13&quot;],
+            &quot;Certificate&quot;: {
+              &quot;Subject&quot;: &quot;&lt;subject; required&gt;&quot;,
+              &quot;Store&quot;: &quot;&lt;certificate store; required&gt;&quot;,
+            },
+            &quot;ClientCertificateMode&quot; : &quot;NoCertificate&quot;
+          },
+          &quot;*.example.org&quot;: {
+            &quot;Certificate&quot;: {
+              &quot;Path&quot;: &quot;&lt;path to .pfx file&gt;&quot;,
+              &quot;Password&quot;: &quot;$CREDENTIAL_PLACEHOLDER$&quot;
+            }
+          },
+          &quot;*&quot;: {
+            // At least one subproperty needs to exist per SNI section or it
+            // cannot be discovered via IConfiguration
+            &quot;Protocols&quot;: &quot;Http1&quot;,
+          }
+        }
+      }
+    },
+    &quot;Certificates&quot;: {
+      &quot;Default&quot;: {
+        &quot;Path&quot;: &quot;&lt;path to .pfx file&gt;&quot;,
+        &quot;Password&quot;: &quot;$CREDENTIAL_PLACEHOLDER$&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+In the preceding example, the certificate password is stored in plain-text in <code>appsettings.json</code>. The <code>$CREDENTIAL_PLACEHOLDER$</code> token is used as a placeholder for the certificate's password. To store certificate passwords securely in development environments, see Protect secrets in development. To store certificate passwords securely in production environments, see Azure Key Vault configuration provider. Development secrets shouldn't be used for production or test.</p>
+</blockquote>
+<ul>
+<li>
+<p><code>Certificate</code> configures the certificate source.</p>
+</li>
+<li>
+<p><code>Protocols</code> configures the allowed HTTP protocols.</p>
+</li>
+<li>
+<p><code>SslProtocols</code> configures the allowed SSL protocols.</p>
+</li>
+<li>
+<p><code>ClientCertificateMode</code> configures the client certificate requirements.</p>
+</li>
+<li>
+<p>Exact match. For example, <code>a.example.org</code> matches <code>a.example.org</code>.</p>
+</li>
+<li>
+<p>Wildcard prefix. If there are multiple wildcard matches, then the longest pattern is chosen. For example, <code>*.example.org</code> matches <code>b.example.org</code> and <code>c.example.org</code>.</p>
+</li>
+<li>
+<p>Full wildcard. * matches everything else, including clients that aren't using SNI and don't send a host name.</p>
+</li>
+</ul>
+<h3><a href="#configure-sni-with-code" aria-hidden="true" class="anchor" id="configure-sni-with-code"></a>Configure SNI with code</h3>
+<ul>
+<li>
+<p><code>ServerCertificateSelector</code></p>
+</li>
+<li>
+<p><code>ServerOptionsSelectionCallback</code></p>
+</li>
+<li>
+<p><code>TlsHandshakeCallbackOptions</code></p>
+</li>
+</ul>
+<h4><a href="#sni-with-servercertificateselector" aria-hidden="true" class="anchor" id="sni-with-servercertificateselector"></a>SNI with <code>ServerCertificateSelector</code></h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.ListenAnyIP(5005, listenOptions =&gt;
+    {
+        listenOptions.UseHttps(httpsOptions =&gt;
+        {
+            var localhostCert = CertificateLoader.LoadFromStoreCert(
+                &quot;localhost&quot;, &quot;My&quot;, StoreLocation.CurrentUser,
+                allowInvalid: true);
+            var exampleCert = CertificateLoader.LoadFromStoreCert(
+                &quot;example.com&quot;, &quot;My&quot;, StoreLocation.CurrentUser,
+                allowInvalid: true);
+            var subExampleCert = CertificateLoader.LoadFromStoreCert(
+                &quot;sub.example.com&quot;, &quot;My&quot;, StoreLocation.CurrentUser,
+                allowInvalid: true);
+            var certs = new Dictionary&lt;string, X509Certificate2&gt;(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                [&quot;localhost&quot;] = localhostCert,
+                [&quot;example.com&quot;] = exampleCert,
+                [&quot;sub.example.com&quot;] = subExampleCert
+            };
+
+            httpsOptions.ServerCertificateSelector = (connectionContext, name) =&gt;
+            {
+                if (name is not null &amp;&amp; certs.TryGetValue(name, out var cert))
+                {
+                    return cert;
+                }
+
+                return exampleCert;
+            };
+        });
+    });
+});
+</code></pre>
+<h4><a href="#sni-with-serveroptionsselectioncallback" aria-hidden="true" class="anchor" id="sni-with-serveroptionsselectioncallback"></a>SNI with <code>ServerOptionsSelectionCallback</code></h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.ListenAnyIP(5005, listenOptions =&gt;
+    {
+        listenOptions.UseHttps(httpsOptions =&gt;
+        {
+            var localhostCert = CertificateLoader.LoadFromStoreCert(
+                &quot;localhost&quot;, &quot;My&quot;, StoreLocation.CurrentUser,
+                allowInvalid: true);
+            var exampleCert = CertificateLoader.LoadFromStoreCert(
+                &quot;example.com&quot;, &quot;My&quot;, StoreLocation.CurrentUser,
+                allowInvalid: true);
+
+            listenOptions.UseHttps((stream, clientHelloInfo, state, cancellationToken) =&gt;
+            {
+                if (string.Equals(clientHelloInfo.ServerName, &quot;localhost&quot;,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ValueTask&lt;SslServerAuthenticationOptions&gt;(
+                        new SslServerAuthenticationOptions
+                        {
+                            ServerCertificate = localhostCert,
+                            // Different TLS requirements for this host
+                            ClientCertificateRequired = true
+                        });
+                }
+
+                return new ValueTask&lt;SslServerAuthenticationOptions&gt;(
+                    new SslServerAuthenticationOptions
+                    {
+                        ServerCertificate = exampleCert
+                    });
+            }, state: null!);
+        });
+    });
+});
+</code></pre>
+<h4><a href="#sni-with-tlshandshakecallbackoptions" aria-hidden="true" class="anchor" id="sni-with-tlshandshakecallbackoptions"></a>SNI with <code>TlsHandshakeCallbackOptions</code></h4>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.ListenAnyIP(5005, listenOptions =&gt;
+    {
+        listenOptions.UseHttps(httpsOptions =&gt;
+        {
+            var localhostCert = CertificateLoader.LoadFromStoreCert(
+                &quot;localhost&quot;, &quot;My&quot;, StoreLocation.CurrentUser,
+                allowInvalid: true);
+            var exampleCert = CertificateLoader.LoadFromStoreCert(
+                &quot;example.com&quot;, &quot;My&quot;, StoreLocation.CurrentUser,
+                allowInvalid: true);
+
+            listenOptions.UseHttps(new TlsHandshakeCallbackOptions
+            {
+                OnConnection = context =&gt;
+                {
+                    if (string.Equals(context.ClientHelloInfo.ServerName, &quot;localhost&quot;,
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Different TLS requirements for this host
+                        context.AllowDelayedClientCertificateNegotation = true;
+
+                        return new ValueTask&lt;SslServerAuthenticationOptions&gt;(
+                            new SslServerAuthenticationOptions
+                            {
+                                ServerCertificate = localhostCert
+                            });
+                    }
+
+                    return new ValueTask&lt;SslServerAuthenticationOptions&gt;(
+                        new SslServerAuthenticationOptions
+                        {
+                            ServerCertificate = exampleCert
+                        });
+                }
+            });
+        });
+    });
+});
+</code></pre>
+<h2><a href="#configure-http-protocols" aria-hidden="true" class="anchor" id="configure-http-protocols"></a>Configure HTTP protocols</h2>
+<table><thead>
+<tr>
+<th><code>HttpProtocols</code> value</th>
+<th>Connection protocol permitted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Http1</code></td>
+<td>HTTP/1.1 only. Can be used with or without TLS.</td>
+</tr>
+<tr>
+<td><code>Http2</code></td>
+<td>HTTP/2 only. May be used without TLS only if the client supports a <a href="https://tools.ietf.org/html/rfc7540#section-3.4" data-linktype="external">Prior Knowledge mode</a>.</td>
+</tr>
+<tr>
+<td><code>Http3</code></td>
+<td>HTTP/3 only. Requires TLS. The client may need to be configured to use HTTP/3 only.</td>
+</tr>
+<tr>
+<td><code>Http1AndHttp2</code></td>
+<td>HTTP/1.1 and HTTP/2. HTTP/2 requires the client to select HTTP/2 in the TLS <a href="https://tools.ietf.org/html/rfc7301#section-3" data-linktype="external">Application-Layer Protocol Negotiation (ALPN)</a> handshake; otherwise, the connection defaults to HTTP/1.1.</td>
+</tr>
+<tr>
+<td><code>Http1AndHttp2AndHttp3</code></td>
+<td>HTTP/1.1, HTTP/2 and HTTP/3. The first client request normally uses HTTP/1.1 or HTTP/2, and the <a href="http3?view=aspnetcore-8.0#alt-svc" data-linktype="relative-path"><code>alt-svc</code> response header</a> prompts the client to upgrade to HTTP/3. HTTP/2 and HTTP/3 requires TLS; otherwise, the connection defaults to HTTP/1.1.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p>TLS version 1.2 or later</p>
+</li>
+<li>
+<p>Renegotiation disabled</p>
+</li>
+<li>
+<p>Compression disabled</p>
+</li>
+<li>
+<p>Minimum ephemeral key exchange sizes:</p>
+<ul>
+<li>
+<p>Elliptic curve Diffie-Hellman (ECDHE) [RFC4492]: 224 bits minimum</p>
+</li>
+<li>
+<p>Finite field Diffie-Hellman (DHE) [TLS12]: 2048 bits minimum</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Cipher suite not prohibited.</p>
+</li>
+</ul>
+<h3><a href="#configure-http-protocols-in-appsettingsjson" aria-hidden="true" class="anchor" id="configure-http-protocols-in-appsettingsjson"></a>Configure HTTP protocols in <code>appsettings.json</code></h3>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;Endpoints&quot;: {
+      &quot;HttpsDefaultCert&quot;: {
+        &quot;Url&quot;: &quot;https://localhost:5001&quot;,
+        &quot;Protocols&quot;: &quot;Http1&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;Kestrel&quot;: {
+    &quot;EndpointDefaults&quot;: {
+      &quot;Protocols&quot;: &quot;Http1&quot;
+    }
+  }
+}
+</code></pre>
+<h3><a href="#configure-http-protocols-in-code" aria-hidden="true" class="anchor" id="configure-http-protocols-in-code"></a>Configure HTTP protocols in code</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    serverOptions.Listen(IPAddress.Any, 8000, listenOptions =&gt;
+    {
+        listenOptions.UseHttps(&quot;testCert.pfx&quot;, &quot;testPassword&quot;);
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+    });
+});
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p><code>Kestrel</code> web server in ASP.NET Core</p>
+</li>
+<li>
+<p>Configure options for the ASP.NET Core <code>Kestrel</code> web server</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/endpoints?view=aspnetcore-8.0">Configure endpoints for the ASP.NET Core <code>Kestrel</code> web server</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

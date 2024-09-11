@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Kestrel - Options | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Kestrel - Options</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    // ...
+});
+</code></pre>
+<h2><a href="#general-limits" aria-hidden="true" class="anchor" id="general-limits"></a>General limits</h2>
+<h3><a href="#keep-alive-timeout" aria-hidden="true" class="anchor" id="keep-alive-timeout"></a>Keep-alive timeout</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+});
+</code></pre>
+<h3><a href="#maximum-client-connections" aria-hidden="true" class="anchor" id="maximum-client-connections"></a>Maximum client connections</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.MaxConcurrentConnections = 100;
+});
+</code></pre>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.MaxConcurrentUpgradedConnections = 100;
+});
+</code></pre>
+<h3><a href="#maximum-request-body-size" aria-hidden="true" class="anchor" id="maximum-request-body-size"></a>Maximum request body size</h3>
+<pre><code class="language-csharp">[RequestSizeLimit(100_000_000)]
+public IActionResult Get()
+</code></pre>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.MaxRequestBodySize = 100_000_000;
+});
+</code></pre>
+<pre><code class="language-csharp">app.Use(async (context, next) =&gt;
+{
+    var httpMaxRequestBodySizeFeature = context.Features.Get&lt;IHttpMaxRequestBodySizeFeature&gt;();
+
+    if (httpMaxRequestBodySizeFeature is not null)
+        httpMaxRequestBodySizeFeature.MaxRequestBodySize = 10 * 1024;
+
+    // ...
+
+    await next(context);
+});
+</code></pre>
+<h3><a href="#minimum-request-body-data-rate" aria-hidden="true" class="anchor" id="minimum-request-body-data-rate"></a>Minimum request body data rate</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.MinRequestBodyDataRate = new MinDataRate(
+        bytesPerSecond: 100, gracePeriod: TimeSpan.FromSeconds(10));
+    serverOptions.Limits.MinResponseDataRate = new MinDataRate(
+        bytesPerSecond: 100, gracePeriod: TimeSpan.FromSeconds(10));
+});
+</code></pre>
+<pre><code class="language-csharp">app.Use(async (context, next) =&gt;
+{
+    var httpMinRequestBodyDataRateFeature = context.Features
+        .Get&lt;IHttpMinRequestBodyDataRateFeature&gt;();
+
+    if (httpMinRequestBodyDataRateFeature is not null)
+    {
+        httpMinRequestBodyDataRateFeature.MinDataRate = new MinDataRate(
+            bytesPerSecond: 100, gracePeriod: TimeSpan.FromSeconds(10));
+    }
+
+    var httpMinResponseDataRateFeature = context.Features
+        .Get&lt;IHttpMinResponseDataRateFeature&gt;();
+
+    if (httpMinResponseDataRateFeature is not null)
+    {
+        httpMinResponseDataRateFeature.MinDataRate = new MinDataRate(
+            bytesPerSecond: 100, gracePeriod: TimeSpan.FromSeconds(10));
+    }
+
+    // ...
+
+    await next(context);
+});
+</code></pre>
+<h3><a href="#request-headers-timeout" aria-hidden="true" class="anchor" id="request-headers-timeout"></a>Request headers timeout</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(1);
+});
+</code></pre>
+<h2><a href="#http2-limits" aria-hidden="true" class="anchor" id="http2-limits"></a>HTTP/2 limits</h2>
+<h3><a href="#maximum-streams-per-connection" aria-hidden="true" class="anchor" id="maximum-streams-per-connection"></a>Maximum streams per connection</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.Http2.MaxStreamsPerConnection = 100;
+});
+</code></pre>
+<h3><a href="#header-table-size" aria-hidden="true" class="anchor" id="header-table-size"></a>Header table size</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.Http2.HeaderTableSize = 4096;
+});
+</code></pre>
+<h3><a href="#maximum-frame-size" aria-hidden="true" class="anchor" id="maximum-frame-size"></a>Maximum frame size</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.Http2.MaxFrameSize = 16_384;
+});
+</code></pre>
+<h3><a href="#maximum-request-header-size" aria-hidden="true" class="anchor" id="maximum-request-header-size"></a>Maximum request header size</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.Http2.MaxRequestHeaderFieldSize = 8192;
+});
+</code></pre>
+<h3><a href="#initial-connection-window-size" aria-hidden="true" class="anchor" id="initial-connection-window-size"></a>Initial connection window size</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.Http2.InitialConnectionWindowSize = 131_072;
+});
+</code></pre>
+<h3><a href="#initial-stream-window-size" aria-hidden="true" class="anchor" id="initial-stream-window-size"></a>Initial stream window size</h3>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.Http2.InitialStreamWindowSize = 98_304;
+});
+</code></pre>
+<h3><a href="#http2-keep-alive-ping-configuration" aria-hidden="true" class="anchor" id="http2-keep-alive-ping-configuration"></a>HTTP/2 keep alive ping configuration</h3>
+<ul>
+<li>
+<p>Keep idle connections alive. Some clients and proxy servers close connections that are idle. HTTP/2 pings are considered as activity on a connection and prevent the connection from being closed as idle.</p>
+</li>
+<li>
+<p>Close unhealthy connections. Connections where the client doesn't respond to the keep alive ping in the configured time are closed by the server.</p>
+</li>
+<li>
+<p><code>KeepAlivePingDelay</code> is a TimeSpan that configures the ping interval. The server sends a keep alive ping to the client if it doesn't receive any frames for this period of time. Keep alive pings are disabled when this option is set to TimeSpan.MaxValue.</p>
+</li>
+<li>
+<p><code>KeepAlivePingTimeout</code> is a TimeSpan that configures the ping timeout. If the server doesn't receive any frames, such as a response ping, during this timeout then the connection is closed. Keep alive timeout is disabled when this option is set to TimeSpan.MaxValue.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.Limits.Http2.KeepAlivePingDelay = TimeSpan.FromSeconds(30);
+    serverOptions.Limits.Http2.KeepAlivePingTimeout = TimeSpan.FromMinutes(1);
+});
+</code></pre>
+<h2><a href="#other-options" aria-hidden="true" class="anchor" id="other-options"></a>Other options</h2>
+<h3><a href="#synchronous-io" aria-hidden="true" class="anchor" id="synchronous-io"></a>Synchronous I/O</h3>
+<blockquote>
+<p class='warning'>Warning
+A large number of blocking synchronous I/O operations can lead to thread pool starvation, which makes the app unresponsive. Only enable <code>AllowSynchronousIO</code> when using a library that doesn't support asynchronous I/O.</p>
+</blockquote>
+<pre><code class="language-csharp">builder.WebHost.ConfigureKestrel(serverOptions =&gt;
+{
+    serverOptions.AllowSynchronousIO = true;
+});
+</code></pre>
+<ul>
+<li>
+<p>KestrelServerOptions</p>
+</li>
+<li>
+<p>KestrelServerLimits</p>
+</li>
+<li>
+<p>ListenOptions</p>
+</li>
+</ul>
+<h2><a href="#behavior-with-debugger-attached" aria-hidden="true" class="anchor" id="behavior-with-debugger-attached"></a>Behavior with debugger attached</h2>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/options?view=aspnetcore-8.0">Configure options for the ASP.NET Core Kestrel web server</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

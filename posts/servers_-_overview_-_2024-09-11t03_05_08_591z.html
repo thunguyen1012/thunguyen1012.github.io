@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>An ASP.NET Core app runs with an in-process HTTP server implementation.</p>
+<ul>
+<li>
+<p>Windows</p>
+</li>
+<li>
+<p>macOS</p>
+</li>
+<li>
+<p>Linux</p>
+</li>
+<li>
+<p>Kestrel server is the default, cross-platform HTTP server implementation. Kestrel provides the best performance and memory utilization, but it doesn't have some of the advanced features in HTTP.sys. For more information, see Kestrel vs. HTTP.sys in the Windows tab.</p>
+</li>
+<li>
+<p>IIS HTTP Server is an in-process server for IIS.</p>
+</li>
+<li>
+<p>HTTP.sys server is a Windows-only HTTP server based on the HTTP.sys kernel driver and HTTP Server API.</p>
+</li>
+<li>
+<p>In the same process as the IIS worker process (the in-process hosting model) with the IIS HTTP Server. In-process is the recommended configuration.</p>
+</li>
+<li>
+<p>In a process separate from the IIS worker process (the out-of-process hosting model) with the Kestrel server.</p>
+</li>
+</ul>
+<h2><a href="#kestrel-vs-http.sys" aria-hidden="true" class="anchor" id="kestrel-vs-http.sys"></a>Kestrel vs. HTTP.sys</h2>
+<ul>
+<li>
+<p>Better performance and memory utilization.</p>
+</li>
+<li>
+<p>Cross platform</p>
+</li>
+<li>
+<p>Agility, it's developed and patched independent of the OS.</p>
+</li>
+<li>
+<p>Programmatic port and TLS configuration</p>
+</li>
+<li>
+<p>Extensibility that allows for protocols like PPv2 and alternate transports.</p>
+</li>
+<li>
+<p>Port sharing</p>
+</li>
+<li>
+<p>Kernel mode windows authentication. Kestrel supports only user-mode authentication.</p>
+</li>
+<li>
+<p>Fast proxying via queue transfers</p>
+</li>
+<li>
+<p>Direct file transmission</p>
+</li>
+<li>
+<p>Response caching</p>
+</li>
+</ul>
+<h2><a href="#hosting-models" aria-hidden="true" class="anchor" id="hosting-models"></a>Hosting models</h2>
+<ul>
+<li>
+<p>Kestrel self-hosting: The Kestrel web server runs without requiring any other external web server such as IIS or HTTP.sys.</p>
+</li>
+<li>
+<p>HTTP.sys self-hosting is an alternative to Kestrel. Kestrel is recommended over HTTP.sys unless the app requires features not available in Kestrel.</p>
+</li>
+<li>
+<p>IIS in-process hosting: An ASP.NET Core app runs in the same process as its IIS worker process. IIS in-process hosting provides improved performance over IIS out-of-process hosting because requests aren't proxied over the loopback adapter, a network interface that returns outgoing network traffic back to the same machine. IIS handles process management with the Windows Process Activation Service (WAS).</p>
+</li>
+<li>
+<p>IIS out-of-process hosting: ASP.NET Core apps run in a process separate from the IIS worker process, and the module handles process management. The module starts the process for the ASP.NET Core app when the first request arrives and restarts the app if it shuts down or crashes. This is essentially the same behavior as seen with apps that run in-process that are managed by the Windows Process Activation Service (WAS). Using a separate process also enables hosting more than one app from the same app pool.</p>
+</li>
+<li>
+<p>Kestrel vs. HTTP.sys</p>
+</li>
+<li>
+<p>Host ASP.NET Core on Windows with IIS</p>
+</li>
+<li>
+<p>ASP.NET Core Module (ANCM) for IIS</p>
+</li>
+</ul>
+<h2><a href="#kestrel" aria-hidden="true" class="anchor" id="kestrel"></a>Kestrel</h2>
+<p>HTTP.sys is the default, cross-platform HTTP server implementation.</p>
+<p>Use Kestrel:</p>
+<ul>
+<li>By itself as an edge server processing requests directly from a network, including the Internet.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/_static/kestrel-to-internet2.png?view=aspnetcore-8.0" alt="Kestrel communicates directly with the Internet without a reverse proxy server!" title="Kestrel communicates directly with the Internet without a reverse proxy server" /></p>
+<ul>
+<li>With a reverse proxy server, such as Internet Information Services (IIS), Nginx, or Apache. A reverse proxy server receives HTTP requests from the Internet and forwards them to Kestrel.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/_static/kestrel-to-internet.png?view=aspnetcore-8.0" alt="Kestrel communicates indirectly with the Internet through a reverse proxy server, such as IIS, Nginx, or Apache!" title="Kestrel communicates indirectly with the Internet through a reverse proxy server, such as IIS, Nginx, or Apache" /></p>
+<p>Either hosting configuration—with or without a reverse proxy server—is supported.</p>
+<p>For Kestrel configuration guidance and information on when to use Kestrel in a reverse proxy configuration, see Kestrel web server in ASP.NET Core.</p>
+<h3><a href="#nginx-with-kestrel" aria-hidden="true" class="anchor" id="nginx-with-kestrel"></a>Nginx with Kestrel</h3>
+<p>For information on how to use Nginx on Linux as a reverse proxy server for Kestrel, see Host ASP.NET Core on Linux with Nginx.</p>
+<h2><a href="#httpsys" aria-hidden="true" class="anchor" id="httpsys"></a>HTTP.sys</h2>
+<p>HTTP.sys is a web server implementation in ASP.NET Core.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys/_static/httpsys-to-internet.png?view=aspnetcore-8.0" alt="HTTP.sys communicates directly with the Internet!" title="HTTP.sys communicates directly with the Internet" /></p>
+<p>HTTP.sys can also be used for apps that are only exposed to an internal network.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/httpsys/_static/httpsys-to-internal.png?view=aspnetcore-8.0" alt="HTTP.sys communicates directly with the internal network!" title="HTTP.sys communicates directly with the internal network" /></p>
+<p>For HTTP.sys configuration guidance, see HTTP.sys web server implementation in ASP.NET Core.</p>
+<h2><a href="#aspnet-core-server-infrastructure" aria-hidden="true" class="anchor" id="aspnet-core-server-infrastructure"></a>ASP.NET Core server infrastructure</h2>
+<p>The IApplicationBuilder available in the <code>Startup.Configure</code> method exposes the ServerFeatures property of type IFeatureCollection. Kestrel and HTTP.sys only expose a single feature each, <code>IServerAddressesFeature</code>, but different server implementations may expose additional functionality.</p>
+<p><code>IServerAddressesFeature</code> can be used to find out which port the server implementation has bound at runtime.</p>
+<h2><a href="#custom-servers" aria-hidden="true" class="anchor" id="custom-servers"></a>Custom servers</h2>
+<p>A Nowin-based IServer implementation makes it easy to write web apps that use built-in servers.</p>
+<h2><a href="#server-startup" aria-hidden="true" class="anchor" id="server-startup"></a>Server startup</h2>
+<p>The server is launched when the Integrated Development Environment (IDE) or editor starts the app:</p>
+<ul>
+<li>
+<p>Visual Studio: Launch profiles can be used to start the app and server with either IIS Express/ASP.NET Core Module or the console.</p>
+</li>
+<li>
+<p>Visual Studio Code: The app and server are started by Omnisharp, which activates the CoreCLR debugger.</p>
+</li>
+<li>
+<p>Visual Studio for Mac: The app and server are started by the Mono Soft-Mode Debugger.</p>
+</li>
+</ul>
+<p>When launching the app from a command prompt in the project's folder, <code>dotnet run</code> launches the app and server (Kestrel and HTTP.sys only). The configuration is specified by the <code>-c|--configuration</code> option, which is set to either <code>Debug</code> (default) or <code>Release</code>.</p>
+<p>A <code>launchSettings.json</code> file provides configuration when launching an app with <code>dotnet run</code> or with a debugger built into tooling, such as Visual Studio. If launch profiles are present in a <code>launchSettings.json</code> file, use the --launch-profile {PROFILE NAME} option with the <code>dotnet run</code> command or select the profile in Visual Studio. For more information, see <code>dotnet run</code> and .NET Core distribution packaging.</p>
+<h2><a href="#http2-support" aria-hidden="true" class="anchor" id="http2-support"></a>HTTP/2 support</h2>
+<p>HTTP/2 is supported with ASP.NET Core in the following deployment scenarios:</p>
+<ul>
+<li>
+<p>Kestrel</p>
+<ul>
+<li>
+<p>Operating system</p>
+<ul>
+<li>
+<p>Windows Server 2016/Windows 10 or later†</p>
+</li>
+<li>
+<p>Linux with OpenSSL 1.0.2 or later (for example, Ubuntu 16.04 or later)</p>
+</li>
+<li>
+<p>macOS 10.15 or later</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Target framework: .NET Core 2.2 or later</p>
+</li>
+</ul>
+</li>
+<li>
+<p>HTTP.sys</p>
+<ul>
+<li>
+<p>Windows Server 2016/Windows 10 or later</p>
+</li>
+<li>
+<p>Target framework: Not applicable to HTTP.sys deployments.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>IIS (in-process)</p>
+<ul>
+<li>
+<p>Windows Server 2016/Windows 10 or later; IIS 10 or later</p>
+</li>
+<li>
+<p>Target framework: .NET Core 2.2 or later</p>
+</li>
+</ul>
+</li>
+<li>
+<p>IIS (out-of-process)</p>
+<ul>
+<li>
+<p>Windows Server 2016/Windows 10 or later; IIS 10 or later</p>
+</li>
+<li>
+<p>Public-facing edge server connections use HTTP/2, but the reverse proxy connection to Kestrel uses HTTP/1.1.</p>
+</li>
+<li>
+<p>Target framework: Not applicable to IIS out-of-process deployments.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>An HTTP/2 connection must use Application-Layer Protocol Negotiation (ALPN) and TLS 1.2 or later. For more information, see the topics that pertain to your server deployment scenarios.</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Kestrel web server in ASP.NET Core</p>
+</li>
+<li>
+<p>ASP.NET Core Module (ANCM) for IIS</p>
+</li>
+<li>
+<p>Host ASP.NET Core on Windows with IIS</p>
+</li>
+<li>
+<p>Deploy ASP.NET Core apps to Azure App Service</p>
+</li>
+<li>
+<p>Host ASP.NET Core on Linux with Nginx</p>
+</li>
+<li>
+<p>HTTP.sys web server implementation in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/?view=aspnetcore-8.0">Web server implementations in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

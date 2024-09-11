@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Kestrel - HTTP/2 | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Kestrel - HTTP/2</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Operating system</p>
+<ul>
+<li>
+<p>Windows Server 2016/Windows 10 or later‡</p>
+</li>
+<li>
+<p>Linux with OpenSSL 1.0.2 or later (for example, Ubuntu 16.04 or later)</p>
+</li>
+<li>
+<p>macOS 10.15 or later</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Target framework: .NET Core 2.2 or later</p>
+</li>
+<li>
+<p>Application-Layer Protocol Negotiation (ALPN) connection</p>
+</li>
+<li>
+<p>TLS 1.2 or later connection</p>
+</li>
+</ul>
+<h2><a href="#advanced-http2-features" aria-hidden="true" class="anchor" id="advanced-http2-features"></a>Advanced <code>HTTP/2</code> features</h2>
+<h3><a href="#trailers" aria-hidden="true" class="anchor" id="trailers"></a>Trailers</h3>
+<pre><code class="language-csharp">if (httpContext.Response.SupportsTrailers())
+{
+    httpContext.Response.DeclareTrailer(&quot;trailername&quot;);	
+
+    // Write body
+    httpContext.Response.WriteAsync(&quot;Hello world&quot;);
+
+    httpContext.Response.AppendTrailer(&quot;trailername&quot;, &quot;TrailerValue&quot;);
+}
+</code></pre>
+<ul>
+<li>
+<p><code>SupportsTrailers</code> ensures that trailers are supported for the response.</p>
+</li>
+<li>
+<p><code>DeclareTrailer</code> adds the given trailer name to the <code>Trailer</code> response header. Declaring a response's trailers is optional, but recommended. If <code>DeclareTrailer</code> is called, it must be before the response headers are sent.</p>
+</li>
+<li>
+<p><code>AppendTrailer</code> appends the trailer.</p>
+</li>
+</ul>
+<h3><a href="#reset" aria-hidden="true" class="anchor" id="reset"></a><code>Reset</code></h3>
+<pre><code class="language-csharp">var resetFeature = httpContext.Features.Get&lt;IHttpResetFeature&gt;();
+resetFeature.Reset(errorCode: 2);
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/http2?view=aspnetcore-8.0">Use <code>HTTP/2</code> with the ASP.NET Core Kestrel web server</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Kestrel - HTTP/3 | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Kestrel - HTTP/3</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p class='important'>Important
+Apps configured to take advantage of HTTP/3 should be designed to also support HTTP/1.1 and HTTP/2.</p>
+</blockquote>
+<h2><a href="#http3-requirements" aria-hidden="true" class="anchor" id="http3-requirements"></a>HTTP/3 requirements</h2>
+<h3><a href="#windows" aria-hidden="true" class="anchor" id="windows"></a>Windows</h3>
+<ul>
+<li>
+<p>Windows 11 Build 22000 or later OR Windows Server 2022.</p>
+</li>
+<li>
+<p>TLS 1.3 or later connection.</p>
+</li>
+</ul>
+<h3><a href="#linux" aria-hidden="true" class="anchor" id="linux"></a>Linux</h3>
+<ul>
+<li>
+<p><code>libmsquic</code> package installed.</p>
+</li>
+<li>
+<p>Add the <code>packages.microsoft.com</code> repository. See Linux Software Repository for Microsoft Products for instructions.</p>
+</li>
+<li>
+<p>Install the <code>libmsquic</code> package using the distro's package manager. For example, apt install <code>libmsquic</code>=1.9* on Ubuntu.</p>
+</li>
+</ul>
+<h3><a href="#macos" aria-hidden="true" class="anchor" id="macos"></a>macOS</h3>
+<h2><a href="#getting-started" aria-hidden="true" class="anchor" id="getting-started"></a>Getting started</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, options) =&gt;
+{
+    options.ListenAnyIP(5001, listenOptions =&gt;
+    {
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+        listenOptions.UseHttps();
+    });
+});
+</code></pre>
+<ul>
+<li>
+<p>Use HTTP/3 alongside HTTP/1.1 and HTTP/2 by specifying <code>HttpProtocols.Http1AndHttp2AndHttp3</code>.</p>
+</li>
+<li>
+<p>Enable HTTPS with <code>UseHttps</code>. HTTP/3 requires HTTPS.</p>
+</li>
+</ul>
+<h2><a href="#alt-svc" aria-hidden="true" class="anchor" id="alt-svc"></a>Alt-svc</h2>
+<h2><a href="#localhost-testing" aria-hidden="true" class="anchor" id="localhost-testing"></a>Localhost testing</h2>
+<ul>
+<li>
+<p>Browsers don't allow self-signed certificates on HTTP/3, such as the Kestrel development certificate.</p>
+</li>
+<li>
+<p><code>HttpClient</code> can be used for localhost/loopback testing in .NET 6 or later. Extra configuration is required when using <code>HttpClient</code> to make an HTTP/3 request:</p>
+<ul>
+<li>
+<p>Set <code>HttpRequestMessage.Version</code> to 3.0, or</p>
+</li>
+<li>
+<p>Set <code>HttpRequestMessage.VersionPolicy</code> to <code>HttpVersionPolicy.RequestVersionOrHigher</code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#http3-benefits" aria-hidden="true" class="anchor" id="http3-benefits"></a>HTTP/3 benefits</h2>
+<ul>
+<li>
+<p>Faster response time of the first request. QUIC and HTTP/3 negotiates the connection in fewer round-trips between the client and the server. The first request reaches the server faster.</p>
+</li>
+<li>
+<p>Improved experience when there is connection packet loss. HTTP/2 multiplexes multiple requests via one TCP connection. Packet loss on the connection affects all requests. This problem is called &quot;head-of-line blocking&quot;. Because QUIC provides native multiplexing, lost packets only impact the requests where data has been lost.</p>
+</li>
+<li>
+<p>Supports transitioning between networks. This feature is useful for mobile devices where it is common to switch between WIFI and cellular networks as a mobile device changes location. Currently, HTTP/1.1 and HTTP/2 connections fail with an error when switching networks. An app or web browsers must retry any failed HTTP requests. HTTP/3 allows the app or web browser to seamlessly continue when a network changes. Kestrel doesn't support network transitions in .NET 8. It may be available in a future release.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/http3?view=aspnetcore-8.0">Use HTTP/3 with the ASP.NET Core Kestrel web server</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

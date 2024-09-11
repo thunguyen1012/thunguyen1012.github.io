@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Kestrel - Diagnostics | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Kestrel - Diagnostics</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article provides guidance for gathering diagnostics from Kestrel to help troubleshoot issues. Topics covered include:</p>
+<ul>
+<li>
+<p>Logging: Structured logs written to .NET Core logging. ILogger is used by app frameworks to write logs, and by users for their own logging in an app.</p>
+</li>
+<li>
+<p>Metrics: Representation of data measures over intervals of time, for example, requests per second. Metrics are emitted using <code>EventCounter</code> and can be observed using the dotnet-counters command line tool or with Application Insights.</p>
+</li>
+<li>
+<p><code>DiagnosticSource</code>: <code>DiagnosticSource</code> is a mechanism for production-time logging with rich data payloads for consumption within the process. Unlike logging, which assumes data will leave the process and expects serializable data, <code>DiagnosticSource</code> works well with complex data.</p>
+</li>
+</ul>
+<h2><a href="#logging" aria-hidden="true" class="anchor" id="logging"></a>Logging</h2>
+<p>Like most components in ASP.NET Core, Kestrel uses <code>Microsoft.Extensions.Logging</code> to emit log information. Kestrel employs the use of multiple categories which allows you to be selective on which logs you listen to.</p>
+<table><thead>
+<tr>
+<th>Logging Category Name</th>
+<th>Logging Events</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Microsoft.AspNetCore.Server.Kestrel</code></td>
+<td><code>ApplicationError</code>, <code>ConnectionHeadResponseBodyWrite</code>, <code>ApplicationNeverCompleted</code>, <code>RequestBodyStart</code>, <code>RequestBodyDone</code>, <code>RequestBodyNotEntirelyRead</code>, <code>RequestBodyDrainTimedOut</code>, <code>ResponseMinimumDataRateNotSatisfied</code>, <code>InvalidResponseHeaderRemoved</code>, <code>HeartbeatSlow</code></td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Server.Kestrel.BadRequests</code></td>
+<td><code>ConnectionBadRequest</code>, <code>RequestProcessingError</code>, <code>RequestBodyMinimumDataRateNotSatisfied</code></td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Server.Kestrel.Connections</code></td>
+<td><code>ConnectionAccepted</code>, <code>ConnectionStart</code>, <code>ConnectionStop</code>, <code>ConnectionPause</code>, <code>ConnectionResume</code>, <code>ConnectionKeepAlive</code>, <code>ConnectionRejected</code>, <code>ConnectionDisconnect</code>, <code>NotAllConnectionsClosedGracefully</code>, <code>NotAllConnectionsAborted</code>, <code>ApplicationAbortedConnection</code></td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Server.Kestrel.Http2</code></td>
+<td><code>Http2ConnectionError</code>, <code>Http2ConnectionClosing</code>, <code>Http2ConnectionClosed</code>, <code>Http2StreamError</code>, <code>Http2StreamResetAbort</code>, <code>HPackDecodingError</code>, <code>HPackEncodingError</code>, <code>Http2FrameReceived</code>, <code>Http2FrameSending</code>, <code>Http2MaxConcurrentStreamsReached</code></td>
+</tr>
+<tr>
+<td><code>Microsoft.AspNetCore.Server.Kestrel.Http3</code></td>
+<td><code>Http3ConnectionError</code>, <code>Http3ConnectionClosing</code>, <code>Http3ConnectionClosed</code>, <code>Http3StreamAbort</code>, <code>Http3FrameReceived</code>, <code>Http3FrameSending</code></td>
+</tr>
+</tbody></table>
+<h3><a href="#connection-logging" aria-hidden="true" class="anchor" id="connection-logging"></a>Connection logging</h3>
+<p>Kestrel also supports the ability to emit <code>Debug</code> level logs for byte-level communication and can be enabled on a per-endpoint basis. To enable connection logging, see configure endpoints for Kestrel</p>
+<h2><a href="#metrics" aria-hidden="true" class="anchor" id="metrics"></a>Metrics</h2>
+<p>Metrics is a representation of data measures over intervals of time, for example, requests per second. Metrics data allows observation of the state of an app at a high-level. Kestrel metrics are emitted using <code>EventCounter</code>.</p>
+<blockquote>
+<p class='note'>Note
+The <code>connections-per-second</code> and <code>tls-handshakes-per-second</code> counters are named incorrectly. The counters:</p>
+</blockquote>
+<p>Do not always contain the number of new connections or TLS handshakes per second
+Display the number of new connection or TLS handshakes in the last update interval as requested as the consumer of Events via the <code>EventCounterIntervalSec</code> argument in the <code>filterPayload</code> to <code>KestrelEventSource</code>.</p>
+<p>We recommend consumers of these counters scale the metric value based on the <code>DisplayRateTimeScale</code> of one second.</p>
+<ul>
+<li>
+<p>Do not always contain the number of new connections or TLS handshakes per second</p>
+</li>
+<li>
+<p>Display the number of new connection or TLS handshakes in the last update interval as requested as the consumer of Events via the <code>EventCounterIntervalSec</code> argument in the <code>filterPayload</code> to <code>KestrelEventSource</code>.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Display Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>connections-per-second</code></td>
+<td>Connection Rate</td>
+<td>The number of new incoming connections per update interval</td>
+</tr>
+<tr>
+<td><code>total-connections</code></td>
+<td>Total Connections</td>
+<td>The total number of connections</td>
+</tr>
+<tr>
+<td><code>tls-handshakes-per-second</code></td>
+<td>TLS Handshake Rate</td>
+<td>The number of new TLS handshakes per update interval</td>
+</tr>
+<tr>
+<td><code>total-tls-handshakes</code></td>
+<td>Total TLS Handshakes</td>
+<td>The total number of TLS handshakes</td>
+</tr>
+<tr>
+<td><code>current-tls-handshakes</code></td>
+<td>Current TLS Handshakes</td>
+<td>The number of TLS handshakes in process</td>
+</tr>
+<tr>
+<td><code>failed-tls-handshakes</code></td>
+<td>Failed TLS Handshakes</td>
+<td>The total number of failed TLS handshakes</td>
+</tr>
+<tr>
+<td><code>current-connections</code></td>
+<td>Current Connections</td>
+<td>The total number of connections, including idle connections</td>
+</tr>
+<tr>
+<td><code>connection-queue-length</code></td>
+<td>Connection Queue Length</td>
+<td>The total number connections queued to the thread pool. In a healthy system at steady state, this number should always be close to zero</td>
+</tr>
+<tr>
+<td><code>request-queue-length</code></td>
+<td>Request Queue Length</td>
+<td>The total number requests queued to the thread pool. In a healthy system at steady state, this number should always be close to zero. This metric is unlike the IIS/Http.Sys request queue and cannot be compared</td>
+</tr>
+<tr>
+<td><code>current-upgraded-requests</code></td>
+<td>Current Upgraded Requests (WebSockets)</td>
+<td>The number of active WebSocket requests</td>
+</tr>
+</tbody></table>
+<h2><a href="#diagnosticsource" aria-hidden="true" class="anchor" id="diagnosticsource"></a><code>DiagnosticSource</code></h2>
+<p>Kestrel emits a <code>DiagnosticSource</code> event for HTTP requests rejected at server layer such as malformed requests and protocols violations. As such, these requests never make it into the hosting layer of ASP.NET Core.</p>
+<p>Kestrel emits these events with the <code>Microsoft.AspNetCore.Server.Kestrel.BadRequest</code> event name and an <code>IFeatureCollection</code> as the object payload. The underlying exception can be retrieved by accessing the <code>IBadRequestExceptionFeature</code> on the feature collection.</p>
+<p>Resolving these events is a two-step process. An observer for <code>DiagnosticListener</code> must be created:</p>
+<pre><code class="language-csharp">class BadRequestEventListener : IObserver&lt;KeyValuePair&lt;string, object&gt;&gt;, IDisposable
+{
+    private readonly IDisposable _subscription;
+    private readonly Action&lt;IBadRequestExceptionFeature&gt; _callback;
+
+    public BadRequestEventListener(DiagnosticListener diagnosticListener, Action&lt;IBadRequestExceptionFeature&gt; callback)
+    {
+        _subscription = diagnosticListener.Subscribe(this!, IsEnabled);
+        _callback = callback;
+    }
+    private static readonly Predicate&lt;string&gt; IsEnabled = (provider) =&gt; provider switch
+    {
+        &quot;Microsoft.AspNetCore.Server.Kestrel.BadRequest&quot; =&gt; true,
+        _ =&gt; false
+    };
+    public void OnNext(KeyValuePair&lt;string, object&gt; pair)
+    {
+        if (pair.Value is IFeatureCollection featureCollection)
+        {
+            var badRequestFeature = featureCollection.Get&lt;IBadRequestExceptionFeature&gt;();
+
+            if (badRequestFeature is not null)
+            {
+                _callback(badRequestFeature);
+            }
+        }
+    }
+    public void OnError(Exception error) { }
+    public void OnCompleted() { }
+    public virtual void Dispose() =&gt; _subscription.Dispose();
+}
+</code></pre>
+<p>Subscribe to the ASP.NET Core <code>DiagnosticListener</code> with the observer. In this example, we create a callback that logs the underlying exception.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+var diagnosticSource = app.Services.GetRequiredService&lt;DiagnosticListener&gt;();
+using var badRequestListener = new BadRequestEventListener(diagnosticSource, (badRequestExceptionFeature) =&gt;
+{
+    app.Logger.LogError(badRequestExceptionFeature.Error, &quot;Bad request received&quot;);
+});
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello world&quot;);
+app.Run();
+</code></pre>
+<h2><a href="#behavior-with-debugger-attached" aria-hidden="true" class="anchor" id="behavior-with-debugger-attached"></a>Behavior with debugger attached</h2>
+<p>Certain timeouts and rate limits aren't enforced when a debugger is attached to a Kestrel process. For more information, see Behavior with debugger attached.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/diagnostics?view=aspnetcore-8.0">Diagnostics in Kestrel</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

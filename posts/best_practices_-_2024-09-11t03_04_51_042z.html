@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Best practices | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Best practices</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article provides guidelines for maximizing performance and reliability of ASP.NET Core apps.</p>
+<h2><a href="#cache-aggressively" aria-hidden="true" class="anchor" id="cache-aggressively"></a>Cache aggressively</h2>
+<p>Caching is discussed in several parts of this article. For more information, see Overview of caching in ASP.NET Core.</p>
+<h2><a href="#understand-hot-code-paths" aria-hidden="true" class="anchor" id="understand-hot-code-paths"></a>Understand hot code paths</h2>
+<p>The term &quot;hot code path&quot; has come to mean many things to many different people.</p>
+<h2><a href="#avoid-blocking-calls" aria-hidden="true" class="anchor" id="avoid-blocking-calls"></a>Avoid blocking calls</h2>
+<p>Asynchronous APIs allow a small pool of threads to handle thousands of concurrent requests by not waiting on blocking calls.</p>
+<p>A common performance problem in ASP.NET Core apps is blocking calls that could be asynchronous. Many synchronous blocking calls lead to Thread Pool starvation and degraded response times.</p>
+<p>Do not block asynchronous execution by calling <code>Task</code>.Wait or <code>Task&lt;TResult&gt;.Result</code>.
+Do not acquire locks in common code paths. ASP.NET Core apps perform best when architected to run code in parallel.
+Do not call <code>Task.Run</code> and immediately <code>await</code> it. ASP.NET Core already runs app code on normal Thread Pool threads, so calling <code>Task.Run</code> only results in extra unnecessary Thread Pool scheduling. Even if the scheduled code would block a thread, <code>Task.Run</code> does not prevent that.</p>
+<ul>
+<li>
+<p>Do make hot code paths asynchronous.</p>
+</li>
+<li>
+<p>Do call data access, I/O, and long-running operations APIs asynchronously if an asynchronous API is available.</p>
+</li>
+<li>
+<p>Do not use <code>Task.Run</code> to make a synchronous API asynchronous.</p>
+</li>
+<li>
+<p>Do make controller/Razor Page actions asynchronous. The entire call stack is asynchronous in order to benefit from async/await patterns.</p>
+</li>
+<li>
+<p>Consider using message brokers like Azure Service Bus to offload long-running calls</p>
+</li>
+</ul>
+<p>A profiler, such as PerfView, can be used to find threads frequently added to the Thread Pool. The <code>Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThread/Start</code> event indicates a thread added to the thread pool.</p>
+<h2><a href="#return-large-collections-across-multiple-smaller-pages" aria-hidden="true" class="anchor" id="return-large-collections-across-multiple-smaller-pages"></a>Return large collections across multiple smaller pages</h2>
+<p>In our series of articles on web performance, we look at how you can improve the performance of your website.</p>
+<ul>
+<li>
+<p>OutOfMemoryException or high memory consumption</p>
+</li>
+<li>
+<p>Thread pool starvation (see the following remarks on <code>IAsyncEnumerable&lt;T&gt;</code>)</p>
+</li>
+<li>
+<p>Slow response times</p>
+</li>
+<li>
+<p>Frequent garbage collection</p>
+</li>
+</ul>
+<p>In this talk, we will be looking at how to return an exhaustive result and asynchronously populate batches of results to avoid locking server resources.</p>
+<p>For more information on paging and limiting the number of returned records, see:</p>
+<ul>
+<li>
+<p>Performance considerations</p>
+</li>
+<li>
+<p>Add paging to an ASP.NET Core app</p>
+</li>
+</ul>
+<h3><a href="#return-ienumerablet>-or-iasyncenumerable<t>" aria-hidden="true" class="anchor" id="return-ienumerablet>-or-iasyncenumerable<t>"></a>Return <code>IEnumerable&lt;T&gt;</code> or <code>IAsyncEnumerable&lt;T&gt;</code></h3>
+<p>Returning <code>IEnumerable&lt;T&gt;</code> from an action results in synchronous collection iteration by the serializer. The result is the blocking of calls and a potential for thread pool starvation. To avoid synchronous enumeration, use <code>ToListAsync</code> before returning the enumerable.</p>
+<p>Beginning with ASP.NET Core 3.0, IAsyncEnumerable<T> can be used as an alternative to <code>IEnumerable&lt;T&gt;</code> that enumerates asynchronously. For more information, see <code>Controller</code> action return types.</p>
+<h2><a href="#minimize-large-object-allocations" aria-hidden="true" class="anchor" id="minimize-large-object-allocations"></a>Minimize large object allocations</h2>
+<p>The .NET Core garbage collector manages allocation and release of memory automatically in ASP.NET Core apps.</p>
+<p>Recommendations:</p>
+<ul>
+<li>
+<p>Do consider caching large objects that are frequently used. Caching large objects prevents expensive allocations.</p>
+</li>
+<li>
+<p>Do pool buffers by using an <code>ArrayPool&lt;T&gt;</code> to store large arrays.</p>
+</li>
+<li>
+<p>Do not allocate many, short-lived large objects on hot code paths.</p>
+</li>
+</ul>
+<p>Memory issues, such as the preceding, can be diagnosed by reviewing garbage collection (GC) stats in PerfView and examining:</p>
+<ul>
+<li>
+<p>Garbage collection pause time.</p>
+</li>
+<li>
+<p>What percentage of the processor time is spent in garbage collection.</p>
+</li>
+<li>
+<p>How many garbage collections are generation 0, 1, and 2.</p>
+</li>
+</ul>
+<p>For more information, see Garbage Collection and Performance.</p>
+<h2><a href="#optimize-data-access-and-io" aria-hidden="true" class="anchor" id="optimize-data-access-and-io"></a>Optimize data access and I/O</h2>
+<p>Interactions with a data store and other remote services are often the slowest parts of an ASP.NET Core app. Reading and writing data efficiently is critical for good performance.</p>
+<p>Recommendations:</p>
+<ul>
+<li>
+<p>Do call all data access APIs asynchronously.</p>
+</li>
+<li>
+<p>Do not retrieve more data than is necessary. Write queries to return just the data that's necessary for the current HTTP request.</p>
+</li>
+<li>
+<p>Do consider caching frequently accessed data retrieved from a database or remote service if slightly out-of-date data is acceptable. Depending on the scenario, use a MemoryCache or a DistributedCache. For more information, see Response caching in ASP.NET Core.</p>
+</li>
+<li>
+<p>Do minimize network round trips. The goal is to retrieve the required data in a single call rather than several calls.</p>
+</li>
+<li>
+<p>Do use no-tracking queries in Entity Framework Core when accessing data for read-only purposes. EF Core can return the results of no-tracking queries more efficiently.</p>
+</li>
+<li>
+<p>Do filter and aggregate LINQ queries (with <code>.Where</code>, <code>.Select</code>, or <code>.Sum</code> statements, for example) so that the filtering is performed by the database.</p>
+</li>
+<li>
+<p>Do consider that EF Core resolves some query operators on the client, which may lead to inefficient query execution. For more information, see Client evaluation performance issues.</p>
+</li>
+<li>
+<p>Do not use projection queries on collections, which can result in executing &quot;N + 1&quot; SQL queries. For more information, see Optimization of correlated subqueries.</p>
+</li>
+</ul>
+<p>The following approaches may improve performance in high-scale apps:</p>
+<ul>
+<li>
+<p><code>DbContext</code> pooling</p>
+</li>
+<li>
+<p>Explicitly compiled queries</p>
+</li>
+</ul>
+<p>In this paper, we show how to improve the performance of queries compiled on top of high-performance queries compiled on top of low-performance queries.</p>
+<p>The best way to find out what is going wrong with a query is to look at its performance.</p>
+<h2><a href="#pool-http-connections-with-httpclientfactory" aria-hidden="true" class="anchor" id="pool-http-connections-with-httpclientfactory"></a>Pool HTTP connections with <code>HttpClientFactory</code></h2>
+<p>Although <code>HttpClient</code> implements the <code>IDisposable</code> interface, it's designed for reuse. Closed <code>HttpClient</code> instances leave sockets open in the <code>TIME_WAIT</code> state for a short period of time. If a code path that creates and disposes of <code>HttpClient</code> objects is frequently used, the app may exhaust available sockets. <code>HttpClientFactory</code> was introduced in ASP.NET Core 2.1 as a solution to this problem. It handles pooling HTTP connections to optimize performance and reliability. For more information, see Use <code>HttpClientFactory</code> to implement resilient HTTP requests.</p>
+<p>Recommendations:</p>
+<ul>
+<li>
+<p>Do not create and dispose of <code>HttpClient</code> instances directly.</p>
+</li>
+<li>
+<p>Do use <code>HttpClientFactory</code> to retrieve <code>HttpClient</code> instances. For more information, see Use <code>HttpClientFactory</code> to implement resilient HTTP requests.</p>
+</li>
+</ul>
+<h2><a href="#keep-common-code-paths-fast" aria-hidden="true" class="anchor" id="keep-common-code-paths-fast"></a>Keep common code paths fast</h2>
+<p>You want all of your code to be fast. Frequently-called code paths are the most critical to optimize. These include:</p>
+<ul>
+<li>
+<p>Middleware components in the app's request processing pipeline, especially middleware run early in the pipeline. These components have a large impact on performance.</p>
+</li>
+<li>
+<p>Code that's executed for every request or multiple times per request. For example, custom logging, authorization handlers, or initialization of transient services.</p>
+</li>
+</ul>
+<p>Recommendations:</p>
+<ul>
+<li>
+<p>Do not use custom middleware components with long-running tasks.</p>
+</li>
+<li>
+<p>Do use performance profiling tools, such as Visual Studio Diagnostic Tools or PerfView), to identify hot code paths.</p>
+</li>
+</ul>
+<h2><a href="#complete-long-running-tasks-outside-of-http-requests" aria-hidden="true" class="anchor" id="complete-long-running-tasks-outside-of-http-requests"></a>Complete long-running Tasks outside of HTTP requests</h2>
+<p>A request to an ASP.NET Core app can be handled by a controller or page model calling necessary services and returning an HTTP response.</p>
+<p>Recommendations:</p>
+<ul>
+<li>
+<p>Do not wait for long-running tasks to complete as part of ordinary HTTP request processing.</p>
+</li>
+<li>
+<p>Do consider handling long-running requests with background services or out of process possibly with an Azure Function and/or using a message broker like Azure Service Bus. Completing work out-of-process is especially beneficial for CPU-intensive tasks.</p>
+</li>
+<li>
+<p>Do use real-time communication options, such as SignalR, to communicate with clients asynchronously.</p>
+</li>
+</ul>
+<h2><a href="#minify-client-assets" aria-hidden="true" class="anchor" id="minify-client-assets"></a>Minify client assets</h2>
+<p>ASP.NET Core apps with complex front-ends frequently serve many JavaScript, CSS, or image files. Performance of initial load requests can be improved by:</p>
+<ul>
+<li>
+<p>Bundling, which combines multiple files into one.</p>
+</li>
+<li>
+<p>Minifying, which reduces the size of files by removing whitespace and comments.</p>
+</li>
+</ul>
+<p>Recommendations:</p>
+<ul>
+<li>
+<p>Do use the bundling and minification guidelines, which mention compatible tools and show how to use ASP.NET Core's <code>environment</code> tag to handle both <code>Development</code> and <code>Production</code> environments.</p>
+</li>
+<li>
+<p>Do consider other third-party tools, such as Webpack, for complex client asset management.</p>
+</li>
+</ul>
+<h2><a href="#compress-responses" aria-hidden="true" class="anchor" id="compress-responses"></a>Compress responses</h2>
+<p>An app's payload is the amount of data it sends to the web browser when it responds to a request.</p>
+<h2><a href="#use-the-latest-aspnet-core-release" aria-hidden="true" class="anchor" id="use-the-latest-aspnet-core-release"></a>Use the latest ASP.NET Core release</h2>
+<p>The current version of ASP.NET Core is .NET Core.</p>
+<h2><a href="#minimize-exceptions" aria-hidden="true" class="anchor" id="minimize-exceptions"></a>Minimize exceptions</h2>
+<p>Exceptions should be rare. Throwing and catching exceptions is slow relative to other code flow patterns. Because of this, exceptions shouldn't be used to control normal program flow.</p>
+<p>Recommendations:</p>
+<ul>
+<li>
+<p>Do not use throwing or catching exceptions as a means of normal program flow, especially in hot code paths.</p>
+</li>
+<li>
+<p>Do include logic in the app to detect and handle conditions that would cause an exception.</p>
+</li>
+<li>
+<p>Do throw or catch exceptions for unusual or unexpected conditions.</p>
+</li>
+</ul>
+<p>App diagnostic tools, such as Application Insights, can help to identify common exceptions in an app that may affect performance.</p>
+<h2><a href="#avoid-synchronous-read-or-write-on-httprequesthttpresponse-body" aria-hidden="true" class="anchor" id="avoid-synchronous-read-or-write-on-httprequesthttpresponse-body"></a>Avoid synchronous read or write on HttpRequest/HttpResponse body</h2>
+<p>All I/O in ASP.NET Core is asynchronous. Servers implement the <code>Stream</code> interface, which has both synchronous and asynchronous overloads. The asynchronous ones should be preferred to avoid blocking thread pool threads. Blocking threads can lead to thread pool starvation.</p>
+<p>Do not do this: The following example uses the ReadToEnd. It blocks the current thread to wait for the result. This is an example of sync over async.</p>
+<pre><code class="language-csharp">public class BadStreamReaderController : Controller
+{
+    [HttpGet(&quot;/contoso&quot;)]
+    public ActionResult&lt;ContosoData&gt; Get()
+    {
+        var json = new StreamReader(Request.Body).ReadToEnd();
+
+        return JsonSerializer.Deserialize&lt;ContosoData&gt;(json);
+    }
+}
+</code></pre>
+<p>In the preceding code, <code>Get</code> synchronously reads the entire HTTP request body into memory. If the client is slowly uploading, the app is doing sync over async. The app does sync over async because Kestrel does NOT support synchronous reads.</p>
+<p>Do this: The following example uses <code>ReadToEndAsync</code> and does not block the thread while reading.</p>
+<pre><code class="language-csharp">public class GoodStreamReaderController : Controller
+{
+    [HttpGet(&quot;/contoso&quot;)]
+    public async Task&lt;ActionResult&lt;ContosoData&gt;&gt; Get()
+    {
+        var json = await new StreamReader(Request.Body).ReadToEndAsync();
+
+        return JsonSerializer.Deserialize&lt;ContosoData&gt;(json);
+    }
+
+}
+</code></pre>
+<p>The preceding code asynchronously reads the entire HTTP request body into memory.</p>
+<blockquote>
+<p class='warning'>Warning
+If the request is large, reading the entire HTTP request body into memory could lead to an out of memory (OOM) condition. OOM can result in a Denial Of Service.  For more information, see Avoid reading large request bodies or response bodies into memory in this article.</p>
+</blockquote>
+<p>Do this: The following example is fully asynchronous using a non-buffered request body:</p>
+<pre><code class="language-csharp">public class GoodStreamReaderController : Controller
+{
+    [HttpGet(&quot;/contoso&quot;)]
+    public async Task&lt;ActionResult&lt;ContosoData&gt;&gt; Get()
+    {
+        return await JsonSerializer.DeserializeAsync&lt;ContosoData&gt;(Request.Body);
+    }
+}
+</code></pre>
+<p>The preceding code asynchronously de-serializes the request body into a C# object.</p>
+<h2><a href="#prefer-readformasync-over-requestform" aria-hidden="true" class="anchor" id="prefer-readformasync-over-requestform"></a>Prefer <code>ReadFormAsync</code> over Request.Form</h2>
+<p>Use <code>HttpContext.Request.ReadFormAsync</code> instead of <code>HttpContext.Request.Form</code>.
+HttpContext.Request.Form can be safely read only with the following conditions:</p>
+<ul>
+<li>
+<p>The form has been read by a call to <code>ReadFormAsync</code>, and</p>
+</li>
+<li>
+<p>The cached form value is being read using <code>HttpContext.Request.Form</code></p>
+</li>
+</ul>
+<p>Do not do this: The following example uses <code>HttpContext.Request.Form</code>.  <code>HttpContext.Request.Form</code> uses sync over async and can lead to thread pool starvation.</p>
+<pre><code class="language-csharp">public class BadReadController : Controller
+{
+    [HttpPost(&quot;/form-body&quot;)]
+    public IActionResult Post()
+    {
+        var form =  HttpContext.Request.Form;
+
+        Process(form[&quot;id&quot;], form[&quot;name&quot;]);
+
+        return Accepted();
+    }
+</code></pre>
+<p>Do this: The following example uses <code>HttpContext.Request.ReadFormAsync</code> to read the form body asynchronously.</p>
+<pre><code class="language-csharp">public class GoodReadController : Controller
+{
+    [HttpPost(&quot;/form-body&quot;)]
+    public async Task&lt;IActionResult&gt; Post()
+    {
+       var form = await HttpContext.Request.ReadFormAsync();
+
+        Process(form[&quot;id&quot;], form[&quot;name&quot;]);
+
+        return Accepted();
+    }
+</code></pre>
+<h2><a href="#avoid-reading-large-request-bodies-or-response-bodies-into-memory" aria-hidden="true" class="anchor" id="avoid-reading-large-request-bodies-or-response-bodies-into-memory"></a>Avoid reading large request bodies or response bodies into memory</h2>
+<p>In .NET, every object allocation greater than or equal to 85,000 bytes ends up in the large object heap (LOH). Large objects are expensive in two ways:</p>
+<ul>
+<li>
+<p>The allocation cost is high because the memory for a newly allocated large object has to be cleared. The CLR guarantees that memory for all newly allocated objects is cleared.</p>
+</li>
+<li>
+<p>LOH is collected with the rest of the heap. LOH requires a full garbage collection or Gen2 collection.</p>
+</li>
+</ul>
+<p>This blog post describes the problem succinctly:</p>
+<p>Storing a large request or response body into a single <code>byte[]</code> or <code>string</code>:</p>
+<ul>
+<li>
+<p>May result in quickly running out of space in the LOH.</p>
+</li>
+<li>
+<p>May cause performance issues for the app because of full GCs running.</p>
+</li>
+</ul>
+<h2><a href="#working-with-a-synchronous-data-processing-api" aria-hidden="true" class="anchor" id="working-with-a-synchronous-data-processing-api"></a>Working with a synchronous data processing API</h2>
+<p>When using a serializer/de-serializer that only supports synchronous reads and writes (for example,  Json.NET):</p>
+<ul>
+<li>Buffer the data into memory asynchronously before passing it into the serializer/de-serializer.</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+If the request is large, it could lead to an out of memory (OOM) condition. OOM can result in a Denial Of Service.  For more information, see Avoid reading large request bodies or response bodies into memory in this article.</p>
+</blockquote>
+<p>ASP.NET Core 3.0 uses <code>System.Text.Json</code> by default for JSON serialization. System.Text.Json:</p>
+<ul>
+<li>
+<p>Reads and writes JSON asynchronously.</p>
+</li>
+<li>
+<p>Is optimized for UTF-8 text.</p>
+</li>
+<li>
+<p>Typically is higher performance than <code>Newtonsoft.Json</code>.</p>
+</li>
+</ul>
+<h2><a href="#do-not-store-ihttpcontextaccessorhttpcontext-in-a-field" aria-hidden="true" class="anchor" id="do-not-store-ihttpcontextaccessorhttpcontext-in-a-field"></a>Do not store <code>IHttpContextAccessor.HttpContext</code> in a field</h2>
+<p>The <code>IHttpContextAccessor.HttpContext</code> returns the <code>HttpContext</code> of the active request when accessed from the request thread. The <code>IHttpContextAccessor.HttpContext</code> should not be stored in a field or variable.</p>
+<p>Do not do this: The following example stores the <code>HttpContext</code> in a field and then attempts to use it later.</p>
+<pre><code class="language-csharp">public class MyBadType
+{
+    private readonly HttpContext _context;
+    public MyBadType(IHttpContextAccessor accessor)
+    {
+        _context = accessor.HttpContext;
+    }
+
+    public void CheckAdmin()
+    {
+        if (!_context.User.IsInRole(&quot;admin&quot;))
+        {
+            throw new UnauthorizedAccessException(&quot;The current user isn't an admin&quot;);
+        }
+    }
+}
+</code></pre>
+<p>The preceding code frequently captures a <code>null</code> or incorrect <code>HttpContext</code> in the constructor.</p>
+<p>Do this: The following example:</p>
+<ul>
+<li>
+<p>Stores the <code>IHttpContextAccessor</code> in a field.</p>
+</li>
+<li>
+<p>Uses the <code>HttpContext</code> field at the correct time and checks for <code>null</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class MyGoodType
+{
+    private readonly IHttpContextAccessor _accessor;
+    public MyGoodType(IHttpContextAccessor accessor)
+    {
+        _accessor = accessor;
+    }
+
+    public void CheckAdmin()
+    {
+        var context = _accessor.HttpContext;
+        if (context != null &amp;&amp; !context.User.IsInRole(&quot;admin&quot;))
+        {
+            throw new UnauthorizedAccessException(&quot;The current user isn't an admin&quot;);
+        }
+    }
+}
+</code></pre>
+<h2><a href="#do-not-access-httpcontext-from-multiple-threads" aria-hidden="true" class="anchor" id="do-not-access-httpcontext-from-multiple-threads"></a>Do not access <code>HttpContext</code> from multiple threads</h2>
+<p><code>HttpContext</code> is not thread-safe. Accessing <code>HttpContext</code> from multiple threads in parallel can result in unexpected behavior such as hangs, crashes, and data corruption.</p>
+<p>The following example makes three parallel requests and logs the incoming request path before and after the outgoing HTTP request.</p>
+<pre><code class="language-csharp">public class AsyncBadSearchController : Controller
+{       
+    [HttpGet(&quot;/search&quot;)]
+    public async Task&lt;SearchResults&gt; Get(string query)
+    {
+        var query1 = SearchAsync(SearchEngine.Google, query);
+        var query2 = SearchAsync(SearchEngine.Bing, query);
+        var query3 = SearchAsync(SearchEngine.DuckDuckGo, query);
+
+        await Task.WhenAll(query1, query2, query3);
+
+        var results1 = await query1;
+        var results2 = await query2;
+        var results3 = await query3;
+
+        return SearchResults.Combine(results1, results2, results3);
+    }       
+
+    private async Task&lt;SearchResults&gt; SearchAsync(SearchEngine engine, string query)
+    {
+        var searchResults = _searchService.Empty();
+        try
+        {
+            _logger.LogInformation(&quot;Starting search query from {path}.&quot;, 
+                                    HttpContext.Request.Path);
+            searchResults = _searchService.Search(engine, query);
+            _logger.LogInformation(&quot;Finishing search query from {path}.&quot;, 
+                                    HttpContext.Request.Path);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, &quot;Failed query from {path}&quot;, 
+                             HttpContext.Request.Path);
+        }
+
+        return await searchResults;
+    }
+</code></pre>
+<p>Do this: The following example copies all data from the incoming request before making the three parallel requests.</p>
+<pre><code class="language-csharp">public class AsyncGoodSearchController : Controller
+{       
+    [HttpGet(&quot;/search&quot;)]
+    public async Task&lt;SearchResults&gt; Get(string query)
+    {
+        string path = HttpContext.Request.Path;
+        var query1 = SearchAsync(SearchEngine.Google, query,
+                                 path);
+        var query2 = SearchAsync(SearchEngine.Bing, query, path);
+        var query3 = SearchAsync(SearchEngine.DuckDuckGo, query, path);
+
+        await Task.WhenAll(query1, query2, query3);
+
+        var results1 = await query1;
+        var results2 = await query2;
+        var results3 = await query3;
+
+        return SearchResults.Combine(results1, results2, results3);
+    }
+
+    private async Task&lt;SearchResults&gt; SearchAsync(SearchEngine engine, string query,
+                                                  string path)
+    {
+        var searchResults = _searchService.Empty();
+        try
+        {
+            _logger.LogInformation(&quot;Starting search query from {path}.&quot;,
+                                   path);
+            searchResults = await _searchService.SearchAsync(engine, query);
+            _logger.LogInformation(&quot;Finishing search query from {path}.&quot;, path);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, &quot;Failed query from {path}&quot;, path);
+        }
+
+        return await searchResults;
+    }
+</code></pre>
+<h2><a href="#do-not-use-the-httpcontext-after-the-request-is-complete" aria-hidden="true" class="anchor" id="do-not-use-the-httpcontext-after-the-request-is-complete"></a>Do not use the <code>HttpContext</code> after the request is complete</h2>
+<p><code>HttpContext</code> is only valid as long as there is an active HTTP request in the ASP.NET Core pipeline. The entire ASP.NET Core pipeline is an asynchronous chain of delegates that executes every request. When the <code>Task</code> returned from this chain completes, the <code>HttpContext</code> is recycled.</p>
+<p>Do not do this: The following example uses <code>async void</code> which makes the HTTP request complete when the first <code>await</code> is reached:</p>
+<ul>
+<li>
+<p>Using <code>async void</code> is ALWAYS a bad practice in ASP.NET Core apps.</p>
+</li>
+<li>
+<p>The example code accesses the <code>HttpResponse</code> after the HTTP request is complete.</p>
+</li>
+<li>
+<p>The late access crashes the process.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class AsyncBadVoidController : Controller
+{
+    [HttpGet(&quot;/async&quot;)]
+    public async void Get()
+    {
+        await Task.Delay(1000);
+
+        // The following line will crash the process because of writing after the 
+        // response has completed on a background thread. Notice async void Get()
+
+        await Response.WriteAsync(&quot;Hello World&quot;);
+    }
+}
+</code></pre>
+<p>Do this: The following example returns a <code>Task</code> to the framework, so the HTTP request doesn't complete until the action completes.</p>
+<pre><code class="language-csharp">public class AsyncGoodTaskController : Controller
+{
+    [HttpGet(&quot;/async&quot;)]
+    public async Task Get()
+    {
+        await Task.Delay(1000);
+
+        await Response.WriteAsync(&quot;Hello World&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#do-not-capture-the-httpcontext-in-background-threads" aria-hidden="true" class="anchor" id="do-not-capture-the-httpcontext-in-background-threads"></a>Do not capture the <code>HttpContext</code> in background threads</h2>
+<p>Do not do this: The following example shows a closure is capturing the <code>HttpContext</code> from the <code>Controller</code> property. This is a bad practice because the work item could:</p>
+<ul>
+<li>
+<p>Run outside of the request scope.</p>
+</li>
+<li>
+<p>Attempt to read the wrong <code>HttpContext</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;/fire-and-forget-1&quot;)]
+public IActionResult BadFireAndForget()
+{
+    _ = Task.Run(async () =&gt;
+    {
+        await Task.Delay(1000);
+
+        var path = HttpContext.Request.Path;
+        Log(path);
+    });
+
+    return Accepted();
+}
+</code></pre>
+<p>Do this: The following example:</p>
+<ul>
+<li>
+<p>Copies the data required in the background task during the request.</p>
+</li>
+<li>
+<p>Doesn't reference anything from the controller.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;/fire-and-forget-3&quot;)]
+public IActionResult GoodFireAndForget()
+{
+    string path = HttpContext.Request.Path;
+    _ = Task.Run(async () =&gt;
+    {
+        await Task.Delay(1000);
+
+        Log(path);
+    });
+
+    return Accepted();
+}
+</code></pre>
+<p>Background tasks should be implemented as hosted services. For more information, see Background tasks with hosted services.</p>
+<h2><a href="#do-not-capture-services-injected-into-the-controllers-on-background-threads" aria-hidden="true" class="anchor" id="do-not-capture-services-injected-into-the-controllers-on-background-threads"></a>Do not capture services injected into the controllers on background threads</h2>
+<p>Do not do this: The following example shows a closure that is capturing the <code>DbContext</code> from the <code>Controller</code> action parameter. This is a bad practice.  The work item could run outside of the request scope. The <code>ContosoDbContext</code> is scoped to the request, resulting in an <code>ObjectDisposedException</code>.</p>
+<pre><code class="language-csharp">[HttpGet(&quot;/fire-and-forget-1&quot;)]
+public IActionResult FireAndForget1([FromServices]ContosoDbContext context)
+{
+    _ = Task.Run(async () =&gt;
+    {
+        await Task.Delay(1000);
+
+        context.Contoso.Add(new Contoso());
+        await context.SaveChangesAsync();
+    });
+
+    return Accepted();
+}
+</code></pre>
+<p>Do this: The following example:</p>
+<ul>
+<li>
+<p>Injects an <code>IServiceScopeFactory</code> in order to create a scope in the background work item. <code>IServiceScopeFactory</code> is a singleton.</p>
+</li>
+<li>
+<p>Creates a new dependency injection scope in the background thread.</p>
+</li>
+<li>
+<p>Doesn't reference anything from the controller.</p>
+</li>
+<li>
+<p>Doesn't capture the <code>ContosoDbContext</code> from the incoming request.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;/fire-and-forget-3&quot;)]
+public IActionResult FireAndForget3([FromServices]IServiceScopeFactory 
+                                    serviceScopeFactory)
+{
+    _ = Task.Run(async () =&gt;
+    {
+        await Task.Delay(1000);
+
+        await using (var scope = serviceScopeFactory.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService&lt;ContosoDbContext&gt;();
+
+            context.Contoso.Add(new Contoso());
+
+            await context.SaveChangesAsync();                                        
+        }
+    });
+
+    return Accepted();
+}
+</code></pre>
+<p>The following highlighted code:</p>
+<ul>
+<li>
+<p>Creates a scope for the lifetime of the background operation and resolves services from it.</p>
+</li>
+<li>
+<p>Uses <code>ContosoDbContext</code> from the correct scope.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[HttpGet(&quot;/fire-and-forget-3&quot;)]
+public IActionResult FireAndForget3([FromServices]IServiceScopeFactory 
+                                    serviceScopeFactory)
+{
+    _ = Task.Run(async () =&gt;
+    {
+        await Task.Delay(1000);
+
+        await using (var scope = serviceScopeFactory.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService&lt;ContosoDbContext&gt;();
+
+            context.Contoso.Add(new Contoso());
+
+            await context.SaveChangesAsync();                                        
+        }
+    });
+
+    return Accepted();
+}
+</code></pre>
+<h2><a href="#do-not-modify-the-status-code-or-headers-after-the-response-body-has-started" aria-hidden="true" class="anchor" id="do-not-modify-the-status-code-or-headers-after-the-response-body-has-started"></a>Do not modify the status code or headers after the response body has started</h2>
+<p>ASP.NET Core does not buffer the HTTP response body. The first time the response is written:</p>
+<ul>
+<li>
+<p>The headers are sent along with that chunk of the body to the client.</p>
+</li>
+<li>
+<p>It's no longer possible to change response headers.</p>
+</li>
+</ul>
+<p>Do not do this: The following code tries to add response headers after the response has already started:</p>
+<pre><code class="language-csharp">app.Use(async (context, next) =&gt;
+{
+    await next();
+
+    context.Response.Headers[&quot;test&quot;] = &quot;test value&quot;;
+});
+</code></pre>
+<p>In the preceding code, <code>context.Response.Headers[&quot;test&quot;] = &quot;test value&quot;;</code> will throw an exception if <code>next()</code> has written to the response.</p>
+<p>Do this: The following example checks if the HTTP response has started before modifying the headers.</p>
+<pre><code class="language-csharp">app.Use(async (context, next) =&gt;
+{
+    await next();
+
+    if (!context.Response.HasStarted)
+    {
+        context.Response.Headers[&quot;test&quot;] = &quot;test value&quot;;
+    }
+});
+</code></pre>
+<p>Do this: The following example uses <code>HttpResponse.OnStarting</code> to set the headers before the response headers are flushed to the client.</p>
+<p>Checking if the response has not started allows registering a callback that will be invoked just before response headers are written. Checking if the response has not started:</p>
+<ul>
+<li>
+<p>Provides the ability to append or override headers just in time.</p>
+</li>
+<li>
+<p>Doesn't require knowledge of the next middleware in the pipeline.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.Use(async (context, next) =&gt;
+{
+    context.Response.OnStarting(() =&gt;
+    {
+        context.Response.Headers[&quot;someheader&quot;] = &quot;somevalue&quot;;
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
+</code></pre>
+<h2><a href="#do-not-call-next)-if-you-have-already-started-writing-to-the-response-body" aria-hidden="true" class="anchor" id="do-not-call-next)-if-you-have-already-started-writing-to-the-response-body"></a>Do not call next() if you have already started writing to the response body</h2>
+<p>Components only expect to be called if it's possible for them to handle and manipulate the response.</p>
+<h2><a href="#use-in-process-hosting-with-iis" aria-hidden="true" class="anchor" id="use-in-process-hosting-with-iis"></a>Use In-process hosting with IIS</h2>
+<p>Microsoft has announced a new way to host ASP.NET Core applications on Windows machines.</p>
+<p>Projects default to the in-process hosting model in ASP.NET Core 3.0 and later.</p>
+<p>For more information, see Host ASP.NET Core on Windows with IIS</p>
+<h2><a href="#dont-assume-that-httprequest.contentlength-is-not-null" aria-hidden="true" class="anchor" id="dont-assume-that-httprequest.contentlength-is-not-null"></a>Don't assume that <code>HttpRequest.ContentLength</code> is not <code>null</code></h2>
+<p><code>HttpRequest.ContentLength</code> is <code>null</code> if the <code>Content-Length</code> header is not received. Null in that case means the length of the request body is not known; it doesn't mean the length is zero. Because all comparisons with <code>null (except ==) return false</code>, the comparison <code>Request.ContentLength &gt; 1024</code>, for example, might return <code>false</code> when the request body size is more than 1024. Not knowing this can lead to security holes in apps. You might think you're guarding against too-large requests when you aren't.</p>
+<p>For more information, see this StackOverflow answer.</p>
+<h2><a href="#reliable-web-app-patterns" aria-hidden="true" class="anchor" id="reliable-web-app-patterns"></a>Reliable web app patterns</h2>
+<p>The Reliable Web App Pattern for.NET YouTube videos and article for guidance on creating a modern, reliable, performant, and scalable ASP.NET Core app, whether from scratch or an existing app.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/best-practices?view=aspnetcore-8.0">ASP.NET Core Best Practices</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
