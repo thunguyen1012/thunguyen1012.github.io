@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - IIS - Troubleshoot | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - IIS - Troubleshoot</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#app-startup-errors" aria-hidden="true" class="anchor" id="app-startup-errors"></a>App startup errors</h2>
+<h3><a href="#40314-forbidden" aria-hidden="true" class="anchor" id="40314-forbidden"></a>403.14 Forbidden</h3>
+<ul>
+<li>
+<p>The app is deployed to the wrong folder on the hosting system.</p>
+</li>
+<li>
+<p>The deployment process failed to move all of the app's files and folders to the deployment folder on the hosting system.</p>
+</li>
+<li>
+<p>The web.config file is missing from the deployment, or the web.config file contents are malformed.</p>
+</li>
+<li>
+<p>Delete all of the files and folders from the deployment folder on the hosting system.</p>
+</li>
+<li>
+<p>Redeploy the contents of the app's publish folder to the hosting system using your normal method of deployment, such as Visual Studio, PowerShell, or manual deployment:</p>
+<ul>
+<li>
+<p>Confirm that the web.config file is present in the deployment and that its contents are correct.</p>
+</li>
+<li>
+<p>When hosting on Azure App Service, confirm that the app is deployed to the <code>D:\home\site\wwwroot</code> folder.</p>
+</li>
+<li>
+<p>When the app is hosted by IIS, confirm that the app is deployed to the IIS Physical path shown in IIS Manager's Basic Settings.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Confirm that all of the app's files and folders are deployed by comparing the deployment on the hosting system to the contents of the project's publish folder.</p>
+</li>
+</ul>
+<h3><a href="#500-internal-server-error" aria-hidden="true" class="anchor" id="500-internal-server-error"></a>500 Internal Server Error</h3>
+<h3><a href="#5000-in-process-handler-load-failure" aria-hidden="true" class="anchor" id="5000-in-process-handler-load-failure"></a>500.0 In-Process Handler Load Failure</h3>
+<ul>
+<li>
+<p>Contact Microsoft Support (select Developer Tools then ASP.NET Core).</p>
+</li>
+<li>
+<p>Ask a question on Stack Overflow.</p>
+</li>
+<li>
+<p>File an issue on our GitHub repository.</p>
+</li>
+</ul>
+<h3><a href="#50030-in-process-startup-failure" aria-hidden="true" class="anchor" id="50030-in-process-startup-failure"></a>500.30 In-Process Startup Failure</h3>
+<ul>
+<li>
+<p>The app is misconfigured due to targeting a version of the ASP.NET Core shared framework that isn't present. Check which versions of the ASP.NET Core shared framework are installed on the target machine.</p>
+</li>
+<li>
+<p>Using Azure Key Vault, lack of permissions to the Key Vault. Check the access policies in the targeted Key Vault to ensure that the correct permissions are granted.</p>
+</li>
+</ul>
+<h3><a href="#50031-ancm-failed-to-find-native-dependencies" aria-hidden="true" class="anchor" id="50031-ancm-failed-to-find-native-dependencies"></a>500.31 ANCM Failed to Find Native Dependencies</h3>
+<ul>
+<li>
+<p>Install the appropriate version of .NET Core on the machine.</p>
+</li>
+<li>
+<p>Change the app to target a version of .NET Core that's present on the machine.</p>
+</li>
+<li>
+<p>Publish the app as a self-contained deployment.</p>
+</li>
+</ul>
+<h3><a href="#50032-ancm-failed-to-load-dll" aria-hidden="true" class="anchor" id="50032-ancm-failed-to-load-dll"></a>500.32 ANCM Failed to Load dll</h3>
+<ul>
+<li>
+<p>Republish the app for the same processor architecture as the worker process.</p>
+</li>
+<li>
+<p>Publish the app as a framework-dependent deployment.</p>
+</li>
+</ul>
+<h3><a href="#50033-ancm-request-handler-load-failure" aria-hidden="true" class="anchor" id="50033-ancm-request-handler-load-failure"></a>500.33 ANCM Request Handler Load Failure</h3>
+<h3><a href="#50034-ancm-mixed-hosting-models-not-supported" aria-hidden="true" class="anchor" id="50034-ancm-mixed-hosting-models-not-supported"></a>500.34 ANCM Mixed Hosting Models Not Supported</h3>
+<h3><a href="#50035-ancm-multiple-in-process-applications-in-same-process" aria-hidden="true" class="anchor" id="50035-ancm-multiple-in-process-applications-in-same-process"></a>500.35 ANCM Multiple In-Process Applications in same Process</h3>
+<h3><a href="#50036-ancm-out-of-process-handler-load-failure" aria-hidden="true" class="anchor" id="50036-ancm-out-of-process-handler-load-failure"></a>500.36 ANCM Out-Of-Process Handler Load Failure</h3>
+<h3><a href="#50037-ancm-failed-to-start-within-startup-time-limit" aria-hidden="true" class="anchor" id="50037-ancm-failed-to-start-within-startup-time-limit"></a>500.37 ANCM Failed to Start Within Startup Time Limit</h3>
+<h3><a href="#50038-ancm-application-dll-not-found" aria-hidden="true" class="anchor" id="50038-ancm-application-dll-not-found"></a>500.38 ANCM Application DLL Not Found</h3>
+<ul>
+<li>
+<p>Disable single-file publishing by setting the <code>PublishSingleFile</code> MSBuild property to <code>false</code>.</p>
+</li>
+<li>
+<p>Switch to the out-of-process hosting model by setting the <code>AspNetCoreHostingModel</code> MSBuild property to <code>OutOfProcess</code>.</p>
+</li>
+</ul>
+<h3><a href="#5025-process-failure" aria-hidden="true" class="anchor" id="5025-process-failure"></a>502.5 Process Failure</h3>
+<h3><a href="#failed-to-start-application-errorcode-'0x800700c1')" aria-hidden="true" class="anchor" id="failed-to-start-application-errorcode-'0x800700c1')"></a>Failed to start application (ErrorCode '0x800700c1')</h3>
+<ul>
+<li>
+<p>Select the app pool in IIS Manager's Application Pools.</p>
+</li>
+<li>
+<p>Select Advanced Settings under Edit Application Pool in the Actions panel.</p>
+</li>
+<li>
+<p>Set Enable 32-Bit Applications:</p>
+<ul>
+<li>
+<p>If deploying a 32-bit (x86) app, set the value to <code>True</code>.</p>
+</li>
+<li>
+<p>If deploying a 64-bit (x64) app, set the value to <code>False</code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#failed-to-start-application-errorcode-'0x800701b1')" aria-hidden="true" class="anchor" id="failed-to-start-application-errorcode-'0x800701b1')"></a>Failed to start application (ErrorCode '0x800701b1')</h3>
+<pre><code class="language-cmd">sc.exe start null
+</code></pre>
+<h3><a href="#connection-reset" aria-hidden="true" class="anchor" id="connection-reset"></a>Connection reset</h3>
+<h3><a href="#default-startup-limits" aria-hidden="true" class="anchor" id="default-startup-limits"></a>Default startup limits</h3>
+<h2><a href="#troubleshoot-on-azure-app-service" aria-hidden="true" class="anchor" id="troubleshoot-on-azure-app-service"></a>Troubleshoot on Azure App Service</h2>
+<blockquote>
+<p class='important'>Important
+ASP.NET Core preview releases with Azure App Service
+ASP.NET Core preview releases aren't deployed to Azure App Service by default. To host an app that uses an ASP.NET Core preview release, see Deploy ASP.NET Core preview release to Azure App Service.</p>
+</blockquote>
+<h3><a href="#azure-app-services-log-stream" aria-hidden="true" class="anchor" id="azure-app-services-log-stream"></a>Azure App Services Log stream</h3>
+<ul>
+<li>
+<p>In the Azure portal, open the app in App Services.</p>
+</li>
+<li>
+<p>In the left pane, navigate to Monitoring &gt; App Service Logs.</p>
+</li>
+</ul>
+<p><img src="https://user-images.githubusercontent.com/3605364/183573538-80645002-d1c3-4451-9a2f-91ef4de4e248.png" alt="App Service Logs!" title="App Service Logs" /></p>
+<ul>
+<li>Select File System for Web Server Logging. Optionally enable Application logging.</li>
+</ul>
+<p><img src="https://user-images.githubusercontent.com/3605364/183529287-f63d3e1c-ee5b-4ca1-bcb6-a8c29d8b26f5.png" alt="enable logging!" title="enable logging" /></p>
+<ul>
+<li>In the left pane, navigate to Monitoring &gt; Log stream, and then select Application logs or Web Server Logs.</li>
+</ul>
+<p><img src="https://user-images.githubusercontent.com/3605364/183561255-91f3d5e1-141b-413b-a403-91e74a770545.png" alt="Monitoring Log stream!" title="Monitoring Log stream" /></p>
+<p><img src="https://user-images.githubusercontent.com/3605364/183528795-532665c0-ce87-4ed3-8e4d-4b374d469c2a.png" alt="app logs!" title="app logs" /></p>
+<h3><a href="#application-event-log-azure-app-service)" aria-hidden="true" class="anchor" id="application-event-log-azure-app-service)"></a>Application Event Log (Azure App Service)</h3>
+<ul>
+<li>
+<p>In the Azure portal, open the app in App Services.</p>
+</li>
+<li>
+<p>Select Diagnose and solve problems.</p>
+</li>
+<li>
+<p>Select the Diagnostic Tools heading.</p>
+</li>
+<li>
+<p>Under Support Tools, select the Application Events button.</p>
+</li>
+<li>
+<p>Examine the latest error provided by the IIS AspNetCoreModule or IIS AspNetCoreModule V2 entry in the Source column.</p>
+</li>
+<li>
+<p>Open Advanced Tools in the <code>Development</code> Tools area. Select the Go→ button. The Kudu console opens in a new browser tab or window.</p>
+</li>
+<li>
+<p>Using the navigation bar at the top of the page, open Debug console and select CMD.</p>
+</li>
+<li>
+<p>Open the LogFiles folder.</p>
+</li>
+<li>
+<p>Select the pencil icon next to the <code>eventlog.xml</code> file.</p>
+</li>
+<li>
+<p>Examine the log. Scroll to the bottom of the log to see the most recent events.</p>
+</li>
+</ul>
+<h3><a href="#run-the-app-in-the-kudu-console" aria-hidden="true" class="anchor" id="run-the-app-in-the-kudu-console"></a>Run the app in the Kudu console</h3>
+<ul>
+<li>
+<p>Open Advanced Tools in the <code>Development</code> Tools area. Select the Go→ button. The Kudu console opens in a new browser tab or window.</p>
+</li>
+<li>
+<p>Using the navigation bar at the top of the page, open Debug console and select CMD.</p>
+</li>
+</ul>
+<h4><a href="#test-a-32-bit-x86)-app" aria-hidden="true" class="anchor" id="test-a-32-bit-x86)-app"></a>Test a 32-bit (x86) app</h4>
+<ul>
+<li>
+<p><code>cd d:\home\site\wwwroot</code></p>
+</li>
+<li>
+<p>Run the app:</p>
+<ul>
+<li>If the app is a framework-dependent deployment:
+dotnet .{ASSEMBLY NAME}.dll</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet .\{ASSEMBLY NAME}.dll
+</code></pre>
+<ul>
+<li>If the app is a self-contained deployment:
+{ASSEMBLY NAME}.exe</li>
+</ul>
+<pre><code class="language-console">{ASSEMBLY NAME}.exe
+</code></pre>
+<ul>
+<li>
+<p><code>cd D:\home\SiteExtensions\AspNetCoreRuntime.{X.Y}.x32</code> ({X.Y} is the runtime version)</p>
+</li>
+<li>
+<p>Run the app: <code>dotnet \home\site\wwwroot\{ASSEMBLY NAME}.dll</code></p>
+</li>
+</ul>
+<h4><a href="#test-a-64-bit-x64)-app" aria-hidden="true" class="anchor" id="test-a-64-bit-x64)-app"></a>Test a 64-bit (x64) app</h4>
+<ul>
+<li>If the app is a 64-bit (x64) framework-dependent deployment:</li>
+</ul>
+<p>cd D:\Program Files\dotnet
+Run the app: <code>dotnet \home\site\wwwroot\{ASSEMBLY NAME}.dll</code></p>
+<ul>
+<li>
+<p><code>cd D:\Program Files\dotnet</code></p>
+</li>
+<li>
+<p>Run the app: <code>dotnet \home\site\wwwroot\{ASSEMBLY NAME}.dll</code></p>
+</li>
+<li>
+<p>If the app is a self-contained deployment:</p>
+</li>
+</ul>
+<p>cd <code>D:\home\site\wwwroot</code>
+Run the app: <code>{ASSEMBLY NAME}.exe</code></p>
+<ul>
+<li>
+<p><code>cd</code>D:\home\site\wwwroot``````</p>
+</li>
+<li>
+<p>Run the app: <code>{ASSEMBLY NAME}.exe</code></p>
+</li>
+<li>
+<p><code>cd D:\home\SiteExtensions\AspNetCoreRuntime.{X.Y}.x64</code> ({X.Y} is the runtime version)</p>
+</li>
+<li>
+<p>Run the app: <code>dotnet \home\site\wwwroot\{ASSEMBLY NAME}.dll</code></p>
+</li>
+</ul>
+<h3><a href="#aspnet-core-module-stdout-log-(azure-app-service)" aria-hidden="true" class="anchor" id="aspnet-core-module-stdout-log-(azure-app-service)"></a>ASP.NET Core Module <code>stdout</code> log (Azure App Service)</h3>
+<blockquote>
+<p class='warning'>Warning
+Failure to disable the <code>stdout</code> log can lead to app or server failure. There's no limit on log file size or the number of log files created. Only use <code>stdout</code> logging to troubleshoot app startup problems.
+For general logging in an ASP.NET Core app after startup, use a logging library that limits log file size and rotates logs. For more information, see third-party logging providers.</p>
+</blockquote>
+<ul>
+<li>
+<p>In the Azure Portal, navigate to the web app.</p>
+</li>
+<li>
+<p>In the App Service blade, enter kudu in the search box.</p>
+</li>
+<li>
+<p>Select Advanced Tools &gt; Go.</p>
+</li>
+<li>
+<p>Select  Debug console &gt; CMD.</p>
+</li>
+<li>
+<p>Navigate to site/wwwroot</p>
+</li>
+<li>
+<p>Select the pencil icon to edit the web.config file.</p>
+</li>
+<li>
+<p>In the <aspNetCore /> element, set stdoutLogEnabled=&quot;true&quot; and select Save.</p>
+</li>
+</ul>
+<h3><a href="#aspnet-core-module-debug-log-(azure-app-service)" aria-hidden="true" class="anchor" id="aspnet-core-module-debug-log-(azure-app-service)"></a>ASP.NET Core Module debug log (Azure App Service)</h3>
+<ul>
+<li>
+<p>To enable the enhanced diagnostic log, perform either of the following:</p>
+<ul>
+<li>
+<p>Follow the instructions in Enhanced diagnostic logs to configure the app for an enhanced diagnostic logging. Redeploy the app.</p>
+</li>
+<li>
+<p>Add the <handlerSettings> shown in Enhanced diagnostic logs to the live app's web.config file using the Kudu console:</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Open Advanced Tools in the <code>Development</code> Tools area. Select the Go→ button. The Kudu console opens in a new browser tab or window.
+Using the navigation bar at the top of the page, open Debug console and select CMD.
+Open the folders to the path site &gt; wwwroot. Edit the web.config file by selecting the pencil button. Add the <handlerSettings> section as shown in Enhanced diagnostic logs. Select the Save button.</p>
+<pre><code> - Open Advanced Tools in the ```Development``` Tools area. Select the Go→ button. The Kudu console opens in a new browser tab or window.
+
+ - Using the navigation bar at the top of the page, open Debug console and select CMD.
+
+ - Open the folders to the path site &gt; wwwroot. Edit the web.config file by selecting the pencil button. Add the &lt;handlerSettings&gt; section as shown in Enhanced diagnostic logs. Select the Save button.
+</code></pre>
+<ul>
+<li>
+<p>Open Advanced Tools in the <code>Development</code> Tools area. Select the Go→ button. The Kudu console opens in a new browser tab or window.</p>
+</li>
+<li>
+<p>Using the navigation bar at the top of the page, open Debug console and select CMD.</p>
+</li>
+<li>
+<p>Open the folders to the path site &gt; wwwroot. If you didn't supply a path for the aspnetcore-debug.log file, the file appears in the list. If you supplied a path, navigate to the location of the log file.</p>
+</li>
+<li>
+<p>Open the log file with the pencil button next to the file name.</p>
+</li>
+<li>
+<p>Remove the <handlerSettings> from the web.config file locally and redeploy the app.</p>
+</li>
+<li>
+<p>Use the Kudu console to edit the web.config file and remove the <handlerSettings> section. Save the file.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Failure to disable the debug log can lead to app or server failure. There's no limit on log file size. Only use debug logging to troubleshoot app startup problems.
+For general logging in an ASP.NET Core app after startup, use a logging library that limits log file size and rotates logs. For more information, see third-party logging providers.</p>
+</blockquote>
+<h3><a href="#slow-or-hanging-app-azure-app-service)" aria-hidden="true" class="anchor" id="slow-or-hanging-app-azure-app-service)"></a>Slow or hanging app (Azure App Service)</h3>
+<h3><a href="#monitoring-blades" aria-hidden="true" class="anchor" id="monitoring-blades"></a>Monitoring blades</h3>
+<ul>
+<li>
+<p>In the DEVELOPMENT TOOLS blade section, select the Extensions blade.</p>
+</li>
+<li>
+<p>The ASP.NET Core Extensions should appear in the list.</p>
+</li>
+<li>
+<p>If the extensions aren't installed, select the Add button.</p>
+</li>
+<li>
+<p>Choose the ASP.NET Core Extensions from the list.</p>
+</li>
+<li>
+<p>Select OK to accept the legal terms.</p>
+</li>
+<li>
+<p>Select OK on the Add extension blade.</p>
+</li>
+<li>
+<p>An informational pop-up message indicates when the extensions are successfully installed.</p>
+</li>
+<li>
+<p>In the Azure portal, select the Advanced Tools blade in the DEVELOPMENT TOOLS area. Select the Go→ button. The Kudu console opens in a new browser tab or window.</p>
+</li>
+<li>
+<p>Using the navigation bar at the top of the page, open Debug console and select CMD.</p>
+</li>
+<li>
+<p>Open the folders to the path site &gt; wwwroot and scroll down to reveal the web.config file at the bottom of the list.</p>
+</li>
+<li>
+<p>Click the pencil icon next to the web.config file.</p>
+</li>
+<li>
+<p>Set stdoutLogEnabled to <code>true</code> and change the stdoutLogFile path to: <code>\\?\%home%\LogFiles\stdout</code>.</p>
+</li>
+<li>
+<p>Select Save to save the updated web.config file.</p>
+</li>
+<li>
+<p>In the Azure portal, select the Diagnostics logs blade.</p>
+</li>
+<li>
+<p>Select the On switch for Application Logging (Filesystem) and Detailed error messages. Select the Save button at the top of the blade.</p>
+</li>
+<li>
+<p>To include failed request tracing, also known as Failed Request Event Buffering (FREB) logging, select the On switch for Failed request tracing.</p>
+</li>
+<li>
+<p>Select the Log stream blade, which is listed immediately under the Diagnostics logs blade in the portal.</p>
+</li>
+<li>
+<p>Make a request to the app.</p>
+</li>
+<li>
+<p>Within the log stream data, the cause of the error is indicated.</p>
+</li>
+<li>
+<p>Navigate to the Diagnose and solve problems blade in the Azure portal.</p>
+</li>
+<li>
+<p>Select Failed Request Tracing Logs from the SUPPORT TOOLS area of the sidebar.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Failure to disable the <code>stdout</code> log can lead to app or server failure. There's no limit on log file size or the number of log files created.
+For routine logging in an ASP.NET Core app, use a logging library that limits log file size and rotates logs. For more information, see third-party logging providers.</p>
+</blockquote>
+<h2><a href="#troubleshoot-on-iis" aria-hidden="true" class="anchor" id="troubleshoot-on-iis"></a>Troubleshoot on IIS</h2>
+<h3><a href="#application-event-log-iis)" aria-hidden="true" class="anchor" id="application-event-log-iis)"></a>Application Event Log (IIS)</h3>
+<ul>
+<li>
+<p>Open the Start menu, search for Event Viewer, and select the Event Viewer app.</p>
+</li>
+<li>
+<p>In Event Viewer, open the Windows Logs node.</p>
+</li>
+<li>
+<p>Select Application to open the Application Event Log.</p>
+</li>
+<li>
+<p>Search for errors associated with the failing app. Errors have a value of IIS AspNetCore Module or IIS Express AspNetCore Module in the Source column.</p>
+</li>
+</ul>
+<h3><a href="#run-the-app-at-a-command-prompt" aria-hidden="true" class="anchor" id="run-the-app-at-a-command-prompt"></a>Run the app at a command prompt</h3>
+<h4><a href="#framework-dependent-deployment" aria-hidden="true" class="anchor" id="framework-dependent-deployment"></a>Framework-dependent deployment</h4>
+<ul>
+<li>
+<p>At a command prompt, navigate to the deployment folder and run the app by executing the app's assembly with dotnet.exe. In the following command, substitute the name of the app's assembly for &lt;assembly_name&gt;: <code>dotnet .\&lt;assembly_name&gt;.dll</code>.</p>
+</li>
+<li>
+<p>The console output from the app, showing any errors, is written to the console window.</p>
+</li>
+<li>
+<p>If the errors occur when making a request to the app, make a request to the host and port where Kestrel listens. Using the default host and post, make a request to http://localhost:5000/. If the app responds normally at the Kestrel endpoint address, the problem is more likely related to the hosting configuration and less likely within the app.</p>
+</li>
+</ul>
+<h4><a href="#self-contained-deployment" aria-hidden="true" class="anchor" id="self-contained-deployment"></a>Self-contained deployment</h4>
+<ul>
+<li>
+<p>At a command prompt, navigate to the deployment folder and run the app's executable. In the following command, substitute the name of the app's assembly for &lt;assembly_name&gt;: <code>&lt;assembly_name&gt;.exe</code>.</p>
+</li>
+<li>
+<p>The console output from the app, showing any errors, is written to the console window.</p>
+</li>
+<li>
+<p>If the errors occur when making a request to the app, make a request to the host and port where Kestrel listens. Using the default host and post, make a request to http://localhost:5000/. If the app responds normally at the Kestrel endpoint address, the problem is more likely related to the hosting configuration and less likely within the app.</p>
+</li>
+</ul>
+<h3><a href="#aspnet-core-module-stdout-log-(iis)" aria-hidden="true" class="anchor" id="aspnet-core-module-stdout-log-(iis)"></a>ASP.NET Core Module <code>stdout</code> log (IIS)</h3>
+<ul>
+<li>
+<p>Navigate to the site's deployment folder on the hosting system.</p>
+</li>
+<li>
+<p>If the logs folder isn't present, create the folder. For instructions on how to enable MSBuild to create the logs folder in the deployment automatically, see the Directory structure topic.</p>
+</li>
+<li>
+<p>Edit the web.config file. Set stdoutLogEnabled to <code>true</code> and change the stdoutLogFile path to point to the logs folder (for example, <code>.\logs\stdout</code>). <code>stdout</code> in the path is the log file name prefix. A timestamp, process id, and file extension are added automatically when the log is created. Using <code>stdout</code> as the file name prefix, a typical log file is named stdout_20180205184032_5412.log.</p>
+</li>
+<li>
+<p>Ensure your application pool's identity has write permissions to the logs folder.</p>
+</li>
+<li>
+<p>Save the updated web.config file.</p>
+</li>
+<li>
+<p>Make a request to the app.</p>
+</li>
+<li>
+<p>Navigate to the logs folder. Find and open the most recent <code>stdout</code> log.</p>
+</li>
+<li>
+<p>Study the log for errors.</p>
+</li>
+<li>
+<p>Edit the web.config file.</p>
+</li>
+<li>
+<p>Set stdoutLogEnabled to <code>false</code>.</p>
+</li>
+<li>
+<p>Save the file.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Failure to disable the <code>stdout</code> log can lead to app or server failure. There's no limit on log file size or the number of log files created.
+For routine logging in an ASP.NET Core app, use a logging library that limits log file size and rotates logs. For more information, see third-party logging providers.</p>
+</blockquote>
+<h3><a href="#aspnet-core-module-debug-log-(iis)" aria-hidden="true" class="anchor" id="aspnet-core-module-debug-log-(iis)"></a>ASP.NET Core Module debug log (IIS)</h3>
+<pre><code class="language-xml">&lt;aspNetCore ...&gt;
+  &lt;handlerSettings&gt;
+    &lt;handlerSetting name=&quot;debugLevel&quot; value=&quot;file&quot; /&gt;
+    &lt;handlerSetting name=&quot;debugFile&quot; value=&quot;c:\temp\ancm.log&quot; /&gt;
+  &lt;/handlerSettings&gt;
+&lt;/aspNetCore&gt;
+</code></pre>
+<h3><a href="#enable-the-developer-exception-page" aria-hidden="true" class="anchor" id="enable-the-developer-exception-page"></a>Enable the Developer Exception Page</h3>
+<pre><code class="language-xml">&lt;aspNetCore processPath=&quot;dotnet&quot;
+      arguments=&quot;.\MyApp.dll&quot;
+      stdoutLogEnabled=&quot;false&quot;
+      stdoutLogFile=&quot;.\logs\stdout&quot;
+      hostingModel=&quot;InProcess&quot;&gt;
+  &lt;environmentVariables&gt;
+    &lt;environmentVariable name=&quot;ASPNETCORE_ENVIRONMENT&quot; value=&quot;Development&quot; /&gt;
+  &lt;/environmentVariables&gt;
+&lt;/aspNetCore&gt;
+</code></pre>
+<h3><a href="#obtain-data-from-an-app" aria-hidden="true" class="anchor" id="obtain-data-from-an-app"></a>Obtain data from an app</h3>
+<h3><a href="#slow-or-hanging-app-iis)" aria-hidden="true" class="anchor" id="slow-or-hanging-app-iis)"></a>Slow or hanging app (IIS)</h3>
+<h4><a href="#app-crashes-or-encounters-an-exception" aria-hidden="true" class="anchor" id="app-crashes-or-encounters-an-exception"></a>App crashes or encounters an exception</h4>
+<ul>
+<li>
+<p>Create a folder to hold crash dump files at <code>c:\dumps</code>. The app pool must have write access to the folder.</p>
+</li>
+<li>
+<p>Run the EnableDumps PowerShell script:</p>
+<ul>
+<li>If the app uses the in-process hosting model, run the script for w3wp.exe:
+.\EnableDumps w3wp.exe <code>c:\dumps</code></li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-console">.\EnableDumps w3wp.exe c:\dumps
+</code></pre>
+<ul>
+<li>If the app uses the out-of-process hosting model, run the script for dotnet.exe:
+.\EnableDumps dotnet.exe <code>c:\dumps</code></li>
+</ul>
+<pre><code class="language-console">.\EnableDumps dotnet.exe c:\dumps
+</code></pre>
+<ul>
+<li>
+<p>Run the app under the conditions that cause the crash to occur.</p>
+</li>
+<li>
+<p>After the crash has occurred, run the DisableDumps PowerShell script:</p>
+<ul>
+<li>If the app uses the in-process hosting model, run the script for w3wp.exe:
+.\DisableDumps w3wp.exe</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-console">.\DisableDumps w3wp.exe
+</code></pre>
+<ul>
+<li>If the app uses the out-of-process hosting model, run the script for dotnet.exe:
+.\DisableDumps dotnet.exe</li>
+</ul>
+<pre><code class="language-console">.\DisableDumps dotnet.exe
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Crash dumps might take up a large amount of disk space (up to several gigabytes each).</p>
+</blockquote>
+<h4><a href="#app-hangs-fails-during-startup,-or-runs-normally" aria-hidden="true" class="anchor" id="app-hangs-fails-during-startup,-or-runs-normally"></a>App hangs, fails during startup, or runs normally</h4>
+<h4><a href="#analyze-the-dump" aria-hidden="true" class="anchor" id="analyze-the-dump"></a>Analyze the dump</h4>
+<h2><a href="#clear-package-caches" aria-hidden="true" class="anchor" id="clear-package-caches"></a>Clear package caches</h2>
+<ul>
+<li>
+<p>Delete the bin and obj folders.</p>
+</li>
+<li>
+<p>Clear the package caches by executing dotnet nuget locals all --clear from a command shell.
+Clearing package caches can also be accomplished with the nuget.exe tool and executing the command <code>nuget locals all -clear</code>. nuget.exe isn't a bundled install with the Windows desktop operating system and must be obtained separately from the NuGet website.</p>
+</li>
+<li>
+<p>Restore and rebuild the project.</p>
+</li>
+<li>
+<p>Delete all of the files in the deployment folder on the server prior to redeploying the app.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Debug .NET and ASP.NET Core source code with Visual Studio</p>
+</li>
+<li>
+<p>Troubleshoot and debug ASP.NET Core projects</p>
+</li>
+<li>
+<p>Common error troubleshooting for Azure App Service and IIS with ASP.NET Core</p>
+</li>
+<li>
+<p>Handle errors in ASP.NET Core</p>
+</li>
+<li>
+<p>ASP.NET Core Module (ANCM) for IIS</p>
+</li>
+</ul>
+<h3><a href="#azure-documentation" aria-hidden="true" class="anchor" id="azure-documentation"></a>Azure documentation</h3>
+<ul>
+<li>
+<p>Application Insights for ASP.NET Core</p>
+</li>
+<li>
+<p>Remote debugging web apps section of Troubleshoot a web app in Azure App Service using Visual Studio</p>
+</li>
+<li>
+<p>Azure App Service diagnostics overview</p>
+</li>
+<li>
+<p>How to: Monitor Apps in Azure App Service</p>
+</li>
+<li>
+<p>Troubleshoot a web app in Azure App Service using Visual Studio</p>
+</li>
+<li>
+<p>Troubleshoot HTTP errors of &quot;502 bad gateway&quot; and &quot;503 service unavailable&quot; in your Azure web apps</p>
+</li>
+<li>
+<p>Troubleshoot slow web app performance issues in Azure App Service</p>
+</li>
+<li>
+<p>Application performance FAQs for Web Apps in Azure</p>
+</li>
+<li>
+<p>Azure Web App sandbox (App Service runtime execution limitations)</p>
+</li>
+</ul>
+<h3><a href="#visual-studio-documentation" aria-hidden="true" class="anchor" id="visual-studio-documentation"></a>Visual Studio documentation</h3>
+<ul>
+<li>
+<p>Remote Debug ASP.NET Core on IIS in Azure in Visual Studio 2017</p>
+</li>
+<li>
+<p>Remote Debug ASP.NET Core on a Remote IIS Computer in Visual Studio 2017</p>
+</li>
+<li>
+<p>Learn to debug using Visual Studio</p>
+</li>
+</ul>
+<h3><a href="#visual-studio-code-documentation" aria-hidden="true" class="anchor" id="visual-studio-code-documentation"></a>Visual Studio Code documentation</h3>
+<ul>
+<li>Debugging with Visual Studio Code</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/test/troubleshoot-azure-iis?view=aspnetcore-8.0">Troubleshoot ASP.NET Core on Azure App Service and IIS</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

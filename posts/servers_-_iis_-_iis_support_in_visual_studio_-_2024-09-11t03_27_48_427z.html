@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - IIS - IIS support in Visual Studio | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - IIS - IIS support in Visual Studio</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<ul>
+<li>
+<p>Visual Studio for Windows</p>
+</li>
+<li>
+<p>ASP.NET and web development workload</p>
+</li>
+<li>
+<p>.NET Core cross-platform development workload</p>
+</li>
+<li>
+<p>X.509 security certificate (for HTTPS support)</p>
+</li>
+</ul>
+<h2><a href="#enable-iis" aria-hidden="true" class="anchor" id="enable-iis"></a>Enable IIS</h2>
+<ul>
+<li>
+<p>In Windows, navigate to Control Panel &gt; Programs &gt; Programs and Features &gt; Turn Windows features on or off (left side of the screen).</p>
+</li>
+<li>
+<p>Select the Internet Information Services checkbox. Select OK.</p>
+</li>
+</ul>
+<h2><a href="#configure-iis" aria-hidden="true" class="anchor" id="configure-iis"></a>Configure IIS</h2>
+<ul>
+<li>
+<p>Host name: Typically, the Default Web Site is used with a Host name of <code>localhost</code>. However, any valid IIS website with a unique host name works.</p>
+</li>
+<li>
+<p>Site Binding</p>
+<ul>
+<li>
+<p>For apps that require HTTPS, create a binding to port 443 with a certificate. Typically, the IIS Express <code>Development</code> Certificate is used, but any valid certificate works.</p>
+</li>
+<li>
+<p>For apps that use HTTP, confirm the existence of a binding to port 80 or create a binding to port 80 for a new site.</p>
+</li>
+<li>
+<p>Use a single binding for either HTTP or HTTPS. Binding to both HTTP and HTTPS ports simultaneously isn't supported.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#configure-the-project" aria-hidden="true" class="anchor" id="configure-the-project"></a>Configure the project</h2>
+<h3><a href="#https-redirection" aria-hidden="true" class="anchor" id="https-redirection"></a>HTTPS redirection</h3>
+<h3><a href="#iis-launch-profile" aria-hidden="true" class="anchor" id="iis-launch-profile"></a>IIS launch profile</h3>
+<ul>
+<li>
+<p>Right-click the project in Solution Explorer. Select Properties. Open the Debug tab.</p>
+</li>
+<li>
+<p>For Profile, select the New button. Name the profile &quot;IIS&quot; in the popup window. Select OK to create the profile.</p>
+</li>
+<li>
+<p>For the Launch setting, select IIS from the list.</p>
+</li>
+<li>
+<p>Select the checkbox for Launch browser and provide the endpoint URL.
+When the app requires HTTPS, use an HTTPS endpoint (https://). For HTTP, use an HTTP (http://) endpoint.
+Provide the same host name and port as the IIS configuration specified earlier uses, typically <code>localhost</code>.
+Provide the name of the app at the end of the URL.
+For example, <code>https://localhost/WebApplication1</code> (HTTPS) or <code>http://localhost/WebApplication1</code> (HTTP) are valid endpoint URLs.</p>
+</li>
+<li>
+<p>In the Environment variables section, select the Add button. Provide an environment variable with a Name of <code>ASPNETCORE_ENVIRONMENT</code> and a Value of <code>Development</code>.</p>
+</li>
+<li>
+<p>In the Web Server Settings area, set the App URL to the same value used for the Launch browser endpoint URL.</p>
+</li>
+<li>
+<p>For the Hosting Model setting in Visual Studio 2019 or later, select Default to use the hosting model used by the project. If the project sets the <AspNetCoreHostingModel> property in its project file, the value of the property (InProcess or <code>OutOfProcess</code>) is used. If the property isn't present, the default hosting model of the app is used, which is in-process. If the app requires an explicit hosting model setting different from the app's normal hosting model, set the Hosting Model to either <code>In Process</code> or <code>Out Of Process</code> as needed.</p>
+</li>
+<li>
+<p>Save the profile.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;iisSettings&quot;: {
+    &quot;windowsAuthentication&quot;: false,
+    &quot;anonymousAuthentication&quot;: true,
+    &quot;iis&quot;: {
+      &quot;applicationUrl&quot;: &quot;https://localhost/WebApplication1&quot;,
+      &quot;sslPort&quot;: 0
+    }
+  },
+  &quot;profiles&quot;: {
+    &quot;IIS&quot;: {
+      &quot;commandName&quot;: &quot;IIS&quot;,
+      &quot;launchBrowser&quot;: true,
+      &quot;launchUrl&quot;: &quot;https://localhost/WebApplication1&quot;,
+      &quot;environmentVariables&quot;: {
+        &quot;ASPNETCORE_ENVIRONMENT&quot;: &quot;Development&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h2><a href="#run-the-project" aria-hidden="true" class="anchor" id="run-the-project"></a>Run the project</h2>
+<ul>
+<li>
+<p>Confirm that the build configuration drop-down list is set to Debug.</p>
+</li>
+<li>
+<p>Set the Start Debugging button to the IIS profile and select the button to start the app.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Debugging a Release build configuration with Just My Code and compiler optimizations results in a degraded experience. For example, break points aren't hit.</p>
+</blockquote>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Getting Started with the IIS Manager in IIS</p>
+</li>
+<li>
+<p>Enforce HTTPS in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/development-time-iis-support?view=aspnetcore-8.0">Development-time IIS support in Visual Studio for ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - IIS - Hosting Bundle | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The .NET Core Hosting bundle is an installer for the .NET Core Runtime and the ASP.NET Core Module. The bundle allows ASP.NET Core apps to run with IIS.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - IIS - Hosting Bundle</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The .NET Core Hosting bundle is an installer for the .NET Core Runtime and the ASP.NET Core Module. The bundle allows ASP.NET Core apps to run with IIS.</p>
+<h2><a href="#install-the-net-core-hosting-bundle" aria-hidden="true" class="anchor" id="install-the-net-core-hosting-bundle"></a>Install the .NET Core Hosting Bundle</h2>
+<blockquote>
+<p class='important'>Important
+If the Hosting Bundle is installed before IIS, the bundle installation must be repaired. Run the Hosting Bundle installer again after installing IIS.
+If the Hosting Bundle is installed after installing the 64-bit (x64) version of .NET Core, SDKs might appear to be missing (No .NET Core SDKs were detected). To resolve the problem, see Troubleshoot and debug ASP.NET Core projects.</p>
+</blockquote>
+<p>Breaking changes and security advisories are reported on the Announcements repo. Announcements can be limited to a specific version by selecting a Label filter.</p>
+<h2><a href="#direct-download" aria-hidden="true" class="anchor" id="direct-download"></a>Direct download</h2>
+<p>Download the installer using the following links:</p>
+<ul>
+<li>
+<p>Current version:.NET Core Hosting Bundle installer (direct download)</p>
+</li>
+<li>
+<p>Previous and pre-release versions</p>
+</li>
+</ul>
+<h2><a href="#visual-c+-redistributable-requirement" aria-hidden="true" class="anchor" id="visual-c+-redistributable-requirement"></a>Visual C++ Redistributable Requirement</h2>
+<p>On older versions of Windows, for example Windows Server 2012 R2, install the Visual Studio C++ 2015, 2017, 2019 Redistributable. Otherwise, a confusing error message in the Windows Event Log reports that The data is the error.</p>
+<p>Current x64 VS C++ redistributable
+Current x86 VS C++ redistributable</p>
+<h2><a href="#earlier-versions-of-the-installer" aria-hidden="true" class="anchor" id="earlier-versions-of-the-installer"></a>Earlier versions of the installer</h2>
+<p>To obtain an earlier version of the installer:</p>
+<ul>
+<li>
+<p>Navigate to the Download .NET Core page.</p>
+</li>
+<li>
+<p>Select the desired .NET Core version.</p>
+</li>
+<li>
+<p>In the Run apps - Runtime column, find the row of the .NET Core runtime version desired.</p>
+</li>
+<li>
+<p>Download the installer using the Hosting Bundle link.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Some installers contain release versions that have reached their end of life (EOL) and are no longer supported by Microsoft. For more information, see the support policy.
+The ASP.NET Core Module is forward and backward compatible with in-support releases of .NET.</p>
+</blockquote>
+<h2><a href="#options" aria-hidden="true" class="anchor" id="options"></a>Options</h2>
+<ul>
+<li>
+<p>The following parameters are available when running the installer from an administrator command shell:</p>
+<ul>
+<li>
+<p><code>OPT_NO_ANCM=1</code>: Skip installing the ASP.NET Core Module.</p>
+</li>
+<li>
+<p><code>OPT_NO_RUNTIME=1</code>: Skip installing the .NET Core runtime. Used when the server only hosts self-contained deployments (SCD).</p>
+</li>
+<li>
+<p><code>OPT_NO_SHAREDFX=1</code>: Skip installing the ASP.NET Shared Framework (ASP.NET runtime). Used when the server only hosts self-contained deployments (SCD).</p>
+</li>
+<li>
+<p><code>OPT_NO_X86=1</code>: Skip installing x86 runtimes. Use this parameter when you know that you won't be hosting 32-bit apps. If there's any chance that you will host both 32-bit and 64-bit apps in the future, don't use this parameter and install both runtimes.</p>
+</li>
+<li>
+<p><code>OPT_NO_SHARED_CONFIG_CHECK=1</code>: Disable the check for using an IIS Shared Configuration when the shared configuration (applicationHost.config) is on the same machine as the IIS installation. Only available for ASP.NET Core 2.2 or later Hosting Bundler installers. For more information, see Advanced configuration.</p>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+For information on IIS Shared Configuration, see ASP.NET Core Module with IIS Shared Configuration.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+When running the Hosting Bundle installer with options set, the value for each option is saved in the registry. Subsequent installs from the same Major.Minor version band use the same options, unless another set of options is explicitly passed from the command line. If the first install of the hosting bundle has no options passed, each option gets a default value of <code>0</code> written in to the registry. A value of <code>0</code> implies that the option is off, meaning the user is not opting out of the given component.</p>
+</blockquote>
+<h2><a href="#restart-iis" aria-hidden="true" class="anchor" id="restart-iis"></a>Restart IIS</h2>
+<p>After the Hosting Bundle is installed, a manual IIS restart may be required. For example, the <code>dotnet</code> CLI tooling (command) might not exist on the PATH for running IIS worker processes.</p>
+<p>This guide will teach you how to manually restart the Windows operating system.</p>
+<pre><code class="language-console">net stop was /y
+net start w3svc
+</code></pre>
+<h2><a href="#module-version-and-hosting-bundle-installer-logs" aria-hidden="true" class="anchor" id="module-version-and-hosting-bundle-installer-logs"></a>Module version and Hosting Bundle installer logs</h2>
+<p>To determine the version of the installed ASP.NET Core Module:</p>
+<ul>
+<li>
+<p>On the hosting system, navigate to <code>%PROGRAMFILES%\IIS\Asp.Net Core Module\V2</code>.</p>
+</li>
+<li>
+<p>Locate the <code>aspnetcorev2.dll</code> file.</p>
+</li>
+<li>
+<p>Right-click the file and select Properties from the contextual menu.</p>
+</li>
+<li>
+<p>Select the Details tab. The File version and Product version represent the installed version of the module.</p>
+</li>
+</ul>
+<p>The Hosting Bundle installer logs for the module are found at <code>C:\Users\%UserName%\AppData\Local\Temp</code>. The file is named <code>dd_DotNetCoreWinSvrHosting__{TIMESTAMP}_000_AspNetCoreModule_x64.log</code>, where the placeholder {TIMESTAMP} is the timestamp of the file.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/hosting-bundle?view=aspnetcore-8.0">The .NET Core Hosting Bundle</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

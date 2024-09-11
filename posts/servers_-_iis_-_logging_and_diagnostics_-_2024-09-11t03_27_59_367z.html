@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - IIS - Logging and diagnostics | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The ASP.NET Core Module redirects stdout and stderr console output to disk if the stdoutLogEnabled and stdoutLogFile attributes of the aspNetCore element are set. Any folders in the stdoutLogFile path are created by the module when the log file is created. The app pool must have write access to the location where the logs are written (use IIS AppPool\{APP POOL NAME} to provide write permission, where the placeholder {APP POOL NAME} is the app pool name).'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - IIS - Logging and diagnostics</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The ASP.NET Core Module redirects <code>stdout</code> and stderr console output to disk if the <code>stdoutLogEnabled</code> and <code>stdoutLogFile</code> attributes of the <code>aspNetCore</code> element are set. Any folders in the <code>stdoutLogFile</code> path are created by the module when the log file is created. The app pool must have write access to the location where the <code>logs</code> are written (use IIS AppPool{APP POOL NAME} to provide write permission, where the placeholder {APP POOL NAME} is the app pool name).</p>
+<p>Logs aren't rotated, unless process recycling/restart occurs. It's the responsibility of the hoster to limit the disk space the <code>logs</code> consume.</p>
+<p>Using the <code>stdout</code> log is only recommended for troubleshooting app startup issues when hosting on IIS or when using development-time support for IIS with Visual Studio, not while debugging locally and running the app with IIS Express.</p>
+<p>Don't use the <code>stdout</code> log for general app logging purposes. For routine logging in an ASP.NET Core app, use a logging library that limits log file size and rotates <code>logs</code>. For more information, see third-party logging providers.</p>
+<p>A timestamp and file extension are added automatically when the log file is created. The log file name is composed by appending the timestamp, process ID, and file extension (.log) to the last segment of the <code>stdoutLogFile</code> path (typically <code>stdout</code>) delimited by underscores. If the <code>stdoutLogFile</code> path ends with <code>stdout</code>, a log for an app with a PID of 1934 created on 2/5/2018 at 19:42:32 has the file name <code>stdout_20180205194132_1934.log</code>.</p>
+<p>If <code>stdoutLogEnabled</code> is false, errors that occur on app startup are captured and emitted to the event log up to 30 KB. After startup, all additional <code>logs</code> are discarded.</p>
+<p>The following sample <code>aspNetCore</code> element configures <code>stdout</code> logging at the relative path .\log. Confirm that the AppPool user identity has permission to write to the path provided.</p>
+<pre><code class="language-xml">&lt;aspNetCore processPath=&quot;dotnet&quot;
+    arguments=&quot;.\MyApp.dll&quot;
+    stdoutLogEnabled=&quot;true&quot;
+    stdoutLogFile=&quot;.\logs\stdout&quot;
+    hostingModel=&quot;inprocess&quot;&gt;
+&lt;/aspNetCore&gt;
+</code></pre>
+<p>When publishing an app for Azure App Service deployment, the Web SDK sets the <code>stdoutLogFile</code> value to <code>\\?\%home%\LogFiles\stdout</code>. The <code>%home</code> environment variable is predefined for apps hosted by Azure App Service.</p>
+<p>To create logging filter rules, see the Apply log filter rules in code section of the ASP.NET Core logging documentation.</p>
+<p>For more information on path formats, see File path formats on Windows systems.</p>
+<h2><a href="#enhanced-diagnostic-logs" aria-hidden="true" class="anchor" id="enhanced-diagnostic-logs"></a>Enhanced diagnostic <code>logs</code></h2>
+<p>The ASP.NET Core Module is configurable to provide enhanced diagnostics <code>logs</code>. Add the <handlerSettings> element to the <aspNetCore> element in <code>web.config</code>. Setting the <code>debugLevel</code> to <code>TRACE</code> exposes a higher fidelity of diagnostic information:</p>
+<pre><code class="language-xml">&lt;aspNetCore processPath=&quot;dotnet&quot;
+    arguments=&quot;.\MyApp.dll&quot;
+    stdoutLogEnabled=&quot;false&quot;
+    stdoutLogFile=&quot;\\?\%home%\LogFiles\stdout&quot;
+    hostingModel=&quot;inprocess&quot;&gt;
+  &lt;handlerSettings&gt;
+    &lt;handlerSetting name=&quot;debugFile&quot; value=&quot;.\logs\aspnetcore-debug.log&quot; /&gt;
+    &lt;handlerSetting name=&quot;debugLevel&quot; value=&quot;FILE,TRACE&quot; /&gt;
+  &lt;/handlerSettings&gt;
+&lt;/aspNetCore&gt;
+</code></pre>
+<p>Any folders in the path (logs in the preceding example) are created by the module when the log file is created. The app pool must have write access to the location where the <code>logs</code> are written (use IIS AppPool{APP POOL NAME} to provide write permission, where the placeholder {APP POOL NAME} is the app pool name).</p>
+<p>Debug level (debugLevel) values can include both the level and the location.</p>
+<p>Levels (in order from least to most verbose):</p>
+<ul>
+<li>
+<p>ERROR</p>
+</li>
+<li>
+<p>WARNING</p>
+</li>
+<li>
+<p>INFO</p>
+</li>
+<li>
+<p><code>TRACE</code></p>
+</li>
+</ul>
+<p>Locations (multiple locations are permitted):</p>
+<ul>
+<li>
+<p>CONSOLE</p>
+</li>
+<li>
+<p>EVENTLOG</p>
+</li>
+<li>
+<p>FILE</p>
+</li>
+</ul>
+<p>The handler settings can also be provided via environment variables:</p>
+<ul>
+<li>
+<p><code>ASPNETCORE_MODULE_DEBUG_FILE</code>: Path to the debug log file. (Default: <code>aspnetcore-debug.log</code>)</p>
+</li>
+<li>
+<p><code>ASPNETCORE_MODULE_DEBUG</code>: Debug level setting.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Do not leave debug logging enabled in the deployment for longer than required to troubleshoot an issue. The size of the log isn't limited. Leaving the debug log enabled can exhaust the available disk space and crash the server or app service.</p>
+</blockquote>
+<p>See Configuration of ASP.NET Core Module with <code>web.config</code> for an example of the <code>aspNetCore</code> element in the <code>web.config</code> file.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/logging-and-diagnostics?view=aspnetcore-8.0">IIS log creation and redirection</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
