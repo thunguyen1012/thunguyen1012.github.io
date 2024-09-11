@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - IIS - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - IIS - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#supported-platforms" aria-hidden="true" class="anchor" id="supported-platforms"></a>Supported platforms</h2>
+<ul>
+<li>
+<p>Windows 7 or later</p>
+</li>
+<li>
+<p>Windows Server 2012 R2 or later</p>
+</li>
+<li>
+<p>Requires the larger virtual memory address space available to a 64-bit app.</p>
+</li>
+<li>
+<p>Requires the larger IIS stack size.</p>
+</li>
+<li>
+<p>Has 64-bit native dependencies.</p>
+</li>
+</ul>
+<h2><a href="#install-the-aspnet-core-module/hosting-bundle" aria-hidden="true" class="anchor" id="install-the-aspnet-core-module/hosting-bundle"></a>Install the ASP.NET Core Module/Hosting Bundle</h2>
+<h2><a href="#get-started" aria-hidden="true" class="anchor" id="get-started"></a>Get started</h2>
+<h2><a href="#configuration" aria-hidden="true" class="anchor" id="configuration"></a>Configuration</h2>
+<h2><a href="#deployment-resources-for-iis-administrators" aria-hidden="true" class="anchor" id="deployment-resources-for-iis-administrators"></a>Deployment resources for IIS administrators</h2>
+<ul>
+<li>
+<p>IIS documentation</p>
+</li>
+<li>
+<p>Getting Started with the IIS Manager in IIS</p>
+</li>
+<li>
+<p>.NET Core application deployment</p>
+</li>
+<li>
+<p>ASP.NET Core Module (ANCM) for IIS</p>
+</li>
+<li>
+<p>ASP.NET Core directory structure</p>
+</li>
+<li>
+<p>IIS modules with ASP.NET Core</p>
+</li>
+<li>
+<p>Troubleshoot ASP.NET Core on Azure App Service and IIS</p>
+</li>
+<li>
+<p>Common error troubleshooting for Azure App Service and IIS with ASP.NET Core</p>
+</li>
+</ul>
+<h2><a href="#overlapped-recycle" aria-hidden="true" class="anchor" id="overlapped-recycle"></a>Overlapped recycle</h2>
+<h2><a href="#optional-client-certificates" aria-hidden="true" class="anchor" id="optional-client-certificates"></a>Optional client certificates</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Troubleshoot and debug ASP.NET Core projects</p>
+</li>
+<li>
+<p>Overview of ASP.NET Core</p>
+</li>
+<li>
+<p>The Official Microsoft IIS Site</p>
+</li>
+<li>
+<p>Windows Server technical content library</p>
+</li>
+<li>
+<p>HTTP/2 on IIS</p>
+</li>
+<li>
+<p>Transform web.config</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/?view=aspnetcore-8.0">Host ASP.NET Core on Windows with IIS</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

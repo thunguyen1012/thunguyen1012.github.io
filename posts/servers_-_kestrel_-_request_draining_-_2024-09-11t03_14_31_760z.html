@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Kestrel - Request draining | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Opening HTTP connections is time consuming. For HTTPS, it's also resource intensive. Therefore, Kestrel tries to reuse connections per the HTTP/1.1 protocol. A request body must be fully consumed to allow the connection to be reused. The app doesn't always consume the request body, such as HTTP POST requests where the server returns a redirect or 404 response. In the HTTP POST redirect case:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Kestrel - Request draining</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In this article, I'm going to show you how to reuse HTTP and HTTPS connections between your app and a server.</p>
+<ul>
+<li>
+<p>The client may already have sent part of the POST data.</p>
+</li>
+<li>
+<p>The server writes the 301 response.</p>
+</li>
+<li>
+<p>The connection can't be used for a new request until the POST data from the previous request body has been fully read.</p>
+</li>
+<li>
+<p>Kestrel tries to drain the request body. Draining the request body means reading and discarding the data without processing it.</p>
+</li>
+</ul>
+<p>The draining process makes a tradeoff between allowing the connection to be reused and the time it takes to drain any remaining data:</p>
+<ul>
+<li>
+<p>Draining has a timeout of five seconds, which isn't configurable.</p>
+</li>
+<li>
+<p>If all of the data specified by the <code>Content-Length</code> or <code>Transfer-Encoding</code> header hasn't been read before the timeout, the connection is closed.</p>
+</li>
+</ul>
+<p>Sometimes you may want to terminate the request immediately, before or after writing the response. For example, clients may have restrictive data caps. Limiting uploaded data might be a priority. In such cases to terminate a request, call HttpContext.Abort from a controller, Razor Page, or middleware.</p>
+<p>There are caveats to calling <code>Abort</code>:</p>
+<ul>
+<li>
+<p>Creating new connections can be slow and expensive.</p>
+</li>
+<li>
+<p>There's no guarantee that the client has read the response before the connection closes.</p>
+</li>
+<li>
+<p>Calling <code>Abort</code> should be rare and reserved for severe error cases, not common errors.</p>
+<ul>
+<li>
+<p>Only call <code>Abort</code> when a specific problem needs to be solved. For example, call <code>Abort</code> if malicious clients are trying to POST data or when there's a bug in client code that causes large or several requests.</p>
+</li>
+<li>
+<p>Don't call <code>Abort</code> for common error situations, such as HTTP 404 (Not Found).</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Calling HttpResponse.CompleteAsync before calling <code>Abort</code> ensures that the server has completed writing the response. However, client behavior isn't predictable and they may not read the response before the connection is aborted.</p>
+<p>If there's any unread request body data after completing a response, then the server sends an HTTP/2 RST frame.</p>
+<p>When sending a request to a server, it's a good idea to wait for the server to respond before sending the request body.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/request-draining?view=aspnetcore-8.0">Request draining with ASP.NET Core Kestrel web server</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

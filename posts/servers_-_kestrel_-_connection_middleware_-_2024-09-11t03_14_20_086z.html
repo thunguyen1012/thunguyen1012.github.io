@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - Kestrel - Connection middleware | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Kestrel supports connection middleware. Connection middleware is software that is assembled into a connection pipeline and runs when Kestrel receives a new connection. Each component:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - Kestrel - Connection middleware</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Kestrel supports connection middleware. Connection middleware is software that is assembled into a connection pipeline and runs when Kestrel receives a new connection. Each component:</p>
+<ul>
+<li>
+<p>Chooses whether to pass the request to the next component in the pipeline.</p>
+</li>
+<li>
+<p>Can perform work before and after the next component in the pipeline.</p>
+</li>
+</ul>
+<p>Connection delegates are used to build the connection pipeline. Connection delegates are configured with the ListenOptions.Use method.</p>
+<p>Connection middleware is different from ASP.NET Core Middleware. Connection middleware runs per-connection instead of per-request.</p>
+<h2><a href="#connection-logging" aria-hidden="true" class="anchor" id="connection-logging"></a>Connection logging</h2>
+<p>Connection logging is connection middleware that is included with ASP.NET Core. Call <code>UseConnectionLogging</code> to emit Debug level logs for byte-level communication on a connection.</p>
+<p>Connection logging is helpful for troubleshooting problems in low-level communication, such as during TLS encryption and behind proxies. If <code>UseConnectionLogging</code> is placed before <code>UseHttps</code>, encrypted traffic is logged. If <code>UseConnectionLogging</code> is placed after <code>UseHttps</code>, decrypted traffic is logged.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    serverOptions.Listen(IPAddress.Any, 8000, listenOptions =&gt;
+    {
+        listenOptions.UseConnectionLogging();
+    });
+});
+</code></pre>
+<h2><a href="#create-custom-connection-middleware" aria-hidden="true" class="anchor" id="create-custom-connection-middleware"></a>Create custom connection middleware</h2>
+<p>The following code snippet shows how to create a custom connection that can filter TLS handshakes on a per-connection basis for specific cipher suites.</p>
+<p>No encryption is used with a CipherAlgorithmType.Null cipher algorithm.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel((context, serverOptions) =&gt;
+{
+    serverOptions.Listen(IPAddress.Any, 8000, listenOptions =&gt;
+    {
+        listenOptions.UseHttps(&quot;testCert.pfx&quot;, &quot;testPassword&quot;);
+
+        listenOptions.Use((context, next) =&gt;
+        {
+            var tlsFeature = context.Features.Get&lt;ITlsHandshakeFeature&gt;()!;
+
+            if (tlsFeature.CipherAlgorithm == CipherAlgorithmType.Null)
+            {
+                throw new NotSupportedException(
+                    $&quot;Prohibited cipher: {tlsFeature.CipherAlgorithm}&quot;);
+            }
+
+            return next();
+        });
+    });
+});
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>Configure endpoints for the ASP.NET Core Kestrel web server</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/connection-middleware?view=aspnetcore-8.0">Connection middleware</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

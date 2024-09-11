@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Servers - IIS - In-process hosting | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Servers - IIS - In-process hosting</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/index/_static/ancm-inprocess.png?view=aspnetcore-8.0" alt="ASP.NET Core Module in the in-process hosting scenario!" title="ASP.NET Core Module in the in-process hosting scenario" /></p>
+<h2><a href="#enable-in-process-hosting" aria-hidden="true" class="anchor" id="enable-in-process-hosting"></a>Enable in-process hosting</h2>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;AspNetCoreHostingModel&gt;InProcess&lt;/AspNetCoreHostingModel&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<h2><a href="#general-architecture" aria-hidden="true" class="anchor" id="general-architecture"></a>General architecture</h2>
+<ul>
+<li>
+<p>A request arrives from the web to the kernel-mode HTTP.sys driver.</p>
+</li>
+<li>
+<p>The driver routes the native request to IIS on the website's configured port, usually 80 (HTTP) or 443 (HTTPS).</p>
+</li>
+<li>
+<p>The ASP.NET Core Module receives the native request and passes it to IIS HTTP Server (IISHttpServer). IIS HTTP Server is an in-process server implementation for IIS that converts the request from native to managed.</p>
+</li>
+<li>
+<p>The request is sent to the ASP.NET Core middleware pipeline.</p>
+</li>
+<li>
+<p>The middleware pipeline handles the request and passes it on as an <code>HttpContext</code> instance to the app's logic.</p>
+</li>
+<li>
+<p>The app's response is passed back to IIS through IIS HTTP Server.</p>
+</li>
+<li>
+<p>IIS sends the response to the client that initiated the request.</p>
+</li>
+</ul>
+<h2><a href="#application-configuration" aria-hidden="true" class="anchor" id="application-configuration"></a>Application configuration</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Server.IIS;
+using Microsoft.EntityFrameworkCore;
+using RPauth.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+builder.Services.Configure&lt;IISServerOptions&gt;(options =&gt;
+{
+    options.AutomaticAuthentication = false;
+});
+
+builder.Services.AddTransient&lt;IClaimsTransformation, MyClaimsTransformation&gt;();
+builder.Services.AddAuthentication(IISServerDefaults.AuthenticationScheme);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<table><thead>
+<tr>
+<th>Option</th>
+<th style="text-align: center;">Default</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AutomaticAuthentication</code></td>
+<td style="text-align: center;"><code>true</code></td>
+<td>If <code>true</code>, IIS Server sets the <code>HttpContext.User</code> authenticated by <a href="../../security/authentication/windowsauth?view=aspnetcore-8.0" data-linktype="relative-path">Windows Authentication</a>. If <code>false</code>, the server only provides an identity for <code>HttpContext.User</code> and responds to challenges when explicitly requested by the <code>AuthenticationScheme</code>. Windows Authentication must be enabled in IIS for <code>AutomaticAuthentication</code> to function. For more information, see <a href="../../security/authentication/windowsauth?view=aspnetcore-8.0" data-linktype="relative-path">Windows Authentication</a>.</td>
+</tr>
+<tr>
+<td><code>AuthenticationDisplayName</code></td>
+<td style="text-align: center;"><code>null</code></td>
+<td>Sets the display name shown to users on login pages.</td>
+</tr>
+<tr>
+<td><code>AllowSynchronousIO</code></td>
+<td style="text-align: center;"><code>false</code></td>
+<td>Whether synchronous I/O is allowed for the <code>HttpContext.Request</code> and the <code>HttpContext.Response</code>.</td>
+</tr>
+<tr>
+<td><code>MaxRequestBodySize</code></td>
+<td style="text-align: center;"><code>30000000</code></td>
+<td>Gets or sets the max request body size for the <code>HttpRequest</code>. Note that IIS itself has the limit <code>maxAllowedContentLength</code> which will be processed before the <code>MaxRequestBodySize</code> set in the <code>IISServerOptions</code>. Changing the <code>MaxRequestBodySize</code> won't affect the <code>maxAllowedContentLength</code>. To increase <code>maxAllowedContentLength</code>, add an entry in the <code>web.config</code> to set <code>maxAllowedContentLength</code> to a higher value. For more details, see <a href="/en-us/iis/configuration/system.webServer/security/requestFiltering/requestLimits/#configuration" data-linktype="absolute-path">Configuration</a>.</td>
+</tr>
+</tbody></table>
+<h2><a href="#differences-between-in-process-and-out-of-process-hosting" aria-hidden="true" class="anchor" id="differences-between-in-process-and-out-of-process-hosting"></a>Differences between in-process and out-of-process hosting</h2>
+<ul>
+<li>
+<p>IIS HTTP Server (IISHttpServer) is used instead of Kestrel server. For in-process, <code>CreateDefaultBuilder</code> calls UseIIS to:</p>
+<ul>
+<li>
+<p>Register the <code>IISHttpServer</code>.</p>
+</li>
+<li>
+<p>Configure the port and base path the server should listen on when running behind the ASP.NET Core Module.</p>
+</li>
+<li>
+<p>Configure the host to capture startup errors.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>The <code>requestTimeout</code> attribute doesn't apply to in-process hosting.</p>
+</li>
+<li>
+<p>Sharing an app pool among apps isn't supported. Use one app pool per app.</p>
+</li>
+<li>
+<p>The architecture (bitness) of the app and installed runtime (x64 or x86) must match the architecture of the app pool. For example, apps published for 32-bit (x86) must have 32-bit enabled for their IIS Application Pools. For more information, see the Create the IIS site section.</p>
+</li>
+<li>
+<p>Client disconnects are detected. The <code>HttpContext.RequestAborted</code> cancellation token is cancelled when the client disconnects.</p>
+</li>
+<li>
+<p>When hosting in-process, <code>AuthenticateAsync</code> isn't called internally to initialize a user. Therefore, an <code>IClaimsTransformation</code> implementation used to transform claims after every authentication isn't activated by default. When transforming claims with an <code>IClaimsTransformation</code> implementation, call <code>AddAuthentication</code> to add authentication services:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Server.IIS;
+using Microsoft.EntityFrameworkCore;
+using RPauth.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+builder.Services.Configure&lt;IISServerOptions&gt;(options =&gt;
+{
+    options.AutomaticAuthentication = false;
+});
+
+builder.Services.AddTransient&lt;IClaimsTransformation, MyClaimsTransformation&gt;();
+builder.Services.AddAuthentication(IISServerDefaults.AuthenticationScheme);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>Web Package (single-file) deployments aren't supported.</li>
+</ul>
+<h2><a href="#get-timing-information" aria-hidden="true" class="anchor" id="get-timing-information"></a>Get timing information</h2>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/in-process-hosting?view=aspnetcore-8.0">In-process hosting with IIS and ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
