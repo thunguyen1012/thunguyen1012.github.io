@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Configure cookie authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Configure cookie authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#add-cookie-authentication" aria-hidden="true" class="anchor" id="add-cookie-authentication"></a>Add cookie authentication</h2>
+<ul>
+<li>
+<p>Add the Authentication Middleware services with the <code>AddAuthentication</code> and AddCookie methods.</p>
+</li>
+<li>
+<p>Call <code>UseAuthentication</code> and <code>UseAuthorization</code> to set the <code>HttpContext.User</code> property and run the Authorization Middleware for requests. <code>UseAuthentication</code> and <code>UseAuthorization</code> must be called before <code>Map</code> methods such as MapRazorPages and MapDefaultControllerRoute</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Cookies;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie();
+
+builder.Services.AddHttpContextAccessor();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+app.MapDefaultControllerRoute();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Cookies;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =&gt;
+    {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(20);
+        options.SlidingExpiration = true;
+        options.AccessDeniedPath = &quot;/Forbidden/&quot;;
+    });
+
+builder.Services.AddSingleton&lt;IHttpContextAccessor, HttpContextAccessor&gt;();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+app.MapDefaultControllerRoute();
+
+app.Run();
+</code></pre>
+<h2><a href="#cookie-policy-middleware" aria-hidden="true" class="anchor" id="cookie-policy-middleware"></a>Cookie Policy Middleware</h2>
+<pre><code class="language-csharp">app.UseCookiePolicy(cookiePolicyOptions);
+</code></pre>
+<pre><code class="language-csharp">var cookiePolicyOptions = new CookiePolicyOptions
+{
+    MinimumSameSitePolicy = SameSiteMode.Strict,
+};
+</code></pre>
+<table><thead>
+<tr>
+<th>MinimumSameSitePolicy</th>
+<th>Cookie.SameSite</th>
+<th>Resultant ```Cookie.SameSite``` setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SameSiteMode.None</td>
+<td>SameSiteMode.None<br>SameSiteMode.Lax<br>SameSiteMode.Strict</td>
+<td>SameSiteMode.None<br>SameSiteMode.Lax<br>SameSiteMode.Strict</td>
+</tr>
+<tr>
+<td>SameSiteMode.Lax</td>
+<td>SameSiteMode.None<br>SameSiteMode.Lax<br>SameSiteMode.Strict</td>
+<td>SameSiteMode.Lax<br>SameSiteMode.Lax<br>SameSiteMode.Strict</td>
+</tr>
+<tr>
+<td>SameSiteMode.Strict</td>
+<td>SameSiteMode.None<br>SameSiteMode.Lax<br>SameSiteMode.Strict</td>
+<td>SameSiteMode.Strict<br>SameSiteMode.Strict<br>SameSiteMode.Strict</td>
+</tr>
+</tbody></table>
+<h2><a href="#create-an-authentication-cookie" aria-hidden="true" class="anchor" id="create-an-authentication-cookie"></a>Create an authentication cookie</h2>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostAsync(string returnUrl = null)
+{
+    ReturnUrl = returnUrl;
+
+    if (ModelState.IsValid)
+    {
+        // Use Input.Email and Input.Password to authenticate the user
+        // with your custom authentication logic.
+        //
+        // For demonstration purposes, the sample validates the user
+        // on the email address maria.rodriguez@contoso.com with 
+        // any password that passes model validation.
+
+        var user = await AuthenticateUser(Input.Email, Input.Password);
+
+        if (user == null)
+        {
+            ModelState.AddModelError(string.Empty, &quot;Invalid login attempt.&quot;);
+            return Page();
+        }
+
+        var claims = new List&lt;Claim&gt;
+        {
+            new Claim(ClaimTypes.Name, user.Email),
+            new Claim(&quot;FullName&quot;, user.FullName),
+            new Claim(ClaimTypes.Role, &quot;Administrator&quot;),
+        };
+
+        var claimsIdentity = new ClaimsIdentity(
+            claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        var authProperties = new AuthenticationProperties
+        {
+            //AllowRefresh = &lt;bool&gt;,
+            // Refreshing the authentication session should be allowed.
+
+            //ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(10),
+            // The time at which the authentication ticket expires. A 
+            // value set here overrides the ExpireTimeSpan option of 
+            // CookieAuthenticationOptions set with AddCookie.
+
+            //IsPersistent = true,
+            // Whether the authentication session is persisted across 
+            // multiple requests. When used with cookies, controls
+            // whether the cookie's lifetime is absolute (matching the
+            // lifetime of the authentication ticket) or session-based.
+
+            //IssuedUtc = &lt;DateTimeOffset&gt;,
+            // The time at which the authentication ticket was issued.
+
+            //RedirectUri = &lt;string&gt;
+            // The full path or absolute URI to be used as an http 
+            // redirect response value.
+        };
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme, 
+            new ClaimsPrincipal(claimsIdentity), 
+            authProperties);
+
+        _logger.LogInformation(&quot;User {Email} logged in at {Time}.&quot;, 
+            user.Email, DateTime.UtcNow);
+
+        return LocalRedirect(Url.GetLocalUrl(returnUrl));
+    }
+
+    // Something failed. Redisplay the form.
+    return Page();
+}
+</code></pre>
+<h2><a href="#sign-out" aria-hidden="true" class="anchor" id="sign-out"></a>Sign out</h2>
+<pre><code class="language-csharp">public async Task OnGetAsync(string returnUrl = null)
+{
+    if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        ModelState.AddModelError(string.Empty, ErrorMessage);
+    }
+
+    // Clear the existing external cookie
+    await HttpContext.SignOutAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme);
+
+    ReturnUrl = returnUrl;
+}
+</code></pre>
+<h2><a href="#react-to-back-end-changes" aria-hidden="true" class="anchor" id="react-to-back-end-changes"></a>React to back-end changes</h2>
+<ul>
+<li>
+<p>The app's cookie authentication system continues to process requests based on the authentication cookie.</p>
+</li>
+<li>
+<p>The user remains signed into the app as long as the authentication cookie is valid.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var claims = new List&lt;Claim&gt;
+{
+    new Claim(ClaimTypes.Name, user.Email),
+    new Claim(&quot;LastChanged&quot;, {Database Value})
+};
+
+var claimsIdentity = new ClaimsIdentity(
+    claims,
+    CookieAuthenticationDefaults.AuthenticationScheme);
+
+await HttpContext.SignInAsync(
+    CookieAuthenticationDefaults.AuthenticationScheme, 
+    new ClaimsPrincipal(claimsIdentity));
+</code></pre>
+<pre><code class="language-csharp">ValidatePrincipal(CookieValidatePrincipalContext)
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+
+public class CustomCookieAuthenticationEvents : CookieAuthenticationEvents
+{
+    private readonly IUserRepository _userRepository;
+
+    public CustomCookieAuthenticationEvents(IUserRepository userRepository)
+    {
+        _userRepository = userRepository;
+    }
+
+    public override async Task ValidatePrincipal(CookieValidatePrincipalContext context)
+    {
+        var userPrincipal = context.Principal;
+
+        // Look for the LastChanged claim.
+        var lastChanged = (from c in userPrincipal.Claims
+                           where c.Type == &quot;LastChanged&quot;
+                           select c.Value).FirstOrDefault();
+
+        if (string.IsNullOrEmpty(lastChanged) ||
+            !_userRepository.ValidateLastChanged(lastChanged))
+        {
+            context.RejectPrincipal();
+
+            await context.HttpContext.SignOutAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme);
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Cookies;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =&gt;
+    {
+        options.EventsType = typeof(CustomCookieAuthenticationEvents);
+    });
+
+builder.Services.AddScoped&lt;CustomCookieAuthenticationEvents&gt;();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+app.MapDefaultControllerRoute();
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+The approach described here is triggered on every request. Validating authentication cookies for all users on every request can result in a large performance penalty for the app.</p>
+</blockquote>
+<h2><a href="#persistent-cookies" aria-hidden="true" class="anchor" id="persistent-cookies"></a>Persistent cookies</h2>
+<pre><code class="language-csharp">// using Microsoft.AspNetCore.Authentication;
+
+await HttpContext.SignInAsync(
+    CookieAuthenticationDefaults.AuthenticationScheme,
+    new ClaimsPrincipal(claimsIdentity),
+    new AuthenticationProperties
+    {
+        IsPersistent = true
+    });
+</code></pre>
+<h2><a href="#absolute-cookie-expiration" aria-hidden="true" class="anchor" id="absolute-cookie-expiration"></a>Absolute cookie expiration</h2>
+<pre><code class="language-csharp">// using Microsoft.AspNetCore.Authentication;
+
+await HttpContext.SignInAsync(
+    CookieAuthenticationDefaults.AuthenticationScheme,
+    new ClaimsPrincipal(claimsIdentity),
+    new AuthenticationProperties
+    {
+        IsPersistent = true,
+        ExpiresUtc = DateTime.UtcNow.AddMinutes(20)
+    });
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/cookie?view=aspnetcore-8.0">Use cookie authentication without ASP.NET Core Identity</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

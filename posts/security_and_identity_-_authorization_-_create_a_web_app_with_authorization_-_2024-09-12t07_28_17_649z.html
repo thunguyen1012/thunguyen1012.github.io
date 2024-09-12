@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Create a web app with authorization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Create a web app with authorization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Registered users can view all the approved data and can edit/delete their own data.</p>
+</li>
+<li>
+<p>Managers can approve or reject contact data. Only approved contacts are visible to users.</p>
+</li>
+<li>
+<p>Administrators can approve/reject and edit/delete any data.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/secure-data/_static/rick.png?view=aspnetcore-8.0" alt="Screenshot showing Rick signed in!" title="Screenshot showing Rick signed in" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/secure-data/_static/manager1.png?view=aspnetcore-8.0" alt="Screenshot showing manager@contoso.com signed in!" title="Screenshot showing manager@contoso.com signed in" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/secure-data/_static/manager.png?view=aspnetcore-8.0" alt="Manager's view of a contact!" title="Manager's view of a contact" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/secure-data/_static/admin.png?view=aspnetcore-8.0" alt="Screenshot showing admin@contoso.com signed in!" title="Screenshot showing admin@contoso.com signed in" /></p>
+<pre><code class="language-csharp">public class Contact
+{
+    public int ContactId { get; set; }
+    public string Name { get; set; }
+    public string Address { get; set; }
+    public string City { get; set; }
+    public string State { get; set; }
+    public string Zip { get; set; }
+    [DataType(DataType.EmailAddress)]
+    public string Email { get; set; }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>ContactIsOwnerAuthorizationHandler</code>: Ensures that a user can only edit their data.</p>
+</li>
+<li>
+<p><code>ContactManagerAuthorizationHandler</code>: Allows managers to approve or reject contacts.</p>
+</li>
+<li>
+<p><code>ContactAdministratorsAuthorizationHandler</code>: Allows administrators to approve or reject contacts and to edit/delete contacts.</p>
+</li>
+</ul>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<ul>
+<li>
+<p>ASP.NET Core</p>
+</li>
+<li>
+<p>Authentication</p>
+</li>
+<li>
+<p>Account Confirmation and Password Recovery</p>
+</li>
+<li>
+<p>Authorization</p>
+</li>
+<li>
+<p>Entity Framework Core</p>
+</li>
+</ul>
+<h2><a href="#the-starter-and-completed-app" aria-hidden="true" class="anchor" id="the-starter-and-completed-app"></a>The starter and completed app</h2>
+<h3><a href="#the-starter-app" aria-hidden="true" class="anchor" id="the-starter-app"></a>The starter app</h3>
+<h2><a href="#secure-user-data" aria-hidden="true" class="anchor" id="secure-user-data"></a>Secure user data</h2>
+<h3><a href="#tie-the-contact-data-to-the-user" aria-hidden="true" class="anchor" id="tie-the-contact-data-to-the-user"></a>Tie the contact data to the user</h3>
+<pre><code class="language-csharp">public class Contact
+{
+    public int ContactId { get; set; }
+
+    // user ID from AspNetUser table.
+    public string? OwnerID { get; set; }
+
+    public string? Name { get; set; }
+    public string? Address { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? Zip { get; set; }
+    [DataType(DataType.EmailAddress)]
+    public string? Email { get; set; }
+
+    public ContactStatus Status { get; set; }
+}
+
+public enum ContactStatus
+{
+    Submitted,
+    Approved,
+    Rejected
+}
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet ef migrations add userID_Status
+dotnet ef database update
+</code></pre>
+<h3><a href="#add-role-services-to-identity" aria-hidden="true" class="anchor" id="add-role-services-to-identity"></a>Add Role services to Identity</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(
+    options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles&lt;IdentityRole&gt;()
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+</code></pre>
+<h3><a href="#require-authenticated-users" aria-hidden="true" class="anchor" id="require-authenticated-users"></a>Require authenticated users</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(
+    options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles&lt;IdentityRole&gt;()
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+</code></pre>
+<ul>
+<li>Is applied to all requests that don't explicitly specify an authorization policy. For requests served by endpoint routing, this includes any endpoint that doesn't specify an authorization attribute. For requests served by other middleware after the authorization middleware, such as static files, this applies the policy to all requests.</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using ContactManager.Data;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(
+    options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles&lt;IdentityRole&gt;()
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddControllers(config =&gt;
+{
+    var policy = new AuthorizationPolicyBuilder()
+                     .RequireAuthenticatedUser()
+                     .Build();
+    config.Filters.Add(new AuthorizeFilter(policy));
+});
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace ContactManager.Pages;
+
+[AllowAnonymous]
+public class IndexModel : PageModel
+{
+    private readonly ILogger&lt;IndexModel&gt; _logger;
+
+    public IndexModel(ILogger&lt;IndexModel&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public void OnGet()
+    {
+
+    }
+}
+</code></pre>
+<h3><a href="#configure-the-test-account" aria-hidden="true" class="anchor" id="configure-the-test-account"></a>Configure the test account</h3>
+<pre><code class="language-dotnetcli">dotnet user-secrets set SeedUserPW &lt;PW&gt;
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(
+    options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles&lt;IdentityRole&gt;()
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+// Authorization handlers.
+builder.Services.AddScoped&lt;IAuthorizationHandler,
+                      ContactIsOwnerAuthorizationHandler&gt;();
+
+builder.Services.AddSingleton&lt;IAuthorizationHandler,
+                      ContactAdministratorsAuthorizationHandler&gt;();
+
+builder.Services.AddSingleton&lt;IAuthorizationHandler,
+                      ContactManagerAuthorizationHandler&gt;();
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService&lt;ApplicationDbContext&gt;();
+    context.Database.Migrate();
+    // requires using Microsoft.Extensions.Configuration;
+    // Set password with the Secret Manager tool.
+    // dotnet user-secrets set SeedUserPW &lt;pw&gt;
+
+    var testUserPw = builder.Configuration.GetValue&lt;string&gt;(&quot;SeedUserPW&quot;);
+
+   await SeedData.Initialize(services, testUserPw);
+}
+</code></pre>
+<h3><a href="#create-the-test-accounts-and-update-the-contacts" aria-hidden="true" class="anchor" id="create-the-test-accounts-and-update-the-contacts"></a>Create the test accounts and update the contacts</h3>
+<pre><code class="language-csharp">public static async Task Initialize(IServiceProvider serviceProvider, string testUserPw)
+{
+    using (var context = new ApplicationDbContext(
+        serviceProvider.GetRequiredService&lt;DbContextOptions&lt;ApplicationDbContext&gt;&gt;()))
+    {
+        // For sample purposes seed both with the same password.
+        // Password is set with the following:
+        // dotnet user-secrets set SeedUserPW &lt;pw&gt;
+        // The admin user can do anything
+
+        var adminID = await EnsureUser(serviceProvider, testUserPw, &quot;admin@contoso.com&quot;);
+        await EnsureRole(serviceProvider, adminID, Constants.ContactAdministratorsRole);
+
+        // allowed user can create and edit contacts that they create
+        var managerID = await EnsureUser(serviceProvider, testUserPw, &quot;manager@contoso.com&quot;);
+        await EnsureRole(serviceProvider, managerID, Constants.ContactManagersRole);
+
+        SeedDB(context, adminID);
+    }
+}
+
+private static async Task&lt;string&gt; EnsureUser(IServiceProvider serviceProvider,
+                                            string testUserPw, string UserName)
+{
+    var userManager = serviceProvider.GetService&lt;UserManager&lt;IdentityUser&gt;&gt;();
+
+    var user = await userManager.FindByNameAsync(UserName);
+    if (user == null)
+    {
+        user = new IdentityUser
+        {
+            UserName = UserName,
+            EmailConfirmed = true
+        };
+        await userManager.CreateAsync(user, testUserPw);
+    }
+
+    if (user == null)
+    {
+        throw new Exception(&quot;The password is probably not strong enough!&quot;);
+    }
+
+    return user.Id;
+}
+
+private static async Task&lt;IdentityResult&gt; EnsureRole(IServiceProvider serviceProvider,
+                                                              string uid, string role)
+{
+    var roleManager = serviceProvider.GetService&lt;RoleManager&lt;IdentityRole&gt;&gt;();
+
+    if (roleManager == null)
+    {
+        throw new Exception(&quot;roleManager null&quot;);
+    }
+
+    IdentityResult IR;
+    if (!await roleManager.RoleExistsAsync(role))
+    {
+        IR = await roleManager.CreateAsync(new IdentityRole(role));
+    }
+
+    var userManager = serviceProvider.GetService&lt;UserManager&lt;IdentityUser&gt;&gt;();
+
+    //if (userManager == null)
+    //{
+    //    throw new Exception(&quot;userManager is null&quot;);
+    //}
+
+    var user = await userManager.FindByIdAsync(uid);
+
+    if (user == null)
+    {
+        throw new Exception(&quot;The testUserPw password was probably not strong enough!&quot;);
+    }
+
+    IR = await userManager.AddToRoleAsync(user, role);
+
+    return IR;
+}
+</code></pre>
+<pre><code class="language-csharp">public static void SeedDB(ApplicationDbContext context, string adminID)
+{
+    if (context.Contact.Any())
+    {
+        return;   // DB has been seeded
+    }
+
+    context.Contact.AddRange(
+        new Contact
+        {
+            Name = &quot;Debra Garcia&quot;,
+            Address = &quot;1234 Main St&quot;,
+            City = &quot;Redmond&quot;,
+            State = &quot;WA&quot;,
+            Zip = &quot;10999&quot;,
+            Email = &quot;debra@example.com&quot;,
+            Status = ContactStatus.Approved,
+            OwnerID = adminID
+        },
+</code></pre>
+<h2><a href="#create-owner-manager,-and-administrator-authorization-handlers" aria-hidden="true" class="anchor" id="create-owner-manager,-and-administrator-authorization-handlers"></a>Create owner, manager, and administrator authorization handlers</h2>
+<pre><code class="language-csharp">using ContactManager.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.AspNetCore.Identity;
+using System.Threading.Tasks;
+
+namespace ContactManager.Authorization
+{
+    public class ContactIsOwnerAuthorizationHandler
+                : AuthorizationHandler&lt;OperationAuthorizationRequirement, Contact&gt;
+    {
+        UserManager&lt;IdentityUser&gt; _userManager;
+
+        public ContactIsOwnerAuthorizationHandler(UserManager&lt;IdentityUser&gt; 
+            userManager)
+        {
+            _userManager = userManager;
+        }
+
+        protected override Task
+            HandleRequirementAsync(AuthorizationHandlerContext context,
+                                   OperationAuthorizationRequirement requirement,
+                                   Contact resource)
+        {
+            if (context.User == null || resource == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            // If not asking for CRUD permission, return.
+
+            if (requirement.Name != Constants.CreateOperationName &amp;&amp;
+                requirement.Name != Constants.ReadOperationName   &amp;&amp;
+                requirement.Name != Constants.UpdateOperationName &amp;&amp;
+                requirement.Name != Constants.DeleteOperationName )
+            {
+                return Task.CompletedTask;
+            }
+
+            if (resource.OwnerID == _userManager.GetUserId(context.User))
+            {
+                context.Succeed(requirement);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Call <code>context.Succeed</code> when the requirements are met.</p>
+</li>
+<li>
+<p>Return <code>Task.CompletedTask</code> when requirements aren't met. Returning <code>Task.CompletedTask</code> without a prior call to <code>context.Success</code> or <code>context.Fail</code>, is not a success or failure, it allows other authorization handlers to run.</p>
+</li>
+</ul>
+<h3><a href="#create-a-manager-authorization-handler" aria-hidden="true" class="anchor" id="create-a-manager-authorization-handler"></a>Create a manager authorization handler</h3>
+<pre><code class="language-csharp">using System.Threading.Tasks;
+using ContactManager.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.AspNetCore.Identity;
+
+namespace ContactManager.Authorization
+{
+    public class ContactManagerAuthorizationHandler :
+        AuthorizationHandler&lt;OperationAuthorizationRequirement, Contact&gt;
+    {
+        protected override Task
+            HandleRequirementAsync(AuthorizationHandlerContext context,
+                                   OperationAuthorizationRequirement requirement,
+                                   Contact resource)
+        {
+            if (context.User == null || resource == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            // If not asking for approval/reject, return.
+            if (requirement.Name != Constants.ApproveOperationName &amp;&amp;
+                requirement.Name != Constants.RejectOperationName)
+            {
+                return Task.CompletedTask;
+            }
+
+            // Managers can approve or reject.
+            if (context.User.IsInRole(Constants.ContactManagersRole))
+            {
+                context.Succeed(requirement);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+}
+</code></pre>
+<h3><a href="#create-an-administrator-authorization-handler" aria-hidden="true" class="anchor" id="create-an-administrator-authorization-handler"></a>Create an administrator authorization handler</h3>
+<pre><code class="language-csharp">using System.Threading.Tasks;
+using ContactManager.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
+
+namespace ContactManager.Authorization
+{
+    public class ContactAdministratorsAuthorizationHandler
+                    : AuthorizationHandler&lt;OperationAuthorizationRequirement, Contact&gt;
+    {
+        protected override Task HandleRequirementAsync(
+                                              AuthorizationHandlerContext context,
+                                    OperationAuthorizationRequirement requirement, 
+                                     Contact resource)
+        {
+            if (context.User == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            // Administrators can do anything.
+            if (context.User.IsInRole(Constants.ContactAdministratorsRole))
+            {
+                context.Succeed(requirement);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+}
+</code></pre>
+<h2><a href="#register-the-authorization-handlers" aria-hidden="true" class="anchor" id="register-the-authorization-handlers"></a>Register the authorization handlers</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(
+    options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles&lt;IdentityRole&gt;()
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+// Authorization handlers.
+builder.Services.AddScoped&lt;IAuthorizationHandler,
+                      ContactIsOwnerAuthorizationHandler&gt;();
+
+builder.Services.AddSingleton&lt;IAuthorizationHandler,
+                      ContactAdministratorsAuthorizationHandler&gt;();
+
+builder.Services.AddSingleton&lt;IAuthorizationHandler,
+                      ContactManagerAuthorizationHandler&gt;();
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService&lt;ApplicationDbContext&gt;();
+    context.Database.Migrate();
+    // requires using Microsoft.Extensions.Configuration;
+    // Set password with the Secret Manager tool.
+    // dotnet user-secrets set SeedUserPW &lt;pw&gt;
+
+    var testUserPw = builder.Configuration.GetValue&lt;string&gt;(&quot;SeedUserPW&quot;);
+
+   await SeedData.Initialize(services, testUserPw);
+}
+</code></pre>
+<h2><a href="#support-authorization" aria-hidden="true" class="anchor" id="support-authorization"></a>Support authorization</h2>
+<h3><a href="#review-the-contact-operations-requirements-class" aria-hidden="true" class="anchor" id="review-the-contact-operations-requirements-class"></a>Review the contact operations requirements class</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization.Infrastructure;
+
+namespace ContactManager.Authorization
+{
+    public static class ContactOperations
+    {
+        public static OperationAuthorizationRequirement Create =   
+          new OperationAuthorizationRequirement {Name=Constants.CreateOperationName};
+        public static OperationAuthorizationRequirement Read = 
+          new OperationAuthorizationRequirement {Name=Constants.ReadOperationName};  
+        public static OperationAuthorizationRequirement Update = 
+          new OperationAuthorizationRequirement {Name=Constants.UpdateOperationName}; 
+        public static OperationAuthorizationRequirement Delete = 
+          new OperationAuthorizationRequirement {Name=Constants.DeleteOperationName};
+        public static OperationAuthorizationRequirement Approve = 
+          new OperationAuthorizationRequirement {Name=Constants.ApproveOperationName};
+        public static OperationAuthorizationRequirement Reject = 
+          new OperationAuthorizationRequirement {Name=Constants.RejectOperationName};
+    }
+
+    public class Constants
+    {
+        public static readonly string CreateOperationName = &quot;Create&quot;;
+        public static readonly string ReadOperationName = &quot;Read&quot;;
+        public static readonly string UpdateOperationName = &quot;Update&quot;;
+        public static readonly string DeleteOperationName = &quot;Delete&quot;;
+        public static readonly string ApproveOperationName = &quot;Approve&quot;;
+        public static readonly string RejectOperationName = &quot;Reject&quot;;
+
+        public static readonly string ContactAdministratorsRole = 
+                                                              &quot;ContactAdministrators&quot;;
+        public static readonly string ContactManagersRole = &quot;ContactManagers&quot;;
+    }
+}
+</code></pre>
+<h3><a href="#create-a-base-class-for-the-contacts-razor-pages" aria-hidden="true" class="anchor" id="create-a-base-class-for-the-contacts-razor-pages"></a>Create a base class for the Contacts Razor Pages</h3>
+<pre><code class="language-csharp">using ContactManager.Data;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace ContactManager.Pages.Contacts
+{
+    public class DI_BasePageModel : PageModel
+    {
+        protected ApplicationDbContext Context { get; }
+        protected IAuthorizationService AuthorizationService { get; }
+        protected UserManager&lt;IdentityUser&gt; UserManager { get; }
+
+        public DI_BasePageModel(
+            ApplicationDbContext context,
+            IAuthorizationService authorizationService,
+            UserManager&lt;IdentityUser&gt; userManager) : base()
+        {
+            Context = context;
+            UserManager = userManager;
+            AuthorizationService = authorizationService;
+        } 
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Adds the <code>IAuthorizationService</code> service to access to the authorization handlers.</p>
+</li>
+<li>
+<p>Adds the Identity <code>UserManager</code> service.</p>
+</li>
+<li>
+<p>Add the <code>ApplicationDbContext</code>.</p>
+</li>
+</ul>
+<h3><a href="#update-the-createmodel" aria-hidden="true" class="anchor" id="update-the-createmodel"></a>Update the CreateModel</h3>
+<ul>
+<li>
+<p>Constructor to use the <code>DI_BasePageModel</code> base class.</p>
+</li>
+<li>
+<p><code>OnPostAsync</code> method to:</p>
+<ul>
+<li>
+<p>Add the user ID to the <code>Contact</code> model.</p>
+</li>
+<li>
+<p>Call the authorization handler to verify the user has permission to create contacts.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">using ContactManager.Authorization;
+using ContactManager.Data;
+using ContactManager.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ContactManager.Pages.Contacts
+{
+    public class CreateModel : DI_BasePageModel
+    {
+        public CreateModel(
+            ApplicationDbContext context,
+            IAuthorizationService authorizationService,
+            UserManager&lt;IdentityUser&gt; userManager)
+            : base(context, authorizationService, userManager)
+        {
+        }
+
+        public IActionResult OnGet()
+        {
+            return Page();
+        }
+
+        [BindProperty]
+        public Contact Contact { get; set; }
+
+        public async Task&lt;IActionResult&gt; OnPostAsync()
+        {
+            if (!ModelState.IsValid)
+            {
+                return Page();
+            }
+
+            Contact.OwnerID = UserManager.GetUserId(User);
+
+            var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                                                        User, Contact,
+                                                        ContactOperations.Create);
+            if (!isAuthorized.Succeeded)
+            {
+                return Forbid();
+            }
+
+            Context.Contact.Add(Contact);
+            await Context.SaveChangesAsync();
+
+            return RedirectToPage(&quot;./Index&quot;);
+        }
+    }
+}
+</code></pre>
+<h3><a href="#update-the-indexmodel" aria-hidden="true" class="anchor" id="update-the-indexmodel"></a>Update the IndexModel</h3>
+<pre><code class="language-csharp">public class IndexModel : DI_BasePageModel
+{
+    public IndexModel(
+        ApplicationDbContext context,
+        IAuthorizationService authorizationService,
+        UserManager&lt;IdentityUser&gt; userManager)
+        : base(context, authorizationService, userManager)
+    {
+    }
+
+    public IList&lt;Contact&gt; Contact { get; set; }
+
+    public async Task OnGetAsync()
+    {
+        var contacts = from c in Context.Contact
+                       select c;
+
+        var isAuthorized = User.IsInRole(Constants.ContactManagersRole) ||
+                           User.IsInRole(Constants.ContactAdministratorsRole);
+
+        var currentUserId = UserManager.GetUserId(User);
+
+        // Only approved contacts are shown UNLESS you're authorized to see them
+        // or you are the owner.
+        if (!isAuthorized)
+        {
+            contacts = contacts.Where(c =&gt; c.Status == ContactStatus.Approved
+                                        || c.OwnerID == currentUserId);
+        }
+
+        Contact = await contacts.ToListAsync();
+    }
+}
+</code></pre>
+<h3><a href="#update-the-editmodel" aria-hidden="true" class="anchor" id="update-the-editmodel"></a>Update the EditModel</h3>
+<pre><code class="language-csharp">public class EditModel : DI_BasePageModel
+{
+    public EditModel(
+        ApplicationDbContext context,
+        IAuthorizationService authorizationService,
+        UserManager&lt;IdentityUser&gt; userManager)
+        : base(context, authorizationService, userManager)
+    {
+    }
+
+    [BindProperty]
+    public Contact Contact { get; set; }
+
+    public async Task&lt;IActionResult&gt; OnGetAsync(int id)
+    {
+        Contact? contact = await Context.Contact.FirstOrDefaultAsync(
+                                                         m =&gt; m.ContactId == id);
+        if (contact == null)
+        {
+            return NotFound();
+        }
+
+        Contact = contact;
+
+        var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                                                  User, Contact,
+                                                  ContactOperations.Update);
+        if (!isAuthorized.Succeeded)
+        {
+            return Forbid();
+        }
+
+        return Page();
+    }
+
+    public async Task&lt;IActionResult&gt; OnPostAsync(int id)
+    {
+        if (!ModelState.IsValid)
+        {
+            return Page();
+        }
+
+        // Fetch Contact from DB to get OwnerID.
+        var contact = await Context
+            .Contact.AsNoTracking()
+            .FirstOrDefaultAsync(m =&gt; m.ContactId == id);
+
+        if (contact == null)
+        {
+            return NotFound();
+        }
+
+        var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                                                 User, contact,
+                                                 ContactOperations.Update);
+        if (!isAuthorized.Succeeded)
+        {
+            return Forbid();
+        }
+
+        Contact.OwnerID = contact.OwnerID;
+
+        Context.Attach(Contact).State = EntityState.Modified;
+
+        if (Contact.Status == ContactStatus.Approved)
+        {
+            // If the contact is updated after approval, 
+            // and the user cannot approve,
+            // set the status back to submitted so the update can be
+            // checked and approved.
+            var canApprove = await AuthorizationService.AuthorizeAsync(User,
+                                    Contact,
+                                    ContactOperations.Approve);
+
+            if (!canApprove.Succeeded)
+            {
+                Contact.Status = ContactStatus.Submitted;
+            }
+        }
+
+        await Context.SaveChangesAsync();
+
+        return RedirectToPage(&quot;./Index&quot;);
+    }
+}
+</code></pre>
+<h3><a href="#update-the-deletemodel" aria-hidden="true" class="anchor" id="update-the-deletemodel"></a>Update the DeleteModel</h3>
+<pre><code class="language-csharp">public class DeleteModel : DI_BasePageModel
+{
+    public DeleteModel(
+        ApplicationDbContext context,
+        IAuthorizationService authorizationService,
+        UserManager&lt;IdentityUser&gt; userManager)
+        : base(context, authorizationService, userManager)
+    {
+    }
+
+    [BindProperty]
+    public Contact Contact { get; set; }
+
+    public async Task&lt;IActionResult&gt; OnGetAsync(int id)
+    {
+        Contact? _contact = await Context.Contact.FirstOrDefaultAsync(
+                                             m =&gt; m.ContactId == id);
+
+        if (_contact == null)
+        {
+            return NotFound();
+        }
+        Contact = _contact;
+
+        var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                                                 User, Contact,
+                                                 ContactOperations.Delete);
+        if (!isAuthorized.Succeeded)
+        {
+            return Forbid();
+        }
+
+        return Page();
+    }
+
+    public async Task&lt;IActionResult&gt; OnPostAsync(int id)
+    {
+        var contact = await Context
+            .Contact.AsNoTracking()
+            .FirstOrDefaultAsync(m =&gt; m.ContactId == id);
+
+        if (contact == null)
+        {
+            return NotFound();
+        }
+
+        var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                                                 User, contact,
+                                                 ContactOperations.Delete);
+        if (!isAuthorized.Succeeded)
+        {
+            return Forbid();
+        }
+
+        Context.Contact.Remove(contact);
+        await Context.SaveChangesAsync();
+
+        return RedirectToPage(&quot;./Index&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#inject-the-authorization-service-into-the-views" aria-hidden="true" class="anchor" id="inject-the-authorization-service-into-the-views"></a>Inject the authorization service into the views</h2>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Identity
+@using ContactManager
+@using ContactManager.Data
+@namespace ContactManager.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using ContactManager.Authorization;
+@using Microsoft.AspNetCore.Authorization
+@using ContactManager.Models
+@inject IAuthorizationService AuthorizationService
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model ContactManager.Pages.Contacts.IndexModel
+
+@{
+    ViewData[&quot;Title&quot;] = &quot;Index&quot;;
+}
+
+&lt;h1&gt;Index&lt;/h1&gt;
+
+&lt;p&gt;
+    &lt;a asp-page=&quot;Create&quot;&gt;Create New&lt;/a&gt;
+&lt;/p&gt;
+&lt;table class=&quot;table&quot;&gt;
+    &lt;thead&gt;
+        &lt;tr&gt;
+            &lt;th&gt;
+                @Html.DisplayNameFor(model =&gt; model.Contact[0].Name)
+            &lt;/th&gt;
+            &lt;th&gt;
+                @Html.DisplayNameFor(model =&gt; model.Contact[0].Address)
+            &lt;/th&gt;
+            &lt;th&gt;
+                @Html.DisplayNameFor(model =&gt; model.Contact[0].City)
+            &lt;/th&gt;
+            &lt;th&gt;
+                @Html.DisplayNameFor(model =&gt; model.Contact[0].State)
+            &lt;/th&gt;
+            &lt;th&gt;
+                @Html.DisplayNameFor(model =&gt; model.Contact[0].Zip)
+            &lt;/th&gt;
+            &lt;th&gt;
+                @Html.DisplayNameFor(model =&gt; model.Contact[0].Email)
+            &lt;/th&gt;
+             &lt;th&gt;
+                @Html.DisplayNameFor(model =&gt; model.Contact[0].Status)
+            &lt;/th&gt;
+            &lt;th&gt;&lt;/th&gt;
+        &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+@foreach (var item in Model.Contact) {
+        &lt;tr&gt;
+            &lt;td&gt;
+                @Html.DisplayFor(modelItem =&gt; item.Name)
+            &lt;/td&gt;
+            &lt;td&gt;
+                @Html.DisplayFor(modelItem =&gt; item.Address)
+            &lt;/td&gt;
+            &lt;td&gt;
+                @Html.DisplayFor(modelItem =&gt; item.City)
+            &lt;/td&gt;
+            &lt;td&gt;
+                @Html.DisplayFor(modelItem =&gt; item.State)
+            &lt;/td&gt;
+            &lt;td&gt;
+                @Html.DisplayFor(modelItem =&gt; item.Zip)
+            &lt;/td&gt;
+            &lt;td&gt;
+                @Html.DisplayFor(modelItem =&gt; item.Email)
+            &lt;/td&gt;
+                           &lt;td&gt;
+                    @Html.DisplayFor(modelItem =&gt; item.Status)
+                &lt;/td&gt;
+                &lt;td&gt;
+                    @if ((await AuthorizationService.AuthorizeAsync(
+                     User, item,
+                     ContactOperations.Update)).Succeeded)
+                    {
+                        &lt;a asp-page=&quot;./Edit&quot; asp-route-id=&quot;@item.ContactId&quot;&gt;Edit&lt;/a&gt;
+                        &lt;text&gt; | &lt;/text&gt;
+                    }
+
+                    &lt;a asp-page=&quot;./Details&quot; asp-route-id=&quot;@item.ContactId&quot;&gt;Details&lt;/a&gt;
+
+                    @if ((await AuthorizationService.AuthorizeAsync(
+                     User, item,
+                     ContactOperations.Delete)).Succeeded)
+                    {
+                        &lt;text&gt; | &lt;/text&gt;
+                        &lt;a asp-page=&quot;./Delete&quot; asp-route-id=&quot;@item.ContactId&quot;&gt;Delete&lt;/a&gt;
+                    }
+                &lt;/td&gt;
+            &lt;/tr&gt;
+        }
+    &lt;/tbody&gt;
+&lt;/table&gt;
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Hiding links from users that don't have permission to change data doesn't secure the app. Hiding links makes the app more user-friendly by displaying only valid links. Users can hack the generated URLs to invoke edit and delete operations on data they don't own. The Razor Page or controller must enforce access checks to secure the data.</p>
+</blockquote>
+<h3><a href="#update-details" aria-hidden="true" class="anchor" id="update-details"></a>Update <code>Details</code></h3>
+<pre><code class="language-cshtml">@*Preceding markup omitted for brevity.*@
+        &lt;dt class=&quot;col-sm-2&quot;&gt;
+            @Html.DisplayNameFor(model =&gt; model.Contact.Email)
+        &lt;/dt&gt;
+        &lt;dd class=&quot;col-sm-10&quot;&gt;
+            @Html.DisplayFor(model =&gt; model.Contact.Email)
+        &lt;/dd&gt;
+    &lt;dt&gt;
+            @Html.DisplayNameFor(model =&gt; model.Contact.Status)
+        &lt;/dt&gt;
+        &lt;dd&gt;
+            @Html.DisplayFor(model =&gt; model.Contact.Status)
+        &lt;/dd&gt;
+    &lt;/dl&gt;
+&lt;/div&gt;
+
+@if (Model.Contact.Status != ContactStatus.Approved)
+{
+    @if ((await AuthorizationService.AuthorizeAsync(
+     User, Model.Contact, ContactOperations.Approve)).Succeeded)
+    {
+        &lt;form style=&quot;display:inline;&quot; method=&quot;post&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;id&quot; value=&quot;@Model.Contact.ContactId&quot; /&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;status&quot; value=&quot;@ContactStatus.Approved&quot; /&gt;
+            &lt;button type=&quot;submit&quot; class=&quot;btn btn-xs btn-success&quot;&gt;Approve&lt;/button&gt;
+        &lt;/form&gt;
+    }
+}
+
+@if (Model.Contact.Status != ContactStatus.Rejected)
+{
+    @if ((await AuthorizationService.AuthorizeAsync(
+     User, Model.Contact, ContactOperations.Reject)).Succeeded)
+    {
+        &lt;form style=&quot;display:inline;&quot; method=&quot;post&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;id&quot; value=&quot;@Model.Contact.ContactId&quot; /&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;status&quot; value=&quot;@ContactStatus.Rejected&quot; /&gt;
+            &lt;button type=&quot;submit&quot; class=&quot;btn btn-xs btn-danger&quot;&gt;Reject&lt;/button&gt;
+        &lt;/form&gt;
+    }
+}
+
+&lt;div&gt;
+    @if ((await AuthorizationService.AuthorizeAsync(
+         User, Model.Contact,
+         ContactOperations.Update)).Succeeded)
+    {
+        &lt;a asp-page=&quot;./Edit&quot; asp-route-id=&quot;@Model.Contact.ContactId&quot;&gt;Edit&lt;/a&gt;
+        &lt;text&gt; | &lt;/text&gt;
+    }
+    &lt;a asp-page=&quot;./Index&quot;&gt;Back to List&lt;/a&gt;
+&lt;/div&gt;
+</code></pre>
+<h3><a href="#update-the-details-page-model" aria-hidden="true" class="anchor" id="update-the-details-page-model"></a>Update the details page model</h3>
+<pre><code class="language-csharp">public class DetailsModel : DI_BasePageModel
+{
+    public DetailsModel(
+        ApplicationDbContext context,
+        IAuthorizationService authorizationService,
+        UserManager&lt;IdentityUser&gt; userManager)
+        : base(context, authorizationService, userManager)
+    {
+    }
+
+    public Contact Contact { get; set; }
+
+    public async Task&lt;IActionResult&gt; OnGetAsync(int id)
+    {
+        Contact? _contact = await Context.Contact.FirstOrDefaultAsync(m =&gt; m.ContactId == id);
+
+        if (_contact == null)
+        {
+            return NotFound();
+        }
+        Contact = _contact;
+
+        var isAuthorized = User.IsInRole(Constants.ContactManagersRole) ||
+                           User.IsInRole(Constants.ContactAdministratorsRole);
+
+        var currentUserId = UserManager.GetUserId(User);
+
+        if (!isAuthorized
+            &amp;&amp; currentUserId != Contact.OwnerID
+            &amp;&amp; Contact.Status != ContactStatus.Approved)
+        {
+            return Forbid();
+        }
+
+        return Page();
+    }
+
+    public async Task&lt;IActionResult&gt; OnPostAsync(int id, ContactStatus status)
+    {
+        var contact = await Context.Contact.FirstOrDefaultAsync(
+                                                  m =&gt; m.ContactId == id);
+
+        if (contact == null)
+        {
+            return NotFound();
+        }
+
+        var contactOperation = (status == ContactStatus.Approved)
+                                                   ? ContactOperations.Approve
+                                                   : ContactOperations.Reject;
+
+        var isAuthorized = await AuthorizationService.AuthorizeAsync(User, contact,
+                                    contactOperation);
+        if (!isAuthorized.Succeeded)
+        {
+            return Forbid();
+        }
+        contact.Status = status;
+        Context.Contact.Update(contact);
+        await Context.SaveChangesAsync();
+
+        return RedirectToPage(&quot;./Index&quot;);
+    }
+}
+</code></pre>
+<h2><a href="#add-or-remove-a-user-to-a-role" aria-hidden="true" class="anchor" id="add-or-remove-a-user-to-a-role"></a>Add or remove a user to a role</h2>
+<ul>
+<li>
+<p>Removing privileges from a user. For example, muting a user in a chat app.</p>
+</li>
+<li>
+<p>Adding privileges to a user.</p>
+</li>
+</ul>
+<h2><a href="#differences-between-challenge-and-forbid" aria-hidden="true" class="anchor" id="differences-between-challenge-and-forbid"></a>Differences between Challenge and Forbid</h2>
+<pre><code class="language-csharp">[AllowAnonymous]
+public class Details2Model : DI_BasePageModel
+{
+    public Details2Model(
+        ApplicationDbContext context,
+        IAuthorizationService authorizationService,
+        UserManager&lt;IdentityUser&gt; userManager)
+        : base(context, authorizationService, userManager)
+    {
+    }
+
+    public Contact Contact { get; set; }
+
+    public async Task&lt;IActionResult&gt; OnGetAsync(int id)
+    {
+        Contact? _contact = await Context.Contact.FirstOrDefaultAsync(m =&gt; m.ContactId == id);
+
+        if (_contact == null)
+        {
+            return NotFound();
+        }
+        Contact = _contact;
+
+        if (!User.Identity!.IsAuthenticated)
+        {
+            return Challenge();
+        }
+
+        var isAuthorized = User.IsInRole(Constants.ContactManagersRole) ||
+                           User.IsInRole(Constants.ContactAdministratorsRole);
+
+        var currentUserId = UserManager.GetUserId(User);
+
+        if (!isAuthorized
+            &amp;&amp; currentUserId != Contact.OwnerID
+            &amp;&amp; Contact.Status != ContactStatus.Approved)
+        {
+            return Forbid();
+        }
+
+        return Page();
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>When the user is not authenticated, a <code>ChallengeResult</code> is returned. When a <code>ChallengeResult</code> is returned, the user is redirected to the sign-in page.</p>
+</li>
+<li>
+<p>When the user is authenticated, but not authorized, a <code>ForbidResult</code> is returned. When a <code>ForbidResult</code> is returned, the user is redirected to the access denied page.</p>
+</li>
+</ul>
+<h2><a href="#test-the-completed-app" aria-hidden="true" class="anchor" id="test-the-completed-app"></a>Test the completed app</h2>
+<ul>
+<li>
+<p>Choose a strong password: Use eight or more characters and at least one upper-case character, number, and symbol. For example, Passw0rd! meets the strong password requirements.</p>
+</li>
+<li>
+<p>Execute the following command from the project's folder, where <code>&lt;PW&gt;</code> is the password:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet user-secrets set SeedUserPW &lt;PW&gt;
+</code></pre>
+<ul>
+<li>
+<p>Delete all of the records in the <code>Contact</code> table.</p>
+</li>
+<li>
+<p>Restart the app to seed the database.</p>
+</li>
+<li>
+<p>Registered users can view all of the approved contact data.</p>
+</li>
+<li>
+<p>Registered users can edit/delete their own data.</p>
+</li>
+<li>
+<p>Managers can approve/reject contact data. The <code>Details</code> view shows Approve and Reject buttons.</p>
+</li>
+<li>
+<p>Administrators can approve/reject and edit/delete all data.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>User</th>
+<th style="text-align: center;">Approve or reject contacts</th>
+<th>Options</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>test@example.com</td>
+<td style="text-align: center;">No</td>
+<td>Edit and delete their data.</td>
+</tr>
+<tr>
+<td>manager@contoso.com</td>
+<td style="text-align: center;">Yes</td>
+<td>Edit and delete their data.</td>
+</tr>
+<tr>
+<td>admin@contoso.com</td>
+<td style="text-align: center;">Yes</td>
+<td>Edit and delete <em><strong>all</strong></em> data.</td>
+</tr>
+</tbody></table>
+<h2><a href="#create-the-starter-app" aria-hidden="true" class="anchor" id="create-the-starter-app"></a>Create the starter app</h2>
+<ul>
+<li>Create a Razor Pages app named &quot;ContactManager&quot;</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new webapp -o ContactManager -au Individual -uld
+</code></pre>
+<ul>
+<li>
+<p>Create the app with Individual User Accounts.</p>
+</li>
+<li>
+<p>Name it &quot;ContactManager&quot; so the namespace matches the namespace used in the sample.</p>
+</li>
+<li>
+<p><code>-uld</code> specifies LocalDB instead of SQLite</p>
+</li>
+<li>
+<p>Add <code>Models/Contact.cs</code>:
+secure-data\samples\starter6\ContactManager\Models\Contact.cs</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.ComponentModel.DataAnnotations;
+
+namespace ContactManager.Models
+{
+    public class Contact
+    {
+        public int ContactId { get; set; }
+        public string? Name { get; set; }
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? Zip { get; set; }
+        [DataType(DataType.EmailAddress)]
+        public string? Email { get; set; }
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Scaffold the <code>Contact</code> model.</p>
+</li>
+<li>
+<p>Create initial migration and update the database:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet add package Microsoft.VisualStudio.Web.CodeGeneration.Design
+dotnet tool install -g dotnet-aspnet-codegenerator
+dotnet-aspnet-codegenerator razorpage -m Contact -udl -dc ApplicationDbContext -outDir Pages\Contacts --referenceScriptLibraries
+dotnet ef database drop -f
+dotnet ef migrations add initial
+dotnet ef database update
+</code></pre>
+<blockquote>
+<p class='note'>Note
+By default the architecture of the .NET binaries to install represents the currently running OS architecture. To specify a different OS architecture, see dotnet tool install, --arch option.
+For more information, see GitHub issue dotnet/AspNetCore.Docs #29262.</p>
+</blockquote>
+<ul>
+<li>Update the ContactManager anchor in the <code>Pages/Shared/_Layout.cshtml</code> file:</li>
+</ul>
+<pre><code class="language-cshtml">&lt;a class=&quot;nav-link text-dark&quot; asp-area=&quot;&quot; asp-page=&quot;/Contacts/Index&quot;&gt;Contact Manager&lt;/a&gt;
+</code></pre>
+<ul>
+<li>Test the app by creating, editing, and deleting a contact</li>
+</ul>
+<h3><a href="#seed-the-database" aria-hidden="true" class="anchor" id="seed-the-database"></a>Seed the database</h3>
+<pre><code class="language-csharp">using ContactManager.Models;
+using Microsoft.EntityFrameworkCore;
+
+// dotnet aspnet-codegenerator razorpage -m Contact -dc ApplicationDbContext -udl -outDir Pages\Contacts --referenceScriptLibraries
+
+namespace ContactManager.Data
+{
+    public static class SeedData
+    {
+        public static async Task Initialize(IServiceProvider serviceProvider, string testUserPw=&quot;&quot;)
+        {
+            using (var context = new ApplicationDbContext(
+                serviceProvider.GetRequiredService&lt;DbContextOptions&lt;ApplicationDbContext&gt;&gt;()))
+            {
+                SeedDB(context, testUserPw);
+            }
+        }
+
+        public static void SeedDB(ApplicationDbContext context, string adminID)
+        {
+            if (context.Contact.Any())
+            {
+                return;   // DB has been seeded
+            }
+
+            context.Contact.AddRange(
+                new Contact
+                {
+                    Name = &quot;Debra Garcia&quot;,
+                    Address = &quot;1234 Main St&quot;,
+                    City = &quot;Redmond&quot;,
+                    State = &quot;WA&quot;,
+                    Zip = &quot;10999&quot;,
+                    Email = &quot;debra@example.com&quot;
+                },
+                new Contact
+                {
+                    Name = &quot;Thorsten Weinrich&quot;,
+                    Address = &quot;5678 1st Ave W&quot;,
+                    City = &quot;Redmond&quot;,
+                    State = &quot;WA&quot;,
+                    Zip = &quot;10999&quot;,
+                    Email = &quot;thorsten@example.com&quot;
+                },
+                new Contact
+                {
+                    Name = &quot;Yuhong Li&quot;,
+                    Address = &quot;9012 State st&quot;,
+                    City = &quot;Redmond&quot;,
+                    State = &quot;WA&quot;,
+                    Zip = &quot;10999&quot;,
+                    Email = &quot;yuhong@example.com&quot;
+                },
+                new Contact
+                {
+                    Name = &quot;Jon Orton&quot;,
+                    Address = &quot;3456 Maple St&quot;,
+                    City = &quot;Redmond&quot;,
+                    State = &quot;WA&quot;,
+                    Zip = &quot;10999&quot;,
+                    Email = &quot;jon@example.com&quot;
+                },
+                new Contact
+                {
+                    Name = &quot;Diliana Alexieva-Bosseva&quot;,
+                    Address = &quot;7890 2nd Ave E&quot;,
+                    City = &quot;Redmond&quot;,
+                    State = &quot;WA&quot;,
+                    Zip = &quot;10999&quot;,
+                    Email = &quot;diliana@example.com&quot;
+                }
+             );
+            context.SaveChanges();
+        }
+
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using ContactManager.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    await SeedData.Initialize(services);
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h3><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h3>
+<ul>
+<li>
+<p>Tutorial: Build an ASP.NET Core and Azure SQL Database app in Azure App Service</p>
+</li>
+<li>
+<p>ASP.NET Core Authorization Lab. This lab goes into more detail on the security features introduced in this tutorial.</p>
+</li>
+<li>
+<p>Introduction to authorization in ASP.NET Core</p>
+</li>
+<li>
+<p>Custom policy-based authorization</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/secure-data?view=aspnetcore-8.0">Create an ASP.NET Core web app with user data protected by authorization</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

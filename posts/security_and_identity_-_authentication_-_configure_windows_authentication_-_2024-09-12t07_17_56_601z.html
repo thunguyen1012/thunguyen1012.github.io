@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Configure Windows authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Configure Windows authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p class='note'>Note
+Windows Authentication isn't supported with <code>HTTP/2</code>. Authentication challenges can be sent on <code>HTTP/2</code> responses, but the client must downgrade to <code>HTTP/1.1</code> before authenticating.</p>
+</blockquote>
+<h2><a href="#proxy-and-load-balancer-scenarios" aria-hidden="true" class="anchor" id="proxy-and-load-balancer-scenarios"></a>Proxy and load balancer scenarios</h2>
+<ul>
+<li>
+<p>Handles the authentication.</p>
+</li>
+<li>
+<p>Passes the user authentication information to the app (for example, in a request header), which acts on the authentication information.</p>
+</li>
+</ul>
+<h2><a href="#iisiis-express" aria-hidden="true" class="anchor" id="iisiis-express"></a>IIS/IIS Express</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Negotiate;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+   .AddNegotiate();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.FallbackPolicy = options.DefaultPolicy;
+});
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h3><a href="#launch-settings-debugger)" aria-hidden="true" class="anchor" id="launch-settings-debugger)"></a>Launch settings (debugger)</h3>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>In Solution Explorer, right click the project and select Properties.</p>
+</li>
+<li>
+<p>Select the Debug &gt; General tab and select Open debug launch profiles UI.</p>
+</li>
+<li>
+<p>Clear the checkbox for Enable Anonymous Authentication.</p>
+</li>
+<li>
+<p>Select the checkbox for Enable Windows Authentication.</p>
+</li>
+</ul>
+<pre><code class="language-json">&quot;iisSettings&quot;: {
+    &quot;windowsAuthentication&quot;: true,
+    &quot;anonymousAuthentication&quot;: false,
+    &quot;iisExpress&quot;: {
+        &quot;applicationUrl&quot;: &quot;http://localhost:52171/&quot;,
+        &quot;sslPort&quot;: 44308
+    }
+}
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet new webapp --auth Windows
+</code></pre>
+<pre><code class="language-json">&quot;iisSettings&quot;: {
+    &quot;windowsAuthentication&quot;: true,
+    &quot;anonymousAuthentication&quot;: false,
+    &quot;iisExpress&quot;: {
+        &quot;applicationUrl&quot;: &quot;http://localhost:52171/&quot;,
+        &quot;sslPort&quot;: 44308
+    }
+}
+</code></pre>
+<h3><a href="#iis" aria-hidden="true" class="anchor" id="iis"></a>IIS</h3>
+<ul>
+<li>
+<p>Provide a local web.config file that activates Windows Authentication on the server when the app is deployed.</p>
+</li>
+<li>
+<p>Use the IIS Manager to configure the web.config file of an ASP.NET Core app that has already been deployed to the server.</p>
+</li>
+<li>
+<p>Before publishing and deploying the project, add the following web.config file to the project root:</p>
+</li>
+</ul>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;configuration&gt;
+  &lt;location path=&quot;.&quot; inheritInChildApplications=&quot;false&quot;&gt;
+    &lt;system.webServer&gt;
+      &lt;security&gt;
+        &lt;authentication&gt;
+          &lt;anonymousAuthentication enabled=&quot;false&quot; /&gt;
+          &lt;windowsAuthentication enabled=&quot;true&quot; /&gt;
+        &lt;/authentication&gt;
+      &lt;/security&gt;
+    &lt;/system.webServer&gt;
+  &lt;/location&gt;
+&lt;/configuration&gt;
+</code></pre>
+<p>When the project is published by the .NET Core SDK (without the <code>&lt;IsTransformWebConfigDisabled&gt;</code> property set to <code>true</code> in the project file), the published web.config file includes the <code>&lt;location&gt;&lt;system.webServer&gt;&lt;security&gt;&lt;authentication&gt;</code> section. For more information on the <code>&lt;IsTransformWebConfigDisabled&gt;</code> property, see Host ASP.NET Core on Windows with IIS.</p>
+<ul>
+<li>After publishing and deploying the project, perform server-side configuration with the IIS Manager:</li>
+</ul>
+<p>In IIS Manager, select the IIS site under the Sites node of the Connections sidebar.
+Double-click Authentication in the IIS area.
+Select Anonymous Authentication. Select Disable in the Actions sidebar.
+Select Windows Authentication. Select Enable in the Actions sidebar.</p>
+<p>When these actions are taken, IIS Manager modifies the app's web.config file. A <code>&lt;system.webServer&gt;&lt;security&gt;&lt;authentication&gt;</code> node is added with updated settings for <code>anonymousAuthentication</code> and <code>windowsAuthentication</code>:</p>
+<pre><code class="language-xml">&lt;system.webServer&gt;
+  &lt;security&gt;
+    &lt;authentication&gt;
+      &lt;anonymousAuthentication enabled=&quot;false&quot; /&gt;
+      &lt;windowsAuthentication enabled=&quot;true&quot; /&gt;
+    &lt;/authentication&gt;
+  &lt;/security&gt;
+&lt;/system.webServer&gt;
+</code></pre>
+<p>The <code>&lt;system.webServer&gt;</code> section added to the web.config file by IIS Manager is outside of the app's <code>&lt;location&gt;</code> section added by the .NET Core SDK when the app is published. Because the section is added outside of the <code>&lt;location&gt;</code> node, the settings are inherited by any sub-apps to the current app. To prevent inheritance, move the added <code>&lt;security&gt;</code> section inside of the <code>&lt;location&gt;&lt;system.webServer&gt;</code> section that the .NET Core SDK provided.
+When IIS Manager is used to add the IIS configuration, it only affects the app's web.config file on the server. A subsequent deployment of the app may overwrite the settings on the server if the server's copy of web.config is replaced by the project's web.config file. Use either of the following approaches to manage the settings:</p>
+<ul>
+<li>
+<p>In IIS Manager, select the IIS site under the Sites node of the Connections sidebar.</p>
+</li>
+<li>
+<p>Double-click Authentication in the IIS area.</p>
+</li>
+<li>
+<p>Select Anonymous Authentication. Select Disable in the Actions sidebar.</p>
+</li>
+<li>
+<p>Select Windows Authentication. Select Enable in the Actions sidebar.</p>
+</li>
+<li>
+<p>Use IIS Manager to reset the settings in the web.config file after the file is overwritten on deployment.</p>
+</li>
+<li>
+<p>Add a web.config file to the app locally with the settings.</p>
+</li>
+</ul>
+<h2><a href="#kestrel" aria-hidden="true" class="anchor" id="kestrel"></a>Kestrel</h2>
+<blockquote>
+<p class='warning'>Warning
+Credentials can be persisted across requests on a connection. <code>Negotiate</code> authentication must not be used with proxies unless the proxy maintains a 1:1 connection affinity (a persistent connection) with Kestrel.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+The <code>Negotiate</code> handler detects if the underlying server supports Windows Authentication natively and if it is enabled. If the server supports Windows Authentication but it is disabled, an error is thrown asking you to enable the server implementation. When Windows Authentication is enabled in the server, the <code>Negotiate</code> handler transparently forwards authentication requests to it.</p>
+</blockquote>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Negotiate;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+   .AddNegotiate();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.FallbackPolicy = options.DefaultPolicy;
+});
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>AddAuthentication</p>
+</li>
+<li>
+<p>AddNegotiate</p>
+</li>
+<li>
+<p>UseAuthentication</p>
+</li>
+</ul>
+<h3><a href="#kerberos-authentication-and-role-based-access-control-rbac)" aria-hidden="true" class="anchor" id="kerberos-authentication-and-role-based-access-control-rbac)"></a>Kerberos authentication and role-based access control (RBAC)</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Negotiate;
+using System.Runtime.InteropServices;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+    .AddNegotiate(options =&gt;
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            options.EnableLdap(&quot;contoso.com&quot;);
+        }
+    });
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Negotiate;
+using System.Runtime.InteropServices;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+        .AddNegotiate(options =&gt;
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                options.EnableLdap(settings =&gt;
+                {
+                    settings.Domain = &quot;contoso.com&quot;;
+                    settings.MachineAccountName = &quot;machineName&quot;;
+                    settings.MachineAccountPassword =
+                                      builder.Configuration[&quot;Password&quot;];
+                });
+            }
+        });
+
+builder.Services.AddRazorPages();
+</code></pre>
+<h3><a href="#windows-environment-configuration" aria-hidden="true" class="anchor" id="windows-environment-configuration"></a>Windows environment configuration</h3>
+<h4><a href="#kerberos-vs-ntlm" aria-hidden="true" class="anchor" id="kerberos-vs-ntlm"></a>Kerberos vs <code>NTLM</code></h4>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.Negotiate;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+   .AddNegotiate();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.FallbackPolicy = options.DefaultPolicy;
+});
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#linux-and-macos-environment-configuration" aria-hidden="true" class="anchor" id="linux-and-macos-environment-configuration"></a>Linux and macOS environment configuration</h3>
+<blockquote>
+<p class='note'>Note
+When following the guidance in the Connect Azure Data Studio to your SQL Server using Windows authentication - Kerberos article, replace <code>python-software-properties</code> with <code>python3-software-properties</code> if needed.</p>
+</blockquote>
+<ul>
+<li>
+<p>On the domain controller, add new web service SPNs to the machine account:</p>
+<ul>
+<li>
+<p><code>setspn -S HTTP/mywebservice.mydomain.com mymachine</code></p>
+</li>
+<li>
+<p><code>setspn -S HTTP/mywebservice@MYDOMAIN.COM mymachine</code></p>
+</li>
+</ul>
+</li>
+<li>
+<p>Use ktpass to generate a keytab file:</p>
+<ul>
+<li>
+<p><code>ktpass -princ HTTP/mywebservice.mydomain.com@MYDOMAIN.COM -pass myKeyTabFilePassword -mapuser MYDOMAIN\mymachine$ -pType KRB5_NT_PRINCIPAL -out c:\temp\mymachine.HTTP.keytab -crypto AES256-SHA1</code></p>
+</li>
+<li>
+<p>Some fields must be specified in uppercase as indicated.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Copy the keytab file to the Linux or macOS machine.</p>
+</li>
+<li>
+<p>Select the keytab file via an environment variable: <code>export KRB5_KTNAME=/tmp/mymachine.HTTP.keytab</code></p>
+</li>
+<li>
+<p>Invoke <code>klist</code> to show the SPNs currently available for use.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+A keytab file contains domain access credentials and must be protected accordingly.</p>
+</blockquote>
+<h2><a href="#httpsys" aria-hidden="true" class="anchor" id="httpsys"></a><code>HTTP</code>.sys</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Server.HttpSys;
+using System.Runtime.InteropServices;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(HttpSysDefaults.AuthenticationScheme);
+
+if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    builder.WebHost.UseHttpSys(options =&gt;
+        {
+            options.Authentication.Schemes =
+                AuthenticationSchemes.NTLM |
+                AuthenticationSchemes.Negotiate;
+            options.Authentication.AllowAnonymous = false;
+        });
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+HTTP.sys delegates to Kernel Mode authentication with the Kerberos authentication protocol. User Mode authentication isn't supported with Kerberos and HTTP.sys. The machine account must be used to decrypt the Kerberos token/ticket that's obtained from Active Directory and forwarded by the client to the server to authenticate the user. Register the Service Principal Name (SPN) for the host, not the user of the app.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+HTTP.sys isn't supported on Nano Server version 1709 or later. To use Windows Authentication and HTTP.sys with Nano Server, use a Server Core (microsoft/windowsservercore) container (see <code>https://hub.docker.com/_/microsoft-windows-servercore</code>). For more information on Server Core, see What is the Server Core installation option in Windows Server?.</p>
+</blockquote>
+<h2><a href="#authorize-users" aria-hidden="true" class="anchor" id="authorize-users"></a>Authorize users</h2>
+<h3><a href="#disallow-anonymous-access" aria-hidden="true" class="anchor" id="disallow-anonymous-access"></a>Disallow anonymous access</h3>
+<h3><a href="#allow-anonymous-access" aria-hidden="true" class="anchor" id="allow-anonymous-access"></a>Allow anonymous access</h3>
+<blockquote>
+<p class='note'>Note
+By default, users who lack authorization to access a page are presented with an empty HTTP 403 response. The StatusCodePages Middleware can be configured to provide users with a better &quot;Access Denied&quot; experience.</p>
+</blockquote>
+<h2><a href="#impersonation" aria-hidden="true" class="anchor" id="impersonation"></a>Impersonation</h2>
+<pre><code class="language-csharp">app.Run(async (context) =&gt;
+{
+    try
+    {
+        var user = (WindowsIdentity)context.User.Identity!;
+
+        await context.Response
+            .WriteAsync($&quot;User: {user.Name}\tState: {user.ImpersonationLevel}\n&quot;);
+
+        await WindowsIdentity.RunImpersonatedAsync(user.AccessToken, async () =&gt;
+        {
+            var impersonatedUser = WindowsIdentity.GetCurrent();
+            var message =
+                $&quot;User: {impersonatedUser.Name}\t&quot; +
+                $&quot;State: {impersonatedUser.ImpersonationLevel}&quot;;
+
+            var bytes = Encoding.UTF8.GetBytes(message);
+            await context.Response.Body.WriteAsync(bytes, 0, bytes.Length);
+        });
+    }
+    catch (Exception e)
+    {
+        await context.Response.WriteAsync(e.ToString());
+    }
+});
+</code></pre>
+<h2><a href="#claims-transformations" aria-hidden="true" class="anchor" id="claims-transformations"></a>Claims transformations</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>dotnet publish</p>
+</li>
+<li>
+<p>Host ASP.NET Core on Windows with IIS</p>
+</li>
+<li>
+<p>ASP.NET Core Module (ANCM) for IIS</p>
+</li>
+<li>
+<p>Visual Studio publish profiles (.pubxml) for ASP.NET Core app deployment</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/windowsauth?view=aspnetcore-8.0">Configure Windows Authentication in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

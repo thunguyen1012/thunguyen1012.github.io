@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Policy schemes | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Authentication policy schemes make it easier to have a single logical authentication scheme potentially use multiple approaches. For example, a policy scheme might use Google authentication for challenges, and cookie authentication for everything else. Authentication policy schemes make it:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Policy schemes</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Google has announced a new policy scheme for its Android operating system.</p>
+<ul>
+<li>
+<p>Easy to forward any authentication action to another scheme.</p>
+</li>
+<li>
+<p>Forward dynamically based on the request.</p>
+</li>
+</ul>
+<p>All authentication schemes that use derived AuthenticationSchemeOptions and the associated AuthenticationHandler<TOptions>:</p>
+<ul>
+<li>
+<p>Are automatically policy schemes in ASP.NET Core 2.1 and later.</p>
+</li>
+<li>
+<p>Can be enabled via configuring the scheme's options.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class AuthenticationSchemeOptions
+{
+    /// &lt;summary&gt;
+    /// If set, this specifies a default scheme that authentication handlers should 
+    /// forward all authentication operations to, by default. The default forwarding 
+    /// logic checks in this order:
+    /// 1. The most specific ForwardAuthenticate/Challenge/Forbid/SignIn/SignOut 
+    /// 2. The ForwardDefaultSelector
+    /// 3. ForwardDefault
+    /// The first non null result is used as the target scheme to forward to.
+    /// &lt;/summary&gt;
+    public string ForwardDefault { get; set; }
+
+    /// &lt;summary&gt;
+    /// If set, this specifies the target scheme that this scheme should forward 
+    /// AuthenticateAsync calls to. For example:
+    /// Context.AuthenticateAsync(&quot;ThisScheme&quot;) =&gt; 
+    ///                Context.AuthenticateAsync(&quot;ForwardAuthenticateValue&quot;);
+    /// Set the target to the current scheme to disable forwarding and allow 
+    /// normal processing.
+    /// &lt;/summary&gt;
+    public string ForwardAuthenticate { get; set; }
+
+    /// &lt;summary&gt;
+    /// If set, this specifies the target scheme that this scheme should forward 
+    /// ChallengeAsync calls to. For example:
+    /// Context.ChallengeAsync(&quot;ThisScheme&quot;) =&gt;
+    ///                         Context.ChallengeAsync(&quot;ForwardChallengeValue&quot;);
+    /// Set the target to the current scheme to disable forwarding and allow normal
+    /// processing.
+    /// &lt;/summary&gt;
+    public string ForwardChallenge { get; set; }
+
+    /// &lt;summary&gt;
+    /// If set, this specifies the target scheme that this scheme should forward 
+    /// ForbidAsync calls to.For example:
+    /// Context.ForbidAsync(&quot;ThisScheme&quot;) 
+    ///                               =&gt; Context.ForbidAsync(&quot;ForwardForbidValue&quot;);
+    /// Set the target to the current scheme to disable forwarding and allow normal 
+    /// processing.
+    /// &lt;/summary&gt;
+    public string ForwardForbid { get; set; }
+
+    /// &lt;summary&gt;
+    /// If set, this specifies the target scheme that this scheme should forward 
+    /// SignInAsync calls to. For example:
+    /// Context.SignInAsync(&quot;ThisScheme&quot;) =&gt; 
+    ///                                Context.SignInAsync(&quot;ForwardSignInValue&quot;);
+    /// Set the target to the current scheme to disable forwarding and allow normal 
+    /// processing.
+    /// &lt;/summary&gt;
+    public string ForwardSignIn { get; set; }
+
+    /// &lt;summary&gt;
+    /// If set, this specifies the target scheme that this scheme should forward 
+    /// SignOutAsync calls to. For example:
+    /// Context.SignOutAsync(&quot;ThisScheme&quot;) =&gt; 
+    ///                              Context.SignOutAsync(&quot;ForwardSignOutValue&quot;);
+    /// Set the target to the current scheme to disable forwarding and allow normal 
+    /// processing.
+    /// &lt;/summary&gt;
+    public string ForwardSignOut { get; set; }
+
+    /// &lt;summary&gt;
+    /// Used to select a default scheme for the current request that authentication
+    /// handlers should forward all authentication operations to by default. The 
+    /// default forwarding checks in this order:
+    /// 1. The most specific ForwardAuthenticate/Challenge/Forbid/SignIn/SignOut
+    /// 2. The ForwardDefaultSelector
+    /// 3. ForwardDefault. 
+    /// The first non null result will be used as the target scheme to forward to.
+    /// &lt;/summary&gt;
+    public Func&lt;HttpContext, string&gt; ForwardDefaultSelector { get; set; }
+}
+</code></pre>
+<h2><a href="#examples" aria-hidden="true" class="anchor" id="examples"></a>Examples</h2>
+<p>The following example shows a higher level scheme that combines lower level schemes. Google authentication is used for challenges, and cookie authentication is used for everything else:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+       .AddCookie(options =&gt; options.ForwardChallenge = &quot;Google&quot;)
+       .AddGoogle(options =&gt; { });
+}
+</code></pre>
+<p>The following example enables dynamic selection of schemes on a per request basis. That is, how to mix cookies and API authentication:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddCookie(options =&gt;
+        {
+            // For example, can foward any requests that start with /api 
+            // to the api scheme.
+            options.ForwardDefaultSelector = ctx =&gt; 
+               ctx.Request.Path.StartsWithSegments(&quot;/api&quot;) ? &quot;Api&quot; : null;
+        })
+        .AddYourApiAuth(&quot;Api&quot;);
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/policyschemes?view=aspnetcore-8.0">Policy schemes in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

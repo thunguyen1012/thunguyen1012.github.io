@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Configure WS-Federation authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This tutorial demonstrates how to enable users to sign in with a WS-Federation authentication provider like Active Directory Federation Services (ADFS) or Microsoft Entra ID. It uses the ASP.NET Core sample app described in Facebook, Google, and external provider authentication.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Configure WS-Federation authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This tutorial shows how to enable users to sign in with a WS-Federation authentication provider like Active Directory Federation Services (ADFS) or Microsoft Entra ID.</p>
+<p>Web Services-Federation (WS-Federation) is a component of Microsoft's Windows Server operating system.</p>
+<p>By default, the new middleware:</p>
+<ul>
+<li>
+<p>Doesn't allow unsolicited logins. This feature of the WS-Federation protocol is vulnerable to XSRF attacks. However, it can be enabled with the <code>AllowUnsolicitedLogins</code> option.</p>
+</li>
+<li>
+<p>Doesn't check every form post for sign-in messages. Only requests to the <code>CallbackPath</code> are checked for sign-ins. <code>CallbackPath</code> defaults to <code>/signin-wsfed</code> but can be changed via the inherited RemoteAuthenticationOptions.CallbackPath property of the WsFederationOptions class. This path can be shared with other authentication providers by enabling the SkipUnrecognizedRequests option.</p>
+</li>
+</ul>
+<h2><a href="#register-the-app-with-active-directory" aria-hidden="true" class="anchor" id="register-the-app-with-active-directory"></a>Register the app with Active Directory</h2>
+<h3><a href="#active-directory-federation-services" aria-hidden="true" class="anchor" id="active-directory-federation-services"></a>Active Directory Federation Services</h3>
+<ul>
+<li>Open the server's Add Relying Party Trust Wizard from the ADFS Management console:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/adfsaddtrust.png?view=aspnetcore-8.0" alt="Add Relying Party Trust Wizard: Welcome!" title="Add Relying Party Trust Wizard: Welcome" /></p>
+<ul>
+<li>Choose to enter data manually:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/adfsselectdatasource.png?view=aspnetcore-8.0" alt="Add Relying Party Trust Wizard: Select Data Source!" title="Add Relying Party Trust Wizard: Select Data Source" /></p>
+<ul>
+<li>
+<p>Enter a display name for the relying party. The name isn't important to the ASP.NET Core app.</p>
+</li>
+<li>
+<p>Microsoft.AspNetCore.Authentication.WsFederation lacks support for token encryption, so don't configure a token encryption certificate:</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/adfsconfigurecert.png?view=aspnetcore-8.0" alt="Add Relying Party Trust Wizard: Configure Certificate!" title="Add Relying Party Trust Wizard: Configure Certificate" /></p>
+<ul>
+<li>Enable support for WS-Federation Passive protocol, using the app's URL. Verify the port is correct for the app:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/adfsconfigureurl.png?view=aspnetcore-8.0" alt="Add Relying Party Trust Wizard: Configure URL!" title="Add Relying Party Trust Wizard: Configure URL" /></p>
+<blockquote>
+<p class='note'>Note
+This must be an HTTPS URL. IIS Express can provide a self-signed certificate when hosting the app during development. Kestrel requires manual certificate configuration. See the Kestrel documentation for more details.</p>
+</blockquote>
+<ul>
+<li>
+<p>Click Next through the rest of the wizard and Close at the end.</p>
+</li>
+<li>
+<p>ASP.NET Core Identity requires a Name ID claim. Add one from the Edit Claim Rules dialog:</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/editclaimrules.png?view=aspnetcore-8.0" alt="Edit Claim Rules!" title="Edit Claim Rules" /></p>
+<ul>
+<li>In the Add Transform Claim Rule Wizard, leave the default Send LDAP Attributes as Claims template selected, and click Next. Add a rule mapping the SAM-Account-Name LDAP attribute to the Name ID outgoing claim:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/addtransformclaimrule.png?view=aspnetcore-8.0" alt="Add Transform Claim Rule Wizard: Configure Claim Rule!" title="Add Transform Claim Rule Wizard: Configure Claim Rule" /></p>
+<ul>
+<li>Click Finish &gt; OK in the Edit Claim Rules window.</li>
+</ul>
+<h3><a href="#microsoft-entra-id" aria-hidden="true" class="anchor" id="microsoft-entra-id"></a>Microsoft Entra ID</h3>
+<ul>
+<li>Navigate to the Microsoft Entra ID tenant's app registrations blade. Click New application registration:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/aadnewappregistration.png?view=aspnetcore-8.0" alt="Microsoft Entra ID: App registrations!" title="Microsoft Entra ID: App registrations" /></p>
+<ul>
+<li>
+<p>Enter a name for the app registration. This isn't important to the ASP.NET Core app.</p>
+</li>
+<li>
+<p>Enter the URL the app listens on as the Sign-on URL:</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/aadcreateappregistration.png?view=aspnetcore-8.0" alt="Microsoft Entra ID: Create app registration!" title="Microsoft Entra ID: Create app registration" /></p>
+<ul>
+<li>Click Endpoints and note the Federation Metadata Document URL. This is the WS-Federation middleware's <code>MetadataAddress</code>:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/aadfederationmetadatadocument.png?view=aspnetcore-8.0" alt="Microsoft Entra ID: Endpoints!" title="Microsoft Entra ID: Endpoints" /></p>
+<ul>
+<li>Navigate to the new app registration. Click Expose an API. Click Application ID URI Set &gt; Save. Make note of the  Application ID URI. This is the WS-Federation middleware's <code>Wtrealm</code>:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/aadappiduri.png?view=aspnetcore-8.0" alt="Microsoft Entra ID: App registration properties!" title="Microsoft Entra ID: App registration properties" /></p>
+<h2><a href="#use-ws-federation-without-aspnet-core-identity" aria-hidden="true" class="anchor" id="use-ws-federation-without-aspnet-core-identity"></a>Use WS-Federation without ASP.NET Core Identity</h2>
+<p>The WS-Federation middleware can be used without Identity. For example:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddAuthentication(sharedOptions =&gt;
+    {
+        sharedOptions.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        sharedOptions.DefaultChallengeScheme = WsFederationDefaults.AuthenticationScheme;
+    })
+     .AddWsFederation(options =&gt;
+     {
+         options.Wtrealm = Configuration[&quot;wsfed:realm&quot;];
+         options.MetadataAddress = Configuration[&quot;wsfed:metadata&quot;];
+     })
+     .AddCookie();
+
+    services.AddControllersWithViews();
+    services.AddRazorPages();
+}
+
+public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+{
+    if (env.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+        app.UseDatabaseErrorPage();
+    }
+    else
+    {
+        app.UseExceptionHandler(&quot;/Home/Error&quot;);
+        app.UseHsts();
+    }
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
+
+    app.UseRouting();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.UseEndpoints(endpoints =&gt;
+    {
+        endpoints.MapControllerRoute(
+            name: &quot;default&quot;,
+            pattern: &quot;{controller=Home}/{action=Index}/{id?}&quot;);
+        endpoints.MapRazorPages();
+    });
+}
+</code></pre>
+<h2><a href="#add-ws-federation-as-an-external-login-provider-for-aspnet-core-identity" aria-hidden="true" class="anchor" id="add-ws-federation-as-an-external-login-provider-for-aspnet-core-identity"></a>Add WS-Federation as an external login provider for ASP.NET Core Identity</h2>
+<ul>
+<li>
+<p>Add a dependency on Microsoft.AspNetCore.Authentication.WsFederation to the project.</p>
+</li>
+<li>
+<p>Add WS-Federation to <code>Startup.ConfigureServices</code>:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+        options.UseSqlServer(
+            Configuration.GetConnectionString(&quot;DefaultConnection&quot;)));
+    services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+        .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+
+
+    services.AddAuthentication()
+        .AddWsFederation(options =&gt;
+        {
+            // MetadataAddress represents the Active Directory instance used to authenticate users.
+            options.MetadataAddress = &quot;https://&lt;ADFS FQDN or AAD tenant&gt;/FederationMetadata/2007-06/FederationMetadata.xml&quot;;
+
+            // Wtrealm is the app's identifier in the Active Directory instance.
+            // For ADFS, use the relying party's identifier, its WS-Federation Passive protocol URL:
+            options.Wtrealm = &quot;https://localhost:44307/&quot;;
+
+            // For AAD, use the Application ID URI from the app registration's Overview blade:
+            options.Wtrealm = &quot;api://bbd35166-7c13-49f3-8041-9551f2847b69&quot;;
+        });
+
+    services.AddControllersWithViews();
+    services.AddRazorPages();
+}
+</code></pre>
+<p>The <code>AddAuthentication(IServiceCollection, String)</code> overload sets the DefaultScheme property. The <code>AddAuthentication(IServiceCollection, Action&lt;AuthenticationOptions&gt;)</code> overload allows configuring authentication options, which can be used to set up default authentication schemes for different purposes. Subsequent calls to <code>AddAuthentication</code> override previously configured AuthenticationOptions properties.</p>
+<p>TheBuilder extension methods that register an authentication handler may only be called once per authentication scheme.</p>
+<h3><a href="#log-in-with-ws-federation" aria-hidden="true" class="anchor" id="log-in-with-ws-federation"></a>Log in with WS-Federation</h3>
+<p>Browse to the app and click the Log in link in the nav header. There's an option to log in with WsFederation:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/wsfederationbutton.png?view=aspnetcore-8.0" alt="Log in page!" title="Log in page" /></p>
+<p>With ADFS as the provider, the button redirects to an ADFS sign-in page:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/adfsloginpage.png?view=aspnetcore-8.0" alt="ADFS sign-in page!" title="ADFS sign-in page" /></p>
+<p>With Microsoft Entra ID as the provider, the button redirects to a Microsoft Entra ID sign-in page:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/aadsignin.png?view=aspnetcore-8.0" alt="Microsoft Entra ID sign-in page!" title="Microsoft Entra ID sign-in page" /></p>
+<p>A successful sign-in for a new user redirects to the app's user registration page:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation/_static/register.png?view=aspnetcore-8.0" alt="Register page!" title="Register page" /></p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/ws-federation?view=aspnetcore-8.0">Authenticate users with WS-Federation in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Multi-factor authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Multi-factor authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>What is MFA and what MFA flows are recommended</p>
+</li>
+<li>
+<p>Configure MFA for administration pages using ASP.NET Core Identity</p>
+</li>
+<li>
+<p>Send MFA sign-in requirement to OpenID Connect server</p>
+</li>
+<li>
+<p>Force ASP.NET Core OpenID Connect client to require MFA</p>
+</li>
+</ul>
+<h2><a href="#mfa-2fa" aria-hidden="true" class="anchor" id="mfa-2fa"></a>MFA, 2FA</h2>
+<h3><a href="#mfa-totp-time-based-one-time-password-algorithm)" aria-hidden="true" class="anchor" id="mfa-totp-time-based-one-time-password-algorithm)"></a>MFA TOTP (Time-based One-time Password Algorithm)</h3>
+<ul>
+<li>
+<p>Microsoft Authenticator</p>
+</li>
+<li>
+<p>Google Authenticator</p>
+</li>
+</ul>
+<h3><a href="#mfa-passkeysfido2-or-passwordless" aria-hidden="true" class="anchor" id="mfa-passkeysfido2-or-passwordless"></a>MFA passkeys/FIDO2 or passwordless</h3>
+<ul>
+<li>
+<p>The most secure way of achieving MFA.</p>
+</li>
+<li>
+<p>MFA that protects against phishing attacks. (As well as certificate authentication and Windows for business)</p>
+</li>
+</ul>
+<h3><a href="#mfa-sms" aria-hidden="true" class="anchor" id="mfa-sms"></a>MFA SMS</h3>
+<h2><a href="#configure-mfa-for-administration-pages-using-aspnet-core-identity" aria-hidden="true" class="anchor" id="configure-mfa-for-administration-pages-using-aspnet-core-identity"></a>Configure MFA for administration pages using ASP.NET Core Identity</h2>
+<h3><a href="#extend-the-login-with-an-mfa-claim" aria-hidden="true" class="anchor" id="extend-the-login-with-an-mfa-claim"></a>Extend the login with an MFA claim</h3>
+<pre><code class="language-csharp">builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlite(
+        Configuration.GetConnectionString(&quot;DefaultConnection&quot;)));
+
+builder.Services.AddIdentity&lt;IdentityUser, IdentityRole&gt;(options =&gt;
+		options.SignIn.RequireConfirmedAccount = false)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddSingleton&lt;IEmailSender, EmailSender&gt;();
+builder.Services.AddScoped&lt;IUserClaimsPrincipalFactory&lt;IdentityUser&gt;, 
+    AdditionalUserClaimsPrincipalFactory&gt;();
+
+builder.Services.AddAuthorization(options =&gt;
+    options.AddPolicy(&quot;TwoFactorEnabled&quot;, x =&gt; x.RequireClaim(&quot;amr&quot;, &quot;mfa&quot;)));
+
+builder.Services.AddRazorPages();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
+
+namespace IdentityStandaloneMfa
+{
+    public class AdditionalUserClaimsPrincipalFactory : 
+        UserClaimsPrincipalFactory&lt;IdentityUser, IdentityRole&gt;
+    {
+        public AdditionalUserClaimsPrincipalFactory( 
+            UserManager&lt;IdentityUser&gt; userManager,
+            RoleManager&lt;IdentityRole&gt; roleManager, 
+            IOptions&lt;IdentityOptions&gt; optionsAccessor) 
+            : base(userManager, roleManager, optionsAccessor)
+        {
+        }
+
+        public async override Task&lt;ClaimsPrincipal&gt; CreateAsync(IdentityUser user)
+        {
+            var principal = await base.CreateAsync(user);
+            var identity = (ClaimsIdentity)principal.Identity;
+
+            var claims = new List&lt;Claim&gt;();
+
+            if (user.TwoFactorEnabled)
+            {
+                claims.Add(new Claim(&quot;amr&quot;, &quot;mfa&quot;));
+            }
+            else
+            {
+                claims.Add(new Claim(&quot;amr&quot;, &quot;pwd&quot;));
+            }
+
+            identity.AddClaims(claims);
+            return principal;
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@{
+    Layout = &quot;/Pages/Shared/_Layout.cshtml&quot;;
+}
+</code></pre>
+<pre><code class="language-cshtml">@{
+    Layout = &quot;_Layout.cshtml&quot;;
+}
+</code></pre>
+<h3><a href="#validate-the-mfa-requirement-in-the-administration-page" aria-hidden="true" class="anchor" id="validate-the-mfa-requirement-in-the-administration-page"></a>Validate the MFA requirement in the administration page</h3>
+<pre><code class="language-csharp">using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace IdentityStandaloneMfa
+{
+    public class AdminModel : PageModel
+    {
+        public IActionResult OnGet()
+        {
+            var claimTwoFactorEnabled = 
+                User.Claims.FirstOrDefault(t =&gt; t.Type == &quot;amr&quot;);
+
+            if (claimTwoFactorEnabled != null &amp;&amp; 
+                &quot;mfa&quot;.Equals(claimTwoFactorEnabled.Value))
+            {
+                // You logged in with MFA, do the administrative stuff
+            }
+            else
+            {
+                return Redirect(
+                    &quot;/Identity/Account/Manage/TwoFactorAuthentication&quot;);
+            }
+
+            return Page();
+        }
+    }
+}
+</code></pre>
+<h3><a href="#ui-logic-to-toggle-user-login-information" aria-hidden="true" class="anchor" id="ui-logic-to-toggle-user-login-information"></a>UI logic to toggle user login information</h3>
+<pre><code class="language-csharp">services.AddAuthorization(options =&gt;
+    options.AddPolicy(&quot;TwoFactorEnabled&quot;,
+        x =&gt; x.RequireClaim(&quot;amr&quot;, &quot;mfa&quot;)));
+</code></pre>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager&lt;IdentityUser&gt; SignInManager
+@inject UserManager&lt;IdentityUser&gt; UserManager
+@inject IAuthorizationService AuthorizationService
+</code></pre>
+<pre><code class="language-cshtml">@if (SignInManager.IsSignedIn(User))
+{
+    @if ((AuthorizationService.AuthorizeAsync(User, &quot;TwoFactorEnabled&quot;)).Result.Succeeded)
+    {
+        &lt;li class=&quot;nav-item&quot;&gt;
+            &lt;a class=&quot;nav-link text-dark&quot; asp-area=&quot;&quot; asp-page=&quot;/Admin&quot;&gt;Admin&lt;/a&gt;
+        &lt;/li&gt;
+    }
+    else
+    {
+        &lt;li class=&quot;nav-item&quot;&gt;
+            &lt;a class=&quot;nav-link text-dark&quot; asp-area=&quot;&quot; asp-page=&quot;/Admin&quot; 
+               id=&quot;tooltip-demo&quot;  
+               data-toggle=&quot;tooltip&quot; 
+               data-placement=&quot;bottom&quot; 
+               title=&quot;MFA is NOT enabled. This is required for the Admin Page. If you have activated MFA, then logout, login again.&quot;&gt;
+                Admin (Not Enabled)
+            &lt;/a&gt;
+        &lt;/li&gt;
+    }
+}
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/mfa/_static/identitystandalonemfa_01.png?view=aspnetcore-8.0" alt="Administrator MFA authentication!" title="Administrator MFA authentication" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/mfa/_static/identitystandalonemfa_02.png?view=aspnetcore-8.0" alt="Administrator activates MFA authentication!" title="Administrator activates MFA authentication" /></p>
+<h2><a href="#send-mfa-sign-in-requirement-to-openid-connect-server" aria-hidden="true" class="anchor" id="send-mfa-sign-in-requirement-to-openid-connect-server"></a>Send MFA sign-in requirement to OpenID Connect server</h2>
+<blockquote>
+<p class='note'>Note
+The <code>acr_values</code> parameter needs to be handled on the OpenID Connect server for this to work.</p>
+</blockquote>
+<h3><a href="#openid-connect-aspnet-core-client" aria-hidden="true" class="anchor" id="openid-connect-aspnet-core-client"></a>OpenID Connect ASP.NET Core client</h3>
+<pre><code class="language-csharp">build.Services.AddAuthentication(options =&gt;
+{
+	options.DefaultScheme =
+		CookieAuthenticationDefaults.AuthenticationScheme;
+	options.DefaultChallengeScheme =
+		OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddCookie()
+.AddOpenIdConnect(options =&gt;
+{
+	options.SignInScheme =
+		CookieAuthenticationDefaults.AuthenticationScheme;
+	options.Authority = &quot;&lt;OpenID Connect server URL&gt;&quot;;
+	options.RequireHttpsMetadata = true;
+	options.ClientId = &quot;&lt;OpenID Connect client ID&gt;&quot;;
+	options.ClientSecret = &quot;&lt;&gt;&quot;;
+	options.ResponseType = &quot;code&quot;;
+	options.UsePkce = true;	
+	options.Scope.Add(&quot;profile&quot;);
+	options.Scope.Add(&quot;offline_access&quot;);
+	options.SaveTokens = true;
+	options.Events = new OpenIdConnectEvents
+	{
+		OnRedirectToIdentityProvider = context =&gt;
+		{
+			context.ProtocolMessage.SetParameter(&quot;acr_values&quot;, &quot;mfa&quot;);
+			return Task.FromResult(0);
+		}
+	};
+});
+</code></pre>
+<h3><a href="#example-openid-connect-duende-identityserver-server-with-aspnet-core-identity" aria-hidden="true" class="anchor" id="example-openid-connect-duende-identityserver-server-with-aspnet-core-identity"></a>Example OpenID Connect Duende IdentityServer server with ASP.NET Core Identity</h3>
+<ul>
+<li>
+<p>Displays if the Identity comes from an app that requires MFA but the user hasn't activated this in Identity.</p>
+</li>
+<li>
+<p>Informs the user and adds a link to activate this.</p>
+</li>
+</ul>
+<pre><code class="language-cshtml">@{
+    ViewData[&quot;Title&quot;] = &quot;ErrorEnable2FA&quot;;
+}
+
+&lt;h1&gt;The client application requires you to have MFA enabled. Enable this, try login again.&lt;/h1&gt;
+
+&lt;br /&gt;
+
+You can enable MFA to login here:
+
+&lt;br /&gt;
+
+&lt;a href=&quot;~/Identity/Account/Manage/TwoFactorAuthentication&quot;&gt;Enable MFA&lt;/a&gt;
+</code></pre>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPost()
+{
+	// check if we are in the context of an authorization request
+	var context = await _interaction.GetAuthorizationContextAsync(Input.ReturnUrl);
+
+	var requires2Fa = context?.AcrValues.Count(t =&gt; t.Contains(&quot;mfa&quot;)) &gt;= 1;
+
+	var user = await _userManager.FindByNameAsync(Input.Username);
+	if (user != null &amp;&amp; !user.TwoFactorEnabled &amp;&amp; requires2Fa)
+	{
+		return RedirectToPage(&quot;/Home/ErrorEnable2FA/Index&quot;);
+	}
+
+	// code omitted for brevity
+
+	if (ModelState.IsValid)
+	{
+		var result = await _signInManager.PasswordSignInAsync(Input.Username, Input.Password, Input.RememberLogin, lockoutOnFailure: true);
+		if (result.Succeeded)
+		{
+			// code omitted for brevity
+		}
+		if (result.RequiresTwoFactor)
+		{
+			var fido2ItemExistsForUser = await _fido2Store.GetCredentialsByUserNameAsync(user.UserName);
+			if (fido2ItemExistsForUser.Count &gt; 0)
+			{
+				return RedirectToPage(&quot;/Account/LoginFido2Mfa&quot;, new { area = &quot;Identity&quot;, Input.ReturnUrl, Input.RememberLogin });
+			}
+
+			return RedirectToPage(&quot;/Account/LoginWith2fa&quot;, new { area = &quot;Identity&quot;, Input.ReturnUrl, RememberMe = Input.RememberLogin });
+		}
+
+		await _events.RaiseAsync(new UserLoginFailureEvent(Input.Username, &quot;invalid credentials&quot;, clientId: context?.Client.ClientId));
+		ModelState.AddModelError(string.Empty, LoginOptions.InvalidCredentialsErrorMessage);
+	}
+
+	// something went wrong, show form with error
+	await BuildModelAsync(Input.ReturnUrl);
+	return Page();
+}
+</code></pre>
+<ul>
+<li>
+<p>Still validates the <code>amr</code> claim.</p>
+</li>
+<li>
+<p>Can set up the MFA with a link to the ASP.NET Core Identity view.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/mfa/_static/acr_values-1.png?view=aspnetcore-8.0" alt="acr_values-1 image!" title="acr_values-1 image" /></p>
+<h2><a href="#force-aspnet-core-openid-connect-client-to-require-mfa" aria-hidden="true" class="anchor" id="force-aspnet-core-openid-connect-client-to-require-mfa"></a>Force ASP.NET Core OpenID Connect client to require MFA</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+
+namespace AspNetCoreRequireMfaOidc;
+
+public class RequireMfa : IAuthorizationRequirement{}
+</code></pre>
+<pre><code class="language-csharp">public class RequireMfaHandler : AuthorizationHandler&lt;RequireMfa&gt;
+{
+	protected override Task HandleRequirementAsync(
+		AuthorizationHandlerContext context, 
+		RequireMfa requirement)
+	{
+		if (context == null)
+			throw new ArgumentNullException(nameof(context));
+		if (requirement == null)
+			throw new ArgumentNullException(nameof(requirement));
+
+		var amrClaim =
+			context.User.Claims.FirstOrDefault(t =&gt; t.Type == &quot;amr&quot;);
+
+		if (amrClaim != null &amp;&amp; amrClaim.Value == Amr.Mfa)
+		{
+			context.Succeed(requirement);
+		}
+
+		return Task.CompletedTask;
+	}
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.ConfigureApplicationCookie(options =&gt;
+        options.Cookie.SecurePolicy =
+            CookieSecurePolicy.Always);
+
+builder.Services.AddSingleton&lt;IAuthorizationHandler, RequireMfaHandler&gt;();
+
+builder.Services.AddAuthentication(options =&gt;
+{
+	options.DefaultScheme =
+		CookieAuthenticationDefaults.AuthenticationScheme;
+	options.DefaultChallengeScheme =
+		OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddCookie()
+.AddOpenIdConnect(options =&gt;
+{
+	options.SignInScheme =
+		CookieAuthenticationDefaults.AuthenticationScheme;
+	options.Authority = &quot;https://localhost:44352&quot;;
+	options.RequireHttpsMetadata = true;
+	options.ClientId = &quot;AspNetCoreRequireMfaOidc&quot;;
+	options.ClientSecret = &quot;AspNetCoreRequireMfaOidcSecret&quot;;
+	options.ResponseType = &quot;code&quot;;
+	options.UsePkce = true;	
+	options.Scope.Add(&quot;profile&quot;);
+	options.Scope.Add(&quot;offline_access&quot;);
+	options.SaveTokens = true;
+});
+
+builder.Services.AddAuthorization(options =&gt;
+{
+	options.AddPolicy(&quot;RequireMfa&quot;, policyIsAdminRequirement =&gt;
+	{
+		policyIsAdminRequirement.Requirements.Add(new RequireMfa());
+	});
+});
+
+builder.Services.AddRazorPages();
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy= &quot;RequireMfa&quot;)]
+public class IndexModel : PageModel
+{
+    public void OnGet()
+    {
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model AspNetCoreRequireMfaOidc.AccessDeniedModel
+@{
+    ViewData[&quot;Title&quot;] = &quot;AccessDenied&quot;;
+    Layout = &quot;~/Pages/Shared/_Layout.cshtml&quot;;
+}
+
+&lt;h1&gt;AccessDenied&lt;/h1&gt;
+
+You require MFA to login here
+
+&lt;a href=&quot;https://localhost:44352/Manage/TwoFactorAuthentication&quot;&gt;Enable MFA&lt;/a&gt;
+</code></pre>
+<ul>
+<li>The <code>amr</code> has the <code>pwd</code> value:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/mfa/_static/require_mfa_oidc_02.png?view=aspnetcore-8.0" alt="amr has the pwd value!" title="amr has the pwd value" /></p>
+<ul>
+<li>Access is denied:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/mfa/_static/require_mfa_oidc_03.png?view=aspnetcore-8.0" alt="Access is denied!" title="Access is denied" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/mfa/_static/require_mfa_oidc_01.png?view=aspnetcore-8.0" alt="Logging in using OTP with Identity!" title="Logging in using OTP with Identity" /></p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Enable QR Code generation for TOTP authenticator apps in ASP.NET Core</p>
+</li>
+<li>
+<p>Passwordless authentication options for Azure Active Directory</p>
+</li>
+<li>
+<p>FIDO2 .NET library for FIDO2 / WebAuthn Attestation and Assertion using .NET</p>
+</li>
+<li>
+<p>WebAuthn Awesome</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/mfa?view=aspnetcore-8.0">Multi-factor authentication in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

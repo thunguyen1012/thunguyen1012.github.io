@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Manage JWTs in development | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Manage JWTs in development</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The <code>dotnet user-jwts</code> command line tool can create and manage app specific local JSON Web Tokens (JWTs).</p>
+<h2><a href="#synopsis" aria-hidden="true" class="anchor" id="synopsis"></a>Synopsis</h2>
+<pre><code class="language-dotnetcli">dotnet user-jwts [&lt;PROJECT&gt;] [command]
+dotnet user-jwts [command] -h|--help
+</code></pre>
+<h2><a href="#description" aria-hidden="true" class="anchor" id="description"></a>Description</h2>
+<p>Creates and manages project specific local JSON Web Tokens.</p>
+<h2><a href="#arguments" aria-hidden="true" class="anchor" id="arguments"></a>Arguments</h2>
+<p><code>PROJECT | SOLUTION</code></p>
+<p>The MSBuild project to apply a command on. If a project is not specified, MSBuild searches the current working directory for a file that has a file extension that ends in proj and uses that file.</p>
+<h2><a href="#commands" aria-hidden="true" class="anchor" id="commands"></a>Commands</h2>
+<table><thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>clear</td>
+<td>Delete all issued JWTs for a project.</td>
+</tr>
+<tr>
+<td>create</td>
+<td>Issue a new JSON Web Token.</td>
+</tr>
+<tr>
+<td>remove</td>
+<td>Delete a given JWT.</td>
+</tr>
+<tr>
+<td>key</td>
+<td>Display or reset the signing key used to issue JWTs.</td>
+</tr>
+<tr>
+<td>list</td>
+<td>Lists the JWTs issued for the project.</td>
+</tr>
+<tr>
+<td>print</td>
+<td>Display the details of a given JWT.</td>
+</tr>
+</tbody></table>
+<h3><a href="#create" aria-hidden="true" class="anchor" id="create"></a>Create</h3>
+<p>Usage: <code>dotnet user-jwts create [options]</code></p>
+<table><thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-p | --project</td>
+<td>The path of the project to operate on. Defaults to the project in the current directory.</td>
+</tr>
+<tr>
+<td>--scheme</td>
+<td>The scheme name to use for the generated token. Defaults to 'Bearer'.</td>
+</tr>
+<tr>
+<td>-n | --name</td>
+<td>The name of the user to create the JWT for. Defaults to the current environment user.</td>
+</tr>
+<tr>
+<td>--audience</td>
+<td>The audiences to create the JWT for. Defaults to the URLs configured in the project's launchSettings.json.</td>
+</tr>
+<tr>
+<td>--issuer</td>
+<td>The issuer of the JWT. Defaults to 'dotnet-user-jwts'.</td>
+</tr>
+<tr>
+<td>--scope</td>
+<td>A scope claim to add to the JWT. Specify once for each scope.</td>
+</tr>
+<tr>
+<td>--role</td>
+<td>A role claim to add to the JWT. Specify once for each role.</td>
+</tr>
+<tr>
+<td>--claim</td>
+<td>Claims to add to the JWT. Specify once for each claim in the format "name=value".</td>
+</tr>
+<tr>
+<td>--not-before</td>
+<td>The UTC date &amp; time the JWT should not be valid before in the format 'yyyy-MM-dd [[HH:mm[[:ss]]]]'. Defaults to the date &amp; time the JWT is created.</td>
+</tr>
+<tr>
+<td>--expires-on</td>
+<td>The UTC date &amp; time the JWT should expire in the format 'yyyy-MM-dd [[[ [HH:mm]]:ss]]'. Defaults to 6 months after the --not-before date. Do not use this option in conjunction with the --valid-for option.</td>
+</tr>
+<tr>
+<td>--valid-for</td>
+<td>The period the JWT should expire after. Specify using a number followed by duration type like 'd' for days, 'h' for hours, 'm' for minutes, and 's' for seconds, e.g. 365d'. Do not use this option in conjunction with the --expires-on option.</td>
+</tr>
+<tr>
+<td>-o | --output</td>
+<td>The format to use for displaying output from the command. Can be one of 'default', 'token', or 'json'.</td>
+</tr>
+<tr>
+<td>-h | --help</td>
+<td>Show help information</td>
+</tr>
+</tbody></table>
+<h2><a href="#examples" aria-hidden="true" class="anchor" id="examples"></a>Examples</h2>
+<p>Run the following commands to create an empty web project and add the Microsoft.AspNetCore.Authentication.JwtBearer NuGet package:</p>
+<pre><code class="language-dotnetcli">dotnet new web -o MyJWT
+cd MyJWT
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+</code></pre>
+<p>Replace the contents of <code>Program.cs</code> with the following code:</p>
+<pre><code class="language-csharp">using System.Security.Claims;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(&quot;Bearer&quot;).AddJwtBearer();
+
+var app = builder.Build();
+
+app.UseAuthorization();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello, World!&quot;);
+app.MapGet(&quot;/secret&quot;, (ClaimsPrincipal user) =&gt; $&quot;Hello {user.Identity?.Name}. My secret&quot;)
+    .RequireAuthorization();
+
+app.Run();
+</code></pre>
+<p>In the preceding code, a GET request to <code>/secret</code> returns an <code>401 Unauthorized</code> error. A production app might get the JWT from a Security token service (STS), perhaps in response to logging in via a set of credentials. For the purpose of working with the API during local development, the <code>dotnet</code>user-jwts`````` command line tool can be used to create and manage app-specific local JWTs.</p>
+<p>The <code>user-jwts</code> tool is similar in concept to the  <code>user-secrets</code> tool, it can be used to manage values for the app that are only valid for the developer on the local machine. In fact, the <code>user-jwts</code> tool utilizes the <code>user-secrets</code> infrastructure to manage the key that the JWTs are signed with, ensuring it’s stored safely in the user profile.</p>
+<p>The <code>user-jwts</code> tool hides implementation details, such as where and how the values are stored. The tool can be used without knowing the implementation details. The values are stored in a JSON file in the local machine's user profile folder:</p>
+<ul>
+<li>
+<p>Windows</p>
+</li>
+<li>
+<p>Linux / macOS</p>
+</li>
+</ul>
+<h3><a href="#create-a-jwt" aria-hidden="true" class="anchor" id="create-a-jwt"></a>Create a JWT</h3>
+<p>The following command creates a local JWT:</p>
+<pre><code class="language-dotnetcli">dotnet user-jwts create
+</code></pre>
+<p>The preceding command creates a JWT and updates the project’s <code>appsettings.Development.json</code> file with JSON similar to the following:</p>
+<pre><code class="language-csharp">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;Authentication&quot;: {
+    &quot;Schemes&quot;: {
+      &quot;Bearer&quot;: {
+        &quot;ValidAudiences&quot;: [
+          &quot;http://localhost:8401&quot;,
+          &quot;https://localhost:44308&quot;,
+          &quot;http://localhost:5182&quot;,
+          &quot;https://localhost:7076&quot;
+        ],
+        &quot;ValidIssuer&quot;: &quot;dotnet-user-jwts&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p>Copy the JWT and the <code>ID</code> created in the preceding command. Use a tool like Curl to test <code>/secret</code>:</p>
+<pre><code class="language-dotnetcli">curl -i -H &quot;Authorization: Bearer {token}&quot; https://localhost:{port}/secret
+</code></pre>
+<p>Where {token} is the previously generated JWT.</p>
+<h3><a href="#display-jwt-security-information" aria-hidden="true" class="anchor" id="display-jwt-security-information"></a>Display JWT security information</h3>
+<p>The following command displays the JWT security information, including expiration, scopes, roles, token header and payload, and the compact token:</p>
+<pre><code class="language-dotnetcli">dotnet user-jwts print {ID} --show-all
+</code></pre>
+<h3><a href="#create-a-token-for-a-specific-user-and-scope" aria-hidden="true" class="anchor" id="create-a-token-for-a-specific-user-and-scope"></a>Create a token for a specific user and scope</h3>
+<p>See Create in this topic for supported create options.</p>
+<p>The following command creates a JWT for a user named <code>MyTestUser</code>:</p>
+<pre><code class="language-dotnetcli">dotnet user-jwts create --name MyTestUser --scope &quot;myapi:secrets&quot;
+</code></pre>
+<p>The preceding command has output similar to the following:</p>
+<pre><code class="language-dotnetcli">New JWT saved with ID '43e0b748'.
+Name: MyTestUser
+Scopes: myapi:secrets
+
+Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.{Remaining token deleted}
+</code></pre>
+<p>The preceding token can be used to test the <code>/secret2</code> endpoint in the following code:</p>
+<pre><code class="language-csharp">using System.Security.Claims;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(&quot;Bearer&quot;).AddJwtBearer();
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello, World!&quot;);
+app.MapGet(&quot;/secret&quot;, (ClaimsPrincipal user) =&gt; $&quot;Hello {user.Identity?.Name}. My secret&quot;)
+    .RequireAuthorization();
+app.MapGet(&quot;/secret2&quot;, () =&gt; &quot;This is a different secret!&quot;)
+    .RequireAuthorization(p =&gt; p.RequireClaim(&quot;scope&quot;, &quot;myapi:secrets&quot;));
+
+app.Run();
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/jwt-authn?view=aspnetcore-8.0">Manage JSON Web Tokens in development with <code>dotnet</code>user-jwts``````</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

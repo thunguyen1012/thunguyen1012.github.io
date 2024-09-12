@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Identity management solutions | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The following table provides an overview of various identity management solutions that can be used in ASP.NET Core apps. These solutions offer features and capabilities to manage user authentication, authorization, and user identity within an app. It includes options for apps that are:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Identity management solutions</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Identity management is an essential part of any ASP.NET Core app.</p>
+<ul>
+<li>
+<p>Container-based</p>
+</li>
+<li>
+<p>Self-hosted, where you manage the installation and infrastructure to support it.</p>
+</li>
+<li>
+<p>Managed, such as cloud-based services like Microsoft Entra</p>
+</li>
+</ul>
+<p>How do I find the right identity management solution for my ASP.NET Core app?</p>
+<p>Many of the commercial licenses provide &quot;community&quot; or free options that may be available depending on your company size and app requirements.</p>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>License Type</th>
+<th>Documentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://dotnet.microsoft.com/apps/aspnet" data-linktype="external">ASP.NET Core Identity</a></td>
+<td>Self host</td>
+<td><a href="https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt" data-linktype="external">OSS (MIT)</a></td>
+<td><a href="/en-us/training/modules/secure-aspnet-core-identity/" data-linktype="absolute-path">Secure a web app with ASP.NET Core Identity</a></td>
+</tr>
+<tr>
+<td><a href="https://auth0.com/" data-linktype="external">Auth0</a></td>
+<td>Managed</td>
+<td><a href="https://auth0.com/pricing" data-linktype="external">Commercial</a></td>
+<td><a href="https://auth0.com/docs/get-started" data-linktype="external">Get started</a></td>
+</tr>
+<tr>
+<td><a href="https://duendesoftware.com/products/identityserver" data-linktype="external">Duende IdentityServer</a></td>
+<td>Self host</td>
+<td><a href="https://duendesoftware.com/products/identityserver#pricing" data-linktype="external">Commercial</a></td>
+<td><a href="https://docs.duendesoftware.com/identityserver/v6/aspnet_identity/" data-linktype="external">ASP.NET Identity integration</a></td>
+</tr>
+<tr>
+<td><a href="https://www.keycloak.org" data-linktype="external">Keycloak</a></td>
+<td>Container</td>
+<td><a href="https://github.com/keycloak/keycloak/blob/master/LICENSE.txt" data-linktype="external">OSS (Apache 2.0)</a></td>
+<td><a href="https://www.keycloak.org/docs/latest/securing_apps/#client-adapters" data-linktype="external">Keycloak client adapters documentation</a></td>
+</tr>
+<tr>
+<td><a href="https://azure.microsoft.com/services/active-directory" data-linktype="external">Microsoft Entra ID</a></td>
+<td>Managed</td>
+<td><a href="https://azure.microsoft.com/pricing/details/active-directory/" data-linktype="external">Commercial</a></td>
+<td><a href="/en-us/azure/active-directory/fundamentals/active-directory-whatis" data-linktype="absolute-path">Entra documentation</a></td>
+</tr>
+<tr>
+<td><a href="https://www.okta.com" data-linktype="external">Okta</a></td>
+<td>Managed</td>
+<td><a href="https://www.okta.com/pricing/" data-linktype="external">Commercial</a></td>
+<td><a href="https://developer.okta.com/code/dotnet/aspnetcore/" data-linktype="external">Okta for ASP.NET Core</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/openiddict/openiddict-core" data-linktype="external">OpenIddict</a></td>
+<td>Self host</td>
+<td><a href="https://github.com/openiddict/openiddict-core/blob/dev/LICENSE.md" data-linktype="external">OSS (Apache 2.0)</a></td>
+<td><a href="https://documentation.openiddict.com/" data-linktype="external">OpenIddict documentation</a></td>
+</tr>
+</tbody></table>
+<p>Is there a solution that should be added to this list? Do you have a correction, suggestion, or feedback? We welcome your contributions. Learn how to contribute.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/identity-management-solutions?view=aspnetcore-8.0">Identity management solutions for .NET web apps</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

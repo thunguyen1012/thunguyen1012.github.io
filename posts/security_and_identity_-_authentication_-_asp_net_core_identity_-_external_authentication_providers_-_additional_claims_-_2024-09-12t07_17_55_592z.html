@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Additional claims | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Additional claims</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<h2><a href="#set-the-client-id-and-client-secret" aria-hidden="true" class="anchor" id="set-the-client-id-and-client-secret"></a>Set the client ID and client secret</h2>
+<ul>
+<li>
+<p>Facebook authentication</p>
+</li>
+<li>
+<p>Google authentication</p>
+</li>
+<li>
+<p>Microsoft authentication</p>
+</li>
+<li>
+<p>Twitter authentication</p>
+</li>
+<li>
+<p>Other authentication providers</p>
+</li>
+<li>
+<p>OpenIdConnect</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using WebGoogOauth.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+var configuration = builder.Configuration;
+
+builder.Services.AddAuthentication().AddGoogle(googleOptions =&gt;
+{
+    googleOptions.ClientId = configuration[&quot;Authentication:Google:ClientId&quot;];
+    googleOptions.ClientSecret = configuration[&quot;Authentication:Google:ClientSecret&quot;];
+
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:picture&quot;, &quot;picture&quot;, &quot;url&quot;);
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:locale&quot;, &quot;locale&quot;, &quot;string&quot;);
+
+    googleOptions.SaveTokens = true;
+
+    googleOptions.Events.OnCreatingTicket = ctx =&gt;
+    {
+        List&lt;AuthenticationToken&gt; tokens = ctx.Properties.GetTokens().ToList();
+
+        tokens.Add(new AuthenticationToken()
+        {
+            Name = &quot;TicketCreated&quot;,
+            Value = DateTime.UtcNow.ToString()
+        });
+
+        ctx.Properties.StoreTokens(tokens);
+
+        return Task.CompletedTask;
+    };
+});
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; 
+                                  options.SignIn.RequireConfirmedAccount = true)
+                                 .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+// Remaining code removed for brevity.
+</code></pre>
+<h2><a href="#establish-the-authentication-scope" aria-hidden="true" class="anchor" id="establish-the-authentication-scope"></a>Establish the authentication scope</h2>
+<table><thead>
+<tr>
+<th>Provider</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Facebook</td>
+<td><code>https://www.facebook.com/dialog/oauth</code></td>
+</tr>
+<tr>
+<td>Google</td>
+<td><code>profile</code>, <code>email</code>, <code>openid</code></td>
+</tr>
+<tr>
+<td>Microsoft</td>
+<td><code>https://login.microsoftonline.com/common/oauth2/v2.0/authorize</code></td>
+</tr>
+<tr>
+<td>Twitter</td>
+<td><code>https://api.twitter.com/oauth/authenticate</code></td>
+</tr>
+</tbody></table>
+<pre><code class="language-csharp">options.Scope.Add(&quot;https://www.googleapis.com/auth/user.birthday.read&quot;);
+</code></pre>
+<h2><a href="#map-user-data-keys-and-create-claims" aria-hidden="true" class="anchor" id="map-user-data-keys-and-create-claims"></a>Map user data keys and create claims</h2>
+<pre><code class="language-csharp">builder.Services.AddAuthentication().AddGoogle(googleOptions =&gt;
+{
+    googleOptions.ClientId = configuration[&quot;Authentication:Google:ClientId&quot;];
+    googleOptions.ClientSecret = configuration[&quot;Authentication:Google:ClientSecret&quot;];
+
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:picture&quot;, &quot;picture&quot;, &quot;url&quot;);
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:locale&quot;, &quot;locale&quot;, &quot;string&quot;);
+
+    googleOptions.SaveTokens = true;
+
+    googleOptions.Events.OnCreatingTicket = ctx =&gt;
+    {
+        List&lt;AuthenticationToken&gt; tokens = ctx.Properties.GetTokens().ToList();
+
+        tokens.Add(new AuthenticationToken()
+        {
+            Name = &quot;TicketCreated&quot;,
+            Value = DateTime.UtcNow.ToString()
+        });
+
+        ctx.Properties.StoreTokens(tokens);
+
+        return Task.CompletedTask;
+    };
+});
+</code></pre>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostConfirmationAsync(string returnUrl = null)
+{
+    returnUrl = returnUrl ?? Url.Content(&quot;~/&quot;);
+    // Get the information about the user from the external login provider
+    var info = await _signInManager.GetExternalLoginInfoAsync();
+    if (info == null)
+    {
+        ErrorMessage = &quot;Error loading external login information during confirmation.&quot;;
+        return RedirectToPage(&quot;./Login&quot;, new { ReturnUrl = returnUrl });
+    }
+
+    if (ModelState.IsValid)
+    {
+        var user = CreateUser();
+
+        await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+        var result = await _userManager.CreateAsync(user);
+        if (result.Succeeded)
+        {
+            result = await _userManager.AddLoginAsync(user, info);
+            if (result.Succeeded)
+            {
+                _logger.LogInformation(&quot;User created an account using {Name} provider.&quot;, info.LoginProvider);
+
+                // If they exist, add claims to the user for:
+                //    Given (first) name
+                //    Locale
+                //    Picture
+                if (info.Principal.HasClaim(c =&gt; c.Type == ClaimTypes.GivenName))
+                {
+                    await _userManager.AddClaimAsync(user,
+                        info.Principal.FindFirst(ClaimTypes.GivenName));
+                }
+
+                if (info.Principal.HasClaim(c =&gt; c.Type == &quot;urn:google:locale&quot;))
+                {
+                    await _userManager.AddClaimAsync(user,
+                        info.Principal.FindFirst(&quot;urn:google:locale&quot;));
+                }
+
+                if (info.Principal.HasClaim(c =&gt; c.Type == &quot;urn:google:picture&quot;))
+                {
+                    await _userManager.AddClaimAsync(user,
+                        info.Principal.FindFirst(&quot;urn:google:picture&quot;));
+                }
+
+                // Include the access token in the properties
+                // using Microsoft.AspNetCore.Authentication;
+                var props = new AuthenticationProperties();
+                props.StoreTokens(info.AuthenticationTokens);
+                props.IsPersistent = false;
+
+                var userId = await _userManager.GetUserIdAsync(user);
+                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                var callbackUrl = Url.Page(
+                    &quot;/Account/ConfirmEmail&quot;,
+                    pageHandler: null,
+                    values: new { area = &quot;Identity&quot;, userId = userId, code = code },
+                    protocol: Request.Scheme);
+
+                await _emailSender.SendEmailAsync(Input.Email, &quot;Confirm your email&quot;,
+                    $&quot;Please confirm your account by &lt;a href='{HtmlEncoder.Default.Encode(callbackUrl)}'&gt;clicking here&lt;/a&gt;.&quot;);
+
+                // If account confirmation is required, we need to show the link if we don't have a real email sender
+                if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                {
+                    return RedirectToPage(&quot;./RegisterConfirmation&quot;, new { Email = Input.Email });
+                }
+
+                await _signInManager.SignInAsync(user, props, info.LoginProvider);
+                return LocalRedirect(returnUrl);
+            }
+        }
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+    }
+
+    ProviderDisplayName = info.ProviderDisplayName;
+    ReturnUrl = returnUrl;
+    return Page();
+}
+</code></pre>
+<ul>
+<li>
+<p>The browser detects that the cookie header is too long.</p>
+</li>
+<li>
+<p>The overall size of the request is too large.</p>
+</li>
+<li>
+<p>Limit the number and size of user claims for request processing to only what the app requires.</p>
+</li>
+<li>
+<p>Use a custom ITicketStore for the Cookie Authentication Middleware's SessionStore to store identity across requests. Preserve large quantities of identity information on the server while only sending a small session identifier key to the client.</p>
+</li>
+</ul>
+<h2><a href="#save-the-access-token" aria-hidden="true" class="anchor" id="save-the-access-token"></a>Save the access token</h2>
+<pre><code class="language-csharp">builder.Services.AddAuthentication().AddGoogle(googleOptions =&gt;
+{
+    googleOptions.ClientId = configuration[&quot;Authentication:Google:ClientId&quot;];
+    googleOptions.ClientSecret = configuration[&quot;Authentication:Google:ClientSecret&quot;];
+
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:picture&quot;, &quot;picture&quot;, &quot;url&quot;);
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:locale&quot;, &quot;locale&quot;, &quot;string&quot;);
+
+    googleOptions.SaveTokens = true;
+
+    googleOptions.Events.OnCreatingTicket = ctx =&gt;
+    {
+        List&lt;AuthenticationToken&gt; tokens = ctx.Properties.GetTokens().ToList();
+
+        tokens.Add(new AuthenticationToken()
+        {
+            Name = &quot;TicketCreated&quot;,
+            Value = DateTime.UtcNow.ToString()
+        });
+
+        ctx.Properties.StoreTokens(tokens);
+
+        return Task.CompletedTask;
+    };
+});
+</code></pre>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostConfirmationAsync(string returnUrl = null)
+{
+    returnUrl = returnUrl ?? Url.Content(&quot;~/&quot;);
+    // Get the information about the user from the external login provider
+    var info = await _signInManager.GetExternalLoginInfoAsync();
+    if (info == null)
+    {
+        ErrorMessage = &quot;Error loading external login information during confirmation.&quot;;
+        return RedirectToPage(&quot;./Login&quot;, new { ReturnUrl = returnUrl });
+    }
+
+    if (ModelState.IsValid)
+    {
+        var user = CreateUser();
+
+        await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+        var result = await _userManager.CreateAsync(user);
+        if (result.Succeeded)
+        {
+            result = await _userManager.AddLoginAsync(user, info);
+            if (result.Succeeded)
+            {
+                _logger.LogInformation(&quot;User created an account using {Name} provider.&quot;, info.LoginProvider);
+
+                // If they exist, add claims to the user for:
+                //    Given (first) name
+                //    Locale
+                //    Picture
+                if (info.Principal.HasClaim(c =&gt; c.Type == ClaimTypes.GivenName))
+                {
+                    await _userManager.AddClaimAsync(user,
+                        info.Principal.FindFirst(ClaimTypes.GivenName));
+                }
+
+                if (info.Principal.HasClaim(c =&gt; c.Type == &quot;urn:google:locale&quot;))
+                {
+                    await _userManager.AddClaimAsync(user,
+                        info.Principal.FindFirst(&quot;urn:google:locale&quot;));
+                }
+
+                if (info.Principal.HasClaim(c =&gt; c.Type == &quot;urn:google:picture&quot;))
+                {
+                    await _userManager.AddClaimAsync(user,
+                        info.Principal.FindFirst(&quot;urn:google:picture&quot;));
+                }
+
+                // Include the access token in the properties
+                // using Microsoft.AspNetCore.Authentication;
+                var props = new AuthenticationProperties();
+                props.StoreTokens(info.AuthenticationTokens);
+                props.IsPersistent = false;
+
+                var userId = await _userManager.GetUserIdAsync(user);
+                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                var callbackUrl = Url.Page(
+                    &quot;/Account/ConfirmEmail&quot;,
+                    pageHandler: null,
+                    values: new { area = &quot;Identity&quot;, userId = userId, code = code },
+                    protocol: Request.Scheme);
+
+                await _emailSender.SendEmailAsync(Input.Email, &quot;Confirm your email&quot;,
+                    $&quot;Please confirm your account by &lt;a href='{HtmlEncoder.Default.Encode(callbackUrl)}'&gt;clicking here&lt;/a&gt;.&quot;);
+
+                // If account confirmation is required, we need to show the link if we don't have a real email sender
+                if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                {
+                    return RedirectToPage(&quot;./RegisterConfirmation&quot;, new { Email = Input.Email });
+                }
+
+                await _signInManager.SignInAsync(user, props, info.LoginProvider);
+                return LocalRedirect(returnUrl);
+            }
+        }
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+    }
+
+    ProviderDisplayName = info.ProviderDisplayName;
+    ReturnUrl = returnUrl;
+    return Page();
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+For information on passing tokens to the Razor components of a server-side Blazor app, see Server-side ASP.NET Core Blazor additional security scenarios.</p>
+</blockquote>
+<h2><a href="#how-to-add-additional-custom-tokens" aria-hidden="true" class="anchor" id="how-to-add-additional-custom-tokens"></a>How to add additional custom tokens</h2>
+<pre><code class="language-csharp">builder.Services.AddAuthentication().AddGoogle(googleOptions =&gt;
+{
+    googleOptions.ClientId = configuration[&quot;Authentication:Google:ClientId&quot;];
+    googleOptions.ClientSecret = configuration[&quot;Authentication:Google:ClientSecret&quot;];
+
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:picture&quot;, &quot;picture&quot;, &quot;url&quot;);
+    googleOptions.ClaimActions.MapJsonKey(&quot;urn:google:locale&quot;, &quot;locale&quot;, &quot;string&quot;);
+
+    googleOptions.SaveTokens = true;
+
+    googleOptions.Events.OnCreatingTicket = ctx =&gt;
+    {
+        List&lt;AuthenticationToken&gt; tokens = ctx.Properties.GetTokens().ToList();
+
+        tokens.Add(new AuthenticationToken()
+        {
+            Name = &quot;TicketCreated&quot;,
+            Value = DateTime.UtcNow.ToString()
+        });
+
+        ctx.Properties.StoreTokens(tokens);
+
+        return Task.CompletedTask;
+    };
+});
+</code></pre>
+<h2><a href="#create-and-add-claims" aria-hidden="true" class="anchor" id="create-and-add-claims"></a>Create and add claims</h2>
+<h2><a href="#add-and-update-user-claims" aria-hidden="true" class="anchor" id="add-and-update-user-claims"></a>Add and update user claims</h2>
+<pre><code class="language-csharp">private readonly IReadOnlyDictionary&lt;string, string&gt; _claimsToSync =
+     new Dictionary&lt;string, string&gt;()
+     {
+             { &quot;urn:google:picture&quot;, &quot;https://localhost:5001/headshot.png&quot; },
+     };
+</code></pre>
+<pre><code class="language-csharp">private readonly IReadOnlyDictionary&lt;string, string&gt; _claimsToSync =
+     new Dictionary&lt;string, string&gt;()
+     {
+             { &quot;urn:google:picture&quot;, &quot;https://localhost:5001/headshot.png&quot; },
+     };
+
+public async Task&lt;IActionResult&gt; OnGetCallbackAsync(string returnUrl = null, string remoteError = null)
+{
+    returnUrl = returnUrl ?? Url.Content(&quot;~/&quot;);
+    if (remoteError != null)
+    {
+        ErrorMessage = $&quot;Error from external provider: {remoteError}&quot;;
+        return RedirectToPage(&quot;./Login&quot;, new { ReturnUrl = returnUrl });
+    }
+    var info = await _signInManager.GetExternalLoginInfoAsync();
+    if (info == null)
+    {
+        ErrorMessage = &quot;Error loading external login information.&quot;;
+        return RedirectToPage(&quot;./Login&quot;, new { ReturnUrl = returnUrl });
+    }
+
+    // Sign in the user with this external login provider if the user already has a login.
+    var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+    if (result.Succeeded)
+    {
+        _logger.LogInformation(&quot;{Name} logged in with {LoginProvider} provider.&quot;, info.Principal.Identity.Name, info.LoginProvider);
+        if (_claimsToSync.Count &gt; 0)
+        {
+            var user = await _userManager.FindByLoginAsync(info.LoginProvider,
+                info.ProviderKey);
+            var userClaims = await _userManager.GetClaimsAsync(user);
+            bool refreshSignIn = false;
+
+            foreach (var addedClaim in _claimsToSync)
+            {
+                var userClaim = userClaims
+                    .FirstOrDefault(c =&gt; c.Type == addedClaim.Key);
+
+                if (info.Principal.HasClaim(c =&gt; c.Type == addedClaim.Key))
+                {
+                    var externalClaim = info.Principal.FindFirst(addedClaim.Key);
+
+                    if (userClaim == null)
+                    {
+                        await _userManager.AddClaimAsync(user,
+                            new Claim(addedClaim.Key, externalClaim.Value));
+                        refreshSignIn = true;
+                    }
+                    else if (userClaim.Value != externalClaim.Value)
+                    {
+                        await _userManager
+                            .ReplaceClaimAsync(user, userClaim, externalClaim);
+                        refreshSignIn = true;
+                    }
+                }
+                else if (userClaim == null)
+                {
+                    // Fill with a default value
+                    await _userManager.AddClaimAsync(user, new Claim(addedClaim.Key,
+                        addedClaim.Value));
+                    refreshSignIn = true;
+                }
+            }
+
+            if (refreshSignIn)
+            {
+                await _signInManager.RefreshSignInAsync(user);
+            }
+        }
+
+        return LocalRedirect(returnUrl);
+    }
+    if (result.IsLockedOut)
+    {
+        return RedirectToPage(&quot;./Lockout&quot;);
+    }
+    else
+    {
+        // If the user does not have an account, then ask the user to create an account.
+        ReturnUrl = returnUrl;
+        ProviderDisplayName = info.ProviderDisplayName;
+        if (info.Principal.HasClaim(c =&gt; c.Type == ClaimTypes.Email))
+        {
+            Input = new InputModel
+            {
+                Email = info.Principal.FindFirstValue(ClaimTypes.Email)
+            };
+        }
+        return Page();
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p><code>UserManager.ReplaceClaimAsync</code> on the user for claims stored in the identity database.</p>
+</li>
+<li>
+<p><code>SignInManager.RefreshSignInAsync</code> on the user to force the generation of a new authentication cookie.</p>
+</li>
+</ul>
+<h2><a href="#remove-claim-actions-and-claims" aria-hidden="true" class="anchor" id="remove-claim-actions-and-claims"></a>Remove claim actions and claims</h2>
+<h2><a href="#sample-app-output" aria-hidden="true" class="anchor" id="sample-app-output"></a>Sample app output</h2>
+<pre><code class="language-text">User Claims
+
+http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+    9b342344f-7aab-43c2-1ac1-ba75912ca999
+http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+    someone@gmail.com
+AspNet.Identity.SecurityStamp
+    7D4312MOWRYYBFI1KXRPHGOSTBVWSFDE
+http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname
+    Judy
+urn:google:locale
+    en
+urn:google:picture
+    https://lh4.googleusercontent.com/-XXXXXX/XXXXXX/XXXXXX/XXXXXX/photo.jpg
+
+Authentication Properties
+
+.Token.access_token
+    yc23.AlvoZqz56...1lxltXV7D-ZWP9
+.Token.token_type
+    Bearer
+.Token.expires_at
+    2019-04-11T22:14:51.0000000+00:00
+.Token.TicketCreated
+    4/11/2019 9:14:52 PM
+.TokenNames
+    access_token;token_type;expires_at;TicketCreated
+.persistent
+.issued
+    Thu, 11 Apr 2019 20:51:06 GMT
+.expires
+    Thu, 25 Apr 2019 20:51:06 GMT
+</code></pre>
+<h2><a href="#forward-request-information-with-a-proxy-or-load-balancer" aria-hidden="true" class="anchor" id="forward-request-information-with-a-proxy-or-load-balancer"></a>Forward request information with a proxy or load balancer</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>dotnet/AspNetCore engineering SocialSample app: The linked sample app is on the dotnet/AspNetCore GitHub repo's <code>main</code> engineering branch. The <code>main</code> branch contains code under active development for the next release of ASP.NET Core. To see a version of the sample app for a released version of ASP.NET Core, use the Branch drop down list to select a release branch (for example release/{X.Y}).</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/additional-claims?view=aspnetcore-8.0">Persist additional claims and tokens from external providers in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

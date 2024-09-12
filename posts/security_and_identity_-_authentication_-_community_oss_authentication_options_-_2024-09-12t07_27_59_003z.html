@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Community OSS authentication options | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This page shows community-provided open-source software (OSS) authentication options for ASP.NET Core. This page is periodically updated as new providers become available.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Community OSS authentication options</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This page shows community-provided open-source software (OSS) authentication options for ASP.NET Core. This page is periodically updated as new providers become available.</p>
+<h2><a href="#oss-authentication-providers-.net]" aria-hidden="true" class="anchor" id="oss-authentication-providers-.net]"></a>OSS authentication providers [.NET]</h2>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://duendesoftware.com/products/identityserver" data-linktype="external">Duende IdentityServer</a></td>
+<td>IdentityServer is an OpenID Connect and OAuth 2.0 framework for ASP.NET Core.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/openiddict/openiddict-core" data-linktype="external">OpenIddict</a></td>
+<td>OAuth 2.0/OpenID Connect server for ASP.NET Core and ASP.NET 4.x.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/passwordless-lib/fido2-net-lib" data-linktype="external">FIDO2 .NET Library, WebAuthn</a></td>
+<td>FIDO2 .NET library for FIDO2 / WebAuthn Attestation and Assertion using .NET</td>
+</tr>
+</tbody></table>
+<h2><a href="#oss-authentication-provider-clients-.net]" aria-hidden="true" class="anchor" id="oss-authentication-provider-clients-.net]"></a>OSS authentication provider clients [.NET]</h2>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/openiddict/openiddict-core" data-linktype="external">OpenIddict</a></td>
+<td>OAuth 2.0/OpenID Connect client for ASP.NET Core, ASP.NET 4.x and Windows/Linux desktop apps with built-in integrations for 80+ services such as Auth0, Microsoft Entra ID, GitHub, Google, Twitter or Yahoo.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/aspnet-contrib/AspNet.Security.OAuth.Providers" data-linktype="external">AspNet.Security.OAuth.Providers</a></td>
+<td>A collection of security middleware for ASP.NET Core apps to support social authentication.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/aspnet-contrib/AspNet.Security.OpenId.Providers" data-linktype="external">AspNet.Security.OpenId.Providers</a></td>
+<td>A collection of security middleware for ASP.NET Core apps to support OpenID 2.0 authentication providers like <a href="https://steampowered.com/" data-linktype="external">Steam</a>.</td>
+</tr>
+</tbody></table>
+<h2><a href="#other-oss-authentication-providers" aria-hidden="true" class="anchor" id="other-oss-authentication-providers"></a>Other OSS authentication providers</h2>
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://gluu.org/" data-linktype="external">Gluu Server</a></td>
+<td>Enterprise ready, open source software for identity, access management (IAM), and single sign-on (SSO). For more information, see the <a href="https://gluu.org/docs/" data-linktype="external">Gluu Product Documentation</a>.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/keycloak/keycloak/" data-linktype="external">Keycloak</a></td>
+<td>Open Source Identity and Access Management For Modern Applications and Services.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/panva/node-oidc-provider" data-linktype="external">node-oidc-provider</a></td>
+<td>OpenID Certified™ OAuth 2.0 Authorization Server implementation for Node.js.</td>
+</tr>
+<tr>
+<td><a href="https://goauthentik.io" data-linktype="external">Authentik</a></td>
+<td>Authentik is an open-source Identity Provider focused on flexibility and versatility.</td>
+</tr>
+</tbody></table>
+<p>To add a provider, edit this page.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/community?view=aspnetcore-8.0">Community OSS authentication options for ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

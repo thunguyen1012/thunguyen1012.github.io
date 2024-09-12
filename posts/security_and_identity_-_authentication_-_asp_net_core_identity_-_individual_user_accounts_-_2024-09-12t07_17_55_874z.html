@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - Individual user accounts | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='ASP.NET Core Identity is included in project templates in Visual Studio with the "Individual User Accounts" option.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - Individual user accounts</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>ASP.NET Core Identity is included in project templates in Visual Studio with the &quot;Individual User Accounts&quot; option.</p>
+<p>The authentication templates are available in .NET CLI with <code>-au Individual</code>:</p>
+<pre><code class="language-dotnetcli">dotnet new mvc -au Individual
+dotnet new webapp -au Individual
+</code></pre>
+<p>See this GitHub issue for web API authentication.</p>
+<h2><a href="#no-authentication" aria-hidden="true" class="anchor" id="no-authentication"></a>No Authentication</h2>
+<p>Authentication is specified in the .NET CLI with the <code>-au</code> option. In Visual Studio, the Change Authentication dialog is available for new web applications. The default for new web apps in Visual Studio is No Authentication.</p>
+<p>Projects created with no authentication:</p>
+<ul>
+<li>
+<p>Don't contain web pages and UI to sign in and sign out.</p>
+</li>
+<li>
+<p>Don't contain authentication code.</p>
+</li>
+</ul>
+<h2><a href="#windows-authentication" aria-hidden="true" class="anchor" id="windows-authentication"></a>Windows Authentication</h2>
+<p>Windows Authentication is specified for new web apps in the .NET CLI with the <code>-au Windows</code> option. In Visual Studio, the Change Authentication dialog provides the Windows Authentication options.</p>
+<p>If Windows Authentication is selected, the app is configured to use the Windows Authentication IIS module. Windows Authentication is intended for Intranet web sites.</p>
+<h2><a href="#dotnet-new-webapp-authentication-options" aria-hidden="true" class="anchor" id="dotnet-new-webapp-authentication-options"></a>dotnet new webapp authentication options</h2>
+<p>The following table shows the authentication options available for new web apps:</p>
+<table><thead>
+<tr>
+<th>Option</th>
+<th>Type of authentication</th>
+<th>Link for more information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>None</td>
+<td>No authentication.</td>
+<td></td>
+</tr>
+<tr>
+<td>Individual</td>
+<td>Individual authentication.</td>
+<td><a href="identity?view=aspnetcore-8.0" data-linktype="relative-path">Introduction to Identity on ASP.NET Core</a></td>
+</tr>
+<tr>
+<td>IndividualB2C</td>
+<td>Cloud-hosted individual authentication with Azure AD B2C.</td>
+<td><a href="/en-us/azure/active-directory-b2c/" data-linktype="absolute-path">Azure AD B2C</a></td>
+</tr>
+<tr>
+<td>SingleOrg</td>
+<td>Organizational authentication for a single tenant. Entra External ID tenants also use SingleOrg.</td>
+<td><a href="/en-us/azure/active-directory/develop/quickstart-v2-aspnet-core-webapp" data-linktype="absolute-path">Entra ID</a></td>
+</tr>
+<tr>
+<td>MultiOrg</td>
+<td>Organizational authentication for multiple tenants.</td>
+<td><a href="/en-us/azure/active-directory/develop/quickstart-v2-aspnet-core-webapp" data-linktype="absolute-path">Entra ID</a></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>Windows authentication.</td>
+<td><a href="windowsauth?view=aspnetcore-8.0" data-linktype="relative-path">Windows Authentication</a></td>
+</tr>
+</tbody></table>
+<h2><a href="#visual-studio-new-webapp-authentication-options" aria-hidden="true" class="anchor" id="visual-studio-new-webapp-authentication-options"></a>Visual Studio new webapp authentication options</h2>
+<p>The following table shows the authentication options available when creating a new web app with Visual Studio:</p>
+<table><thead>
+<tr>
+<th>Option</th>
+<th>Type of authentication</th>
+<th>Link for more information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>None</td>
+<td>No authentication</td>
+<td></td>
+</tr>
+<tr>
+<td>Individual User Accounts / Store user accounts in-app</td>
+<td>Individual authentication</td>
+<td><a href="identity?view=aspnetcore-8.0" data-linktype="relative-path">Introduction to Identity on ASP.NET Core</a></td>
+</tr>
+<tr>
+<td>Individual User Accounts / Connect to an existing user store in the cloud</td>
+<td>Cloud-hosted individual authentication with Azure AD B2C</td>
+<td><a href="/en-us/azure/active-directory-b2c/" data-linktype="absolute-path">Azure AD B2C</a></td>
+</tr>
+<tr>
+<td>Work or School Cloud / Single Org</td>
+<td>Organizational authentication for a single tenant</td>
+<td><a href="/en-us/azure/active-directory/develop/quickstart-v2-aspnet-core-webapp" data-linktype="absolute-path">Azure AD</a></td>
+</tr>
+<tr>
+<td>Work or School Cloud / Multiple Org</td>
+<td>Organizational authentication for multiple tenants</td>
+<td><a href="/en-us/azure/active-directory/develop/quickstart-v2-aspnet-core-webapp" data-linktype="absolute-path">Azure AD</a></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>Windows authentication</td>
+<td><a href="windowsauth?view=aspnetcore-8.0" data-linktype="relative-path">Windows Authentication</a></td>
+</tr>
+</tbody></table>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<p>The following articles show how to use the code generated in ASP.NET Core templates that use individual user accounts:</p>
+<ul>
+<li>
+<p>Account confirmation and password recovery in ASP.NET Core</p>
+</li>
+<li>
+<p>Create an ASP.NET Core app with user data protected by authorization</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/individual?view=aspnetcore-8.0">Articles based on ASP.NET Core projects created with individual user accounts</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
