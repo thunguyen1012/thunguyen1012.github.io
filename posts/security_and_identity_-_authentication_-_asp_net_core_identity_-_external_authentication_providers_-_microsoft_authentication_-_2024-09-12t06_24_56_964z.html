@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Microsoft authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Microsoft authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#create-the-app-in-microsoft-developer-portal" aria-hidden="true" class="anchor" id="create-the-app-in-microsoft-developer-portal"></a>Create the app in Microsoft Developer Portal</h2>
+<ul>
+<li>
+<p>Add the Microsoft.AspNetCore.Authentication.MicrosoftAccount NuGet package to the project.</p>
+</li>
+<li>
+<p>Navigate to the Azure portal - App registrations page and create or sign into a Microsoft account:</p>
+</li>
+<li>
+<p>Select New registration</p>
+</li>
+<li>
+<p>Enter a Name.</p>
+</li>
+<li>
+<p>Select an option for Supported account types.</p>
+<ul>
+<li>
+<p>The <code>MicrosoftAccount</code> package supports App Registrations created using &quot;Accounts in any organizational directory&quot; or &quot;Accounts in any organizational directory and Microsoft accounts&quot; options by default.</p>
+</li>
+<li>
+<p>To use other options, set <code>AuthorizationEndpoint</code> and <code>TokenEndpoint</code> members of <code>MicrosoftAccountOptions</code> used to initialize the Microsoft Account authentication to the URLs displayed on Endpoints page of the App Registration after it is created (available by clicking Endpoints on the Overview page).</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Under Redirect URI, enter your development URL with <code>/signin-microsoft</code> appended. For example, <code>https://localhost:5001/signin-microsoft</code>. The Microsoft authentication scheme configured later in this sample will automatically handle requests at <code>/signin-microsoft</code> route to implement the OAuth flow.</p>
+</li>
+<li>
+<p>Select Register</p>
+</li>
+</ul>
+<h3><a href="#create-client-secret" aria-hidden="true" class="anchor" id="create-client-secret"></a>Create client secret</h3>
+<ul>
+<li>
+<p>In the left pane, select Certificates &amp; secrets.</p>
+</li>
+<li>
+<p>Under Client secrets, select New client secret</p>
+<ul>
+<li>
+<p>Add a description for the client secret.</p>
+</li>
+<li>
+<p>Select the Add button.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Under Client secrets, copy the value of the client secret.</p>
+</li>
+</ul>
+<h2><a href="#store-the-microsoft-client-id-and-secret" aria-hidden="true" class="anchor" id="store-the-microsoft-client-id-and-secret"></a>Store the Microsoft client ID and secret</h2>
+<ul>
+<li>
+<p>Initialize the project for secret storage per the instructions at Enable secret storage.</p>
+</li>
+<li>
+<p>Store the sensitive settings in the local secret store with the secret keys <code>Authentication:Microsoft:ClientId</code> and <code>Authentication:Microsoft:ClientSecret</code>:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet user-secrets set &quot;Authentication:Microsoft:ClientId&quot; &quot;&lt;client-id&gt;&quot;
+dotnet user-secrets set &quot;Authentication:Microsoft:ClientSecret&quot; &quot;&lt;client-secret&gt;&quot;
+</code></pre>
+<ul>
+<li>
+<p>Supported by all platforms.</p>
+</li>
+<li>
+<p>Automatically replaced by a colon, :.</p>
+</li>
+</ul>
+<h2><a href="#configure-microsoft-account-authentication" aria-hidden="true" class="anchor" id="configure-microsoft-account-authentication"></a>Configure Microsoft Account Authentication</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+var configuration = builder.Configuration;
+
+services.AddAuthentication().AddMicrosoftAccount(microsoftOptions =&gt;
+    {
+        microsoftOptions.ClientId = configuration[&quot;Authentication:Microsoft:ClientId&quot;];
+        microsoftOptions.ClientSecret = configuration[&quot;Authentication:Microsoft:ClientSecret&quot;];
+    });
+</code></pre>
+<h2><a href="#sign-in-with-microsoft-account" aria-hidden="true" class="anchor" id="sign-in-with-microsoft-account"></a>Sign in with Microsoft Account</h2>
+<ul>
+<li>
+<p>Run the app and select Log in. An option to sign in with Microsoft appears.</p>
+</li>
+<li>
+<p>Select to sign in with Microsoft. You are redirected to Microsoft for authentication. After signing in with your Microsoft Account, you will be prompted to let the app access your info:</p>
+</li>
+<li>
+<p>Select Yes. You are redirected back to the web site where you can set your email.</p>
+</li>
+</ul>
+<h2><a href="#multiple-authentication-providers" aria-hidden="true" class="anchor" id="multiple-authentication-providers"></a>Multiple authentication providers</h2>
+<pre><code class="language-csharp">services.AddAuthentication()
+    .AddMicrosoftAccount(microsoftOptions =&gt; { ... })
+    .AddGoogle(googleOptions =&gt; { ... })
+    .AddTwitter(twitterOptions =&gt; { ... })
+    .AddFacebook(facebookOptions =&gt; { ... });
+</code></pre>
+<h2><a href="#forward-request-information-with-a-proxy-or-load-balancer" aria-hidden="true" class="anchor" id="forward-request-information-with-a-proxy-or-load-balancer"></a>Forward request information with a proxy or load balancer</h2>
+<h2><a href="#troubleshooting" aria-hidden="true" class="anchor" id="troubleshooting"></a>Troubleshooting</h2>
+<ul>
+<li>
+<p>If the Microsoft Account provider redirects you to a sign in error page, note the error title and description query string parameters directly following the # (hashtag) in the Uri.
+Although the error message seems to indicate a problem with Microsoft authentication, the most common cause is your application Uri not matching any of the Redirect URIs specified for the Web platform.</p>
+</li>
+<li>
+<p>If Identity isn't configured by calling <code>services.AddIdentity</code> in <code>ConfigureServices</code>, attempting to authenticate will result in ArgumentException: The 'SignInScheme' option must be provided. The project template used in this sample ensures that this is done.</p>
+</li>
+<li>
+<p>If the site database has not been created by applying the initial migration, you will get A database operation failed while processing the request error. Tap Apply Migrations to create the database and refresh to continue past the error.</p>
+</li>
+</ul>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>This article showed how you can authenticate with Microsoft. You can follow a similar approach to authenticate with other providers listed on the previous page.</p>
+</li>
+<li>
+<p>Once you publish your web site to Azure web app, create a new client secrets in the Microsoft Developer Portal.</p>
+</li>
+<li>
+<p>Set the <code>Authentication:Microsoft:ClientId</code> and <code>Authentication:Microsoft:ClientSecret</code> as application settings in the Azure portal. The configuration system is set up to read keys from environment variables.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/microsoft-logins?view=aspnetcore-8.0">Microsoft Account external login setup with ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Authenticating a user.</p>
+</li>
+<li>
+<p>Responding when an unauthenticated user tries to access a restricted resource.</p>
+</li>
+<li>
+<p>By calling a scheme-specific extension method after a call to <code>AddAuthentication</code>, such as AddJwtBearer or <code>AddCookie</code>. These extension methods use <code>AuthenticationBuilder.AddScheme</code> to register schemes with appropriate settings.</p>
+</li>
+<li>
+<p>Less commonly, by calling <code>AuthenticationBuilder.AddScheme</code> directly.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,
+        options =&gt; builder.Configuration.Bind(&quot;JwtSettings&quot;, options))
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme,
+        options =&gt; builder.Configuration.Bind(&quot;CookieSettings&quot;, options));
+</code></pre>
+<h2><a href="#authentication-concepts" aria-hidden="true" class="anchor" id="authentication-concepts"></a>Authentication concepts</h2>
+<ul>
+<li>
+<p>Authentication scheme</p>
+</li>
+<li>
+<p>The default authentication scheme, discussed in the next two sections.</p>
+</li>
+<li>
+<p>Directly set HttpContext.User.</p>
+</li>
+</ul>
+<h3><a href="#defaultscheme" aria-hidden="true" class="anchor" id="defaultscheme"></a><code>DefaultScheme</code></h3>
+<ul>
+<li>
+<p>Is automatically used as the <code>DefaultScheme</code>.</p>
+</li>
+<li>
+<p>Eliminates the need to specify the <code>DefaultScheme</code> in <code>AddAuthentication(IServiceCollection) or AddAuthenticationCore(IServiceCollection)</code>.</p>
+</li>
+</ul>
+<h3><a href="#authentication-scheme" aria-hidden="true" class="anchor" id="authentication-scheme"></a>Authentication scheme</h3>
+<ul>
+<li>
+<p>An authentication handler.</p>
+</li>
+<li>
+<p>Options for configuring that specific instance of the handler.</p>
+</li>
+<li>
+<p>Specify different default schemes to use for authenticate, challenge, and forbid actions.</p>
+</li>
+<li>
+<p>Combine multiple schemes into one using policy schemes.</p>
+</li>
+</ul>
+<h3><a href="#authentication-handler" aria-hidden="true" class="anchor" id="authentication-handler"></a>Authentication handler</h3>
+<ul>
+<li>
+<p>Is a type that implements the behavior of a scheme.</p>
+</li>
+<li>
+<p>Is derived from <code>IAuthenticationHandler</code> or <code>AuthenticationHandler&lt;TOptions&gt;</code>.</p>
+</li>
+<li>
+<p>Has the primary responsibility to authenticate users.</p>
+</li>
+<li>
+<p>Construct AuthenticationTicket objects representing the user's identity if authentication is successful.</p>
+</li>
+<li>
+<p>Return 'no result' or 'failure' if authentication is unsuccessful.</p>
+</li>
+<li>
+<p>Have methods for challenge and forbid actions for when users attempt to access resources:</p>
+<ul>
+<li>
+<p>They're unauthorized to access (forbid).</p>
+</li>
+<li>
+<p>When they're unauthenticated (challenge).</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#remoteauthenticationhandlertoptions>-vs-authenticationhandler<toptions>" aria-hidden="true" class="anchor" id="remoteauthenticationhandlertoptions>-vs-authenticationhandler<toptions>"></a><code>RemoteAuthenticationHandler&lt;TOptions&gt;</code> vs <code>AuthenticationHandler&lt;TOptions&gt;</code></h3>
+<ul>
+<li>
+<p>Is the authentication provider.</p>
+</li>
+<li>
+<p>Examples include Facebook, Twitter, Google, Microsoft, and any other OIDC provider that handles authenticating users using the handlers mechanism.</p>
+</li>
+</ul>
+<h3><a href="#authenticate" aria-hidden="true" class="anchor" id="authenticate"></a>Authenticate</h3>
+<ul>
+<li>
+<p>A cookie authentication scheme constructing the user's identity from cookies.</p>
+</li>
+<li>
+<p>A JWT bearer scheme deserializing and validating a JWT bearer token to construct the user's identity.</p>
+</li>
+</ul>
+<h3><a href="#challenge" aria-hidden="true" class="anchor" id="challenge"></a>Challenge</h3>
+<ul>
+<li>
+<p>A cookie authentication scheme redirecting the user to a login page.</p>
+</li>
+<li>
+<p>A JWT bearer scheme returning a 401 result with a <code>www-authenticate: bearer</code> header.</p>
+</li>
+</ul>
+<h3><a href="#forbid" aria-hidden="true" class="anchor" id="forbid"></a>Forbid</h3>
+<ul>
+<li>
+<p>A cookie authentication scheme redirecting the user to a page indicating access was forbidden.</p>
+</li>
+<li>
+<p>A JWT bearer scheme returning a 403 result.</p>
+</li>
+<li>
+<p>A custom authentication scheme redirecting to a page where the user can request access to the resource.</p>
+</li>
+<li>
+<p>They're authenticated.</p>
+</li>
+<li>
+<p>They're not permitted to access the requested resource.</p>
+</li>
+<li>
+<p>Challenge and forbid with an operational resource handler.</p>
+</li>
+<li>
+<p>Differences between challenge and forbid.</p>
+</li>
+</ul>
+<h2><a href="#authentication-providers-per-tenant" aria-hidden="true" class="anchor" id="authentication-providers-per-tenant"></a>Authentication providers per tenant</h2>
+<ul>
+<li>
+<p>An open-source, modular, and multi-tenant app framework built with ASP.NET Core.</p>
+</li>
+<li>
+<p>A content management system (CMS) built on top of that app framework.</p>
+</li>
+<li>
+<p>Open source</p>
+</li>
+<li>
+<p>Provides tenant resolution</p>
+</li>
+<li>
+<p>Lightweight</p>
+</li>
+<li>
+<p>Provides data isolation</p>
+</li>
+<li>
+<p>Configure app behavior uniquely for each tenant</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Authorize with a specific scheme in ASP.NET Core</p>
+</li>
+<li>
+<p>Policy schemes in ASP.NET Core</p>
+</li>
+<li>
+<p>Create an ASP.NET Core app with user data protected by authorization</p>
+</li>
+<li>
+<p>Globally require authenticated users</p>
+</li>
+<li>
+<p>GitHub issue on using multiple authentication schemes</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/?view=aspnetcore-8.0">Overview of ASP.NET Core authentication</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Twitter authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Twitter authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This sample shows how to enable users to sign in with their Twitter account using a sample ASP.NET Core project created on the previous page.</p>
+<blockquote>
+<p class='note'>Note
+The Microsoft.AspNetCore.Authentication.Twitter package described below uses the OAuth 1.0 APIs provided by Twitter. Twitter has since added OAuth 2.0 APIs with a different set of functionality. The OpenIddict and AspNet.Security.OAuth.Twitter packages are community implementations that use the new OAuth 2.0 APIs.</p>
+</blockquote>
+<h2><a href="#create-the-app-in-twitter" aria-hidden="true" class="anchor" id="create-the-app-in-twitter"></a>Create the app in Twitter</h2>
+<ul>
+<li>
+<p>Add the Microsoft.AspNetCore.Authentication.Twitter NuGet package to the project.</p>
+</li>
+<li>
+<p>Navigate to twitter developer portal Dashboard and sign in. If you don't already have a Twitter account, use the Sign up now link to create one.</p>
+</li>
+<li>
+<p>If you don't have a project, create one.</p>
+</li>
+<li>
+<p>Select + Add app. Fill out the App name then record the generated API Key, API Key Secret and Bearer Token. These will be needed
+later.</p>
+</li>
+<li>
+<p>In the App Settings page, select Edit in the Authentication settings section, then:</p>
+</li>
+</ul>
+<p class='note'>Note
+Microsoft.AspNetCore.Identity requires users to have an email address by default. For Callback URLs during development, use <code>https://localhost:{PORT}/signin-twitter</code>, where the {PORT} placeholder is the app's port.</p>
+<p class='note'>Note
+The URI segment <code>/signin-twitter</code> is set as the default callback of the Twitter authentication provider. You can change the default callback URI while configuring the Twitter authentication middleware via the inherited RemoteAuthenticationOptions.CallbackPath property of the TwitterOptions class.</p>
+<ul>
+<li>
+<p>Enable 3-legged OAuth</p>
+</li>
+<li>
+<p>Request email address from users</p>
+</li>
+<li>
+<p>Fill out the required fields and select Save</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Microsoft.AspNetCore.Identity requires users to have an email address by default. For Callback URLs during development, use <code>https://localhost:{PORT}/signin-twitter</code>, where the {PORT} placeholder is the app's port.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+The URI segment <code>/signin-twitter</code> is set as the default callback of the Twitter authentication provider. You can change the default callback URI while configuring the Twitter authentication middleware via the inherited RemoteAuthenticationOptions.CallbackPath property of the TwitterOptions class.</p>
+</blockquote>
+<h2><a href="#store-the-twitter-consumer-api-key-and-secret" aria-hidden="true" class="anchor" id="store-the-twitter-consumer-api-key-and-secret"></a>Store the Twitter consumer API key and secret</h2>
+<p>Store sensitive settings such as the Twitter consumer API key and secret with Secret Manager. For this sample, use the following steps:</p>
+<ul>
+<li>
+<p>Initialize the project for secret storage per the instructions at Enable secret storage.</p>
+</li>
+<li>
+<p>Store the sensitive settings in the local secret store with the secrets keys <code>Authentication:Twitter:ConsumerKey</code> and <code>Authentication:Twitter:ConsumerSecret</code>:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet user-secrets set &quot;Authentication:Twitter:ConsumerAPIKey&quot; &quot;&lt;consumer-api-key&gt;&quot;
+dotnet user-secrets set &quot;Authentication:Twitter:ConsumerSecret&quot; &quot;&lt;consumer-secret&gt;&quot;
+</code></pre>
+<p>The : separator doesn't work with environment variable hierarchical keys on all platforms. For example, the : separator is not supported by Bash. The double underscore, <code>__</code>, is:</p>
+<ul>
+<li>
+<p>Supported by all platforms.</p>
+</li>
+<li>
+<p>Automatically replaced by a colon, :.</p>
+</li>
+</ul>
+<p>These tokens can be found on the Keys and Access Tokens tab after creating a new Twitter application:</p>
+<h2><a href="#configure-twitter-authentication" aria-hidden="true" class="anchor" id="configure-twitter-authentication"></a>Configure Twitter Authentication</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+var configuration = builder.Configuration;
+
+services.AddAuthentication().AddTwitter(twitterOptions =&gt;
+    {
+        twitterOptions.ConsumerKey = configuration[&quot;Authentication:Twitter:ConsumerAPIKey&quot;];
+        twitterOptions.ConsumerSecret = configuration[&quot;Authentication:Twitter:ConsumerSecret&quot;];
+    });
+</code></pre>
+<p>The <code>AddAuthentication(IServiceCollection, String)</code> overload sets the DefaultScheme property. The <code>AddAuthentication(IServiceCollection, Action&lt;AuthenticationOptions&gt;)</code> overload allows configuring authentication options, which can be used to set up default authentication schemes for different purposes. Subsequent calls to <code>AddAuthentication</code> override previously configured AuthenticationOptions properties.</p>
+<p>TheBuilder extension methods that register an authentication handler may only be called once per authentication scheme.</p>
+<h2><a href="#multiple-authentication-providers" aria-hidden="true" class="anchor" id="multiple-authentication-providers"></a>Multiple authentication providers</h2>
+<p>When the app requires multiple providers, chain the provider extension methods behind <code>AddAuthentication</code>:</p>
+<pre><code class="language-csharp">services.AddAuthentication()
+    .AddMicrosoftAccount(microsoftOptions =&gt; { ... })
+    .AddGoogle(googleOptions =&gt; { ... })
+    .AddTwitter(twitterOptions =&gt; { ... })
+    .AddFacebook(facebookOptions =&gt; { ... });
+</code></pre>
+<p>For more information on configuration options supported by Twitter authentication, see the TwitterOptions API reference. This can be used to request different information about the user.</p>
+<h2><a href="#sign-in-with-twitter" aria-hidden="true" class="anchor" id="sign-in-with-twitter"></a>Sign in with Twitter</h2>
+<p>Run the app and select Log in. An option to sign in with Twitter appears:</p>
+<p>Selecting Twitter redirects to Twitter for authentication:</p>
+<p>After entering your Twitter credentials, you are redirected back to the web site where you can set your email.</p>
+<p>You are now logged in using your Twitter credentials:</p>
+<h2><a href="#forward-request-information-with-a-proxy-or-load-balancer" aria-hidden="true" class="anchor" id="forward-request-information-with-a-proxy-or-load-balancer"></a>Forward request information with a proxy or load balancer</h2>
+<p>If the app is deployed behind a proxy server or load balancer, some of the original request information might be forwarded to the app in request headers. This information usually includes the secure request scheme (https), host, and client IP address. Apps don't automatically read these request headers to discover and use the original request information.</p>
+<p>The scheme is used in link generation that affects the authentication flow with external providers. Losing the secure scheme (https) results in the app generating incorrect insecure redirect URLs.</p>
+<p>Use Forwarded Headers Middleware to make the original request information available to the app for request processing.</p>
+<p>For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.</p>
+<h2><a href="#troubleshooting" aria-hidden="true" class="anchor" id="troubleshooting"></a>Troubleshooting</h2>
+<ul>
+<li>
+<p>ASP.NET Core 2.x only: If Identity isn't configured by calling <code>services.AddIdentity</code> in <code>ConfigureServices</code>, attempting to authenticate will result in ArgumentException: The 'SignInScheme' option must be provided. The project template used in this sample ensures Identity is configured.</p>
+</li>
+<li>
+<p>If the site database has not been created by applying the initial migration, you will get A database operation failed while processing the request error. Tap Apply Migrations to create the database and refresh to continue past the error.</p>
+</li>
+</ul>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>This article showed how you can authenticate with Twitter. You can follow a similar approach to authenticate with other providers listed on the previous page.</p>
+</li>
+<li>
+<p>Once you publish your web site to Azure web app, you should reset the <code>ConsumerSecret</code> in the Twitter developer portal.</p>
+</li>
+<li>
+<p>Set the <code>Authentication:Twitter:ConsumerKey</code> and <code>Authentication:Twitter:ConsumerSecret</code> as application settings in the Azure portal. The configuration system is set up to read keys from environment variables.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/twitter-logins?view=aspnetcore-8.0">Twitter external sign-in setup with ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Google authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Google authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This tutorial shows you how to enable users to sign in with their Google account using the ASP.NET Core project created on the previous page.</p>
+<h2><a href="#create-the-google-oauth-20-client-id-and-secret" aria-hidden="true" class="anchor" id="create-the-google-oauth-20-client-id-and-secret"></a>Create the Google OAuth 2.0 Client ID and secret</h2>
+<ul>
+<li>
+<p>Follow the guidance in Integrating Google Sign-In into your web app (Google documentation).</p>
+</li>
+<li>
+<p>Go to Google API &amp; Services.</p>
+</li>
+<li>
+<p>A Project must exist first, you may have to create one. Once a project is selected, enter the Dashboard.</p>
+</li>
+<li>
+<p>In the Oauth consent screen of the Dashboard:</p>
+<ul>
+<li>
+<p>Select User Type - External and CREATE.</p>
+</li>
+<li>
+<p>In the App information dialog, Provide an app name for the app, user support email, and developer contact information.</p>
+</li>
+<li>
+<p>Step through the Scopes step.</p>
+</li>
+<li>
+<p>Step through the Test users step.</p>
+</li>
+<li>
+<p>Review the OAuth consent screen and go back to the app Dashboard.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>In the Credentials tab of the application Dashboard, select CREATE CREDENTIALS &gt; OAuth client ID.</p>
+</li>
+<li>
+<p>Select Application type &gt; Web application, choose a name.</p>
+</li>
+<li>
+<p>In the Authorized redirect URIs section, select ADD URI to set the redirect URI. Example redirect URI: <code>https://localhost:{PORT}/signin-google</code>, where the {PORT} placeholder is the app's port.</p>
+</li>
+<li>
+<p>Select the CREATE button.</p>
+</li>
+<li>
+<p>Save the Client ID and Client Secret for use in the app's configuration.</p>
+</li>
+<li>
+<p>When deploying the site, either:</p>
+<ul>
+<li>
+<p>Update the app's redirect URI in the Google Console to the app's deployed redirect URI.</p>
+</li>
+<li>
+<p>Create a new Google API registration in the Google Console for the production app with its production redirect URI.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#store-the-google-client-id-and-secret" aria-hidden="true" class="anchor" id="store-the-google-client-id-and-secret"></a>Store the Google client ID and secret</h2>
+<p>Store sensitive settings such as the Google client ID and secret values with Secret Manager. For this sample, use the following steps:</p>
+<ul>
+<li>
+<p>Initialize the project for secret storage per the instructions at Enable secret storage.</p>
+</li>
+<li>
+<p>Store the sensitive settings in the local secret store with the secret keys <code>Authentication:Google:ClientId</code> and <code>Authentication:Google:ClientSecret</code>:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet user-secrets set &quot;Authentication:Google:ClientId&quot; &quot;&lt;client-id&gt;&quot;
+dotnet user-secrets set &quot;Authentication:Google:ClientSecret&quot; &quot;&lt;client-secret&gt;&quot;
+</code></pre>
+<p>The : separator doesn't work with environment variable hierarchical keys on all platforms. For example, the : separator is not supported by Bash. The double underscore, <code>__</code>, is:</p>
+<ul>
+<li>
+<p>Supported by all platforms.</p>
+</li>
+<li>
+<p>Automatically replaced by a colon, :.</p>
+</li>
+</ul>
+<p>You can manage your API credentials and usage in the API Console.</p>
+<h2><a href="#configure-google-authentication" aria-hidden="true" class="anchor" id="configure-google-authentication"></a>Configure Google authentication</h2>
+<p>Add the <code>Microsoft.AspNetCore.Authentication.Google</code> NuGet package to the app.</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+var configuration = builder.Configuration;
+
+services.AddAuthentication().AddGoogle(googleOptions =&gt;
+    {
+        googleOptions.ClientId = configuration[&quot;Authentication:Google:ClientId&quot;];
+        googleOptions.ClientSecret = configuration[&quot;Authentication:Google:ClientSecret&quot;];
+    });
+</code></pre>
+<p>The call to AddIdentity configures the default scheme settings. The <code>AddAuthentication(IServiceCollection, String)</code> overload sets the DefaultScheme property. The <code>AddAuthentication(IServiceCollection, Action&lt;AuthenticationOptions&gt;)</code> overload allows configuring authentication options, which can be used to set up default authentication schemes for different purposes. Subsequent calls to <code>AddAuthentication</code> override previously configured AuthenticationOptions properties.</p>
+<p>TheBuilder extension methods that register an authentication handler may only be called once per authentication scheme.</p>
+<h2><a href="#sign-in-with-google" aria-hidden="true" class="anchor" id="sign-in-with-google"></a>Sign in with Google</h2>
+<ul>
+<li>
+<p>Run the app and select Log in. An option to sign in with Google appears.</p>
+</li>
+<li>
+<p>Select the Google button, which redirects to Google for authentication.</p>
+</li>
+<li>
+<p>After entering your Google credentials, you are redirected back to the web site.</p>
+</li>
+</ul>
+<h2><a href="#forward-request-information-with-a-proxy-or-load-balancer" aria-hidden="true" class="anchor" id="forward-request-information-with-a-proxy-or-load-balancer"></a>Forward request information with a proxy or load balancer</h2>
+<p>If the app is deployed behind a proxy server or load balancer, some of the original request information might be forwarded to the app in request headers. This information usually includes the secure request scheme (https), host, and client IP address. Apps don't automatically read these request headers to discover and use the original request information.</p>
+<p>The scheme is used in link generation that affects the authentication flow with external providers. Losing the secure scheme (https) results in the app generating incorrect insecure redirect URLs.</p>
+<p>Use Forwarded Headers Middleware to make the original request information available to the app for request processing.</p>
+<p>For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.</p>
+<h2><a href="#multiple-authentication-providers" aria-hidden="true" class="anchor" id="multiple-authentication-providers"></a>Multiple authentication providers</h2>
+<p>When the app requires multiple providers, chain the provider extension methods behind <code>AddAuthentication</code>:</p>
+<pre><code class="language-csharp">services.AddAuthentication()
+    .AddMicrosoftAccount(microsoftOptions =&gt; { ... })
+    .AddGoogle(googleOptions =&gt; { ... })
+    .AddTwitter(twitterOptions =&gt; { ... })
+    .AddFacebook(facebookOptions =&gt; { ... });
+</code></pre>
+<p>For more information on configuration options supported by Google authentication, see the GoogleOptions API reference . This can be used to request different information about the user.</p>
+<h2><a href="#change-the-default-callback-uri" aria-hidden="true" class="anchor" id="change-the-default-callback-uri"></a>Change the default callback URI</h2>
+<p>The URI segment <code>/signin-google</code> is set as the default callback of the Google authentication provider. You can change the default callback URI while configuring the Google authentication middleware via the inherited RemoteAuthenticationOptions.CallbackPath property of the GoogleOptions class.</p>
+<h2><a href="#troubleshooting" aria-hidden="true" class="anchor" id="troubleshooting"></a>Troubleshooting</h2>
+<ul>
+<li>
+<p>If the sign-in doesn't work and you aren't getting any errors, switch to development mode to make the issue easier to debug.</p>
+</li>
+<li>
+<p>If Identity isn't configured by calling <code>services.AddIdentity</code> in <code>ConfigureServices</code>, attempting to authenticate results in ArgumentException: The 'SignInScheme' option must be provided. The project template used in this tutorial ensures Identity is configured.</p>
+</li>
+<li>
+<p>If the site database has not been created by applying the initial migration, you get A database operation failed while processing the request error. Select Apply Migrations to create the database, and refresh the page to continue past the error.</p>
+</li>
+<li>
+<p>HTTP 500 error after successfully authenticating the request by the OAuth 2.0 provider such as Google: See this GitHub issue.</p>
+</li>
+<li>
+<p>How to implement external authentication with Google for React and other SPA apps: See this GitHub issue.</p>
+</li>
+</ul>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>This article showed how you can authenticate with Google. You can follow a similar approach to authenticate with other providers listed on the previous page.</p>
+</li>
+<li>
+<p>Once you publish the app to Azure, reset the <code>ClientSecret</code> in the Google API Console.</p>
+</li>
+<li>
+<p>Set the <code>Authentication:Google:ClientId</code> and <code>Authentication:Google:ClientSecret</code> as application settings in the Azure portal. The configuration system is set up to read keys from environment variables.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/google-logins?view=aspnetcore-8.0">Google external login setup in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

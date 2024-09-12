@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - Identity with SPA | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - Identity with SPA</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<ul>
+<li>
+<p>Isn't already configured for authentication.</p>
+</li>
+<li>
+<p>Targets <code>net8.0</code> or later.</p>
+</li>
+<li>
+<p>Can be either minimal API or controller-based API.</p>
+</li>
+</ul>
+<h2><a href="#install-nuget-packages" aria-hidden="true" class="anchor" id="install-nuget-packages"></a>Install NuGet packages</h2>
+<ul>
+<li>
+<p><code>Microsoft.AspNetCore.Identity.EntityFrameworkCore</code> - Enables Identity to work with Entity Framework Core (EF Core).</p>
+</li>
+<li>
+<p>One that enables EF Core to work with a database, such as one of the following packages:</p>
+<ul>
+<li>
+<p><code>Microsoft.EntityFrameworkCore.SqlServer</code> or</p>
+</li>
+<li>
+<p><code>Microsoft.EntityFrameworkCore.Sqlite</code> or</p>
+</li>
+<li>
+<p><code>Microsoft.EntityFrameworkCore.InMemory</code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#create-an-identitydbcontext" aria-hidden="true" class="anchor" id="create-an-identitydbcontext"></a>Create an <code>IdentityDbContext</code></h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+public class ApplicationDbContext : IdentityDbContext&lt;IdentityUser&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options) :
+        base(options)
+    { }
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+</code></pre>
+<h2><a href="#configure-the-ef-core-context" aria-hidden="true" class="anchor" id="configure-the-ef-core-context"></a>Configure the EF Core context</h2>
+<pre><code class="language-csharp">builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(
+    options =&gt; options.UseInMemoryDatabase(&quot;AppDb&quot;));
+</code></pre>
+<h2><a href="#add-identity-services-to-the-container" aria-hidden="true" class="anchor" id="add-identity-services-to-the-container"></a>Add Identity services to the container</h2>
+<pre><code class="language-csharp">builder.Services.AddAuthorization();
+</code></pre>
+<h2><a href="#activate-identity-apis" aria-hidden="true" class="anchor" id="activate-identity-apis"></a>Activate Identity APIs</h2>
+<pre><code class="language-csharp">builder.Services.AddIdentityApiEndpoints&lt;IdentityUser&gt;()
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+</code></pre>
+<h2><a href="#map-identity-routes" aria-hidden="true" class="anchor" id="map-identity-routes"></a>Map Identity routes</h2>
+<pre><code class="language-csharp">app.MapIdentityApi&lt;IdentityUser&gt;();
+</code></pre>
+<h2><a href="#secure-selected-endpoints" aria-hidden="true" class="anchor" id="secure-selected-endpoints"></a>Secure selected endpoints</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/weatherforecast&quot;, (HttpContext httpContext) =&gt;
+{
+    var forecast = Enumerable.Range(1, 5).Select(index =&gt;
+        new WeatherForecast
+        {
+            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = summaries[Random.Shared.Next(summaries.Length)]
+        })
+        .ToArray();
+    return forecast;
+})
+.WithName(&quot;GetWeatherForecast&quot;)
+.WithOpenApi()
+.RequireAuthorization();
+</code></pre>
+<ul>
+<li>Secure Swagger UI endpoints, as shown in the following example:</li>
+</ul>
+<pre><code class="language-csharp">app.MapSwagger().RequireAuthorization();
+</code></pre>
+<ul>
+<li>Secure with a specific claim or permission, as shown in the following example:</li>
+</ul>
+<pre><code class="language-csharp">.RequireAuthorization(&quot;Admin&quot;);
+</code></pre>
+<h2><a href="#test-the-api" aria-hidden="true" class="anchor" id="test-the-api"></a>Test the API</h2>
+<h3><a href="#attempt-to-access-a-secured-endpoint" aria-hidden="true" class="anchor" id="attempt-to-access-a-secured-endpoint"></a>Attempt to access a secured endpoint</h3>
+<ul>
+<li>
+<p>Run the app and navigate to the Swagger UI.</p>
+</li>
+<li>
+<p>Expand a secured endpoint, such as <code>/weatherforecast</code> in a project created by the web API template.</p>
+</li>
+<li>
+<p>Select  Try it out.</p>
+</li>
+<li>
+<p>Select Execute. The response is <code>401 - not authorized</code>.</p>
+</li>
+</ul>
+<h3><a href="#test-registration" aria-hidden="true" class="anchor" id="test-registration"></a>Test registration</h3>
+<ul>
+<li>
+<p>Expand <code>/register</code> and select Try it out.</p>
+</li>
+<li>
+<p>In the Parameters section of the UI, a sample request body is shown:</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;
+}
+</code></pre>
+<ul>
+<li>Replace &quot;string&quot; with a valid email address and password, and then select Execute.
+To comply with the default password validation rules, the password must be at least six characters long and contain at least one of each of the following characters:</li>
+</ul>
+<p>If you enter an invalid email address or a bad password, the result includes the validation errors. Here's an example of a response body with validation errors:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;https://tools.ietf.org/html/rfc9110#section-15.5.1&quot;,
+  &quot;title&quot;: &quot;One or more validation errors occurred.&quot;,
+  &quot;status&quot;: 400,
+  &quot;errors&quot;: {
+    &quot;PasswordTooShort&quot;: [
+      &quot;Passwords must be at least 6 characters.&quot;
+    ],
+    &quot;PasswordRequiresNonAlphanumeric&quot;: [
+      &quot;Passwords must have at least one non alphanumeric character.&quot;
+    ],
+    &quot;PasswordRequiresDigit&quot;: [
+      &quot;Passwords must have at least one digit ('0'-'9').&quot;
+    ],
+    &quot;PasswordRequiresLower&quot;: [
+      &quot;Passwords must have at least one lowercase ('a'-'z').&quot;
+    ]
+  }
+}
+</code></pre>
+<p>The errors are returned in the ProblemDetails format so the client can parse them and display validation errors as needed.
+A successful registration results in a <code>200 - OK</code> response.</p>
+<ul>
+<li>
+<p>Uppercase letter</p>
+</li>
+<li>
+<p>Lowercase letter</p>
+</li>
+<li>
+<p>Numeric digit</p>
+</li>
+<li>
+<p>Nonalphanumeric character</p>
+</li>
+</ul>
+<h3><a href="#test-login" aria-hidden="true" class="anchor" id="test-login"></a>Test login</h3>
+<ul>
+<li>Expand <code>/login</code> and select Try it out. The example request body shows two additional parameters:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;,
+  &quot;twoFactorCode&quot;: &quot;string&quot;,
+  &quot;twoFactorRecoveryCode&quot;: &quot;string&quot;
+}
+</code></pre>
+<p>The extra JSON properties aren't needed for this example and can be deleted. Set <code>useCookies</code> to <code>true</code>.</p>
+<ul>
+<li>Replace &quot;string&quot; with the email address and password that you used to register, and then select Execute.
+A successful login results in a <code>200 - OK</code> response with a cookie in the response header.</li>
+</ul>
+<h3><a href="#retest-the-secured-endpoint" aria-hidden="true" class="anchor" id="retest-the-secured-endpoint"></a>Retest the secured endpoint</h3>
+<h3><a href="#testing-with-nonbrowser-clients" aria-hidden="true" class="anchor" id="testing-with-nonbrowser-clients"></a>Testing with nonbrowser clients</h3>
+<ul>
+<li>
+<p>If you're <code>using</code> a tool for testing APIs, you might need to enable cookies in the settings.</p>
+</li>
+<li>
+<p>The JavaScript <code>fetch</code> API doesn't <code>include</code> cookies by default. Enable them by setting <code>credentials</code> to the value <code>include</code> in the options.</p>
+</li>
+<li>
+<p>An <code>HttpClient</code> running in a Blazor WebAssembly app needs the <code>HttpRequestMessage</code> to <code>include</code> <code>credentials</code>, like the following example:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">request.SetBrowserRequestCredential(BrowserRequestCredentials.Include);
+</code></pre>
+<h2><a href="#use-token-based-authentication" aria-hidden="true" class="anchor" id="use-token-based-authentication"></a>Use token-based authentication</h2>
+<h2><a href="#log-out" aria-hidden="true" class="anchor" id="log-out"></a>Log out</h2>
+<pre><code class="language-csharp">app.MapPost(&quot;/logout&quot;, async (SignInManager&lt;IdentityUser&gt; signInManager,
+    [FromBody] object empty) =&gt;
+{
+    if (empty != null)
+    {
+        await signInManager.SignOutAsync();
+        return Results.Ok();
+    }
+    return Results.Unauthorized();
+})
+.WithOpenApi()
+.RequireAuthorization();
+</code></pre>
+<pre><code class="language-typescript">public signOut() {
+  return this.http.post('/logout', {}, {
+    withCredentials: true,
+    observe: 'response',
+    responseType: 'text'
+</code></pre>
+<h2><a href="#the-mapidentityapi-endpoints" aria-hidden="true" class="anchor" id="the-mapidentityapi-endpoints"></a>The MapIdentityApi<TUser> endpoints</h2>
+<ul>
+<li>
+<p><code>POST /register</code></p>
+</li>
+<li>
+<p><code>POST /login</code></p>
+</li>
+<li>
+<p><code>POST /refresh</code></p>
+</li>
+<li>
+<p><code>GET /confirmEmail</code></p>
+</li>
+<li>
+<p><code>POST /resendConfirmationEmail</code></p>
+</li>
+<li>
+<p><code>POST /forgotPassword</code></p>
+</li>
+<li>
+<p><code>POST /resetPassword</code></p>
+</li>
+<li>
+<p><code>POST /manage/2fa</code></p>
+</li>
+<li>
+<p><code>GET /manage/info</code></p>
+</li>
+<li>
+<p><code>POST /manage/info</code></p>
+</li>
+</ul>
+<h2><a href="#use-the-post-register-endpoint" aria-hidden="true" class="anchor" id="use-the-post-register-endpoint"></a>Use the <code>POST /register</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;,
+}
+</code></pre>
+<ul>
+<li>
+<p>Test registration earlier in this article.</p>
+</li>
+<li>
+<p>RegisterRequest.</p>
+</li>
+</ul>
+<h2><a href="#use-the-post-login-endpoint" aria-hidden="true" class="anchor" id="use-the-post-login-endpoint"></a>Use the <code>POST /login</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;
+}
+</code></pre>
+<ul>
+<li></li>
+</ul>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;,
+  &quot;twoFactorCode&quot;: &quot;string&quot;,
+}
+</code></pre>
+<ul>
+<li></li>
+</ul>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;,
+  &quot;twoFactorRecoveryCode&quot;: &quot;string&quot;
+}
+</code></pre>
+<ul>
+<li><code>useCookies</code> - Set to <code>true</code> for cookie-based authentication. Set to <code>false</code> or omit for token-based authentication.</li>
+</ul>
+<h3><a href="#token-based-authentication" aria-hidden="true" class="anchor" id="token-based-authentication"></a>Token-based authentication</h3>
+<pre><code class="language-json">{
+  &quot;tokenType&quot;: &quot;string&quot;,
+  &quot;accessToken&quot;: &quot;string&quot;,
+  &quot;expiresIn&quot;: 0,
+  &quot;refreshToken&quot;: &quot;string&quot;
+}
+</code></pre>
+<pre><code class="language-http">Authorization: Bearer {access token}
+</code></pre>
+<h2><a href="#use-the-post-refresh-endpoint" aria-hidden="true" class="anchor" id="use-the-post-refresh-endpoint"></a>Use the <code>POST /refresh</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;refreshToken&quot;: &quot;string&quot;
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;tokenType&quot;: &quot;string&quot;,
+  &quot;accessToken&quot;: &quot;string&quot;,
+  &quot;expiresIn&quot;: 0,
+  &quot;refreshToken&quot;: &quot;string&quot;
+}
+</code></pre>
+<h2><a href="#use-the-get-confirmemail-endpoint" aria-hidden="true" class="anchor" id="use-the-get-confirmemail-endpoint"></a>Use the <code>GET /confirmEmail</code> endpoint</h2>
+<ul>
+<li>
+<p><code>userId</code></p>
+</li>
+<li>
+<p><code>code</code></p>
+</li>
+<li>
+<p><code>changedEmail</code> - Included only if the user changed the email address during registration.</p>
+</li>
+</ul>
+<pre><code class="language-http">Please confirm your account by &lt;a href='https://contoso.com/confirmEmail?userId={user ID}&amp;code={generated code}&amp;changedEmail={new email address}'&gt;clicking here&lt;/a&gt;.
+</code></pre>
+<ul>
+<li>
+<p>Confirms the email address and enables the user to log in.</p>
+</li>
+<li>
+<p>Returns the text &quot;Thank you for confirming your email.&quot; in the response body.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.Configure&lt;IdentityOptions&gt;(options =&gt;
+{
+    options.SignIn.RequireConfirmedEmail = true;
+});
+
+builder.Services.AddTransient&lt;IEmailSender, EmailSender&gt;();
+</code></pre>
+<h2><a href="#use-the-post-resendconfirmationemail-endpoint" aria-hidden="true" class="anchor" id="use-the-post-resendconfirmationemail-endpoint"></a>Use the <code>POST /resendConfirmationEmail</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;
+}
+</code></pre>
+<h2><a href="#use-the-post-forgotpassword-endpoint" aria-hidden="true" class="anchor" id="use-the-post-forgotpassword-endpoint"></a>Use the <code>POST /forgotPassword</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;
+}
+</code></pre>
+<h2><a href="#use-the-post-resetpassword-endpoint" aria-hidden="true" class="anchor" id="use-the-post-resetpassword-endpoint"></a>Use the <code>POST /resetPassword</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;resetCode&quot;: &quot;string&quot;,
+  &quot;newPassword&quot;: &quot;string&quot;
+}
+</code></pre>
+<h2><a href="#use-the-post-manage/2fa-endpoint" aria-hidden="true" class="anchor" id="use-the-post-manage/2fa-endpoint"></a>Use the <code>POST /manage/2fa</code> endpoint</h2>
+<h3><a href="#enable-2fa" aria-hidden="true" class="anchor" id="enable-2fa"></a>Enable 2FA</h3>
+<ul>
+<li>
+<p>Call the <code>/manage/2fa</code> endpoint, sending an empty JSON object ({}) in the request body.</p>
+</li>
+<li>
+<p>The response body provides the SharedKey along with some other properties that aren't needed at this point. The shared key is used to set up the authenticator app. Response body example:</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;sharedKey&quot;: &quot;string&quot;,
+  &quot;recoveryCodesLeft&quot;: 0,
+  &quot;recoveryCodes&quot;: null,
+  &quot;isTwoFactorEnabled&quot;: false,
+  &quot;isMachineRemembered&quot;: false
+}
+</code></pre>
+<ul>
+<li>
+<p>Use the shared key to get a Time-based one-time password (TOTP). For more information, see Enable QR <code>code</code> generation for TOTP authenticator apps in ASP.NET Core.</p>
+</li>
+<li>
+<p>Call the <code>/manage/2fa</code> endpoint, sending the TOTP and <code>&quot;enable&quot;: true</code> in the request body. For example:</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;enable&quot;: true,
+  &quot;twoFactorCode&quot;: &quot;string&quot;
+}
+</code></pre>
+<ul>
+<li>The response body confirms that IsTwoFactorEnabled is <code>true</code> and provides the RecoveryCodes. The recovery codes are used to log in when the authenticator app isn't available. Response body example after successfully enabling 2FA:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;sharedKey&quot;: &quot;string&quot;,
+  &quot;recoveryCodesLeft&quot;: 10,
+  &quot;recoveryCodes&quot;: [
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;,
+    &quot;string&quot;
+  ],
+  &quot;isTwoFactorEnabled&quot;: true,
+  &quot;isMachineRemembered&quot;: false
+}
+</code></pre>
+<h3><a href="#log-in-with-2fa" aria-hidden="true" class="anchor" id="log-in-with-2fa"></a>Log in with 2FA</h3>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;,
+  &quot;twoFactorCode&quot;: &quot;string&quot;
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;,
+  &quot;twoFactorRecoveryCode&quot;: &quot;string&quot;
+}
+</code></pre>
+<h3><a href="#reset-the-recovery-codes" aria-hidden="true" class="anchor" id="reset-the-recovery-codes"></a>Reset the recovery codes</h3>
+<pre><code class="language-json">{
+  &quot;resetRecoveryCodes&quot;: true
+}
+</code></pre>
+<h3><a href="#reset-the-shared-key" aria-hidden="true" class="anchor" id="reset-the-shared-key"></a>Reset the shared key</h3>
+<pre><code class="language-json">{
+  &quot;resetSharedKey&quot;: true
+}
+</code></pre>
+<h3><a href="#forget-the-machine" aria-hidden="true" class="anchor" id="forget-the-machine"></a>Forget the machine</h3>
+<pre><code class="language-json">{
+  &quot;forgetMachine&quot;: true
+}
+</code></pre>
+<h2><a href="#use-the-get-manage/info-endpoint" aria-hidden="true" class="anchor" id="use-the-get-manage/info-endpoint"></a>Use the <code>GET /manage/info</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;isEmailConfirmed&quot;: true
+}
+</code></pre>
+<h2><a href="#use-the-post-manage/info-endpoint" aria-hidden="true" class="anchor" id="use-the-post-manage/info-endpoint"></a>Use the <code>POST /manage/info</code> endpoint</h2>
+<pre><code class="language-json">{
+  &quot;newEmail&quot;: &quot;string&quot;,
+  &quot;newPassword&quot;: &quot;string&quot;,
+  &quot;oldPassword&quot;: &quot;string&quot;
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;isEmailConfirmed&quot;: false
+}
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Choose an identity management solution</p>
+</li>
+<li>
+<p>Identity management solutions for .NET web apps</p>
+</li>
+<li>
+<p>Simple authorization in ASP.NET Core</p>
+</li>
+<li>
+<p>Add, download, and delete user data to Identity in an ASP.NET Core project</p>
+</li>
+<li>
+<p>Create an ASP.NET Core app with user data protected by authorization</p>
+</li>
+<li>
+<p>Account confirmation and password recovery in ASP.NET Core</p>
+</li>
+<li>
+<p>Enable QR code generation for TOTP authenticator apps in ASP.NET Core</p>
+</li>
+<li>
+<p>Sample Web API backend for SPAs
+The .http file shows token-based authentication. For example:</p>
+<ul>
+<li>
+<p>Doesn't set <code>useCookies</code></p>
+</li>
+<li>
+<p>Uses the <code>Authorization</code> header to pass the token</p>
+</li>
+<li>
+<p>Shows refresh to extend session without forcing the user to login again</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Sample Angular app that uses Identity to secure a Web API backend</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity-api-authorization?view=aspnetcore-8.0">How to use Identity to secure a Web API backend for SPAs</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

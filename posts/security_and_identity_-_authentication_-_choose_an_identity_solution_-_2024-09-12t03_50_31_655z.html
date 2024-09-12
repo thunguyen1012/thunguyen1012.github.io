@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - Choose an identity solution | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Most web apps support authentication to ensure that users are who they claim to be. A user might be a person or another app. Management of access ensures users are only able to see and modify the information they're authorized to see and modify. For example, an end user shouldn't have access to the administrative section of a website. Identity management solutions are built to handle the requirements of authentication and authorization-related tasks. To learn more about identity management, see What is identity and access management?. Many identity management solutions for .NET web apps are available, each with different capabilities and requirements to use or install. This article provides guidance on how to choose the right solution.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - Choose an identity solution</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>.NET web apps use identity and access management to ensure users are who they claim to be. Many identity management solutions for .NET web apps are available, each with different capabilities and requirements to use or install.</p>
+<h2><a href="#basic-identity-management-with-aspnet-core-identity" aria-hidden="true" class="anchor" id="basic-identity-management-with-aspnet-core-identity"></a>Basic identity management with ASP.NET Core Identity</h2>
+<p>Microsoft has released ASP.NET Core, the latest version of the ASP.NET Framework.</p>
+<ul>
+<li>
+<p>External logins</p>
+</li>
+<li>
+<p>Two-factor authentication (2FA)</p>
+</li>
+<li>
+<p>Password management</p>
+</li>
+<li>
+<p>Account lockout and reactivation</p>
+</li>
+<li>
+<p>Authenticator apps</p>
+</li>
+</ul>
+<p>For most scenarios, this may be the only provider needed.</p>
+<p>To learn more:</p>
+<ul>
+<li>
+<p>Read the Introduction to Identity on ASP.NET Core</p>
+</li>
+<li>
+<p>Follow a tutorial to build your own secure .NET web app: Secure a .NET web app with the ASP.NET Core Identity framework.</p>
+</li>
+</ul>
+<p>In other scenarios, a server or service that manages authentication and identity may be beneficial.</p>
+<h2><a href="#determine-if-an-oidc-server-is-needed" aria-hidden="true" class="anchor" id="determine-if-an-oidc-server-is-needed"></a>Determine if an OIDC server is needed</h2>
+<p>Web apps require a way to remember past actions because the web, by default, is stateless. Web apps require a way to remember past actions because the web, by default, is stateless.</p>
+<p>The Open Internet Data Consortium (OIDC) issues tokens to websites.</p>
+<p>The signed token can't be tampered with due to the private key. The public key:</p>
+<ul>
+<li>
+<p>Makes it possible to validate the token to ensure it hasn't been changed.</p>
+</li>
+<li>
+<p>Guarantees that it was generated by the entity holding the private key.</p>
+</li>
+</ul>
+<p>tokens can be used to verify the identity of a person or organisation.</p>
+<p>The ASP.NET Core Identity Server (OIDC) is a component of the ASP.NET Core Identity Framework that allows developers to create, manage, and update their ASP.NET Core identity.</p>
+<ul>
+<li>
+<p>Can be used by mobile and desktop clients. Cookies are preferred over tokens for both security and simplicity.</p>
+</li>
+<li>
+<p>Isn't suitable for managing access from third-party apps.</p>
+</li>
+</ul>
+<p>Another reason an OIDC server is required is for sharing sign-ins with other apps. Commonly referred to as single sign on, this feature enables users to:</p>
+<ul>
+<li>
+<p>Sign in once with a web app's form.</p>
+</li>
+<li>
+<p>Use the resulting credentials to authenticate with other apps without having to sign-in again or choose a different password.</p>
+</li>
+</ul>
+<p>An OIDC server is typically preferred to provide a secure and scalable solution for single sign on.</p>
+<p>OIDC servers are available as:</p>
+<ul>
+<li>
+<p>Products you install on your server, called self-host.</p>
+</li>
+<li>
+<p>Containers run in a host like Docker.</p>
+</li>
+<li>
+<p>Web-based services you integrate with to manage identity.</p>
+</li>
+</ul>
+<p>There are a variety of identity management solutions available.</p>
+<h2><a href="#disconnected-scenarios" aria-hidden="true" class="anchor" id="disconnected-scenarios"></a>Disconnected scenarios</h2>
+<p>Many solutions, such as Microsoft Entra ID, are cloud-based and require an Internet connection to work. If your environment doesn't allow Internet connectivity, you won't be able to use the service.</p>
+<p>ASP.NET Core Identity works perfectly well in disconnected scenarios, such as:</p>
+<ul>
+<li>
+<p>The app can't access the Internet.</p>
+</li>
+<li>
+<p>The app must still function on the local network even if the Internet is disconnected.</p>
+</li>
+</ul>
+<p>If you require a full OIDC server for a disconnected scenario, choose one of the following options:</p>
+<ul>
+<li>
+<p>A solution that allows you to install and run the service on your own machines.</p>
+</li>
+<li>
+<p>Run the authentication service locally as a container.</p>
+</li>
+</ul>
+<h2><a href="#decide-where-user-data-such-as-sign-ins-are-stored" aria-hidden="true" class="anchor" id="decide-where-user-data-such-as-sign-ins-are-stored"></a>Decide where user data such as sign-ins are stored</h2>
+<p>Choosing the right sign-in service for your app depends on a number of factors, including:</p>
+<ul>
+<li>
+<p>Takes on the responsibilities of securely storing data.</p>
+</li>
+<li>
+<p>keeps the software up to date with the latest security patches and releases.</p>
+</li>
+<li>
+<p>Complies with privacy regulations.</p>
+</li>
+</ul>
+<p>Others prefer to store data on their own servers due to regulations, compliance, policy, or other reasons.</p>
+<p>If the data is stored on your servers, you'll most likely need to choose an installable or container-based solution.</p>
+<h2><a href="#identity-vs-oidc-server" aria-hidden="true" class="anchor" id="identity-vs-oidc-server"></a>Identity vs OIDC server</h2>
+<p>Use the following diagram to help you decide whether to use the ASP.NET Core Identity system or an OIDC server for authentication and authorization:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/_static/identity-management-decision-flow.png?view=aspnetcore-8.0" alt="Identity management decision flow!" title="Identity management decision flow" /></p>
+<p>The following table lists some of the things to consider when choosing your identity management solution.</p>
+<table><thead>
+<tr>
+<th><strong>Feature</strong></th>
+<th><strong>Self-host (infrastructure or container)</strong></th>
+<th><strong>Cloud</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>App integration</strong></td>
+<td>Local solutions that are implemented as libraries or frameworks can often be integrated directly in your own app. Container-based solutions require a hand-off to occur between your web app and the container-based service.</td>
+<td>Cloud-based solutions typically integrate at specific points in your sign-in flow and provide configuration to update the UI to match your theme, but the level of customization available is limited.</td>
+</tr>
+<tr>
+<td><strong>Configuration</strong></td>
+<td>Self host solutions require configuring the software for the environment in addition to setting up how you want to manage identities. Container-based solutions typically provide a web-based UI for configuration.</td>
+<td>Cloud-based solutions typically provide a web-based UI for configuration.</td>
+</tr>
+<tr>
+<td><strong>Customization</strong></td>
+<td>Self-host solutions are usually highly customizable, including code-based changes. Although containerized solutions provide extensibility options, they are often more limited.</td>
+<td>Cloud-based services allow customization, but it's typically limited to configuration-based changes.</td>
+</tr>
+<tr>
+<td><strong>Maintenance</strong></td>
+<td>Installed products require a dedicated resource to ensure all security patches are applied in a timely fashion and to manage upgrades. The upgrade and patch process for containers is usually lower-friction and involves simply installing the provided container image.</td>
+<td>The service provider maintains their cloud-based solution, including applying needed patches and handling upgrades.</td>
+</tr>
+<tr>
+<td><strong>User credentials storage</strong></td>
+<td>You are responsible for data governance and handling breaches.</td>
+<td>Managing the risks associated with handling user credentials, and complying with regulations. is delegated to the service provider.</td>
+</tr>
+</tbody></table>
+<p>For more information about available options, see Identity management solutions for ASP.NET Core.</p>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>Learn about JSON Web Tokens</p>
+</li>
+<li>
+<p>Browse sample apps with authentication/authorization and identity for ASP.NET Core.</p>
+</li>
+<li>
+<p>Follow a tutorial to secure a .NET web app using built-in ASP.NET Core Identity.</p>
+</li>
+<li>
+<p>Learn more about how to protect web APIs.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/how-to-choose-identity-solution?view=aspnetcore-8.0">Choose an identity management solution</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

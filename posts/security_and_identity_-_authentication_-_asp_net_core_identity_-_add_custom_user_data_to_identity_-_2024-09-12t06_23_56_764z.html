@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - Add custom user data to Identity | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - Add custom user data to Identity</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article shows how to:</p>
+<ul>
+<li>
+<p>Add custom user data to an ASP.NET Core web app.</p>
+</li>
+<li>
+<p>Mark the custom user data model with the PersonalDataAttribute attribute so it's automatically available for download and deletion. Making the data able to be downloaded and deleted helps meet GDPR requirements.</p>
+</li>
+</ul>
+<p>The project sample is created from a Razor Pages web app, but the instructions are similar for an ASP.NET Core MVC web app.</p>
+<p>View or download sample code (how to download)</p>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<h2><a href="#create-a-razor-web-app" aria-hidden="true" class="anchor" id="create-a-razor-web-app"></a>Create a Razor web app</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>From the Visual Studio File menu, select New &gt; Project. Name the project WebApp1 if you want to it match the namespace of the download sample code.</p>
+</li>
+<li>
+<p>Select ASP.NET Core Web Application &gt; OK</p>
+</li>
+<li>
+<p>Select Web Application &gt; OK</p>
+</li>
+<li>
+<p>Build and run the project.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new webapp -o WebApp1
+</code></pre>
+<h2><a href="#run-the-identity-scaffolder" aria-hidden="true" class="anchor" id="run-the-identity-scaffolder"></a>Run the Identity scaffolder</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>From Solution Explorer, right-click on the project &gt; Add &gt; New Scaffolded Item.</p>
+</li>
+<li>
+<p>From the left pane of the Add Scaffold dialog, select Identity &gt; Add.</p>
+</li>
+<li>
+<p>In the Add Identity dialog, the following options:</p>
+<ul>
+<li>
+<p>Select the existing layout  file  <code>~/Pages/Shared/_Layout.cshtml</code></p>
+</li>
+<li>
+<p>Select the following files to override:</p>
+<ul>
+<li>
+<p>Account/Register</p>
+</li>
+<li>
+<p>Account/Manage/Index</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Select the + button to create a new Data context class. Accept the type (WebApp1.Models.WebApp1Context if the project is named WebApp1).</p>
+</li>
+<li>
+<p>Select the + button to create a new User class. Accept the type (WebApp1User if the project is named WebApp1) &gt; Add.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Select Add.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet tool install -g dotnet-aspnet-codegenerator
+</code></pre>
+<blockquote>
+<p class='note'>Note
+By default the architecture of the .NET binaries to install represents the currently running OS architecture. To specify a different OS architecture, see dotnet tool install, --arch option.
+For more information, see GitHub issue dotnet/AspNetCore.Docs #29262.</p>
+</blockquote>
+<pre><code class="language-dotnetcli">dotnet add package Microsoft.VisualStudio.Web.CodeGeneration.Design
+dotnet restore
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet aspnet-codegenerator identity -h
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet aspnet-codegenerator identity -u WebApp1User -fi Account.Register;Account.Manage.Index
+</code></pre>
+<ul>
+<li>
+<p>Create a migration and update the database.</p>
+</li>
+<li>
+<p>Add <code>UseAuthentication</code> to <code>Program.cs</code></p>
+</li>
+<li>
+<p>Add <partial name="_LoginPartial" /> to the layout file.</p>
+</li>
+<li>
+<p>Test the app:</p>
+<ul>
+<li>
+<p>Register a user</p>
+</li>
+<li>
+<p>Select the new user name (next to the Logout link). You might need to expand the window or select the navigation bar icon to show the user name and other links.</p>
+</li>
+<li>
+<p>Select the Personal Data tab.</p>
+</li>
+<li>
+<p>Select the Download button and examined the <code>PersonalData.json</code> file.</p>
+</li>
+<li>
+<p>Test the Delete button, which deletes the logged on user.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#add-custom-user-data-to-the-identity-db" aria-hidden="true" class="anchor" id="add-custom-user-data-to-the-identity-db"></a>Add custom user data to the Identity DB</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity;
+
+namespace WebApp1.Areas.Identity.Data;
+
+public class WebApp1User : IdentityUser
+{
+    [PersonalData]
+    public string? Name { get; set; }
+    [PersonalData]
+    public DateTime DOB { get; set; }
+}
+</code></pre>
+<ul>
+<li>
+<p>Deleted when the <code>Areas/Identity/Pages/Account/Manage/DeletePersonalData.cshtml</code> Razor Page calls <code>UserManager.Delete</code>.</p>
+</li>
+<li>
+<p>Included in the downloaded data by the <code>Areas/Identity/Pages/Account/Manage/DownloadPersonalData.cshtml</code> Razor Page.</p>
+</li>
+</ul>
+<h3><a href="#update-the-accountmanage/index.cshtml-page" aria-hidden="true" class="anchor" id="update-the-accountmanage/index.cshtml-page"></a>Update the <code>Account/Manage/Index.cshtml</code> page</h3>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    private readonly UserManager&lt;WebApp1User&gt; _userManager;
+    private readonly SignInManager&lt;WebApp1User&gt; _signInManager;
+
+    public IndexModel(
+        UserManager&lt;WebApp1User&gt; userManager,
+        SignInManager&lt;WebApp1User&gt; signInManager)
+    {
+        _userManager = userManager;
+        _signInManager = signInManager;
+    }
+
+    /// &lt;summary&gt;
+    ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
+    ///     directly from your code. This API may change or be removed in future releases.
+    /// &lt;/summary&gt;
+    public string Username { get; set; }
+
+    // Remaining API warnings ommited.
+
+    [TempData]
+    public string StatusMessage { get; set; }
+
+    [BindProperty]
+    public InputModel Input { get; set; }
+
+    public class InputModel
+    {
+        [Required]
+        [DataType(DataType.Text)]
+        [Display(Name = &quot;Full name&quot;)]
+        public string Name { get; set; }
+
+        [Required]
+        [Display(Name = &quot;Birth Date&quot;)]
+        [DataType(DataType.Date)]
+        public DateTime DOB { get; set; }
+
+        [Phone]
+        [Display(Name = &quot;Phone number&quot;)]
+        public string PhoneNumber { get; set; }
+    }
+
+    private async Task LoadAsync(WebApp1User user)
+    {
+        var userName = await _userManager.GetUserNameAsync(user);
+        var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
+
+        Username = userName;
+
+        Input = new InputModel
+        {
+            Name = user.Name,
+            DOB = user.DOB,
+            PhoneNumber = phoneNumber
+        };
+    }
+
+    public async Task&lt;IActionResult&gt; OnGetAsync()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return NotFound($&quot;Unable to load user with ID '{_userManager.GetUserId(User)}'.&quot;);
+        }
+
+        await LoadAsync(user);
+        return Page();
+    }
+
+    public async Task&lt;IActionResult&gt; OnPostAsync()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return NotFound($&quot;Unable to load user with ID '{_userManager.GetUserId(User)}'.&quot;);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await LoadAsync(user);
+            return Page();
+        }
+
+        var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
+        if (Input.PhoneNumber != phoneNumber)
+        {
+            var setPhoneResult = await _userManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
+            if (!setPhoneResult.Succeeded)
+            {
+                StatusMessage = &quot;Unexpected error when trying to set phone number.&quot;;
+                return RedirectToPage();
+            }
+        }
+
+        if (Input.Name != user.Name)
+        {
+            user.Name = Input.Name;
+        }
+
+        if (Input.DOB != user.DOB)
+        {
+            user.DOB = Input.DOB;
+        }
+
+        await _userManager.UpdateAsync(user);
+        await _signInManager.RefreshSignInAsync(user);
+        StatusMessage = &quot;Your profile has been updated&quot;;
+        return RedirectToPage();
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model IndexModel
+@{
+    ViewData[&quot;Title&quot;] = &quot;Profile&quot;;
+    ViewData[&quot;ActivePage&quot;] = ManageNavPages.Index;
+}
+
+&lt;h3&gt;@ViewData[&quot;Title&quot;]&lt;/h3&gt;
+&lt;partial name=&quot;_StatusMessage&quot; for=&quot;StatusMessage&quot; /&gt;
+&lt;div class=&quot;row&quot;&gt;
+    &lt;div class=&quot;col-md-6&quot;&gt;
+        &lt;form id=&quot;profile-form&quot; method=&quot;post&quot;&gt;
+            &lt;div asp-validation-summary=&quot;ModelOnly&quot; class=&quot;text-danger&quot;&gt;&lt;/div&gt;
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Username&quot; class=&quot;form-control&quot; disabled /&gt;
+                &lt;label asp-for=&quot;Username&quot; class=&quot;form-label&quot;&gt;&lt;/label&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.Name&quot; class=&quot;form-control&quot; /&gt;
+                &lt;label asp-for=&quot;Input.Name&quot; class=&quot;form-label&quot;&gt;&lt;/label&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.DOB&quot; class=&quot;form-control&quot; /&gt;
+                &lt;label asp-for=&quot;Input.DOB&quot; class=&quot;form-label&quot;&gt;&lt;/label&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.PhoneNumber&quot; class=&quot;form-control&quot; /&gt;
+                &lt;label asp-for=&quot;Input.PhoneNumber&quot; class=&quot;form-label&quot;&gt;&lt;/label&gt;
+                &lt;span asp-validation-for=&quot;Input.PhoneNumber&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;button id=&quot;update-profile-button&quot; type=&quot;submit&quot; class=&quot;w-100 btn btn-lg btn-primary&quot;&gt;Save&lt;/button&gt;
+        &lt;/form&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+
+@section Scripts {
+    &lt;partial name=&quot;_ValidationScriptsPartial&quot; /&gt;
+}
+</code></pre>
+<h3><a href="#update-the-accountregister.cshtml-page" aria-hidden="true" class="anchor" id="update-the-accountregister.cshtml-page"></a>Update the <code>Account/Register.cshtml</code> page</h3>
+<pre><code class="language-csharp">public class RegisterModel : PageModel
+    {
+        private readonly SignInManager&lt;WebApp1User&gt; _signInManager;
+        private readonly UserManager&lt;WebApp1User&gt; _userManager;
+        private readonly IUserStore&lt;WebApp1User&gt; _userStore;
+        private readonly IUserEmailStore&lt;WebApp1User&gt; _emailStore;
+        private readonly ILogger&lt;RegisterModel&gt; _logger;
+        private readonly IEmailSender _emailSender;
+
+        public RegisterModel(
+            UserManager&lt;WebApp1User&gt; userManager,
+            IUserStore&lt;WebApp1User&gt; userStore,
+            SignInManager&lt;WebApp1User&gt; signInManager,
+            ILogger&lt;RegisterModel&gt; logger,
+            IEmailSender emailSender)
+        {
+            _userManager = userManager;
+            _userStore = userStore;
+            _emailStore = GetEmailStore();
+            _signInManager = signInManager;
+            _logger = logger;
+            _emailSender = emailSender;
+        }
+
+        /// &lt;summary&gt;
+        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
+        ///     directly from your code. This API may change or be removed in future releases.
+        /// &lt;/summary&gt;
+        [BindProperty]
+        public InputModel Input { get; set; }
+
+        // Remaining API warnings ommited.
+        public string ReturnUrl { get; set; }
+
+        public IList&lt;AuthenticationScheme&gt; ExternalLogins { get; set; }
+
+        public class InputModel
+        {
+            [Required]
+            [DataType(DataType.Text)]
+            [Display(Name = &quot;Full name&quot;)]
+            public string Name { get; set; }
+
+            [Required]
+            [Display(Name = &quot;Birth Date&quot;)]
+            [DataType(DataType.Date)]
+            public DateTime DOB { get; set; }
+
+            [Required]
+            [EmailAddress]
+            [Display(Name = &quot;Email&quot;)]
+            public string Email { get; set; }
+
+            [Required]
+            [StringLength(100, ErrorMessage = &quot;The {0} must be at least {2} and at max {1} characters long.&quot;, MinimumLength = 6)]
+            [DataType(DataType.Password)]
+            [Display(Name = &quot;Password&quot;)]
+            public string Password { get; set; }
+
+            [DataType(DataType.Password)]
+            [Display(Name = &quot;Confirm password&quot;)]
+            [Compare(&quot;Password&quot;, ErrorMessage = &quot;The password and confirmation password do not match.&quot;)]
+            public string ConfirmPassword { get; set; }
+        }
+
+
+        public async Task OnGetAsync(string returnUrl = null)
+        {
+            ReturnUrl = returnUrl;
+            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        }
+
+        public async Task&lt;IActionResult&gt; OnPostAsync(string returnUrl = null)
+        {
+            returnUrl ??= Url.Content(&quot;~/&quot;);
+            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            if (ModelState.IsValid)
+            {
+                var user = CreateUser();
+
+                user.Name = Input.Name;
+                user.DOB = Input.DOB;
+
+                await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+                await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+                var result = await _userManager.CreateAsync(user, Input.Password);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation(&quot;User created a new account with password.&quot;);
+
+                    var userId = await _userManager.GetUserIdAsync(user);
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                    var callbackUrl = Url.Page(
+                        &quot;/Account/ConfirmEmail&quot;,
+                        pageHandler: null,
+                        values: new { area = &quot;Identity&quot;, userId = userId, code = code, returnUrl = returnUrl },
+                        protocol: Request.Scheme);
+
+                    await _emailSender.SendEmailAsync(Input.Email, &quot;Confirm your email&quot;,
+                        $&quot;Please confirm your account by &lt;a href='{HtmlEncoder.Default.Encode(callbackUrl)}'&gt;clicking here&lt;/a&gt;.&quot;);
+
+                    if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                    {
+                        return RedirectToPage(&quot;RegisterConfirmation&quot;, new { email = Input.Email, returnUrl = returnUrl });
+                    }
+                    else
+                    {
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        return LocalRedirect(returnUrl);
+                    }
+                }
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+
+            // If we got this far, something failed, redisplay form
+            return Page();
+        }
+
+        private WebApp1User CreateUser()
+        {
+            try
+            {
+                return Activator.CreateInstance&lt;WebApp1User&gt;();
+            }
+            catch
+            {
+                throw new InvalidOperationException($&quot;Can't create an instance of '{nameof(WebApp1User)}'. &quot; +
+                    $&quot;Ensure that '{nameof(WebApp1User)}' is not an abstract class and has a parameterless constructor, or alternatively &quot; +
+                    $&quot;override the register page in /Areas/Identity/Pages/Account/Register.cshtml&quot;);
+            }
+        }
+
+        private IUserEmailStore&lt;WebApp1User&gt; GetEmailStore()
+        {
+            if (!_userManager.SupportsUserEmail)
+            {
+                throw new NotSupportedException(&quot;The default UI requires a user store with email support.&quot;);
+            }
+            return (IUserEmailStore&lt;WebApp1User&gt;)_userStore;
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model RegisterModel
+@{
+    ViewData[&quot;Title&quot;] = &quot;Register&quot;;
+}
+
+&lt;h1&gt;@ViewData[&quot;Title&quot;]&lt;/h1&gt;
+
+&lt;div class=&quot;row&quot;&gt;
+    &lt;div class=&quot;col-md-4&quot;&gt;
+        &lt;form id=&quot;registerForm&quot; asp-route-returnUrl=&quot;@Model.ReturnUrl&quot; method=&quot;post&quot;&gt;
+            &lt;h2&gt;Create a new account.&lt;/h2&gt;
+            &lt;hr /&gt;
+            &lt;div asp-validation-summary=&quot;ModelOnly&quot; class=&quot;text-danger&quot;&gt;&lt;/div&gt;
+
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.Name&quot; class=&quot;form-control&quot; /&gt;
+                &lt;label asp-for=&quot;Input.Name&quot;&gt;&lt;/label&gt;
+                &lt;span asp-validation-for=&quot;Input.Name&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.DOB&quot; class=&quot;form-control&quot; /&gt;
+                &lt;label asp-for=&quot;Input.DOB&quot;&gt;&lt;/label&gt;
+                &lt;span asp-validation-for=&quot;Input.DOB&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+            &lt;/div&gt;
+
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.Email&quot; class=&quot;form-control&quot; autocomplete=&quot;username&quot; aria-required=&quot;true&quot; /&gt;
+                &lt;label asp-for=&quot;Input.Email&quot;&gt;&lt;/label&gt;
+                &lt;span asp-validation-for=&quot;Input.Email&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.Password&quot; class=&quot;form-control&quot; autocomplete=&quot;new-password&quot; aria-required=&quot;true&quot; /&gt;
+                &lt;label asp-for=&quot;Input.Password&quot;&gt;&lt;/label&gt;
+                &lt;span asp-validation-for=&quot;Input.Password&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;form-floating&quot;&gt;
+                &lt;input asp-for=&quot;Input.ConfirmPassword&quot; class=&quot;form-control&quot; autocomplete=&quot;new-password&quot; aria-required=&quot;true&quot; /&gt;
+                &lt;label asp-for=&quot;Input.ConfirmPassword&quot;&gt;&lt;/label&gt;
+                &lt;span asp-validation-for=&quot;Input.ConfirmPassword&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;button id=&quot;registerSubmit&quot; type=&quot;submit&quot; class=&quot;w-100 btn btn-lg btn-primary&quot;&gt;Register&lt;/button&gt;
+        &lt;/form&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;col-md-6 col-md-offset-2&quot;&gt;
+        &lt;section&gt;
+            &lt;h3&gt;Use another service to register.&lt;/h3&gt;
+            &lt;hr /&gt;
+            @{
+                if ((Model.ExternalLogins?.Count ?? 0) == 0)
+                {
+                    &lt;div&gt;
+                        &lt;p&gt;
+                            There are no external authentication services configured. See this &lt;a href=&quot;https://go.microsoft.com/fwlink/?LinkID=532715&quot;&gt;article
+                            about setting up this ASP.NET application to support logging in via external services&lt;/a&gt;.
+                        &lt;/p&gt;
+                    &lt;/div&gt;
+                }
+                else
+                {
+                    &lt;form id=&quot;external-account&quot; asp-page=&quot;./ExternalLogin&quot; asp-route-returnUrl=&quot;@Model.ReturnUrl&quot; method=&quot;post&quot; class=&quot;form-horizontal&quot;&gt;
+                        &lt;div&gt;
+                            &lt;p&gt;
+                                @foreach (var provider in Model.ExternalLogins!)
+                                {
+                                    &lt;button type=&quot;submit&quot; class=&quot;btn btn-primary&quot; name=&quot;provider&quot; value=&quot;@provider.Name&quot; title=&quot;Log in using your @provider.DisplayName account&quot;&gt;@provider.DisplayName&lt;/button&gt;
+                                }
+                            &lt;/p&gt;
+                        &lt;/div&gt;
+                    &lt;/form&gt;
+                }
+            }
+        &lt;/section&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+
+@section Scripts {
+    &lt;partial name=&quot;_ValidationScriptsPartial&quot; /&gt;
+}
+</code></pre>
+<h3><a href="#update-the-layout" aria-hidden="true" class="anchor" id="update-the-layout"></a>Update the layout</h3>
+<h3><a href="#add-a-migration-for-the-custom-user-data" aria-hidden="true" class="anchor" id="add-a-migration-for-the-custom-user-data"></a>Add a migration for the custom user data</h3>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+</ul>
+<pre><code class="language-powershell">Add-Migration CustomUserData
+Update-Database
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet ef migrations add CustomUserData
+dotnet ef database update
+</code></pre>
+<h2><a href="#test-create-view,-download,-delete-custom-user-data" aria-hidden="true" class="anchor" id="test-create-view,-download,-delete-custom-user-data"></a>Test create, view, download, delete custom user data</h2>
+<ul>
+<li>
+<p>Register a new user.</p>
+</li>
+<li>
+<p>View the custom user data on the <code>/Identity/Account/Manage</code> page.</p>
+</li>
+<li>
+<p>Download and view the users personal data from the <code>/Identity/Account/Manage/PersonalData</code> page.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/add-user-data?view=aspnetcore-8.0">Add, download, and delete custom user data to Identity in an ASP.NET Core project</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

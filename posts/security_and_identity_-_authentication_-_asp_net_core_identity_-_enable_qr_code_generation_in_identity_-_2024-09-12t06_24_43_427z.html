@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - Enable QR code generation in Identity | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='ASP.NET Core ships with support for authenticator applications for individual authentication. Two factor authentication (2FA) authenticator apps, using a Time-based One-time Password Algorithm (TOTP), are the industry recommended approach for 2FA. 2FA using TOTP is preferred to SMS 2FA. An authenticator app provides a 6 to 8 digit code which users must enter after confirming their username and password. Typically an authenticator app is installed on a smartphone.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - Enable QR code generation in Identity</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>ASP.NET Core ships with support for authenticator applications for individual authentication.</p>
+<blockquote>
+<p class='warning'>Warning
+An ASP.NET Core TOTP code should be kept secret because it can be used to authenticate successfully multiple times before it expires.</p>
+</blockquote>
+<p>Two-factor authentication ( 2FA) is the process of requiring a username and a password to login to an online account.</p>
+<h2><a href="#adding-qr-codes-to-the-2fa-configuration-page" aria-hidden="true" class="anchor" id="adding-qr-codes-to-the-2fa-configuration-page"></a>Adding QR codes to the 2FA configuration page</h2>
+<p>These instructions use <code>qrcode.js</code> from the <a href="https://davidshimjs.github.io/qrcodejs/">https://davidshimjs.github.io/qrcodejs/</a> repo.</p>
+<ul>
+<li>
+<p>Download the <code>qrcode.js</code> JavaScript library to the <code>wwwroot\lib</code> folder in your project.</p>
+</li>
+<li>
+<p>Follow the instructions in Scaffold Identity to generate <code>/Areas/Identity/Pages/Account/Manage/EnableAuthenticator.cshtml</code>.</p>
+</li>
+<li>
+<p>In <code>/Areas/Identity/Pages/Account/Manage/EnableAuthenticator.cshtml</code>, locate the <code>Scripts</code> section at the end of the file:</p>
+</li>
+</ul>
+<pre><code class="language-cshtml">@section Scripts {
+    @await Html.PartialAsync(&quot;_ValidationScriptsPartial&quot;)
+}
+</code></pre>
+<ul>
+<li>Create a new JavaScript file called <code>qr.js</code> in <code>wwwroot/js</code> and add the following code to generate the QR Code:</li>
+</ul>
+<pre><code class="language-javascript">window.addEventListener(&quot;load&quot;, () =&gt; {
+  const uri = document.getElementById(&quot;qrCodeData&quot;).getAttribute('data-url');
+  new QRCode(document.getElementById(&quot;qrCode&quot;),
+    {
+      text: uri,
+      width: 150,
+      height: 150
+    });
+});
+</code></pre>
+<ul>
+<li>
+<p>Update the <code>Scripts</code> section to add a reference to the <code>qrcode.js</code> library previously downloaded.</p>
+</li>
+<li>
+<p>Add the <code>qr.js</code> file with the call to generate the QR code:</p>
+</li>
+</ul>
+<pre><code class="language-cshtml">@section Scripts {
+    @await Html.PartialAsync(&quot;_ValidationScriptsPartial&quot;)
+
+    &lt;script type=&quot;text/javascript&quot; src=&quot;~/lib/qrcode.js&quot;&gt;&lt;/script&gt;
+    &lt;script type=&quot;text/javascript&quot; src=&quot;~/js/qr.js&quot;&gt;&lt;/script&gt;
+}
+</code></pre>
+<ul>
+<li>Delete the paragraph which links you to these instructions.</li>
+</ul>
+<p>Run your app and ensure that you can scan the QR code and validate the code the authenticator proves.</p>
+<h2><a href="#change-the-site-name-in-the-qr-code" aria-hidden="true" class="anchor" id="change-the-site-name-in-the-qr-code"></a>Change the site name in the QR code</h2>
+<p>The site name in the QR code is taken from the project name you choose when initially creating your project. You can change it by looking for the GenerateQrCodeUri(string email, string unformattedKey) method in the <code>/Areas/Identity/Pages/Account/Manage/EnableAuthenticator.cshtml.cs</code>.</p>
+<p>The default code from the template looks as follows:</p>
+<pre><code class="language-csharp">private string GenerateQrCodeUri(string email, string unformattedKey)
+{
+    return string.Format(
+        AuthenticatorUriFormat,
+        _urlEncoder.Encode(&quot;Razor Pages&quot;),
+        _urlEncoder.Encode(email),
+        unformattedKey);
+}
+</code></pre>
+<p>The second parameter in the call to <code>string.Format</code> is your site name, taken from your solution name. It can be changed to any value, but it must always be URL encoded.</p>
+<h2><a href="#using-a-different-qr-code-library" aria-hidden="true" class="anchor" id="using-a-different-qr-code-library"></a>Using a different QR Code library</h2>
+<p>You can replace the QR Code library with your preferred library. The HTML contains a <code>qrCode</code> element into which you can place a QR Code by whatever mechanism your library provides.</p>
+<p>The correctly formatted URL for the QR Code is available in the:</p>
+<ul>
+<li>
+<p><code>AuthenticatorUri</code> property of the model.</p>
+</li>
+<li>
+<p><code>data-url</code> property in the <code>qrCodeData</code> element.</p>
+</li>
+</ul>
+<h2><a href="#totp-client-and-server-time-skew" aria-hidden="true" class="anchor" id="totp-client-and-server-time-skew"></a>TOTP client and server time skew</h2>
+<p>To use TOTP 2FA, you must have an authenticator device with an accurate time setting.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity-enable-qrcodes?view=aspnetcore-8.0">Enable QR code generation for TOTP authenticator apps in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

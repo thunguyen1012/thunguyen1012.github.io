@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Data access - Azure Storage with Visual Studio - Queue storage | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Data access - Azure Storage with Visual Studio - Queue storage</h1>
+        <h2><a href="#about-azure-queues" aria-hidden="true" class="anchor" id="about-azure-queues"></a>About Azure queues</h2>
+<h3><a href="#overview" aria-hidden="true" class="anchor" id="overview"></a>Overview</h3>
+<pre><code>- What are Azure queues?
+</code></pre>
+<h2><a href="#get-started" aria-hidden="true" class="anchor" id="get-started"></a>Get started</h2>
+<h3><a href="#quickstart" aria-hidden="true" class="anchor" id="quickstart"></a>Quickstart</h3>
+<pre><code>- Create a queue and add a message with the Azure portal
+</code></pre>
+<h2><a href="#develop-with-queues" aria-hidden="true" class="anchor" id="develop-with-queues"></a>Develop with queues</h2>
+<h3><a href="#quickstart-1" aria-hidden="true" class="anchor" id="quickstart-1"></a>Quickstart</h3>
+<pre><code>- Azure Queue storage for .NET
+
+- Azure Queue storage for Java
+
+- Azure Queue storage for Python
+
+- Azure Queue storage for JavaScript
+</code></pre>
+<h3><a href="#how-to-guide" aria-hidden="true" class="anchor" id="how-to-guide"></a>How-To Guide</h3>
+<pre><code>- Get started with Azure Queue storage using .NET
+
+- How to use Queue storage from Java
+
+- How to use Queue storage from Node.js
+
+- How to use Queue Storage from C++
+
+- How to use Queue storage from Python
+</code></pre>
+<h2><a href="#manage-queues" aria-hidden="true" class="anchor" id="manage-queues"></a>Manage queues</h2>
+<h3><a href="#how-to-guide-1" aria-hidden="true" class="anchor" id="how-to-guide-1"></a>How-To Guide</h3>
+<pre><code>- Perform Azure Queue storage operations with Azure PowerShell
+</code></pre>
+<h2><a href="#tutorial" aria-hidden="true" class="anchor" id="tutorial"></a>Tutorial</h2>
+<h3><a href="#tutorial-1" aria-hidden="true" class="anchor" id="tutorial-1"></a>Tutorial</h3>
+<pre><code>- Work with Azure storage queues (.NET)
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/azure/visual-studio/vs-storage-aspnet5-getting-started-queues?toc=%2Faspnet%2Fcore%2Ftoc.json&bc=%2Faspnet%2Fcore%2Fbreadcrumb%2Ftoc.json&view=aspnetcore-8.0">Azure Queue storage documentation</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

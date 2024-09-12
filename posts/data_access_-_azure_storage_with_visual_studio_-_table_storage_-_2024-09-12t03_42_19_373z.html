@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Data access - Azure Storage with Visual Studio - Table storage | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Azure Table storage is a service that stores non-relational structured data (also known as structured NoSQL data) in the cloud, providing a key/attribute store with a schemaless design. Because Table storage is schemaless, it's easy to adapt your data as the needs of your application evolve. Access to Table storage data is fast and cost-effective for many types of applications, and is typically lower in cost than traditional SQL for similar volumes of data.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Data access - Azure Storage with Visual Studio - Table storage</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p class='tip'>Tip
+The content in this article applies to the original Azure Table storage. However, the same concepts apply to the newer Azure Cosmos DB for Table, which offers higher performance and availability, global distribution, and automatic secondary indexes. It is also available in a consumption-based serverless mode. There are some feature differences between Table API in Azure Cosmos DB and Azure Table storage. For more information, see Azure Cosmos DB for Table. For ease of development, we now provide a unified Azure Tables SDK that can be used to target both Azure Table storage and Azure Cosmos DB for Table.</p>
+</blockquote>
+<p>Azure Table storage is a service that stores non-relational structured data (also known as structured data) in the cloud, providing a key/attribute store with a schemaless design.</p>
+<p>You can use Table storage to store flexible datasets like user data for web applications, address books, device information, or other types of metadata your service requires.</p>
+<h2><a href="#what-is-table-storage" aria-hidden="true" class="anchor" id="what-is-table-storage"></a>What is Table storage</h2>
+<p>Microsoft has released a new version of its Azure Table storage service.</p>
+<ul>
+<li>
+<p>Storing TBs of structured data capable of serving web scale applications</p>
+</li>
+<li>
+<p>Storing datasets that don't require complex joins, foreign keys, or stored procedures and can be denormalized for fast access</p>
+</li>
+<li>
+<p>Quickly querying data using a clustered index</p>
+</li>
+<li>
+<p>Accessing data using the OData protocol and LINQ queries with WCF Data Service .NET Libraries</p>
+</li>
+</ul>
+<p>You can use Table storage to store and query huge sets of structured, non-relational data, and your tables will scale as demand increases.</p>
+<h2><a href="#table-storage-concepts" aria-hidden="true" class="anchor" id="table-storage-concepts"></a>Table storage concepts</h2>
+<p>Table storage contains the following components:</p>
+<p><img src="https://learn.microsoft.com/en-us/azure/visual-studio/vs-storage-aspnet5-getting-started-tables/../../includes/media/storage-table-concepts-include/table1.png" alt="Tables storage component diagram!" title="Tables storage component diagram" /></p>
+<ul>
+<li>
+<p>URL format: Azure Table Storage accounts use this format: http://<storage account>.table.core.windows.net/<table>
+You can address Azure tables directly using this address with the OData protocol. For more information, see OData.org.</p>
+</li>
+<li>
+<p>Accounts: All access to Azure Storage is done through a storage account. For more information about storage accounts, see Storage account overview.
+All access to Azure Cosmos DB is done through an Azure Cosmos DB for Table account. For more information, see Create an Azure Cosmos DB for Table account.</p>
+</li>
+<li>
+<p>Table: A table is a collection of entities. Tables don't enforce a schema on entities, which means a single table can contain entities that have different sets of properties.</p>
+</li>
+<li>
+<p>Entity: An entity is a set of properties, similar to a database row. An entity in Azure Storage can be up to 1MB in size. An entity in Azure Cosmos DB can be up to 2MB in size.</p>
+</li>
+<li>
+<p>Properties: A property is a name-value pair. Each entity can include up to 252 properties to store data. Each entity also has three system properties that specify a partition key, a row key, and a timestamp. Entities with the same partition key can be queried more quickly, and inserted/updated in atomic operations. An entity's row key is its unique identifier within a partition.</p>
+</li>
+</ul>
+<p>For details about naming tables and properties, see Understanding the Table Service Data Model.</p>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>Microsoft Azure Storage Explorer is a free, standalone app from Microsoft that enables you to work visually with Azure Storage data on Windows, macOS, and Linux.</p>
+</li>
+<li>
+<p>Get started with Azure Table Storage in .NET</p>
+</li>
+<li>
+<p>View the Table service reference documentation for complete details about available APIs:</p>
+<ul>
+<li>
+<p>Storage Client Library for .NET reference</p>
+</li>
+<li>
+<p>REST API reference</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/azure/visual-studio/vs-storage-aspnet5-getting-started-tables?toc=%2Faspnet%2Fcore%2Ftoc.json&bc=%2Faspnet%2Fcore%2Fbreadcrumb%2Ftoc.json&view=aspnetcore-8.0">What is Azure Table storage?</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

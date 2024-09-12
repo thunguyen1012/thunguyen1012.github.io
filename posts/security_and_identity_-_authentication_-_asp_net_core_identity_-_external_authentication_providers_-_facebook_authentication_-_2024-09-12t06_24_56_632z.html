@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Facebook authentication | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - External authentication providers - Facebook authentication</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This tutorial with code examples shows how to enable your users to sign in with their Facebook account using a sample ASP.NET Core project created on the previous page. We start by creating a Facebook <code>App ID</code> by following the official steps.</p>
+<h2><a href="#create-the-app-in-facebook" aria-hidden="true" class="anchor" id="create-the-app-in-facebook"></a>Create the app in Facebook</h2>
+<ul>
+<li>
+<p>Add the Microsoft.AspNetCore.Authentication.Facebook NuGet package to the project.</p>
+</li>
+<li>
+<p>Navigate to the Facebook Developers app page and sign in. If you don't already have a Facebook account, use the Sign up for Facebook link on the login page to create one.  Once you have a Facebook account, follow the instructions to register as a Facebook Developer.</p>
+</li>
+<li>
+<p>From the My Apps menu select Create App. The Create an app form appears.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/index/_static/fbmyapps.png?view=aspnetcore-8.0" alt="Facebook for developers portal open in Microsoft Edge!" title="Facebook for developers portal open in Microsoft Edge" /></p>
+<ul>
+<li>
+<p>Select an app type that best fits your project. For this project, select Consumer, and then Next. A new <code>App ID</code> is created.</p>
+</li>
+<li>
+<p>Fill out the form and tap the Create App button.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/index/_static/fbnewappid.png?view=aspnetcore-8.0" alt="Create a New App ID form!" title="Create a New App ID form" /></p>
+<ul>
+<li>On the Add Products to Your App page, select Set Up on the Facebook Login card.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/index/_static/fbproductsetup.png?view=aspnetcore-8.0" alt="Product Setup page!" title="Product Setup page" /></p>
+<ul>
+<li>The Quickstart wizard launches with Choose a Platform as the first page. Bypass the wizard for now by clicking the FaceBook Login Settings link in the menu on the lower left:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/index/_static/fbskipquickstart.png?view=aspnetcore-8.0" alt="Skip Quick Start!" title="Skip Quick Start" /></p>
+<ul>
+<li>The Client OAuth Settings page is presented:</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/index/_static/fboauthsetup.png?view=aspnetcore-8.0" alt="Client OAuth Settings page!" title="Client OAuth Settings page" /></p>
+<ul>
+<li>Enter your development URI with /signin-facebook appended into the Valid OAuth Redirect URIs field (for example: <code>https://localhost:44320/signin-facebook</code>). The Facebook authentication configured later in this tutorial will automatically handle requests at /signin-facebook route to implement the OAuth flow.</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+The URI /signin-facebook is set as the default callback of the Facebook authentication provider. You can change the default callback URI while configuring the Facebook authentication middleware via the inherited RemoteAuthenticationOptions.CallbackPath property of the FacebookOptions class.</p>
+</blockquote>
+<ul>
+<li>
+<p>Select Save Changes.</p>
+</li>
+<li>
+<p>Select Settings &gt; Basic link in the left navigation.</p>
+</li>
+<li>
+<p>Make a note of your <code>App ID</code> and your <code>App Secret</code>. You will add both into your ASP.NET Core application in the next section:</p>
+</li>
+<li>
+<p>When deploying the site you need to revisit the Facebook Login setup page, and register a new public URI.</p>
+</li>
+</ul>
+<h2><a href="#store-the-facebook-app-id-and-secret" aria-hidden="true" class="anchor" id="store-the-facebook-app-id-and-secret"></a>Store the Facebook app ID and secret</h2>
+<p>Store sensitive settings such as the Facebook app ID and secret values with Secret Manager. For this sample, use the following steps:</p>
+<ul>
+<li>
+<p>Initialize the project for secret storage per the instructions at Enable secret storage.</p>
+</li>
+<li>
+<p>Store the sensitive settings in the local secret store with the secret keys <code>Authentication:Facebook:AppId</code> and <code>Authentication:Facebook:AppSecret</code>:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet user-secrets set &quot;Authentication:Facebook:AppId&quot; &quot;&lt;app-id&gt;&quot;
+dotnet user-secrets set &quot;Authentication:Facebook:AppSecret&quot; &quot;&lt;app-secret&gt;&quot;
+</code></pre>
+<p>The : separator doesn't work with environment variable hierarchical keys on all platforms. For example, the : separator is not supported by Bash. The double underscore, <code>__</code>, is:</p>
+<ul>
+<li>
+<p>Supported by all platforms.</p>
+</li>
+<li>
+<p>Automatically replaced by a colon, :.</p>
+</li>
+</ul>
+<h2><a href="#configure-facebook-authentication" aria-hidden="true" class="anchor" id="configure-facebook-authentication"></a>Configure Facebook Authentication</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+var configuration = builder.Configuration;
+
+services.AddAuthentication().AddFacebook(facebookOptions =&gt;
+    {
+        facebookOptions.AppId = configuration[&quot;Authentication:Facebook:AppId&quot;];
+        facebookOptions.AppSecret = configuration[&quot;Authentication:Facebook:AppSecret&quot;];
+    });
+</code></pre>
+<p>The <code>AddAuthentication(IServiceCollection, String)</code> overload sets the DefaultScheme property. The <code>AddAuthentication(IServiceCollection, Action&lt;AuthenticationOptions&gt;)</code> overload allows configuring authentication options, which can be used to set up default authentication schemes for different purposes. Subsequent calls to <code>AddAuthentication</code> override previously configured AuthenticationOptions properties.</p>
+<p>TheBuilder extension methods that register an authentication handler may only be called once per authentication scheme.</p>
+<h2><a href="#sign-in-with-facebook" aria-hidden="true" class="anchor" id="sign-in-with-facebook"></a>Sign in with Facebook</h2>
+<ul>
+<li>
+<p>Run the app and select Log in.</p>
+</li>
+<li>
+<p>Under Use another service to log in., select Facebook.</p>
+</li>
+<li>
+<p>You are redirected to Facebook for authentication.</p>
+</li>
+<li>
+<p>Enter your Facebook credentials.</p>
+</li>
+<li>
+<p>You are redirected back to your site where you can set your email.</p>
+</li>
+</ul>
+<p>You are now logged in using your Facebook credentials:</p>
+<h2><a href="#react-to-cancel-authorize-external-sign-in" aria-hidden="true" class="anchor" id="react-to-cancel-authorize-external-sign-in"></a>React to cancel authorize external sign-in</h2>
+<p><code>AccessDeniedPath</code> can provide a redirect path to the user agent when the user doesn't approve the requested authorization demand.</p>
+<p>The following code sets the <code>AccessDeniedPath</code> to &quot;/AccessDeniedPathInfo&quot;:</p>
+<pre><code class="language-csharp">services.AddAuthentication().AddFacebook(options =&gt;
+{
+    options.AppId = Configuration[&quot;Authentication:Facebook:AppId&quot;];
+    options.AppSecret = Configuration[&quot;Authentication:Facebook:AppSecret&quot;];
+    options.AccessDeniedPath = &quot;/AccessDeniedPathInfo&quot;;
+});
+</code></pre>
+<p>We recommend the <code>AccessDeniedPath</code> page contains the following information:</p>
+<ul>
+<li>
+<p>Remote authentication was canceled.</p>
+</li>
+<li>
+<p>This app requires authentication.</p>
+</li>
+<li>
+<p>To try sign-in again, select the Login link.</p>
+</li>
+</ul>
+<h3><a href="#test-accessdeniedpath" aria-hidden="true" class="anchor" id="test-accessdeniedpath"></a>Test <code>AccessDeniedPath</code></h3>
+<ul>
+<li>
+<p>Navigate to facebook.com</p>
+</li>
+<li>
+<p>If you are signed in, you must sign out.</p>
+</li>
+<li>
+<p>Run the app and select Facebook sign-in.</p>
+</li>
+<li>
+<p>Select Not now. You are redirected to the specified <code>AccessDeniedPath</code> page.</p>
+</li>
+</ul>
+<h2><a href="#forward-request-information-with-a-proxy-or-load-balancer" aria-hidden="true" class="anchor" id="forward-request-information-with-a-proxy-or-load-balancer"></a>Forward request information with a proxy or load balancer</h2>
+<p>If the app is deployed behind a proxy server or load balancer, some of the original request information might be forwarded to the app in request headers. This information usually includes the secure request scheme (https), host, and client IP address. Apps don't automatically read these request headers to discover and use the original request information.</p>
+<p>The scheme is used in link generation that affects the authentication flow with external providers. Losing the secure scheme (https) results in the app generating incorrect insecure redirect URLs.</p>
+<p>Use Forwarded Headers Middleware to make the original request information available to the app for request processing.</p>
+<p>For more information, see Configure ASP.NET Core to work with proxy servers and load balancers.</p>
+<h2><a href="#multiple-authentication-providers" aria-hidden="true" class="anchor" id="multiple-authentication-providers"></a>Multiple authentication providers</h2>
+<p>When the app requires multiple providers, chain the provider extension methods behind <code>AddAuthentication</code>:</p>
+<pre><code class="language-csharp">services.AddAuthentication()
+    .AddMicrosoftAccount(microsoftOptions =&gt; { ... })
+    .AddGoogle(googleOptions =&gt; { ... })
+    .AddTwitter(twitterOptions =&gt; { ... })
+    .AddFacebook(facebookOptions =&gt; { ... });
+</code></pre>
+<p>For more information on configuration options supported by Facebook authentication, see the FacebookOptions API reference. Configuration options can be used to:</p>
+<ul>
+<li>
+<p>Request different information about the user.</p>
+</li>
+<li>
+<p>Add query string arguments to customize the login experience.</p>
+</li>
+</ul>
+<h2><a href="#troubleshooting" aria-hidden="true" class="anchor" id="troubleshooting"></a>Troubleshooting</h2>
+<ul>
+<li>
+<p>ASP.NET Core 2.x only: If Identity isn't configured by calling <code>services.AddIdentity</code> in <code>ConfigureServices</code>, attempting to authenticate will result in ArgumentException: The 'SignInScheme' option must be provided. The project template used in this tutorial ensures that this is done.</p>
+</li>
+<li>
+<p>If the site database has not been created by applying the initial migration, you get A database operation failed while processing the request error. Tap Apply Migrations to create the database and refresh to continue past the error.</p>
+</li>
+</ul>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>This article showed how you can authenticate with Facebook. You can follow a similar approach to authenticate with other providers listed on the previous page.</p>
+</li>
+<li>
+<p>Once you publish your web site to Azure web app, you should reset the <code>AppSecret</code> in the Facebook developer portal.</p>
+</li>
+<li>
+<p>Set the <code>Authentication:Facebook:AppId</code> and <code>Authentication:Facebook:AppSecret</code> as application settings in the Azure portal. The configuration system is set up to read keys from environment variables.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/facebook-logins?view=aspnetcore-8.0">Facebook external login setup in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

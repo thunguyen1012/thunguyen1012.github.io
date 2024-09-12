@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - Customize Identity | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='By Arthur Vickers'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - Customize Identity</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>ASP.NET Core Identity provides a framework for managing and storing user accounts in ASP.NET Core apps. Identity is added to your project when Individual <code>User</code> Accounts is selected as the authentication mechanism. By default, Identity makes use of an Entity Framework (EF) Core data model. This article describes how to customize the Identity model.</p>
+<h2><a href="#identity-and-ef-core-migrations" aria-hidden="true" class="anchor" id="identity-and-ef-core-migrations"></a>Identity and EF Core Migrations</h2>
+<p>Before examining the model, it's useful to understand how Identity works with EF Core Migrations to create and update a database. At the top level, the process is:</p>
+<ul>
+<li>
+<p>Define or update a data model in code.</p>
+</li>
+<li>
+<p>Add a Migration to translate this model into changes that can be applied to the database.</p>
+</li>
+<li>
+<p>Check that the Migration correctly represents your intentions.</p>
+</li>
+<li>
+<p>Apply the Migration to update the database to be in sync with the model.</p>
+</li>
+<li>
+<p>Repeat steps 1 through 4 to further refine the model and keep the database in sync.</p>
+</li>
+</ul>
+<p>Use one of the following approaches to add and apply Migrations:</p>
+<ul>
+<li>
+<p>The Package Manager Console (PMC) window if using Visual Studio. For more information, see EF Core PMC tools.</p>
+</li>
+<li>
+<p>The .NET CLI if using the command line. For more information, see EF Core .NET command line tools.</p>
+</li>
+<li>
+<p>Clicking the Apply Migrations button on the error page when the app is run.</p>
+</li>
+</ul>
+<p>ASP.NET Core has a development-time error page handler that can apply database migrations when the app is run.</p>
+<p>In this article, I'm going to walk you through the initial migration of an existing app using Identity.</p>
+<ul>
+<li>
+<p>Run <code>Update-Database</code> in PMC.</p>
+</li>
+<li>
+<p>Run <code>dotnet ef database update</code> in a command shell.</p>
+</li>
+<li>
+<p>Click the Apply Migrations button on the error page when the app is run.</p>
+</li>
+</ul>
+<p>Repeat the preceding steps as changes are made to the model.</p>
+<h2><a href="#the-identity-model" aria-hidden="true" class="anchor" id="the-identity-model"></a>The Identity model</h2>
+<h3><a href="#entity-types" aria-hidden="true" class="anchor" id="entity-types"></a>Entity types</h3>
+<p>The Identity model consists of the following entity types.</p>
+<table><thead>
+<tr>
+<th>Entity type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>User</code></td>
+<td>Represents the user.</td>
+</tr>
+<tr>
+<td><code>Role</code></td>
+<td>Represents a role.</td>
+</tr>
+<tr>
+<td><code>UserClaim</code></td>
+<td>Represents a claim that a user possesses.</td>
+</tr>
+<tr>
+<td><code>UserToken</code></td>
+<td>Represents an authentication token for a user.</td>
+</tr>
+<tr>
+<td><code>UserLogin</code></td>
+<td>Associates a user with a login.</td>
+</tr>
+<tr>
+<td><code>RoleClaim</code></td>
+<td>Represents a claim that's granted to all users within a role.</td>
+</tr>
+<tr>
+<td><code>UserRole</code></td>
+<td>A join entity that associates users and roles.</td>
+</tr>
+</tbody></table>
+<h3><a href="#entity-type-relationships" aria-hidden="true" class="anchor" id="entity-type-relationships"></a>Entity type relationships</h3>
+<p>The entity types are related to each other in the following ways:</p>
+<ul>
+<li>
+<p>Each <code>User</code> can have many <code>UserClaims</code>.</p>
+</li>
+<li>
+<p>Each <code>User</code> can have many <code>UserLogins</code>.</p>
+</li>
+<li>
+<p>Each <code>User</code> can have many <code>UserTokens</code>.</p>
+</li>
+<li>
+<p>Each <code>Role</code> can have many associated <code>RoleClaims</code>.</p>
+</li>
+<li>
+<p>Each <code>User</code> can have many associated <code>Roles</code>, and each <code>Role</code> can be associated with many <code>Users</code>. This is a many-to-many relationship that requires a join table in the database. The join table is represented by the <code>UserRole</code> entity.</p>
+</li>
+</ul>
+<h3><a href="#default-model-configuration" aria-hidden="true" class="anchor" id="default-model-configuration"></a>Default model configuration</h3>
+<p>Identity defines many context classes that inherit from <code>DbContext</code> to configure and use the model. This configuration is done using the EF Core Code First Fluent API in the <code>OnModelCreating</code> method of the context class. The default configuration is:</p>
+<pre><code class="language-csharp">builder.Entity&lt;TUser&gt;(b =&gt;
+{
+    // Primary key
+    b.HasKey(u =&gt; u.Id);
+
+    // Indexes for &quot;normalized&quot; username and email, to allow efficient lookups
+    b.HasIndex(u =&gt; u.NormalizedUserName).HasName(&quot;UserNameIndex&quot;).IsUnique();
+    b.HasIndex(u =&gt; u.NormalizedEmail).HasName(&quot;EmailIndex&quot;);
+
+    // Maps to the AspNetUsers table
+    b.ToTable(&quot;AspNetUsers&quot;);
+
+    // A concurrency token for use with the optimistic concurrency checking
+    b.Property(u =&gt; u.ConcurrencyStamp).IsConcurrencyToken();
+
+    // Limit the size of columns to use efficient database types
+    b.Property(u =&gt; u.UserName).HasMaxLength(256);
+    b.Property(u =&gt; u.NormalizedUserName).HasMaxLength(256);
+    b.Property(u =&gt; u.Email).HasMaxLength(256);
+    b.Property(u =&gt; u.NormalizedEmail).HasMaxLength(256);
+
+    // The relationships between User and other entity types
+    // Note that these relationships are configured with no navigation properties
+
+    // Each User can have many UserClaims
+    b.HasMany&lt;TUserClaim&gt;().WithOne().HasForeignKey(uc =&gt; uc.UserId).IsRequired();
+
+    // Each User can have many UserLogins
+    b.HasMany&lt;TUserLogin&gt;().WithOne().HasForeignKey(ul =&gt; ul.UserId).IsRequired();
+
+    // Each User can have many UserTokens
+    b.HasMany&lt;TUserToken&gt;().WithOne().HasForeignKey(ut =&gt; ut.UserId).IsRequired();
+
+    // Each User can have many entries in the UserRole join table
+    b.HasMany&lt;TUserRole&gt;().WithOne().HasForeignKey(ur =&gt; ur.UserId).IsRequired();
+});
+
+builder.Entity&lt;TUserClaim&gt;(b =&gt;
+{
+    // Primary key
+    b.HasKey(uc =&gt; uc.Id);
+
+    // Maps to the AspNetUserClaims table
+    b.ToTable(&quot;AspNetUserClaims&quot;);
+});
+
+builder.Entity&lt;TUserLogin&gt;(b =&gt;
+{
+    // Composite primary key consisting of the LoginProvider and the key to use
+    // with that provider
+    b.HasKey(l =&gt; new { l.LoginProvider, l.ProviderKey });
+
+    // Limit the size of the composite key columns due to common DB restrictions
+    b.Property(l =&gt; l.LoginProvider).HasMaxLength(128);
+    b.Property(l =&gt; l.ProviderKey).HasMaxLength(128);
+
+    // Maps to the AspNetUserLogins table
+    b.ToTable(&quot;AspNetUserLogins&quot;);
+});
+
+builder.Entity&lt;TUserToken&gt;(b =&gt;
+{
+    // Composite primary key consisting of the UserId, LoginProvider and Name
+    b.HasKey(t =&gt; new { t.UserId, t.LoginProvider, t.Name });
+
+    // Limit the size of the composite key columns due to common DB restrictions
+    b.Property(t =&gt; t.LoginProvider).HasMaxLength(maxKeyLength);
+    b.Property(t =&gt; t.Name).HasMaxLength(maxKeyLength);
+
+    // Maps to the AspNetUserTokens table
+    b.ToTable(&quot;AspNetUserTokens&quot;);
+});
+
+builder.Entity&lt;TRole&gt;(b =&gt;
+{
+    // Primary key
+    b.HasKey(r =&gt; r.Id);
+
+    // Index for &quot;normalized&quot; role name to allow efficient lookups
+    b.HasIndex(r =&gt; r.NormalizedName).HasName(&quot;RoleNameIndex&quot;).IsUnique();
+
+    // Maps to the AspNetRoles table
+    b.ToTable(&quot;AspNetRoles&quot;);
+
+    // A concurrency token for use with the optimistic concurrency checking
+    b.Property(r =&gt; r.ConcurrencyStamp).IsConcurrencyToken();
+
+    // Limit the size of columns to use efficient database types
+    b.Property(u =&gt; u.Name).HasMaxLength(256);
+    b.Property(u =&gt; u.NormalizedName).HasMaxLength(256);
+
+    // The relationships between Role and other entity types
+    // Note that these relationships are configured with no navigation properties
+
+    // Each Role can have many entries in the UserRole join table
+    b.HasMany&lt;TUserRole&gt;().WithOne().HasForeignKey(ur =&gt; ur.RoleId).IsRequired();
+
+    // Each Role can have many associated RoleClaims
+    b.HasMany&lt;TRoleClaim&gt;().WithOne().HasForeignKey(rc =&gt; rc.RoleId).IsRequired();
+});
+
+builder.Entity&lt;TRoleClaim&gt;(b =&gt;
+{
+    // Primary key
+    b.HasKey(rc =&gt; rc.Id);
+
+    // Maps to the AspNetRoleClaims table
+    b.ToTable(&quot;AspNetRoleClaims&quot;);
+});
+
+builder.Entity&lt;TUserRole&gt;(b =&gt;
+{
+    // Primary key
+    b.HasKey(r =&gt; new { r.UserId, r.RoleId });
+
+    // Maps to the AspNetUserRoles table
+    b.ToTable(&quot;AspNetUserRoles&quot;);
+});
+</code></pre>
+<h3><a href="#model-generic-types" aria-hidden="true" class="anchor" id="model-generic-types"></a>Model generic types</h3>
+<p>Identity defines default Common Language Runtime (CLR) types for each of the entity types listed above. These types are all prefixed with Identity:</p>
+<ul>
+<li>
+<p><code>IdentityUser</code></p>
+</li>
+<li>
+<p><code>IdentityRole</code></p>
+</li>
+<li>
+<p><code>IdentityUserClaim</code></p>
+</li>
+<li>
+<p><code>IdentityUserToken</code></p>
+</li>
+<li>
+<p><code>IdentityUserLogin</code></p>
+</li>
+<li>
+<p><code>IdentityRoleClaim</code></p>
+</li>
+<li>
+<p><code>IdentityUserRole</code></p>
+</li>
+</ul>
+<p>Rather than using these types directly, the types can be used as base classes for the app's own types. The <code>DbContext</code> classes defined by Identity are generic, such that different CLR types can be used for one or more of the entity types in the model. These generic types also allow the <code>User</code> primary key (PK) data type to be changed.</p>
+<p>When using Identity with support for roles, an <code>IdentityDbContext</code> class should be used. For example:</p>
+<pre><code class="language-csharp">// Uses all the built-in Identity types
+// Uses `string` as the key type
+public class IdentityDbContext
+    : IdentityDbContext&lt;IdentityUser, IdentityRole, string&gt;
+{
+}
+
+// Uses the built-in Identity types except with a custom User type
+// Uses `string` as the key type
+public class IdentityDbContext&lt;TUser&gt;
+    : IdentityDbContext&lt;TUser, IdentityRole, string&gt;
+        where TUser : IdentityUser
+{
+}
+
+// Uses the built-in Identity types except with custom User and Role types
+// The key type is defined by TKey
+public class IdentityDbContext&lt;TUser, TRole, TKey&gt; : IdentityDbContext&lt;
+    TUser, TRole, TKey, IdentityUserClaim&lt;TKey&gt;, IdentityUserRole&lt;TKey&gt;,
+    IdentityUserLogin&lt;TKey&gt;, IdentityRoleClaim&lt;TKey&gt;, IdentityUserToken&lt;TKey&gt;&gt;
+        where TUser : IdentityUser&lt;TKey&gt;
+        where TRole : IdentityRole&lt;TKey&gt;
+        where TKey : IEquatable&lt;TKey&gt;
+{
+}
+
+// No built-in Identity types are used; all are specified by generic arguments
+// The key type is defined by TKey
+public abstract class IdentityDbContext&lt;
+    TUser, TRole, TKey, TUserClaim, TUserRole, TUserLogin, TRoleClaim, TUserToken&gt;
+    : IdentityUserContext&lt;TUser, TKey, TUserClaim, TUserLogin, TUserToken&gt;
+         where TUser : IdentityUser&lt;TKey&gt;
+         where TRole : IdentityRole&lt;TKey&gt;
+         where TKey : IEquatable&lt;TKey&gt;
+         where TUserClaim : IdentityUserClaim&lt;TKey&gt;
+         where TUserRole : IdentityUserRole&lt;TKey&gt;
+         where TUserLogin : IdentityUserLogin&lt;TKey&gt;
+         where TRoleClaim : IdentityRoleClaim&lt;TKey&gt;
+         where TUserToken : IdentityUserToken&lt;TKey&gt;
+</code></pre>
+<p>It's also possible to use Identity without roles (only claims), in which case an IdentityUserContext<TUser> class should be used:</p>
+<pre><code class="language-csharp">// Uses the built-in non-role Identity types except with a custom User type
+// Uses `string` as the key type
+public class IdentityUserContext&lt;TUser&gt;
+    : IdentityUserContext&lt;TUser, string&gt;
+        where TUser : IdentityUser
+{
+}
+
+// Uses the built-in non-role Identity types except with a custom User type
+// The key type is defined by TKey
+public class IdentityUserContext&lt;TUser, TKey&gt; : IdentityUserContext&lt;
+    TUser, TKey, IdentityUserClaim&lt;TKey&gt;, IdentityUserLogin&lt;TKey&gt;,
+    IdentityUserToken&lt;TKey&gt;&gt;
+        where TUser : IdentityUser&lt;TKey&gt;
+        where TKey : IEquatable&lt;TKey&gt;
+{
+}
+
+// No built-in Identity types are used; all are specified by generic arguments, with no roles
+// The key type is defined by TKey
+public abstract class IdentityUserContext&lt;
+    TUser, TKey, TUserClaim, TUserLogin, TUserToken&gt; : DbContext
+        where TUser : IdentityUser&lt;TKey&gt;
+        where TKey : IEquatable&lt;TKey&gt;
+        where TUserClaim : IdentityUserClaim&lt;TKey&gt;
+        where TUserLogin : IdentityUserLogin&lt;TKey&gt;
+        where TUserToken : IdentityUserToken&lt;TKey&gt;
+{
+}
+</code></pre>
+<h2><a href="#customize-the-model" aria-hidden="true" class="anchor" id="customize-the-model"></a>Customize the model</h2>
+<p>The starting point for model customization is to derive from the appropriate context type. See the Model generic types section. This context type is customarily called <code>ApplicationDbContext</code> and is created by the ASP.NET Core templates.</p>
+<p>The context is used to configure the model in two ways:</p>
+<ul>
+<li>
+<p>Supplying entity and key types for the generic type parameters.</p>
+</li>
+<li>
+<p>Overriding <code>OnModelCreating</code> to modify the mapping of these types.</p>
+</li>
+</ul>
+<p>When overriding <code>OnModelCreating</code>, <code>base.OnModelCreating</code> should be called first; the overriding configuration should be called next. EF Core generally has a last-one-wins policy for configuration. For example, if the <code>ToTable</code> method for an entity type is called first with one table name and then again later with a different table name, the table name in the second call is used.</p>
+<p>NOTE: If the <code>DbContext</code> doesn't derive from <code>IdentityDbContext</code>, <code>AddEntityFrameworkStores</code> may not infer the correct POCO types for <code>TUserClaim</code>, <code>TUserLogin</code>, and <code>TUserToken</code>. If <code>AddEntityFrameworkStores</code> doesn't infer the correct POCO types, a workaround is to directly add the correct types via <code>services.AddScoped&lt;IUser/RoleStore&lt;TUser&gt;</code> and <code>UserStore&lt;...&gt;</code>.</p>
+<h3><a href="#custom-user-data" aria-hidden="true" class="anchor" id="custom-user-data"></a>Custom user data</h3>
+<p>Custom user data is supported by inheriting from <code>IdentityUser</code>. It's customary to name this type <code>ApplicationUser</code>:</p>
+<pre><code class="language-csharp">public class ApplicationUser : IdentityUser
+{
+    public string CustomTag { get; set; }
+}
+</code></pre>
+<p>Use the <code>ApplicationUser</code> type as a generic argument for the context:</p>
+<pre><code class="language-csharp">public class ApplicationDbContext : IdentityDbContext&lt;ApplicationUser&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+    }
+}
+</code></pre>
+<p>There's no need to override <code>OnModelCreating</code> in the <code>ApplicationDbContext</code> class. EF Core maps the <code>CustomTag</code> property by convention. However, the database needs to be updated to create a new <code>CustomTag</code> column. To create the column, add a migration, and then update the database as described in Identity and EF Core Migrations.</p>
+<p>Update <code>Pages/Shared/_LoginPartial.cshtml</code> and replace <code>IdentityUser</code> with <code>ApplicationUser</code>:</p>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Identity
+@using WebApp1.Areas.Identity.Data
+@inject SignInManager&lt;ApplicationUser&gt; SignInManager
+@inject UserManager&lt;ApplicationUser&gt; UserManager
+</code></pre>
+<p>Update <code>Areas/Identity/IdentityHostingStartup.cs</code> or <code>Startup.ConfigureServices</code> and replace <code>IdentityUser</code> with <code>ApplicationUser</code>.</p>
+<pre><code class="language-csharp">services.AddDefaultIdentity&lt;ApplicationUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+        .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+</code></pre>
+<p>Calling AddDefaultIdentity is equivalent to the following code:</p>
+<pre><code class="language-csharp">services.AddAuthentication(o =&gt;
+{
+    o.DefaultScheme = IdentityConstants.ApplicationScheme;
+    o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
+.AddIdentityCookies(o =&gt; { });
+
+services.AddIdentityCore&lt;TUser&gt;(o =&gt;
+{
+    o.Stores.MaxLengthForKeys = 128;
+    o.SignIn.RequireConfirmedAccount = true;
+})
+.AddDefaultUI()
+.AddDefaultTokenProviders();
+</code></pre>
+<p>Identity is provided as a Razor class library. For more information, see Scaffold Identity in ASP.NET Core projects. Consequently, the preceding code requires a call to <code>AddDefaultUI</code>. If the Identity scaffolder was used to add Identity files to the project, remove the call to <code>AddDefaultUI</code>. For more information, see:</p>
+<ul>
+<li>
+<p>Scaffold Identity</p>
+</li>
+<li>
+<p>Add, download, and delete custom user data to Identity</p>
+</li>
+</ul>
+<h3><a href="#change-the-primary-key-type" aria-hidden="true" class="anchor" id="change-the-primary-key-type"></a>Change the primary key type</h3>
+<p>Key types should be specified in the initial migration when the database is created.</p>
+<p>Follow these steps to change the PK type:</p>
+<ul>
+<li>
+<p>If the database was created before the PK change, run <code>Drop-Database</code> (PMC) or <code>dotnet ef database drop</code> (.NET CLI) to delete it.</p>
+</li>
+<li>
+<p>After confirming deletion of the database, remove the initial migration with <code>Remove-Migration</code> (PMC) or <code>dotnet ef migrations remove</code> (.NET CLI).</p>
+</li>
+<li>
+<p>Update the <code>ApplicationDbContext</code> class to derive from <code>IdentityDbContext&lt;TUser,TRole,TKey&gt;</code>. Specify the new key type for <code>TKey</code>. For example, to use a <code>Guid</code> key type:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class ApplicationDbContext
+    : IdentityDbContext&lt;IdentityUser&lt;Guid&gt;, IdentityRole&lt;Guid&gt;, Guid&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+}
+</code></pre>
+<p>In the preceding code, the generic classes <code>IdentityUser&lt;TKey&gt;</code> and <code>IdentityRole&lt;TKey&gt;</code> must be specified to use the new key type.
+Startup.ConfigureServices must be updated to use the generic user:</p>
+<pre><code class="language-csharp">services.AddDefaultIdentity&lt;IdentityUser&lt;Guid&gt;&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+        .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+</code></pre>
+<ul>
+<li>If a custom <code>ApplicationUser</code> class is being used, update the class to inherit from <code>IdentityUser</code>. For example:</li>
+</ul>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.Identity;
+
+public class ApplicationUser : IdentityUser&lt;Guid&gt;
+{
+    public string CustomTag { get; set; }
+}
+</code></pre>
+<p>Register the custom database context class when adding the Identity service in <code>Startup.ConfigureServices</code>:</p>
+<pre><code class="language-csharp">public class ApplicationDbContext
+    : IdentityDbContext&lt;ApplicationUser, IdentityRole&lt;Guid&gt;, Guid&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">services.AddDefaultIdentity&lt;ApplicationUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+        .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+</code></pre>
+<p>The primary key's data type is inferred by analyzing the <code>DbContext</code> object.
+Identity is provided as a Razor class library. For more information, see Scaffold Identity in ASP.NET Core projects. Consequently, the preceding code requires a call to <code>AddDefaultUI</code>. If the Identity scaffolder was used to add Identity files to the project, remove the call to <code>AddDefaultUI</code>.</p>
+<ul>
+<li>If a custom <code>ApplicationRole</code> class is being used, update the class to inherit from <code>IdentityRole&lt;TKey&gt;</code>. For example:</li>
+</ul>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.Identity;
+
+public class ApplicationRole : IdentityRole&lt;Guid&gt;
+{
+    public string Description { get; set; }
+}
+</code></pre>
+<p>Update <code>ApplicationDbContext</code> to reference the custom <code>ApplicationRole</code> class. For example, the following class references a custom <code>ApplicationUser</code> and a custom <code>ApplicationRole</code>:</p>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+public class ApplicationDbContext :
+    IdentityDbContext&lt;ApplicationUser, ApplicationRole, Guid&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+}
+</code></pre>
+<p>Register the custom database context class when adding the Identity service in <code>Startup.ConfigureServices</code>:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.Configure&lt;CookiePolicyOptions&gt;(options =&gt;
+    {
+        options.CheckConsentNeeded = context =&gt; true;
+        options.MinimumSameSitePolicy = SameSiteMode.None;
+    });
+
+    services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+        options.UseSqlServer(
+            Configuration.GetConnectionString(&quot;DefaultConnection&quot;)));
+
+    services.AddIdentity&lt;ApplicationUser, ApplicationRole&gt;()
+            .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;()
+            .AddDefaultUI()
+            .AddDefaultTokenProviders();
+
+    services.AddMvc()
+            .SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+}
+</code></pre>
+<p>The primary key's data type is inferred by analyzing the <code>DbContext</code> object.
+Identity is provided as a Razor class library. For more information, see Scaffold Identity in ASP.NET Core projects. Consequently, the preceding code requires a call to <code>AddDefaultUI</code>. If the Identity scaffolder was used to add Identity files to the project, remove the call to <code>AddDefaultUI</code>.</p>
+<h3><a href="#add-navigation-properties" aria-hidden="true" class="anchor" id="add-navigation-properties"></a>Add navigation properties</h3>
+<p>Changing the model configuration for relationships can be more difficult than making other changes. Care must be taken to replace the existing relationships rather than create new, additional relationships. In particular, the changed relationship must specify the same foreign key (FK) property as the existing relationship. For example, the relationship between <code>Users</code> and <code>UserClaims</code> is, by default, specified as follows:</p>
+<pre><code class="language-csharp">builder.Entity&lt;TUser&gt;(b =&gt;
+{
+    // Each User can have many UserClaims
+    b.HasMany&lt;TUserClaim&gt;()
+     .WithOne()
+     .HasForeignKey(uc =&gt; uc.UserId)
+     .IsRequired();
+});
+</code></pre>
+<p>The FK for this relationship is specified as the <code>UserClaim.UserId</code> property. <code>HasMany</code> and <code>WithOne</code> are called without arguments to create the relationship without navigation properties.</p>
+<p>Add a navigation property to <code>ApplicationUser</code> that allows associated <code>UserClaims</code> to be referenced from the user:</p>
+<pre><code class="language-csharp">public class ApplicationUser : IdentityUser
+{
+    public virtual ICollection&lt;IdentityUserClaim&lt;string&gt;&gt; Claims { get; set; }
+}
+</code></pre>
+<p>The <code>TKey</code> for <code>IdentityUserClaim&lt;TKey&gt;</code> is the type specified for the PK of users. In this case, <code>TKey</code> is <code>string</code> because the defaults are being used. It's not the PK type for the <code>UserClaim</code> entity type.</p>
+<p>Now that the navigation property exists, it must be configured in <code>OnModelCreating</code>:</p>
+<pre><code class="language-csharp">public class ApplicationDbContext : IdentityDbContext&lt;ApplicationUser&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity&lt;ApplicationUser&gt;(b =&gt;
+        {
+            // Each User can have many UserClaims
+            b.HasMany(e =&gt; e.Claims)
+                .WithOne()
+                .HasForeignKey(uc =&gt; uc.UserId)
+                .IsRequired();
+        });
+    }
+}
+</code></pre>
+<p>Notice that relationship is configured exactly as it was before, only with a navigation property specified in the call to <code>HasMany</code>.</p>
+<p>The navigation properties only exist in the EF model, not the database. Because the FK for the relationship hasn't changed, this kind of model change doesn't require the database to be updated. This can be checked by adding a migration after making the change. The <code>Up</code> and <code>Down</code> methods are empty.</p>
+<h3><a href="#add-all-user-navigation-properties" aria-hidden="true" class="anchor" id="add-all-user-navigation-properties"></a>Add all <code>User</code> navigation properties</h3>
+<p>Using the section above as guidance, the following example configures unidirectional navigation properties for all relationships on <code>User</code>:</p>
+<pre><code class="language-csharp">public class ApplicationUser : IdentityUser
+{
+    public virtual ICollection&lt;IdentityUserClaim&lt;string&gt;&gt; Claims { get; set; }
+    public virtual ICollection&lt;IdentityUserLogin&lt;string&gt;&gt; Logins { get; set; }
+    public virtual ICollection&lt;IdentityUserToken&lt;string&gt;&gt; Tokens { get; set; }
+    public virtual ICollection&lt;IdentityUserRole&lt;string&gt;&gt; UserRoles { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class ApplicationDbContext : IdentityDbContext&lt;ApplicationUser&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity&lt;ApplicationUser&gt;(b =&gt;
+        {
+            // Each User can have many UserClaims
+            b.HasMany(e =&gt; e.Claims)
+                .WithOne()
+                .HasForeignKey(uc =&gt; uc.UserId)
+                .IsRequired();
+
+            // Each User can have many UserLogins
+            b.HasMany(e =&gt; e.Logins)
+                .WithOne()
+                .HasForeignKey(ul =&gt; ul.UserId)
+                .IsRequired();
+
+            // Each User can have many UserTokens
+            b.HasMany(e =&gt; e.Tokens)
+                .WithOne()
+                .HasForeignKey(ut =&gt; ut.UserId)
+                .IsRequired();
+
+            // Each User can have many entries in the UserRole join table
+            b.HasMany(e =&gt; e.UserRoles)
+                .WithOne()
+                .HasForeignKey(ur =&gt; ur.UserId)
+                .IsRequired();
+        });
+    }
+}
+</code></pre>
+<h3><a href="#add-user-and-role-navigation-properties" aria-hidden="true" class="anchor" id="add-user-and-role-navigation-properties"></a>Add <code>User</code> and <code>Role</code> navigation properties</h3>
+<p>Using the section above as guidance, the following example configures navigation properties for all relationships on <code>User</code> and <code>Role</code>:</p>
+<pre><code class="language-csharp">public class ApplicationUser : IdentityUser
+{
+    public virtual ICollection&lt;IdentityUserClaim&lt;string&gt;&gt; Claims { get; set; }
+    public virtual ICollection&lt;IdentityUserLogin&lt;string&gt;&gt; Logins { get; set; }
+    public virtual ICollection&lt;IdentityUserToken&lt;string&gt;&gt; Tokens { get; set; }
+    public virtual ICollection&lt;ApplicationUserRole&gt; UserRoles { get; set; }
+}
+
+public class ApplicationRole : IdentityRole
+{
+    public virtual ICollection&lt;ApplicationUserRole&gt; UserRoles { get; set; }
+}
+
+public class ApplicationUserRole : IdentityUserRole&lt;string&gt;
+{
+    public virtual ApplicationUser User { get; set; }
+    public virtual ApplicationRole Role { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class ApplicationDbContext
+    : IdentityDbContext&lt;
+        ApplicationUser, ApplicationRole, string,
+        IdentityUserClaim&lt;string&gt;, ApplicationUserRole, IdentityUserLogin&lt;string&gt;,
+        IdentityRoleClaim&lt;string&gt;, IdentityUserToken&lt;string&gt;&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity&lt;ApplicationUser&gt;(b =&gt;
+        {
+            // Each User can have many UserClaims
+            b.HasMany(e =&gt; e.Claims)
+                .WithOne()
+                .HasForeignKey(uc =&gt; uc.UserId)
+                .IsRequired();
+
+            // Each User can have many UserLogins
+            b.HasMany(e =&gt; e.Logins)
+                .WithOne()
+                .HasForeignKey(ul =&gt; ul.UserId)
+                .IsRequired();
+
+            // Each User can have many UserTokens
+            b.HasMany(e =&gt; e.Tokens)
+                .WithOne()
+                .HasForeignKey(ut =&gt; ut.UserId)
+                .IsRequired();
+
+            // Each User can have many entries in the UserRole join table
+            b.HasMany(e =&gt; e.UserRoles)
+                .WithOne(e =&gt; e.User)
+                .HasForeignKey(ur =&gt; ur.UserId)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity&lt;ApplicationRole&gt;(b =&gt;
+        {
+            // Each Role can have many entries in the UserRole join table
+            b.HasMany(e =&gt; e.UserRoles)
+                .WithOne(e =&gt; e.Role)
+                .HasForeignKey(ur =&gt; ur.RoleId)
+                .IsRequired();
+        });
+
+    }
+}
+</code></pre>
+<p class='note'>Notes:</p>
+<ul>
+<li>
+<p>This example also includes the <code>UserRole</code> join entity, which is needed to navigate the many-to-many relationship from <code>Users</code> to <code>Roles</code>.</p>
+</li>
+<li>
+<p>Remember to change the types of the navigation properties to reflect that Application{...} types are now being used instead of Identity{...} types.</p>
+</li>
+<li>
+<p>Remember to use the Application{...} in the generic <code>ApplicationContext</code> definition.</p>
+</li>
+</ul>
+<h3><a href="#add-all-navigation-properties" aria-hidden="true" class="anchor" id="add-all-navigation-properties"></a>Add all navigation properties</h3>
+<p>Using the section above as guidance, the following example configures navigation properties for all relationships on all entity types:</p>
+<pre><code class="language-csharp">public class ApplicationUser : IdentityUser
+{
+    public virtual ICollection&lt;ApplicationUserClaim&gt; Claims { get; set; }
+    public virtual ICollection&lt;ApplicationUserLogin&gt; Logins { get; set; }
+    public virtual ICollection&lt;ApplicationUserToken&gt; Tokens { get; set; }
+    public virtual ICollection&lt;ApplicationUserRole&gt; UserRoles { get; set; }
+}
+
+public class ApplicationRole : IdentityRole
+{
+    public virtual ICollection&lt;ApplicationUserRole&gt; UserRoles { get; set; }
+    public virtual ICollection&lt;ApplicationRoleClaim&gt; RoleClaims { get; set; }
+}
+
+public class ApplicationUserRole : IdentityUserRole&lt;string&gt;
+{
+    public virtual ApplicationUser User { get; set; }
+    public virtual ApplicationRole Role { get; set; }
+}
+
+public class ApplicationUserClaim : IdentityUserClaim&lt;string&gt;
+{
+    public virtual ApplicationUser User { get; set; }
+}
+
+public class ApplicationUserLogin : IdentityUserLogin&lt;string&gt;
+{
+    public virtual ApplicationUser User { get; set; }
+}
+
+public class ApplicationRoleClaim : IdentityRoleClaim&lt;string&gt;
+{
+    public virtual ApplicationRole Role { get; set; }
+}
+
+public class ApplicationUserToken : IdentityUserToken&lt;string&gt;
+{
+    public virtual ApplicationUser User { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class ApplicationDbContext
+    : IdentityDbContext&lt;
+        ApplicationUser, ApplicationRole, string,
+        ApplicationUserClaim, ApplicationUserRole, ApplicationUserLogin,
+        ApplicationRoleClaim, ApplicationUserToken&gt;
+{
+    public ApplicationDbContext(DbContextOptions&lt;ApplicationDbContext&gt; options)
+        : base(options)
+    {
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity&lt;ApplicationUser&gt;(b =&gt;
+        {
+            // Each User can have many UserClaims
+            b.HasMany(e =&gt; e.Claims)
+                .WithOne(e =&gt; e.User)
+                .HasForeignKey(uc =&gt; uc.UserId)
+                .IsRequired();
+
+            // Each User can have many UserLogins
+            b.HasMany(e =&gt; e.Logins)
+                .WithOne(e =&gt; e.User)
+                .HasForeignKey(ul =&gt; ul.UserId)
+                .IsRequired();
+
+            // Each User can have many UserTokens
+            b.HasMany(e =&gt; e.Tokens)
+                .WithOne(e =&gt; e.User)
+                .HasForeignKey(ut =&gt; ut.UserId)
+                .IsRequired();
+
+            // Each User can have many entries in the UserRole join table
+            b.HasMany(e =&gt; e.UserRoles)
+                .WithOne(e =&gt; e.User)
+                .HasForeignKey(ur =&gt; ur.UserId)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity&lt;ApplicationRole&gt;(b =&gt;
+        {
+            // Each Role can have many entries in the UserRole join table
+            b.HasMany(e =&gt; e.UserRoles)
+                .WithOne(e =&gt; e.Role)
+                .HasForeignKey(ur =&gt; ur.RoleId)
+                .IsRequired();
+
+            // Each Role can have many associated RoleClaims
+            b.HasMany(e =&gt; e.RoleClaims)
+                .WithOne(e =&gt; e.Role)
+                .HasForeignKey(rc =&gt; rc.RoleId)
+                .IsRequired();
+        });
+    }
+}
+</code></pre>
+<h3><a href="#use-composite-keys" aria-hidden="true" class="anchor" id="use-composite-keys"></a>Use composite keys</h3>
+<p>This document describes how to change the type of key used in the Identity model.</p>
+<h3><a href="#change-tablecolumn-names-and-facets" aria-hidden="true" class="anchor" id="change-tablecolumn-names-and-facets"></a>Change table/column names and facets</h3>
+<p>To change the names of tables and columns, call <code>base.OnModelCreating</code>. Then, add configuration to override any of the defaults. For example, to change the name of all the Identity tables:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+
+    modelBuilder.Entity&lt;IdentityUser&gt;(b =&gt;
+    {
+        b.ToTable(&quot;MyUsers&quot;);
+    });
+
+    modelBuilder.Entity&lt;IdentityUserClaim&lt;string&gt;&gt;(b =&gt;
+    {
+        b.ToTable(&quot;MyUserClaims&quot;);
+    });
+
+    modelBuilder.Entity&lt;IdentityUserLogin&lt;string&gt;&gt;(b =&gt;
+    {
+        b.ToTable(&quot;MyUserLogins&quot;);
+    });
+
+    modelBuilder.Entity&lt;IdentityUserToken&lt;string&gt;&gt;(b =&gt;
+    {
+        b.ToTable(&quot;MyUserTokens&quot;);
+    });
+
+    modelBuilder.Entity&lt;IdentityRole&gt;(b =&gt;
+    {
+        b.ToTable(&quot;MyRoles&quot;);
+    });
+
+    modelBuilder.Entity&lt;IdentityRoleClaim&lt;string&gt;&gt;(b =&gt;
+    {
+        b.ToTable(&quot;MyRoleClaims&quot;);
+    });
+
+    modelBuilder.Entity&lt;IdentityUserRole&lt;string&gt;&gt;(b =&gt;
+    {
+        b.ToTable(&quot;MyUserRoles&quot;);
+    });
+}
+</code></pre>
+<p>These examples use the default Identity types. If using an app type such as <code>ApplicationUser</code>, configure that type instead of the default type.</p>
+<p>The following example changes some column names:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+
+    modelBuilder.Entity&lt;IdentityUser&gt;(b =&gt;
+    {
+        b.Property(e =&gt; e.Email).HasColumnName(&quot;EMail&quot;);
+    });
+
+    modelBuilder.Entity&lt;IdentityUserClaim&lt;string&gt;&gt;(b =&gt;
+    {
+        b.Property(e =&gt; e.ClaimType).HasColumnName(&quot;CType&quot;);
+        b.Property(e =&gt; e.ClaimValue).HasColumnName(&quot;CValue&quot;);
+    });
+}
+</code></pre>
+<p>Some types of database columns can be configured with certain facets (for example, the maximum <code>string</code> length allowed). The following example sets column maximum lengths for several <code>string</code> properties in the model:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+
+    modelBuilder.Entity&lt;IdentityUser&gt;(b =&gt;
+    {
+        b.Property(u =&gt; u.UserName).HasMaxLength(128);
+        b.Property(u =&gt; u.NormalizedUserName).HasMaxLength(128);
+        b.Property(u =&gt; u.Email).HasMaxLength(128);
+        b.Property(u =&gt; u.NormalizedEmail).HasMaxLength(128);
+    });
+
+    modelBuilder.Entity&lt;IdentityUserToken&lt;string&gt;&gt;(b =&gt;
+    {
+        b.Property(t =&gt; t.LoginProvider).HasMaxLength(128);
+        b.Property(t =&gt; t.Name).HasMaxLength(128);
+    });
+}
+</code></pre>
+<h3><a href="#map-to-a-different-schema" aria-hidden="true" class="anchor" id="map-to-a-different-schema"></a>Map to a different schema</h3>
+<p>Schemas can behave differently across database providers. For SQL Server, the default is to create all tables in the dbo schema. The tables can be created in a different schema. For example:</p>
+<pre><code class="language-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+
+    modelBuilder.HasDefaultSchema(&quot;notdbo&quot;);
+}
+</code></pre>
+<h3><a href="#lazy-loading" aria-hidden="true" class="anchor" id="lazy-loading"></a>Lazy loading</h3>
+<p>In this section, support for lazy-loading proxies in the Identity model is added. Lazy-loading is useful since it allows navigation properties to be used without first ensuring they're loaded.</p>
+<p>Entity types can be made suitable for lazy-loading in several ways, as described in the EF Core documentation. For simplicity, use lazy-loading proxies, which requires:</p>
+<ul>
+<li>
+<p>Installation of the Microsoft.EntityFrameworkCore.Proxies package.</p>
+</li>
+<li>
+<p>A call to <code>UseLazyLoadingProxies</code> inside AddDbContext.</p>
+</li>
+<li>
+<p>Public entity types with <code>public virtual</code> navigation properties.</p>
+</li>
+</ul>
+<p>The following example demonstrates calling <code>UseLazyLoadingProxies</code> in <code>Startup.ConfigureServices</code>:</p>
+<pre><code class="language-csharp">services
+    .AddDbContext&lt;ApplicationDbContext&gt;(
+        b =&gt; b.UseSqlServer(connectionString)
+              .UseLazyLoadingProxies())
+    .AddDefaultIdentity&lt;ApplicationUser&gt;()
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+</code></pre>
+<p>Refer to the preceding examples for guidance on adding navigation properties to the entity types.</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>Scaffold Identity in ASP.NET Core projects</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/customize-identity-model?view=aspnetcore-8.0">Identity model customization in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

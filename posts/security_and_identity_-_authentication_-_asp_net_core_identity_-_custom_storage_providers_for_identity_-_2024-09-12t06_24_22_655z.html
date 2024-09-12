@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - Custom storage providers for Identity | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - Custom storage providers for Identity</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>ASP.NET Core Identity is an extensible system which enables you to create a custom storage provider and connect it to your app. This topic describes how to create a customized storage provider for ASP.NET Core Identity. It covers the important concepts for creating your own storage provider, but isn't a step-by-step walk through. See Identity model customization to customize an Identity model.</p>
+<h2><a href="#introduction" aria-hidden="true" class="anchor" id="introduction"></a>Introduction</h2>
+<p>By default, the ASP.NET Core Identity system stores user information in a SQL Server database using Entity Framework Core. For many apps, this approach works well. However, you may prefer to use a different persistence mechanism or data schema. For example:</p>
+<ul>
+<li>
+<p>You use Azure Table Storage or another data store.</p>
+</li>
+<li>
+<p>Your database tables have a different structure.</p>
+</li>
+<li>
+<p>You may wish to use a different data access approach, such as Dapper.</p>
+</li>
+</ul>
+<p>In each of these cases, you can write a customized provider for your storage mechanism and plug that provider into your app.</p>
+<p>ASP.NET Core Identity is included in project templates in Visual Studio with the &quot;Individual User Accounts&quot; option.</p>
+<p>When using the .NET CLI, add <code>-au Individual</code>:</p>
+<pre><code class="language-dotnetcli">dotnet new mvc -au Individual
+</code></pre>
+<h2><a href="#the-aspnet-core-identity-architecture" aria-hidden="true" class="anchor" id="the-aspnet-core-identity-architecture"></a>The ASP.NET Core Identity architecture</h2>
+<p>ASP.NET Core Identity consists of classes called managers and stores. Managers are high-level classes which an app developer uses to perform operations, such as creating an Identity user. Stores are lower-level classes that specify how entities, such as users and roles, are persisted. Stores follow the repository pattern and are closely coupled with the persistence mechanism. Managers are decoupled from stores, which means you can replace the persistence mechanism without changing your application code (except for configuration).</p>
+<p>The following diagram shows how a web app interacts with the managers, while stores interact with the data access layer.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity-custom-storage-providers/_static/identity-architecture-diagram.png?view=aspnetcore-8.0" alt="ASP.NET Core Apps work with Managers (for example, UserManager, RoleManager). Managers work with Stores (for example, UserStore) which communicate with a Data Source using a library like Entity Framework Core.!" title="ASP.NET Core Apps work with Managers (for example, UserManager, RoleManager). Managers work with Stores (for example, UserStore) which communicate with a Data Source using a library like Entity Framework Core." /></p>
+<p>In this article, I'm going to show you how to create a custom storage provider and how to interact with them.</p>
+<p>When creating a new instance of <code>UserManager</code> or <code>RoleManager</code> you provide the type of the user class and pass an instance of the store class as an argument. This approach enables you to plug your customized classes into ASP.NET Core.</p>
+<p>Reconfigure app to use new storage provider shows how to instantiate <code>UserManager</code> and <code>RoleManager</code> with a customized store.</p>
+<h2><a href="#aspnet-core-identity-stores-data-types" aria-hidden="true" class="anchor" id="aspnet-core-identity-stores-data-types"></a>ASP.NET Core Identity stores data types</h2>
+<p>ASP.NET Core Identity data types are detailed in the following sections:</p>
+<h3><a href="#users" aria-hidden="true" class="anchor" id="users"></a>Users</h3>
+<p>Registered users of your web site. The <code>IdentityUser</code> type may be extended or used as an example for your own custom type. You don't need to inherit from a particular type to implement your own custom identity storage solution.</p>
+<h3><a href="#user-claims" aria-hidden="true" class="anchor" id="user-claims"></a>User Claims</h3>
+<p>A set of statements (or Claims) about the user that represent the user's identity. Can enable greater expression of the user's identity than can be achieved through roles.</p>
+<h3><a href="#user-logins" aria-hidden="true" class="anchor" id="user-logins"></a>User Logins</h3>
+<p>Information about the external authentication provider (like Facebook or a Microsoft account) to use when logging in a user. Example</p>
+<h3><a href="#roles" aria-hidden="true" class="anchor" id="roles"></a>Roles</h3>
+<p>Authorization groups for your site. Includes the role <code>Id</code> and role name (like &quot;Admin&quot; or &quot;Employee&quot;). Example</p>
+<h2><a href="#the-data-access-layer" aria-hidden="true" class="anchor" id="the-data-access-layer"></a>The data access layer</h2>
+<p>This topic assumes you are familiar with the persistence mechanism that you are going to use and how to create entities for that mechanism. This topic doesn't provide details about how to create the repositories or data access classes; it provides some suggestions about design decisions when working with ASP.NET Core Identity.</p>
+<p>You have a lot of freedom when designing the data access layer for a customized store provider. You only need to create persistence mechanisms for features that you intend to use in your app. For example, if you are not using roles in your app, you don't need to create storage for roles or user role associations. Your technology and existing infrastructure may require a structure that's very different from the default implementation of ASP.NET Core Identity. In your data access layer, you provide the logic to work with the structure of your storage implementation.</p>
+<p>The data access layer provides the logic to save the data from ASP.NET Core Identity to a data source. The data access layer for your customized storage provider might include the following classes to store user and role information.</p>
+<h3><a href="#context-class" aria-hidden="true" class="anchor" id="context-class"></a>Context class</h3>
+<p>This class provides an instance of the data class persistence.</p>
+<h3><a href="#user-storage" aria-hidden="true" class="anchor" id="user-storage"></a>User Storage</h3>
+<p>Stores and retrieves user information (such as user name and password hash). Example</p>
+<h3><a href="#role-storage" aria-hidden="true" class="anchor" id="role-storage"></a>Role Storage</h3>
+<p>Stores and retrieves role information (such as the role name). Example</p>
+<h3><a href="#userclaims-storage" aria-hidden="true" class="anchor" id="userclaims-storage"></a>UserClaims Storage</h3>
+<p>Stores and retrieves user claim information (such as the claim type and value). Example</p>
+<h3><a href="#userlogins-storage" aria-hidden="true" class="anchor" id="userlogins-storage"></a>UserLogins Storage</h3>
+<p>Stores and retrieves user login information (such as an external authentication provider). Example</p>
+<h3><a href="#userrole-storage" aria-hidden="true" class="anchor" id="userrole-storage"></a>UserRole Storage</h3>
+<p>Stores and retrieves which roles are assigned to which users. Example</p>
+<p>TIP: Only implement the classes you intend to use in your app.</p>
+<p>In this article, you'll learn how to create a new user in a store class.</p>
+<pre><code class="language-csharp">public async Task&lt;IdentityResult&gt; CreateAsync(ApplicationUser user, 
+    CancellationToken cancellationToken = default(CancellationToken))
+{
+    cancellationToken.ThrowIfCancellationRequested();
+    if (user == null) throw new ArgumentNullException(nameof(user));
+
+    return await _usersTable.CreateAsync(user);
+}
+</code></pre>
+<p>The implementation logic for creating the user is in the <code>_usersTable.CreateAsync</code> method, shown below.</p>
+<h2><a href="#customize-the-user-class" aria-hidden="true" class="anchor" id="customize-the-user-class"></a>Customize the user class</h2>
+<p>When implementing a storage provider, create a user class which is equivalent to the <code>IdentityUser</code> class.</p>
+<p>At a minimum, your user class must include an <code>Id</code> and a <code>UserName</code> property.</p>
+<p>The <code>IdentityUser</code> class defines the properties that the <code>UserManager</code> calls when performing requested operations. The default type of the <code>Id</code> property is a string, but you can inherit from <code>IdentityUser&lt;TKey, TUserClaim, TUserRole, TUserLogin, TUserToken&gt;</code> and specify a different type. The framework expects the storage implementation to handle data type conversions.</p>
+<h2><a href="#customize-the-user-store" aria-hidden="true" class="anchor" id="customize-the-user-store"></a>Customize the user store</h2>
+<p>Create a <code>UserStore</code> class that provides the methods for all data operations on the user. This class is equivalent to the <code>UserStore&lt;TUser&gt;</code> class. In your <code>UserStore</code> class, implement <code>IUserStore&lt;TUser&gt;</code> and the optional interfaces required. You select which optional interfaces to implement based on the functionality provided in your app.</p>
+<h3><a href="#optional-interfaces" aria-hidden="true" class="anchor" id="optional-interfaces"></a>Optional interfaces</h3>
+<ul>
+<li>
+<p>IUserRoleStore</p>
+</li>
+<li>
+<p>IUserClaimStore</p>
+</li>
+<li>
+<p>IUserPasswordStore</p>
+</li>
+<li>
+<p>IUserSecurityStampStore</p>
+</li>
+<li>
+<p>IUserEmailStore</p>
+</li>
+<li>
+<p>IUserPhoneNumberStore</p>
+</li>
+<li>
+<p>IQueryableUserStore</p>
+</li>
+<li>
+<p>IUserLoginStore</p>
+</li>
+<li>
+<p>IUserTwoFactorStore</p>
+</li>
+<li>
+<p>IUserLockoutStore</p>
+</li>
+</ul>
+<p>The optional interfaces inherit from <code>IUserStore&lt;TUser&gt;</code>. You can see a partially implemented sample user store in the sample app.</p>
+<p>Within the <code>UserStore</code> class, you use the data access classes that you created to perform operations. These are passed in using dependency injection. For example, in the SQL Server with Dapper implementation, the <code>UserStore</code> class has the <code>CreateAsync</code> method which uses an instance of <code>DapperUsersTable</code> to insert a new record:</p>
+<pre><code class="language-csharp">public async Task&lt;IdentityResult&gt; CreateAsync(ApplicationUser user)
+{
+    string sql = &quot;INSERT INTO dbo.CustomUser &quot; +
+        &quot;VALUES (@id, @Email, @EmailConfirmed, @PasswordHash, @UserName)&quot;;
+
+    int rows = await _connection.ExecuteAsync(sql, new { user.Id, user.Email, user.EmailConfirmed, user.PasswordHash, user.UserName });
+
+    if(rows &gt; 0)
+    {
+        return IdentityResult.Success;
+    }
+    return IdentityResult.Failed(new IdentityError { Description = $&quot;Could not insert user {user.Email}.&quot; });
+}
+</code></pre>
+<h3><a href="#interfaces-to-implement-when-customizing-user-store" aria-hidden="true" class="anchor" id="interfaces-to-implement-when-customizing-user-store"></a>Interfaces to implement when customizing user store</h3>
+<ul>
+<li>
+<p>IUserStore
+The <code>IUserStore&lt;TUser&gt;</code> interface is the only interface you must implement in the user store. It defines methods for creating, updating, deleting, and retrieving users.</p>
+</li>
+<li>
+<p>IUserClaimStore
+The <code>IUserClaimStore&lt;TUser&gt;</code> interface defines the methods you implement to enable user claims. It contains methods for adding, removing and retrieving user claims.</p>
+</li>
+<li>
+<p>IUserLoginStore
+The <code>IUserLoginStore&lt;TUser&gt;</code> defines the methods you implement to enable external authentication providers. It contains methods for adding, removing and retrieving user logins, and a method for retrieving a user based on the login information.</p>
+</li>
+<li>
+<p>IUserRoleStore
+The <code>IUserRoleStore&lt;TUser&gt;</code> interface defines the methods you implement to map a user to a role. It contains methods to add, remove, and retrieve a user's roles, and a method to check if a user is assigned to a role.</p>
+</li>
+<li>
+<p>IUserPasswordStore
+The <code>IUserPasswordStore&lt;TUser&gt;</code> interface defines the methods you implement to persist hashed passwords. It contains methods for getting and setting the hashed password, and a method that indicates whether the user has set a password.</p>
+</li>
+<li>
+<p>IUserSecurityStampStore
+The <code>IUserSecurityStampStore&lt;TUser&gt;</code> interface defines the methods you implement to use a security stamp for indicating whether the user's account information has changed. This stamp is updated when a user changes the password, or adds or removes logins. It contains methods for getting and setting the security stamp.</p>
+</li>
+<li>
+<p>IUserTwoFactorStore
+The <code>IUserTwoFactorStore&lt;TUser&gt;</code> interface defines the methods you implement to support two factor authentication. It contains methods for getting and setting whether two factor authentication is enabled for a user.</p>
+</li>
+<li>
+<p>IUserPhoneNumberStore
+The <code>IUserPhoneNumberStore&lt;TUser&gt;</code> interface defines the methods you implement to store user phone numbers. It contains methods for getting and setting the phone number and whether the phone number is confirmed.</p>
+</li>
+<li>
+<p>IUserEmailStore
+The <code>IUserEmailStore&lt;TUser&gt;</code> interface defines the methods you implement to store user email addresses. It contains methods for getting and setting the email address and whether the email is confirmed.</p>
+</li>
+<li>
+<p>IUserLockoutStore
+The <code>IUserLockoutStore&lt;TUser&gt;</code> interface defines the methods you implement to store information about locking an account. It contains methods for tracking failed access attempts and lockouts.</p>
+</li>
+<li>
+<p>IQueryableUserStore
+The <code>IQueryableUserStore&lt;TUser&gt;</code> interface defines the members you implement to provide a queryable user store.</p>
+</li>
+</ul>
+<p>You implement only the interfaces that are needed in your app. For example:</p>
+<pre><code class="language-csharp">public class UserStore : IUserStore&lt;IdentityUser&gt;,
+                         IUserClaimStore&lt;IdentityUser&gt;,
+                         IUserLoginStore&lt;IdentityUser&gt;,
+                         IUserRoleStore&lt;IdentityUser&gt;,
+                         IUserPasswordStore&lt;IdentityUser&gt;,
+                         IUserSecurityStampStore&lt;IdentityUser&gt;
+{
+    // interface implementations not shown
+}
+</code></pre>
+<h3><a href="#identityuserclaim-identityuserlogin,-and-identityuserrole" aria-hidden="true" class="anchor" id="identityuserclaim-identityuserlogin,-and-identityuserrole"></a>IdentityUserClaim, IdentityUserLogin, and IdentityUserRole</h3>
+<p>The <code>Microsoft.AspNet.Identity.EntityFramework</code> namespace contains implementations of the IdentityUserClaim, IdentityUserLogin, and IdentityUserRole classes. If you are using these features, you may want to create your own versions of these classes and define the properties for your app. However, sometimes it's more efficient to not load these entities into memory when performing basic operations (such as adding or removing a user's claim). Instead, the backend store classes can execute these operations directly on the data source. For example, the <code>UserStore.GetClaimsAsync</code> method can call the <code>userClaimTable.FindByUserId(user.Id)</code> method to execute a query on that table directly and return a list of claims.</p>
+<h2><a href="#customize-the-role-class" aria-hidden="true" class="anchor" id="customize-the-role-class"></a>Customize the role class</h2>
+<p>When implementing a role storage provider, you can create a custom role type. It need not implement a particular interface, but it must have an <code>Id</code> and typically it will have a <code>Name</code> property.</p>
+<p>The following is an example role class:</p>
+<pre><code class="language-csharp">using System;
+
+namespace CustomIdentityProviderSample.CustomProvider
+{
+    public class ApplicationRole
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; }
+    }
+}
+</code></pre>
+<h2><a href="#customize-the-role-store" aria-hidden="true" class="anchor" id="customize-the-role-store"></a>Customize the role store</h2>
+<p>You can create a <code>RoleStore</code> class that provides the methods for all data operations on roles. This class is equivalent to the <code>RoleStore&lt;TRole&gt;</code> class. In the <code>RoleStore</code> class, you implement the <code>IRoleStore&lt;TRole&gt;</code> and optionally the <code>IQueryableRoleStore&lt;TRole&gt;</code> interface.</p>
+<ul>
+<li>
+<p>IRoleStore<TRole>
+The <code>IRoleStore&lt;TRole&gt;</code> interface defines the methods to implement in the role store class. It contains methods for creating, updating, deleting, and retrieving roles.</p>
+</li>
+<li>
+<p><code>RoleStore&lt;TRole&gt;</code>
+To customize <code>RoleStore</code>, create a class that implements the <code>IRoleStore&lt;TRole&gt;</code> interface.</p>
+</li>
+</ul>
+<h2><a href="#reconfigure-app-to-use-a-new-storage-provider" aria-hidden="true" class="anchor" id="reconfigure-app-to-use-a-new-storage-provider"></a>Reconfigure app to use a new storage provider</h2>
+<p>Once you have implemented a storage provider, you configure your app to use it. If your app used the default provider, replace it with your custom provider.</p>
+<ul>
+<li>
+<p>Remove the <code>Microsoft.AspNetCore.EntityFramework.Identity</code> NuGet package.</p>
+</li>
+<li>
+<p>If the storage provider resides in a separate project or package, add a reference to it.</p>
+</li>
+<li>
+<p>Replace all references to <code>Microsoft.AspNetCore.EntityFramework.Identity</code> with a using statement for the namespace of your storage provider.</p>
+</li>
+<li>
+<p>Change the <code>AddIdentity</code> method to use the custom types. You can create your own extension methods for this purpose. See IdentityServiceCollectionExtensions for an example.</p>
+</li>
+<li>
+<p>If you are using Roles, update the <code>RoleManager</code> to use your <code>RoleStore</code> class.</p>
+</li>
+<li>
+<p>Update the connection string and credentials to your app's configuration.</p>
+</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add identity types
+builder.Services.AddIdentity&lt;ApplicationUser, ApplicationRole&gt;()
+    .AddDefaultTokenProviders();
+
+// Identity Services
+builder.Services.AddTransient&lt;IUserStore&lt;ApplicationUser&gt;, CustomUserStore&gt;();
+builder.Services.AddTransient&lt;IRoleStore&lt;ApplicationRole&gt;, CustomRoleStore&gt;();
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddTransient&lt;SqlConnection&gt;(e =&gt; new SqlConnection(connectionString));
+builder.Services.AddTransient&lt;DapperUsersTable&gt;();
+
+// additional configuration
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h2>
+<ul>
+<li>
+<p>Identity model customization</p>
+</li>
+<li>
+<p>Custom Storage Providers for ASP.NET 4.x Identity</p>
+</li>
+<li>
+<p>ASP.NET Core Identity: This repository includes links to community maintained store providers.</p>
+</li>
+<li>
+<p>View or download sample from GitHub.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity-custom-storage-providers?view=aspnetcore-8.0">Custom storage providers for ASP.NET Core Identity</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

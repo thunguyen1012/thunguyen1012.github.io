@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authentication - ASP.NET Core Identity - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authentication - ASP.NET Core Identity - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Is an API that supports user interface (UI) login functionality.</p>
+</li>
+<li>
+<p>Manages users, passwords, profile data, roles, claims, tokens, email confirmation, and more.</p>
+</li>
+<li>
+<p>An evolution of the Azure Active Directory (Azure AD) developer platform.</p>
+</li>
+<li>
+<p>An alternative identity solution for authentication and authorization in ASP.NET Core apps.</p>
+</li>
+<li>
+<p>Microsoft Entra ID</p>
+</li>
+<li>
+<p>Azure Active Directory B2C (Azure AD B2C)</p>
+</li>
+<li>
+<p>Duende Identity Server</p>
+</li>
+<li>
+<p>Authentication as a Service (AaaS)</p>
+</li>
+<li>
+<p>Single sign-on/off (SSO) over multiple application types</p>
+</li>
+<li>
+<p>Access control for APIs</p>
+</li>
+<li>
+<p>Federation Gateway</p>
+</li>
+</ul>
+<blockquote>
+<p class='important'>Important
+Duende Software might require you to pay a license fee for production use of Duende Identity Server. For more information, see Migrate from ASP.NET Core 5.0 to 6.0.</p>
+</blockquote>
+<h2><a href="#create-a-web-app-with-authentication" aria-hidden="true" class="anchor" id="create-a-web-app-with-authentication"></a>Create a Web app with authentication</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>Select the ASP.NET Core Web App template. Name the project WebApp1 to have the same namespace as the project download. Click OK.</p>
+</li>
+<li>
+<p>In the Authentication type input,  select  Individual User Accounts.</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new webapp --auth Individual -o WebApp1
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet new webapp --auth Individual -uld -o WebApp1
+</code></pre>
+<ul>
+<li>
+<p>/Identity/Account/Login</p>
+</li>
+<li>
+<p>/Identity/Account/Logout</p>
+</li>
+<li>
+<p>/Identity/Account/Manage</p>
+</li>
+</ul>
+<h3><a href="#apply-migrations" aria-hidden="true" class="anchor" id="apply-migrations"></a>Apply migrations</h3>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet tool install --global dotnet-ef
+</code></pre>
+<blockquote>
+<p class='note'>Note
+By default the architecture of the .NET binaries to install represents the currently running OS architecture. To specify a different OS architecture, see dotnet tool install, --arch option.
+For more information, see GitHub issue dotnet/AspNetCore.Docs #29262.</p>
+</blockquote>
+<pre><code class="language-dotnetcli">dotnet ef database update
+</code></pre>
+<h3><a href="#test-register-and-login" aria-hidden="true" class="anchor" id="test-register-and-login"></a>Test <code>Register</code> and <code>Login</code></h3>
+<h3><a href="#view-the-identity-database" aria-hidden="true" class="anchor" id="view-the-identity-database"></a>View the Identity database</h3>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+<li>
+<p>From the View menu, select SQL Server Object Explorer (SSOX).</p>
+</li>
+<li>
+<p>Navigate to (localdb)MSSQLLocalDB(SQL Server 13). Right-click on dbo.AspNetUsers &gt; View Data:</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/accconfirm/_static/ssox.png?view=aspnetcore-8.0" alt="Contextual menu on AspNetUsers table in SQL Server Object Explorer!" title="Contextual menu on AspNetUsers table in SQL Server Object Explorer" /></p>
+<h3><a href="#configure-identity-services" aria-hidden="true" class="anchor" id="configure-identity-services"></a>Configure Identity services</h3>
+<ul>
+<li>
+<p>Add{Service}</p>
+</li>
+<li>
+<p>builder.Services.Configure{Service}</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using WebApp1.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString(&quot;DefaultConnection&quot;);
+builder.Services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;(options =&gt; options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+builder.Services.AddRazorPages();
+
+builder.Services.Configure&lt;IdentityOptions&gt;(options =&gt;
+{
+    // Password settings.
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequiredLength = 6;
+    options.Password.RequiredUniqueChars = 1;
+
+    // Lockout settings.
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
+
+    // User settings.
+    options.User.AllowedUserNameCharacters =
+    &quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+&quot;;
+    options.User.RequireUniqueEmail = false;
+});
+
+builder.Services.ConfigureApplicationCookie(options =&gt;
+{
+    // Cookie settings
+    options.Cookie.HttpOnly = true;
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+
+    options.LoginPath = &quot;/Identity/Account/Login&quot;;
+    options.AccessDeniedPath = &quot;/Identity/Account/AccessDenied&quot;;
+    options.SlidingExpiration = true;
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h2><a href="#scaffold-register-login,-logout,-and-registerconfirmation" aria-hidden="true" class="anchor" id="scaffold-register-login,-logout,-and-registerconfirmation"></a>Scaffold <code>Register</code>, <code>Login</code>, <code>LogOut</code>, and <code>RegisterConfirmation</code></h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet add package Microsoft.VisualStudio.Web.CodeGeneration.Design
+dotnet aspnet-codegenerator identity -dc WebApp1.Data.ApplicationDbContext --files &quot;Account.Register;Account.Login;Account.Logout;Account.RegisterConfirmation&quot;
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet aspnet-codegenerator identity -dc WebApp1.Data.ApplicationDbContext --files &quot;Account.Register;Account.Login;Account.Logout;Account.RegisterConfirmation&quot; --useSqLite
+</code></pre>
+<h3><a href="#examine-register" aria-hidden="true" class="anchor" id="examine-register"></a>Examine <code>Register</code></h3>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostAsync(string returnUrl = null)
+{
+    returnUrl = returnUrl ?? Url.Content(&quot;~/&quot;);
+    ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync())
+                                          .ToList();
+    if (ModelState.IsValid)
+    {
+        var user = new IdentityUser { UserName = Input.Email, Email = Input.Email };
+        var result = await _userManager.CreateAsync(user, Input.Password);
+        if (result.Succeeded)
+        {
+            _logger.LogInformation(&quot;User created a new account with password.&quot;);
+
+            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var callbackUrl = Url.Page(
+                &quot;/Account/ConfirmEmail&quot;,
+                pageHandler: null,
+                values: new { area = &quot;Identity&quot;, userId = user.Id, code = code },
+                protocol: Request.Scheme);
+
+            await _emailSender.SendEmailAsync(Input.Email, &quot;Confirm your email&quot;,
+                $&quot;Please confirm your account by &lt;a href='{HtmlEncoder.Default.Encode(callbackUrl)}'&gt;clicking here&lt;/a&gt;.&quot;);
+
+            if (_userManager.Options.SignIn.RequireConfirmedAccount)
+            {
+                return RedirectToPage(&quot;RegisterConfirmation&quot;, 
+                                      new { email = Input.Email });
+            }
+            else
+            {
+                await _signInManager.SignInAsync(user, isPersistent: false);
+                return LocalRedirect(returnUrl);
+            }
+        }
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+    }
+
+    // If we got this far, something failed, redisplay form
+    return Page();
+}
+</code></pre>
+<h3><a href="#disable-default-account-verification" aria-hidden="true" class="anchor" id="disable-default-account-verification"></a>Disable default account verification</h3>
+<pre><code class="language-csharp">[AllowAnonymous]
+public class RegisterConfirmationModel : PageModel
+{
+    private readonly UserManager&lt;IdentityUser&gt; _userManager;
+    private readonly IEmailSender _sender;
+
+    public RegisterConfirmationModel(UserManager&lt;IdentityUser&gt; userManager, IEmailSender sender)
+    {
+        _userManager = userManager;
+        _sender = sender;
+    }
+
+    public string Email { get; set; }
+
+    public bool DisplayConfirmAccountLink { get; set; }
+
+    public string EmailConfirmationUrl { get; set; }
+
+    public async Task&lt;IActionResult&gt; OnGetAsync(string email, string returnUrl = null)
+    {
+        if (email == null)
+        {
+            return RedirectToPage(&quot;/Index&quot;);
+        }
+
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            return NotFound($&quot;Unable to load user with email '{email}'.&quot;);
+        }
+
+        Email = email;
+        // Once you add a real email sender, you should remove this code that lets you confirm the account
+        DisplayConfirmAccountLink = false;
+        if (DisplayConfirmAccountLink)
+        {
+            var userId = await _userManager.GetUserIdAsync(user);
+            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            EmailConfirmationUrl = Url.Page(
+                &quot;/Account/ConfirmEmail&quot;,
+                pageHandler: null,
+                values: new { area = &quot;Identity&quot;, userId = userId, code = code, returnUrl = returnUrl },
+                protocol: Request.Scheme);
+        }
+
+        return Page();
+    }
+}
+</code></pre>
+<h3><a href="#log-in" aria-hidden="true" class="anchor" id="log-in"></a>Log in</h3>
+<ul>
+<li>
+<p>The Log in link is selected.</p>
+</li>
+<li>
+<p>A user attempts to access a restricted page that they aren't authorized to access or when they haven't been authenticated by the system.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostAsync(string returnUrl = null)
+{
+    returnUrl = returnUrl ?? Url.Content(&quot;~/&quot;);
+
+    if (ModelState.IsValid)
+    {
+        // This doesn't count login failures towards account lockout
+        // To enable password failures to trigger account lockout, 
+        // set lockoutOnFailure: true
+        var result = await _signInManager.PasswordSignInAsync(Input.Email,
+                           Input.Password, Input.RememberMe, lockoutOnFailure: true);
+        if (result.Succeeded)
+        {
+            _logger.LogInformation(&quot;User logged in.&quot;);
+            return LocalRedirect(returnUrl);
+        }
+        if (result.RequiresTwoFactor)
+        {
+            return RedirectToPage(&quot;./LoginWith2fa&quot;, new
+            {
+                ReturnUrl = returnUrl,
+                RememberMe = Input.RememberMe
+            });
+        }
+        if (result.IsLockedOut)
+        {
+            _logger.LogWarning(&quot;User account locked out.&quot;);
+            return RedirectToPage(&quot;./Lockout&quot;);
+        }
+        else
+        {
+            ModelState.AddModelError(string.Empty, &quot;Invalid login attempt.&quot;);
+            return Page();
+        }
+    }
+
+    // If we got this far, something failed, redisplay form
+    return Page();
+}
+</code></pre>
+<h3><a href="#log-out" aria-hidden="true" class="anchor" id="log-out"></a>Log out</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+
+namespace WebApp1.Areas.Identity.Pages.Account
+{
+    [AllowAnonymous]
+    public class LogoutModel : PageModel
+    {
+        private readonly SignInManager&lt;IdentityUser&gt; _signInManager;
+        private readonly ILogger&lt;LogoutModel&gt; _logger;
+
+        public LogoutModel(SignInManager&lt;IdentityUser&gt; signInManager, ILogger&lt;LogoutModel&gt; logger)
+        {
+            _signInManager = signInManager;
+            _logger = logger;
+        }
+
+        public void OnGet()
+        {
+        }
+
+        public async Task&lt;IActionResult&gt; OnPost(string returnUrl = null)
+        {
+            await _signInManager.SignOutAsync();
+            _logger.LogInformation(&quot;User logged out.&quot;);
+            if (returnUrl != null)
+            {
+                return LocalRedirect(returnUrl);
+            }
+            else
+            {
+                return RedirectToPage();
+            }
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Identity
+@inject SignInManager&lt;IdentityUser&gt; SignInManager
+@inject UserManager&lt;IdentityUser&gt; UserManager
+
+&lt;ul class=&quot;navbar-nav&quot;&gt;
+@if (SignInManager.IsSignedIn(User))
+{
+    &lt;li class=&quot;nav-item&quot;&gt;
+        &lt;a  class=&quot;nav-link text-dark&quot; asp-area=&quot;Identity&quot; asp-page=&quot;/Account/Manage/Index&quot; 
+                                              title=&quot;Manage&quot;&gt;Hello @User.Identity.Name!&lt;/a&gt;
+    &lt;/li&gt;
+    &lt;li class=&quot;nav-item&quot;&gt;
+        &lt;form class=&quot;form-inline&quot; asp-area=&quot;Identity&quot; asp-page=&quot;/Account/Logout&quot; 
+                                  asp-route-returnUrl=&quot;@Url.Page(&quot;/&quot;, new { area = &quot;&quot; })&quot; 
+                                  method=&quot;post&quot; &gt;
+            &lt;button  type=&quot;submit&quot; class=&quot;nav-link btn btn-link text-dark&quot;&gt;Logout&lt;/button&gt;
+        &lt;/form&gt;
+    &lt;/li&gt;
+}
+else
+{
+    &lt;li class=&quot;nav-item&quot;&gt;
+        &lt;a class=&quot;nav-link text-dark&quot; asp-area=&quot;Identity&quot; asp-page=&quot;/Account/Register&quot;&gt;Register&lt;/a&gt;
+    &lt;/li&gt;
+    &lt;li class=&quot;nav-item&quot;&gt;
+        &lt;a class=&quot;nav-link text-dark&quot; asp-area=&quot;Identity&quot; asp-page=&quot;/Account/Login&quot;&gt;Login&lt;/a&gt;
+    &lt;/li&gt;
+}
+&lt;/ul&gt;
+</code></pre>
+<h2><a href="#test-identity" aria-hidden="true" class="anchor" id="test-identity"></a>Test Identity</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
+
+namespace WebApp1.Pages
+{
+    [Authorize]
+    public class PrivacyModel : PageModel
+    {
+        private readonly ILogger&lt;PrivacyModel&gt; _logger;
+
+        public PrivacyModel(ILogger&lt;PrivacyModel&gt; logger)
+        {
+            _logger = logger;
+        }
+
+        public void OnGet()
+        {
+        }
+    }
+}
+</code></pre>
+<h3><a href="#explore-identity" aria-hidden="true" class="anchor" id="explore-identity"></a>Explore Identity</h3>
+<ul>
+<li>
+<p>Create full identity UI source</p>
+</li>
+<li>
+<p>Examine the source of each page and step through the debugger.</p>
+</li>
+</ul>
+<h2><a href="#identity-components" aria-hidden="true" class="anchor" id="identity-components"></a>Identity Components</h2>
+<h2><a href="#migrating-to-aspnet-core-identity" aria-hidden="true" class="anchor" id="migrating-to-aspnet-core-identity"></a>Migrating to ASP.NET Core Identity</h2>
+<h2><a href="#setting-password-strength" aria-hidden="true" class="anchor" id="setting-password-strength"></a>Setting password strength</h2>
+<h2><a href="#adddefaultidentity-and-addidentity" aria-hidden="true" class="anchor" id="adddefaultidentity-and-addidentity"></a><code>AddDefaultIdentity</code> and AddIdentity</h2>
+<ul>
+<li>
+<p>AddIdentity</p>
+</li>
+<li>
+<p>AddDefaultUI</p>
+</li>
+<li>
+<p>AddDefaultTokenProviders</p>
+</li>
+</ul>
+<h2><a href="#prevent-publish-of-static-identity-assets" aria-hidden="true" class="anchor" id="prevent-publish-of-static-identity-assets"></a>Prevent publish of static Identity assets</h2>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;ResolveStaticWebAssetsInputsDependsOn&gt;RemoveIdentityAssets&lt;/ResolveStaticWebAssetsInputsDependsOn&gt;
+&lt;/PropertyGroup&gt;
+
+&lt;Target Name=&quot;RemoveIdentityAssets&quot;&gt;
+  &lt;ItemGroup&gt;
+    &lt;StaticWebAsset Remove=&quot;@(StaticWebAsset)&quot; Condition=&quot;%(SourceId) == 'Microsoft.AspNetCore.Identity.UI'&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Target&gt;
+</code></pre>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next Steps</h2>
+<ul>
+<li>
+<p>ASP.NET Core Identity source code</p>
+</li>
+<li>
+<p>How to work with Roles in ASP.NET Core Identity</p>
+</li>
+<li>
+<p>See this GitHub issue for information on configuring Identity using SQLite.</p>
+</li>
+<li>
+<p>Configure Identity</p>
+</li>
+<li>
+<p>Create an ASP.NET Core app with user data protected by authorization</p>
+</li>
+<li>
+<p>Add, download, and delete user data to Identity in an ASP.NET Core project</p>
+</li>
+<li>
+<p>Enable QR code generation for TOTP authenticator apps in ASP.NET Core</p>
+</li>
+<li>
+<p>Migrate Authentication and Identity to ASP.NET Core</p>
+</li>
+<li>
+<p>Account confirmation and password recovery in ASP.NET Core</p>
+</li>
+<li>
+<p>Two-factor authentication with SMS in ASP.NET Core</p>
+</li>
+<li>
+<p>Host ASP.NET Core in a web farm</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity?view=aspnetcore-8.0">Introduction to Identity on ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
