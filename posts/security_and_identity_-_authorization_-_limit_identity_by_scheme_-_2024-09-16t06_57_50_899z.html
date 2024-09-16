@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Limit identity by scheme | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Limit identity by scheme</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication()
+        .AddCookie(options =&gt;
+        {
+            options.LoginPath = &quot;/Account/Unauthorized/&quot;;
+            options.AccessDeniedPath = &quot;/Account/Forbidden/&quot;;
+        })
+        .AddJwtBearer(options =&gt;
+        {
+            options.Audience = &quot;http://localhost:5001/&quot;;
+            options.Authority = &quot;http://localhost:5000/&quot;;
+        });
+
+builder.Services.AddAuthentication()
+        .AddIdentityServerJwt();
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseIdentityServer();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.MapFallbackToFile(&quot;index.html&quot;);
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='note'>Note
+Specifying the default scheme results in the <code>HttpContext.User</code> property being set to that identity. If that behavior isn't desired, disable it by invoking the parameterless form of <code>AddAuthentication</code>.</p>
+</blockquote>
+<h2><a href="#selecting-the-scheme-with-the-authorize-attribute" aria-hidden="true" class="anchor" id="selecting-the-scheme-with-the-authorize-attribute"></a>Selecting the scheme with the Authorize attribute</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AuthScheme.Controllers;
+
+[Authorize(AuthenticationSchemes = AuthSchemes)]
+public class MixedController : Controller
+{
+    private const string AuthSchemes =
+        CookieAuthenticationDefaults.AuthenticationScheme + &quot;,&quot; +
+        JwtBearerDefaults.AuthenticationScheme;
+    public ContentResult Index() =&gt; Content(MyWidgets.GetMyContent());
+
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(AuthenticationSchemes=JwtBearerDefaults.AuthenticationScheme)]
+public class Mixed2Controller : Controller
+{
+    public ContentResult Index() =&gt; Content(MyWidgets.GetMyContent());
+}
+</code></pre>
+<h2><a href="#selecting-the-scheme-with-policies" aria-hidden="true" class="anchor" id="selecting-the-scheme-with-policies"></a>Selecting the scheme with policies</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.AddPolicy(&quot;Over18&quot;, policy =&gt;
+    {
+        policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new MinimumAgeRequirement(18));
+    });
+});
+
+builder.Services.AddAuthentication()
+                .AddIdentityServerJwt();
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseIdentityServer();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.MapFallbackToFile(&quot;index.html&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AuthScheme.Controllers;
+[Authorize(Policy = &quot;Over18&quot;)]
+public class RegistrationController : Controller
+{
+    // Do Registration
+</code></pre>
+<h2><a href="#use-multiple-authentication-schemes" aria-hidden="true" class="anchor" id="use-multiple-authentication-schemes"></a>Use multiple authentication schemes</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =&gt;
+        {
+            options.Audience = &quot;https://localhost:5000/&quot;;
+            options.Authority = &quot;https://localhost:5000/identity/&quot;;
+        })
+        .AddJwtBearer(&quot;AzureAD&quot;, options =&gt;
+        {
+            options.Audience = &quot;https://localhost:5000/&quot;;
+            options.Authority = &quot;https://login.microsoftonline.com/eb971100-7f436/&quot;;
+        });
+
+// Authorization
+builder.Services.AddAuthorization(options =&gt;
+{
+    var defaultAuthorizationPolicyBuilder = new AuthorizationPolicyBuilder(
+        JwtBearerDefaults.AuthenticationScheme,
+        &quot;AzureAD&quot;);
+    defaultAuthorizationPolicyBuilder =
+        defaultAuthorizationPolicyBuilder.RequireAuthenticatedUser();
+    options.DefaultPolicy = defaultAuthorizationPolicyBuilder.Build();
+});
+
+builder.Services.AddAuthentication()
+        .AddIdentityServerJwt();
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseIdentityServer();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.MapFallbackToFile(&quot;index.html&quot;);
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='note'>Note
+Only one JWT bearer authentication is registered with the default authentication scheme <code>JwtBearerDefaults.AuthenticationScheme</code>. Additional authentication has to be registered with a unique authentication scheme.</p>
+</blockquote>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =&gt;
+        {
+            options.Audience = &quot;https://localhost:5000/&quot;;
+            options.Authority = &quot;https://localhost:5000/identity/&quot;;
+        })
+        .AddJwtBearer(&quot;AzureAD&quot;, options =&gt;
+        {
+            options.Audience = &quot;https://localhost:5000/&quot;;
+            options.Authority = &quot;https://login.microsoftonline.com/eb971100-7f436/&quot;;
+        });
+
+// Authorization
+builder.Services.AddAuthorization(options =&gt;
+{
+    var defaultAuthorizationPolicyBuilder = new AuthorizationPolicyBuilder(
+        JwtBearerDefaults.AuthenticationScheme,
+        &quot;AzureAD&quot;);
+    defaultAuthorizationPolicyBuilder =
+        defaultAuthorizationPolicyBuilder.RequireAuthenticatedUser();
+    options.DefaultPolicy = defaultAuthorizationPolicyBuilder.Build();
+});
+
+builder.Services.AddAuthentication()
+        .AddIdentityServerJwt();
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseIdentityServer();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.MapFallbackToFile(&quot;index.html&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.Net.Http.Headers;
+using System.IdentityModel.Tokens.Jwt;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Authentication
+builder.Services.AddAuthentication(options =&gt;
+{
+    options.DefaultScheme = &quot;B2C_OR_AAD&quot;;
+    options.DefaultChallengeScheme = &quot;B2C_OR_AAD&quot;;
+})
+.AddJwtBearer(&quot;B2C&quot;, jwtOptions =&gt;
+{
+    jwtOptions.MetadataAddress = &quot;B2C-MetadataAddress&quot;;
+    jwtOptions.Authority = &quot;B2C-Authority&quot;;
+    jwtOptions.Audience = &quot;B2C-Audience&quot;;
+})
+.AddJwtBearer(&quot;AAD&quot;, jwtOptions =&gt;
+{
+    jwtOptions.MetadataAddress = &quot;AAD-MetadataAddress&quot;;
+    jwtOptions.Authority = &quot;AAD-Authority&quot;;
+    jwtOptions.Audience = &quot;AAD-Audience&quot;;
+    jwtOptions.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateIssuerSigningKey = true,
+        ValidAudiences = builder.Configuration.GetSection(&quot;ValidAudiences&quot;).Get&lt;string[]&gt;(),
+        ValidIssuers = builder.Configuration.GetSection(&quot;ValidIssuers&quot;).Get&lt;string[]&gt;()
+    };
+})
+.AddPolicyScheme(&quot;B2C_OR_AAD&quot;, &quot;B2C_OR_AAD&quot;, options =&gt;
+{
+    options.ForwardDefaultSelector = context =&gt;
+    {
+        string authorization = context.Request.Headers[HeaderNames.Authorization];
+        if (!string.IsNullOrEmpty(authorization) &amp;&amp; authorization.StartsWith(&quot;Bearer &quot;))
+        {
+            var token = authorization.Substring(&quot;Bearer &quot;.Length).Trim();
+            var jwtHandler = new JwtSecurityTokenHandler();
+
+            return (jwtHandler.CanReadToken(token) &amp;&amp; jwtHandler.ReadJwtToken(token).Issuer.Equals(&quot;B2C-Authority&quot;))
+                ? &quot;B2C&quot; : &quot;AAD&quot;;
+        }
+        return &quot;AAD&quot;;
+    };
+});
+
+builder.Services.AddAuthentication()
+        .AddIdentityServerJwt();
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseIdentityServer();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute().RequireAuthorization();
+app.MapRazorPages().RequireAuthorization();
+
+app.MapFallbackToFile(&quot;index.html&quot;);
+
+app.Run();
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/limitingidentitybyscheme?view=aspnetcore-8.0">Authorize with a specific scheme in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

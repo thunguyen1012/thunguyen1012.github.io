@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Resource-based authorization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Resource-based authorization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#use-imperative-authorization" aria-hidden="true" class="anchor" id="use-imperative-authorization"></a>Use imperative authorization</h2>
+<pre><code class="language-csharp">public class DocumentController : Controller
+{
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IDocumentRepository _documentRepository;
+
+    public DocumentController(IAuthorizationService authorizationService,
+                              IDocumentRepository documentRepository)
+    {
+        _authorizationService = authorizationService;
+        _documentRepository = documentRepository;
+    }
+</code></pre>
+<pre><code class="language-csharp">Task&lt;AuthorizationResult&gt; AuthorizeAsync(ClaimsPrincipal user,
+                          object resource,
+                          IEnumerable&lt;IAuthorizationRequirement&gt; requirements);
+Task&lt;AuthorizationResult&gt; AuthorizeAsync(ClaimsPrincipal user,
+                          object resource,
+                          string policyName);
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The following code samples assume authentication has run and set the <code>User</code> property.</p>
+</blockquote>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnGetAsync(Guid documentId)
+{
+    Document = _documentRepository.Find(documentId);
+
+    if (Document == null)
+    {
+        return new NotFoundResult();
+    }
+
+    var authorizationResult = await _authorizationService
+            .AuthorizeAsync(User, Document, &quot;EditPolicy&quot;);
+
+    if (authorizationResult.Succeeded)
+    {
+        return Page();
+    }
+    else if (User.Identity.IsAuthenticated)
+    {
+        return new ForbidResult();
+    }
+    else
+    {
+        return new ChallengeResult();
+    }
+}
+</code></pre>
+<h2><a href="#write-a-resource-based-handler" aria-hidden="true" class="anchor" id="write-a-resource-based-handler"></a>Write a resource-based handler</h2>
+<pre><code class="language-csharp">public class DocumentAuthorizationHandler : 
+    AuthorizationHandler&lt;SameAuthorRequirement, Document&gt;
+{
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
+                                                   SameAuthorRequirement requirement,
+                                                   Document resource)
+    {
+        if (context.User.Identity?.Name == resource.Author)
+        {
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+public class SameAuthorRequirement : IAuthorizationRequirement { }
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.AddPolicy(&quot;EditPolicy&quot;, policy =&gt;
+        policy.Requirements.Add(new SameAuthorRequirement()));
+});
+
+builder.Services.AddSingleton&lt;IAuthorizationHandler, DocumentAuthorizationHandler&gt;();
+builder.Services.AddSingleton&lt;IAuthorizationHandler, DocumentAuthorizationCrudHandler&gt;();
+builder.Services.AddScoped&lt;IDocumentRepository, DocumentRepository&gt;();
+</code></pre>
+<h3><a href="#operational-requirements" aria-hidden="true" class="anchor" id="operational-requirements"></a>Operational requirements</h3>
+<pre><code class="language-csharp">public static class Operations
+{
+    public static OperationAuthorizationRequirement Create =
+        new OperationAuthorizationRequirement { Name = nameof(Create) };
+    public static OperationAuthorizationRequirement Read =
+        new OperationAuthorizationRequirement { Name = nameof(Read) };
+    public static OperationAuthorizationRequirement Update =
+        new OperationAuthorizationRequirement { Name = nameof(Update) };
+    public static OperationAuthorizationRequirement Delete =
+        new OperationAuthorizationRequirement { Name = nameof(Delete) };
+}
+</code></pre>
+<pre><code class="language-csharp">public class DocumentAuthorizationCrudHandler :
+    AuthorizationHandler&lt;OperationAuthorizationRequirement, Document&gt;
+{
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
+                                                   OperationAuthorizationRequirement requirement,
+                                                   Document resource)
+    {
+        if (context.User.Identity?.Name == resource.Author &amp;&amp;
+            requirement.Name == Operations.Read.Name)
+        {
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<h2><a href="#challenge-and-forbid-with-an-operational-resource-handler" aria-hidden="true" class="anchor" id="challenge-and-forbid-with-an-operational-resource-handler"></a>Challenge and forbid with an operational resource handler</h2>
+<blockquote>
+<p class='note'>Note
+The following code samples assume authentication has run and set the <code>User</code> property.</p>
+</blockquote>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnGetAsync(Guid documentId)
+{
+    Document = _documentRepository.Find(documentId);
+
+    if (Document == null)
+    {
+        return new NotFoundResult();
+    }
+
+    var authorizationResult = await _authorizationService
+            .AuthorizeAsync(User, Document, Operations.Read);
+
+    if (authorizationResult.Succeeded)
+    {
+        return Page();
+    }
+    else if (User.Identity.IsAuthenticated)
+    {
+        return new ForbidResult();
+    }
+    else
+    {
+        return new ChallengeResult();
+    }
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/resourcebased?view=aspnetcore-8.0">Resource-based authorization in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

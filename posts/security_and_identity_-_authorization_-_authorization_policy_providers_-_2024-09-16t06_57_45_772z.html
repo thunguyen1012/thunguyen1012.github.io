@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Authorization policy providers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Authorization policy providers</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Typically when using policy-based authorization, policies are registered by calling <code>AuthorizationOptions.AddPolicy</code> as part of authorization service configuration. In some scenarios, it may not be possible (or desirable) to register all authorization policies in this way. In those cases, you can use a custom <code>IAuthorizationPolicyProvider</code> to control how authorization policies are supplied.</p>
+<p>Examples of scenarios where a custom <code>IAuthorizationPolicyProvider</code> may be useful include:</p>
+<ul>
+<li>
+<p>Using an external service to provide policy evaluation.</p>
+</li>
+<li>
+<p>Using a large range of policies (for different room numbers or ages, for example), so it doesn't make sense to add each individual authorization policy with an <code>AuthorizationOptions.AddPolicy</code> call.</p>
+</li>
+<li>
+<p>Creating policies at runtime based on information in an external data source (like a database) or determining authorization requirements dynamically through another mechanism.</p>
+</li>
+</ul>
+<p>View or download sample code from the AspNetCore GitHub repository. Download the dotnet/AspNetCore repository ZIP file. Unzip the file. Navigate to the src/Security/samples/CustomPolicyProvider project folder.</p>
+<h2><a href="#customize-policy-retrieval" aria-hidden="true" class="anchor" id="customize-policy-retrieval"></a>Customize policy retrieval</h2>
+<p>ASP.NET Core apps use an implementation of the <code>IAuthorizationPolicyProvider</code> interface to retrieve authorization policies. By default, <code>DefaultAuthorizationPolicyProvider</code> is registered and used. <code>DefaultAuthorizationPolicyProvider</code> returns policies from the <code>AuthorizationOptions</code> provided in an <code>IServiceCollection.AddAuthorization</code> call.</p>
+<p>Customize this behavior by registering a different <code>IAuthorizationPolicyProvider</code> implementation in the app's dependency injection container.</p>
+<p>The <code>IAuthorizationPolicyProvider</code> interface contains three APIs:</p>
+<ul>
+<li>
+<p><code>GetPolicyAsync</code> returns an authorization policy for a given name.</p>
+</li>
+<li>
+<p><code>GetDefaultPolicyAsync</code> returns the default authorization policy (the policy used for <code>[Authorize]</code> attributes without a policy specified).</p>
+</li>
+<li>
+<p><code>GetFallbackPolicyAsync</code> returns the fallback authorization policy (the policy used by the Authorization Middleware when no policy is specified).</p>
+</li>
+</ul>
+<p>By implementing these APIs, you can customize how authorization policies are provided.</p>
+<h2><a href="#parameterized-authorize-attribute-example" aria-hidden="true" class="anchor" id="parameterized-authorize-attribute-example"></a>Parameterized authorize attribute example</h2>
+<p>One scenario where <code>IAuthorizationPolicyProvider</code> is useful is enabling custom <code>[Authorize]</code> attributes whose requirements depend on a parameter. For example, in policy-based authorization documentation, an age-based (“AtLeast21”) policy was used as a sample. If different controller actions in an app should be made available to users of different ages, it might be useful to have many different age-based policies. Instead of registering all the different age-based policies that the application will need in <code>AuthorizationOptions</code>, you can generate the policies dynamically with a custom <code>IAuthorizationPolicyProvider</code>. To make using the policies easier, you can annotate actions with custom authorization attribute like <code>[MinimumAgeAuthorize(20)]</code>.</p>
+<h2><a href="#custom-authorization-attributes" aria-hidden="true" class="anchor" id="custom-authorization-attributes"></a>Custom Authorization attributes</h2>
+<p>Authorization policies are identified by their names. The custom <code>MinimumAgeAuthorizeAttribute</code> described previously needs to map arguments into a string that can be used to retrieve the corresponding authorization policy. You can do this by deriving from <code>AuthorizeAttribute</code> and making the <code>Age</code> property wrap the
+AuthorizeAttribute.Policy property.</p>
+<pre><code class="language-csharp">internal class MinimumAgeAuthorizeAttribute : AuthorizeAttribute
+{
+    const string POLICY_PREFIX = &quot;MinimumAge&quot;;
+
+    public MinimumAgeAuthorizeAttribute(int age) =&gt; Age = age;
+
+    // Get or set the Age property by manipulating the underlying Policy property
+    public int Age
+    {
+        get
+        {
+            if (int.TryParse(Policy.Substring(POLICY_PREFIX.Length), out var age))
+            {
+                return age;
+            }
+            return default(int);
+        }
+        set
+        {
+            Policy = $&quot;{POLICY_PREFIX}{value.ToString()}&quot;;
+        }
+    }
+}
+</code></pre>
+<p>This attribute type has a <code>Policy</code> string based on the hard-coded prefix (&quot;MinimumAge&quot;) and an integer passed in via the constructor.</p>
+<p>You can apply it to actions in the same way as other <code>Authorize</code> attributes except that it takes an integer as a parameter.</p>
+<pre><code class="language-csharp">[MinimumAgeAuthorize(10)]
+public IActionResult RequiresMinimumAge10()
+</code></pre>
+<h2><a href="#custom-iauthorizationpolicyprovider" aria-hidden="true" class="anchor" id="custom-iauthorizationpolicyprovider"></a>Custom <code>IAuthorizationPolicyProvider</code></h2>
+<p>The custom <code>MinimumAgeAuthorizeAttribute</code> makes it easy to request authorization policies for any minimum age desired. The next problem to solve is making sure that authorization policies are available for all of those different ages. This is where an <code>IAuthorizationPolicyProvider</code> is useful.</p>
+<p>When using <code>MinimumAgeAuthorizationAttribute</code>, the authorization policy names will follow the pattern <code>&quot;MinimumAge&quot; +</code>Age``````, so the custom <code>IAuthorizationPolicyProvider</code> should generate authorization policies by:</p>
+<ul>
+<li>
+<p>Parsing the age from the policy name.</p>
+</li>
+<li>
+<p>Using <code>AuthorizationPolicyBuilder</code> to create a new <code>AuthorizationPolicy</code></p>
+</li>
+<li>
+<p>In this and following examples it will be assumed that the user is authenticated via a cookie. The <code>AuthorizationPolicyBuilder</code> should either be constructed with at least one authorization scheme name or always succeed. Otherwise there is no information on how to provide a challenge to the user and an exception will be thrown.</p>
+</li>
+<li>
+<p>Adding requirements to the policy based on the age with <code>AuthorizationPolicyBuilder.AddRequirements</code>. In other scenarios, you might use <code>RequireClaim</code>, <code>RequireRole</code>, or <code>RequireUserName</code> instead.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">internal class MinimumAgePolicyProvider : IAuthorizationPolicyProvider
+{
+    const string POLICY_PREFIX = &quot;MinimumAge&quot;;
+
+    // Policies are looked up by string name, so expect 'parameters' (like age)
+    // to be embedded in the policy names. This is abstracted away from developers
+    // by the more strongly-typed attributes derived from AuthorizeAttribute
+    // (like [MinimumAgeAuthorize()] in this sample)
+    public Task&lt;AuthorizationPolicy&gt; GetPolicyAsync(string policyName)
+    {
+        if (policyName.StartsWith(POLICY_PREFIX, StringComparison.OrdinalIgnoreCase) &amp;&amp;
+            int.TryParse(policyName.Substring(POLICY_PREFIX.Length), out var age))
+        {
+            var policy = new AuthorizationPolicyBuilder(CookieAuthenticationDefaults.AuthenticationScheme);
+            policy.AddRequirements(new MinimumAgeRequirement(age));
+            return Task.FromResult(policy.Build());
+        }
+
+        return Task.FromResult&lt;AuthorizationPolicy&gt;(null);
+    }
+}
+</code></pre>
+<h2><a href="#multiple-authorization-policy-providers" aria-hidden="true" class="anchor" id="multiple-authorization-policy-providers"></a>Multiple authorization policy providers</h2>
+<p>When using custom <code>IAuthorizationPolicyProvider</code> implementations, keep in mind that ASP.NET Core only uses one instance of <code>IAuthorizationPolicyProvider</code>. If a custom provider isn't able to provide authorization policies for all policy names that will be used, it should defer to a backup provider.</p>
+<p>For example, consider an application that needs both custom age policies and more traditional role-based policy retrieval. Such an app could use a custom authorization policy provider that:</p>
+<ul>
+<li>
+<p>Attempts to parse policy names.</p>
+</li>
+<li>
+<p>Calls into a different policy provider (like <code>DefaultAuthorizationPolicyProvider</code>) if the policy name doesn't contain an age.</p>
+</li>
+</ul>
+<p>The example <code>IAuthorizationPolicyProvider</code> implementation shown above can be updated to use the <code>DefaultAuthorizationPolicyProvider</code> by creating a backup policy provider in its constructor (to be used in case the policy name doesn't match its expected pattern of 'MinimumAge' + age).</p>
+<pre><code class="language-csharp">private DefaultAuthorizationPolicyProvider BackupPolicyProvider { get; }
+
+public MinimumAgePolicyProvider(IOptions&lt;AuthorizationOptions&gt; options)
+{
+    // ASP.NET Core only uses one authorization policy provider, so if the custom implementation
+    // doesn't handle all policies it should fall back to an alternate provider.
+    BackupPolicyProvider = new DefaultAuthorizationPolicyProvider(options);
+}
+</code></pre>
+<p>Then, the <code>GetPolicyAsync</code> method can be updated to use the <code>BackupPolicyProvider</code> instead of returning <code>null</code>:</p>
+<pre><code class="language-csharp">...
+return BackupPolicyProvider.GetPolicyAsync(policyName);
+</code></pre>
+<h2><a href="#default-policy" aria-hidden="true" class="anchor" id="default-policy"></a>Default policy</h2>
+<p>In addition to providing named authorization policies, a custom <code>IAuthorizationPolicyProvider</code> needs to implement <code>GetDefaultPolicyAsync</code> to provide an authorization policy for <code>[Authorize]</code> attributes without a policy name specified.</p>
+<p>In many cases, this authorization attribute only requires an authenticated user, so you can make the necessary policy with a call to <code>RequireAuthenticatedUser</code>:</p>
+<pre><code class="language-csharp">public Task&lt;AuthorizationPolicy&gt; GetDefaultPolicyAsync() =&gt; 
+    Task.FromResult(new AuthorizationPolicyBuilder(CookieAuthenticationDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build());
+</code></pre>
+<p>As with all aspects of a custom <code>IAuthorizationPolicyProvider</code>, you can customize this, as needed. In some cases, it may be desirable to retrieve the default policy from a fallback <code>IAuthorizationPolicyProvider</code>.</p>
+<h2><a href="#fallback-policy" aria-hidden="true" class="anchor" id="fallback-policy"></a>Fallback policy</h2>
+<p>A custom <code>IAuthorizationPolicyProvider</code> can optionally implement <code>GetFallbackPolicyAsync</code> to provide a policy that's used when combining policies and when no policies are specified. If <code>GetFallbackPolicyAsync</code> returns a non-null policy, the returned policy is used by the Authorization Middleware when no policies are specified for the request.</p>
+<p>If no fallback policy is required, the provider can return <code>null</code> or defer to the fallback provider:</p>
+<pre><code class="language-csharp">public Task&lt;AuthorizationPolicy&gt; GetFallbackPolicyAsync() =&gt; 
+    Task.FromResult&lt;AuthorizationPolicy&gt;(null);
+</code></pre>
+<h2><a href="#use-a-custom-iauthorizationpolicyprovider" aria-hidden="true" class="anchor" id="use-a-custom-iauthorizationpolicyprovider"></a>Use a custom <code>IAuthorizationPolicyProvider</code></h2>
+<p>To use custom policies from an <code>IAuthorizationPolicyProvider</code>, you must:</p>
+<ul>
+<li>
+<p>Register the appropriate <code>AuthorizationHandler</code> types with dependency injection (described in policy-based authorization), as with all policy-based authorization scenarios.</p>
+</li>
+<li>
+<p>Register the custom <code>IAuthorizationPolicyProvider</code> type in the app's dependency injection service collection in <code>Startup.ConfigureServices</code> to replace the default policy provider.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">services.AddSingleton&lt;IAuthorizationPolicyProvider, MinimumAgePolicyProvider&gt;();
+</code></pre>
+<p>A complete custom <code>IAuthorizationPolicyProvider</code> sample is available in the dotnet/aspnetcore GitHub repository.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/iauthorizationpolicyprovider?view=aspnetcore-8.0">Custom Authorization <code>Policy</code> Providers using <code>IAuthorizationPolicyProvider</code> in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

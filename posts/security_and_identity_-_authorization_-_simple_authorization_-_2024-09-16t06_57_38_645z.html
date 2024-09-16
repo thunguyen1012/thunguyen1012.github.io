@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Simple authorization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Authorization in ASP.NET Core is controlled with the [Authorize] attribute and its various parameters. In its most basic form, applying the [Authorize] attribute to a controller, action, or Razor Page, limits access to that component to authenticated users.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Simple authorization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Authorization in ASP.NET Core is controlled with the <code>[Authorize]</code> attribute and its various parameters. In its most basic form, applying the <code>[Authorize]</code> attribute to a controller, action, or Razor Page, limits access to that component to authenticated users.</p>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<p>This article assumes that you have a basic understanding of ASP.NET Core Razor Pages and MVC. If you're new to ASP.NET Core, see the following resources:</p>
+<ul>
+<li>
+<p>Introduction to Razor Pages in ASP.NET Core</p>
+</li>
+<li>
+<p>Overview of ASP.NET Core MVC</p>
+</li>
+<li>
+<p>Tutorial: Get started with Razor Pages in ASP.NET Core</p>
+</li>
+<li>
+<p>Introduction to Identity on ASP.NET Core</p>
+</li>
+</ul>
+<h2><a href="#use-the-authorize]-attribute" aria-hidden="true" class="anchor" id="use-the-authorize]-attribute"></a>Use the <code>[Authorize]</code> attribute</h2>
+<p>The following code limits access to the <code>AccountController</code> to authenticated users:</p>
+<pre><code class="language-csharp">[Authorize]
+public class AccountController : Controller
+{
+    public ActionResult Login()
+    {
+    }
+
+    public ActionResult Logout()
+    {
+    }
+}
+</code></pre>
+<p>If you want to apply authorization to an action rather than the controller, apply the <code>AuthorizeAttribute</code> attribute to the action itself:</p>
+<pre><code class="language-csharp">public class AccountController : Controller
+{
+   public ActionResult Login()
+   {
+   }
+
+   [Authorize]
+   public ActionResult Logout()
+   {
+   }
+}
+</code></pre>
+<p>Now only authenticated users can access the <code>Logout</code> function.</p>
+<p>You can also use the <code>AllowAnonymous</code> attribute to allow access by non-authenticated users to individual actions. For example:</p>
+<pre><code class="language-csharp">[Authorize]
+public class AccountController : Controller
+{
+    [AllowAnonymous]
+    public ActionResult Login()
+    {
+    }
+
+    public ActionResult Logout()
+    {
+    }
+}
+</code></pre>
+<p>This would allow only authenticated users to the <code>AccountController</code>, except for the <code>Login</code> action, which is accessible by everyone, regardless of their authenticated or unauthenticated / anonymous status.</p>
+<blockquote>
+<p class='warning'>Warning
+<code>[AllowAnonymous]</code> bypasses authorization statements. If you combine <code>[AllowAnonymous]</code> and an <code>[Authorize]</code> attribute, the <code>[Authorize]</code> attributes are ignored. For example if you apply <code>[AllowAnonymous]</code> at the controller level:</p>
+</blockquote>
+<p>Any authorization requirements from <code>[Authorize]</code> attributes on the same controller or action methods on the controller are ignored.
+Authentication middleware is not short-circuited but doesn't need to succeed.</p>
+<ul>
+<li>
+<p>Any authorization requirements from <code>[Authorize]</code> attributes on the same controller or action methods on the controller are ignored.</p>
+</li>
+<li>
+<p>Authentication middleware is not short-circuited but doesn't need to succeed.</p>
+</li>
+</ul>
+<p>The following code limits access to the <code>LogoutModel</code> Razor Page to authenticated users:</p>
+<pre><code class="language-csharp">[Authorize]
+public class LogoutModel : PageModel
+{
+    public async Task OnGetAsync()
+    {
+
+    }
+
+    public async Task&lt;IActionResult&gt; OnPostAsync()
+    {
+
+    }
+}
+</code></pre>
+<p>For information on how to globally require all users to be authenticated, see Require authenticated users.</p>
+<h2><a href="#authorize-attribute-and-razor-pages" aria-hidden="true" class="anchor" id="authorize-attribute-and-razor-pages"></a>Authorize attribute and Razor Pages</h2>
+<p>The <code>AuthorizeAttribute</code> can not be applied to Razor Page handlers. For example, <code>[Authorize]</code> can't be applied to <code>OnGet</code>, <code>OnPost</code>, or any other page handler. Consider using an ASP.NET Core MVC controller for pages with different authorization requirements for different handlers. Using an MVC controller when different authorization requirements are required:</p>
+<ul>
+<li>
+<p>Is the least complex approach.</p>
+</li>
+<li>
+<p>Is the approach recommended by Microsoft.</p>
+</li>
+</ul>
+<p>If you decide not to use an MVC controller, the following two approaches can be used to apply authorization to Razor Page handler methods:</p>
+<ul>
+<li>
+<p>Use separate pages for page handlers requiring different authorization. Move shared content into one or more partial views. When possible, this is the recommended approach.</p>
+</li>
+<li>
+<p>For content that must share a common page, write a filter that performs authorization as part of <code>IAsyncPageFilter.OnPageHandlerSelectionAsync</code>. The PageHandlerAuth GitHub project demonstrates this approach:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[TypeFilter(typeof(AuthorizeIndexPageHandlerFilter))]
+public class IndexModel : PageModel
+{
+    private readonly ILogger&lt;IndexModel&gt; _logger;
+
+    public IndexModel(ILogger&lt;IndexModel&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public void OnGet()
+    {
+
+    }
+
+    public void OnPost()
+    {
+
+    }
+
+    [AuthorizePageHandler]
+    public void OnPostAuthorized()
+    {
+
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class AuthorizeIndexPageHandlerFilter : IAsyncPageFilter, IOrderedFilter
+{
+    private readonly IAuthorizationPolicyProvider policyProvider;
+    private readonly IPolicyEvaluator policyEvaluator;
+
+    public AuthorizeIndexPageHandlerFilter(
+        IAuthorizationPolicyProvider policyProvider,
+        IPolicyEvaluator policyEvaluator)
+    {
+        this.policyProvider = policyProvider;
+        this.policyEvaluator = policyEvaluator;
+    }
+
+    // Run late in the selection pipeline
+    public int Order =&gt; 10000;
+
+    public Task OnPageHandlerExecutionAsync(PageHandlerExecutingContext context, PageHandlerExecutionDelegate next) =&gt; next();
+
+    public async Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context)
+    {
+        var attribute = context.HandlerMethod?.MethodInfo?.GetCustomAttribute&lt;AuthorizePageHandlerAttribute&gt;();
+        if (attribute is null)
+        {
+            return;
+        }
+
+        var policy = await AuthorizationPolicy.CombineAsync(policyProvider, new[] { attribute });
+        if (policy is null)
+        {
+            return;
+        }
+
+        await AuthorizeAsync(context, policy);
+    }
+
+    #region AuthZ - do not change
+    private async Task AuthorizeAsync(ActionContext actionContext, AuthorizationPolicy policy)
+    {
+        var httpContext = actionContext.HttpContext;
+        var authenticateResult = await policyEvaluator.AuthenticateAsync(policy, httpContext);
+        var authorizeResult = await policyEvaluator.AuthorizeAsync(policy, authenticateResult, httpContext, actionContext.ActionDescriptor);
+        if (authorizeResult.Challenged)
+        {
+            if (policy.AuthenticationSchemes.Count &gt; 0)
+            {
+                foreach (var scheme in policy.AuthenticationSchemes)
+                {
+                    await httpContext.ChallengeAsync(scheme);
+                }
+            }
+            else
+            {
+                await httpContext.ChallengeAsync();
+            }
+
+            return;
+        }
+        else if (authorizeResult.Forbidden)
+        {
+            if (policy.AuthenticationSchemes.Count &gt; 0)
+            {
+                foreach (var scheme in policy.AuthenticationSchemes)
+                {
+                    await httpContext.ForbidAsync(scheme);
+                }
+            }
+            else
+            {
+                await httpContext.ForbidAsync();
+            }
+
+            return;
+        }
+    }
+</code></pre>
+<ul>
+<li>
+<p>The <code>AuthorizeIndexPageHandlerFilter</code> implements the authorization filter:</p>
+</li>
+<li>
+<p>The <code>[AuthorizePageHandler]</code> attribute is applied to the <code>OnPostAuthorized</code> page handler:</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+The PageHandlerAuth sample approach does not:</p>
+</blockquote>
+<p>Compose with authorization attributes applied to the page, page model, or globally. Composing authorization attributes results in authentication and authorization executing multiple times when you have one more <code>AuthorizeAttribute</code> or <code>AuthorizeFilter</code> instances also applied to the page.
+Work in conjunction with the rest of ASP.NET Core authentication and authorization system. You must verify using this approach works correctly for your application.</p>
+<ul>
+<li>
+<p>Compose with authorization attributes applied to the page, page model, or globally. Composing authorization attributes results in authentication and authorization executing multiple times when you have one more <code>AuthorizeAttribute</code> or <code>AuthorizeFilter</code> instances also applied to the page.</p>
+</li>
+<li>
+<p>Work in conjunction with the rest of ASP.NET Core authentication and authorization system. You must verify using this approach works correctly for your application.</p>
+</li>
+</ul>
+<p>There are no plans to support the <code>AuthorizeAttribute</code> on Razor Page handlers.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/simple?view=aspnetcore-8.0">Simple authorization in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

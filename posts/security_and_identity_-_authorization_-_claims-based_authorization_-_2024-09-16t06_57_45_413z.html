@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Claims-based authorization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Claims-based authorization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#adding-claims-checks" aria-hidden="true" class="anchor" id="adding-claims-checks"></a>Adding claims checks</h2>
+<ul>
+<li>
+<p>Are declarative.</p>
+</li>
+<li>
+<p>Are applied to Razor Pages, controllers, or actions within a controller.</p>
+</li>
+<li>
+<p>Can not be applied at the Razor Page handler level, they must be applied to the Page.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+   options.AddPolicy(&quot;EmployeeOnly&quot;, policy =&gt; policy.RequireClaim(&quot;EmployeeNumber&quot;));
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;EmployeeOnly&quot;)]
+public IActionResult VacationBalance()
+{
+    return View();
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;EmployeeOnly&quot;)]
+public class VacationController : Controller
+{
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    public ActionResult VacationBalance()
+    {
+        return View();
+    }
+
+    [AllowAnonymous]
+    public ActionResult VacationPolicy()
+    {
+        return View();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;EmployeeOnly&quot;)]
+public class IndexModel : PageModel
+{
+    public void OnGet()
+    {
+
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;EmployeeOnly&quot;)]
+public class VacationController : Controller
+{
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    public ActionResult VacationBalance()
+    {
+        return View();
+    }
+
+    [AllowAnonymous]
+    public ActionResult VacationPolicy()
+    {
+        return View();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.AddPolicy(&quot;Founders&quot;, policy =&gt;
+                      policy.RequireClaim(&quot;EmployeeNumber&quot;, &quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;));
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h3><a href="#add-a-generic-claim-check" aria-hidden="true" class="anchor" id="add-a-generic-claim-check"></a>Add a generic claim check</h3>
+<h2><a href="#multiple-policy-evaluation" aria-hidden="true" class="anchor" id="multiple-policy-evaluation"></a>Multiple <code>Policy</code> Evaluation</h2>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;EmployeeOnly&quot;)]
+public class SalaryController : Controller
+{
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    public IActionResult Payslip()
+    {
+        return View();
+    }
+
+    [Authorize(Policy = &quot;HumanResources&quot;)]
+    public IActionResult UpdateSalary()
+    {
+        return View();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;EmployeeOnly&quot;)]
+[Authorize(Policy = &quot;HumanResources&quot;)]
+public class SalaryModel : PageModel
+{
+    public ContentResult OnGetPayStub()
+    {
+        return Content(&quot;OnGetPayStub&quot;);
+    }
+
+    public ContentResult OnGetSalary()
+    {
+        return Content(&quot;OnGetSalary&quot;);
+    }
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/claims?view=aspnetcore-8.0">Claims-based authorization in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

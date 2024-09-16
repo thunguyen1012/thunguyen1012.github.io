@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - View-based authorization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A developer often wants to show, hide, or otherwise modify a UI based on the current user identity. You can access the authorization service within MVC views via dependency injection. To inject the authorization service into a Razor view, use the @inject directive:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - View-based authorization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A developer often wants to show, hide, or otherwise modify a UI based on the current user identity. You can access the authorization service within MVC views via dependency injection. To inject the authorization service into a Razor view, use the <code>@inject</code> directive:</p>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+</code></pre>
+<p>If you want the authorization service in every view, place the <code>@inject</code> directive into the <code>_ViewImports.cshtml</code> file of the Views directory. For more information, see Dependency injection into views.</p>
+<p>Use the injected authorization service to invoke <code>AuthorizeAsync</code> in exactly the same way you would check during resource-based authorization:</p>
+<pre><code class="language-cshtml">@if ((await AuthorizationService.AuthorizeAsync(User, &quot;PolicyName&quot;)).Succeeded)
+{
+    &lt;p&gt;This paragraph is displayed because you fulfilled PolicyName.&lt;/p&gt;
+}
+</code></pre>
+<p>In some cases, the resource will be your view model. Invoke <code>AuthorizeAsync</code> in exactly the same way you would check during resource-based authorization:</p>
+<pre><code class="language-cshtml">@if ((await AuthorizationService.AuthorizeAsync(User, Model, Operations.Edit)).Succeeded)
+{
+    &lt;p&gt;&lt;a class=&quot;btn btn-default&quot; role=&quot;button&quot;
+        href=&quot;@Url.Action(&quot;Edit&quot;, &quot;Document&quot;, new { id = Model.Id })&quot;&gt;Edit&lt;/a&gt;&lt;/p&gt;
+}
+</code></pre>
+<p>In the preceding code, the model is passed as a resource the policy evaluation should take into consideration.</p>
+<blockquote>
+<p class='warning'>Warning
+Don't rely on toggling visibility of your app's UI elements as the sole authorization check. Hiding a UI element may not completely prevent access to its associated controller action. For example, consider the button in the preceding code snippet. A user can invoke the <code>Edit</code> action method if he or she knows the relative resource URL is /Document/Edit/1. For this reason, the <code>Edit</code> action method should perform its own authorization check.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/views?view=aspnetcore-8.0">View-based authorization in ASP.NET Core MVC</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Custom authorization with IAuthorizationRequirementData | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Consider the following sample that implements a custom MinimumAgeAuthorizationHandler:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Custom authorization with IAuthorizationRequirementData</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Consider the following sample that implements a custom <code>MinimumAgeAuthorizationHandler</code>:</p>
+<pre><code class="language-csharp">using AuthRequirementsData.Authorization;
+using Microsoft.AspNetCore.Authorization;
+
+var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthorization();
+builder.Services.AddControllers();
+builder.Services.AddSingleton&lt;IAuthorizationHandler, MinimumAgeAuthorizationHandler&gt;();
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<p>The <code>MinimumAgeAuthorizationHandler</code> class:</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using System.Globalization;
+using System.Security.Claims;
+
+namespace AuthRequirementsData.Authorization;
+
+class MinimumAgeAuthorizationHandler : AuthorizationHandler&lt;MinimumAgeAuthorizeAttribute&gt;
+{
+    private readonly ILogger&lt;MinimumAgeAuthorizationHandler&gt; _logger;
+
+    public MinimumAgeAuthorizationHandler(ILogger&lt;MinimumAgeAuthorizationHandler&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    // Check whether a given MinimumAgeRequirement is satisfied or not for a particular
+    // context.
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
+                                               MinimumAgeAuthorizeAttribute requirement)
+    {
+        // Log as a warning so that it's very clear in sample output which authorization
+        // policies(and requirements/handlers) are in use.
+        _logger.LogWarning(&quot;Evaluating authorization requirement for age &gt;= {age}&quot;,
+                                                                    requirement.Age);
+
+        // Check the user's age.
+        var dateOfBirthClaim = context.User.FindFirst(c =&gt; c.Type == 
+                                                                 ClaimTypes.DateOfBirth);
+        if (dateOfBirthClaim != null)
+        {
+            // If the user has a date of birth claim, check their age.
+            var dateOfBirth = Convert.ToDateTime(dateOfBirthClaim.Value,
+                                                           CultureInfo.InvariantCulture);
+            var age = DateTime.Now.Year - dateOfBirth.Year;
+            if (dateOfBirth &gt; DateTime.Now.AddYears(-age))
+            {
+                // Adjust age if the user hasn't had a birthday yet this year.
+                age--;
+            }
+
+            // If the user meets the age criterion, mark the authorization requirement
+            // succeeded.
+            if (age &gt;= requirement.Age)
+            {
+                _logger.LogInformation(
+                    &quot;Minimum age authorization requirement {age} satisfied&quot;, 
+                      requirement.Age);
+                context.Succeed(requirement);
+            }
+            else
+            {
+                _logger.LogInformation(&quot;Current user's DateOfBirth claim ({dateOfBirth})&quot;
+                   + &quot; does not satisfy the minimum age authorization requirement {age}&quot;,
+                    dateOfBirthClaim.Value,
+                    requirement.Age);
+            }
+        }
+        else
+        {
+            _logger.LogInformation(&quot;No DateOfBirth claim present&quot;);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<p>The custom <code>MinimumAgePolicyProvider</code>:</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
+
+namespace AuthRequirementsData.Authorization;
+
+class MinimumAgePolicyProvider : IAuthorizationPolicyProvider
+{
+    const string POLICY_PREFIX = &quot;MinimumAge&quot;;
+    public DefaultAuthorizationPolicyProvider FallbackPolicyProvider { get; }
+    public MinimumAgePolicyProvider(IOptions&lt;AuthorizationOptions&gt; options)
+    {
+        FallbackPolicyProvider = new DefaultAuthorizationPolicyProvider(options);
+    }
+    public Task&lt;AuthorizationPolicy&gt; GetDefaultPolicyAsync() =&gt; 
+                            FallbackPolicyProvider.GetDefaultPolicyAsync();
+    public Task&lt;AuthorizationPolicy?&gt; GetFallbackPolicyAsync() =&gt;
+                            FallbackPolicyProvider.GetFallbackPolicyAsync();
+
+    public Task&lt;AuthorizationPolicy?&gt; GetPolicyAsync(string policyName)
+    {
+        if (policyName.StartsWith(POLICY_PREFIX, StringComparison.OrdinalIgnoreCase) &amp;&amp;
+            int.TryParse(policyName.Substring(POLICY_PREFIX.Length), out var age))
+        {
+            var policy = new AuthorizationPolicyBuilder(
+                                                JwtBearerDefaults.AuthenticationScheme);
+            policy.AddRequirements(new MinimumAgeRequirement(age));
+            return Task.FromResult&lt;AuthorizationPolicy?&gt;(policy.Build());
+        }
+
+        return Task.FromResult&lt;AuthorizationPolicy?&gt;(null);
+    }
+}
+</code></pre>
+<p>A custom implementation of ASP.NET Core should handle all policies, including default policies, etc.</p>
+<ul>
+<li>
+<p>Constructed with options from the dependency injection container.</p>
+</li>
+<li>
+<p>Used if this custom provider isn't able to handle a given policy name.</p>
+</li>
+</ul>
+<p>If a custom policy provider is able to handle all expected policy names, setting the fallback policy with <code>GetFallbackPolicyAsync()</code> isn't required.</p>
+<pre><code class="language-csharp">class MinimumAgePolicyProvider : IAuthorizationPolicyProvider
+{
+    const string POLICY_PREFIX = &quot;MinimumAge&quot;;
+    public DefaultAuthorizationPolicyProvider FallbackPolicyProvider { get; }
+    public MinimumAgePolicyProvider(IOptions&lt;AuthorizationOptions&gt; options)
+    {
+        FallbackPolicyProvider = new DefaultAuthorizationPolicyProvider(options);
+    }
+    public Task&lt;AuthorizationPolicy&gt; GetDefaultPolicyAsync() =&gt; 
+                            FallbackPolicyProvider.GetDefaultPolicyAsync();
+    public Task&lt;AuthorizationPolicy?&gt; GetFallbackPolicyAsync() =&gt;
+                            FallbackPolicyProvider.GetFallbackPolicyAsync();
+</code></pre>
+<p>Policies are looked up by string name, therefore parameters, for example, <code>age</code>, are embedded in the policy names. This is abstracted away from developers by the more strongly-typed attributes derived from AuthorizeAttribute. For example, the <code>[MinimumAgeAuthorize()]</code> attribute in this sample looks up policies by string name.</p>
+<pre><code class="language-csharp">public Task&lt;AuthorizationPolicy?&gt; GetPolicyAsync(string policyName)
+{
+    if (policyName.StartsWith(POLICY_PREFIX, StringComparison.OrdinalIgnoreCase) &amp;&amp;
+        int.TryParse(policyName.Substring(POLICY_PREFIX.Length), out var age))
+    {
+        var policy = new AuthorizationPolicyBuilder(
+                                            JwtBearerDefaults.AuthenticationScheme);
+        policy.AddRequirements(new MinimumAgeRequirement(age));
+        return Task.FromResult&lt;AuthorizationPolicy?&gt;(policy.Build());
+    }
+
+    return Task.FromResult&lt;AuthorizationPolicy?&gt;(null);
+}
+</code></pre>
+<p>The <code>MinimumAgeAuthorizeAttribute</code> uses the <code>IAuthorizationRequirementData</code> interface that allows the attribute definition to specify the requirements associated with the authorization policy:</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+
+namespace AuthRequirementsData.Authorization;
+
+class MinimumAgeAuthorizeAttribute : AuthorizeAttribute, IAuthorizationRequirement,
+                                     IAuthorizationRequirementData
+{
+    public MinimumAgeAuthorizeAttribute(int age) =&gt; Age = age;
+    public int Age { get; }
+
+    public IEnumerable&lt;IAuthorizationRequirement&gt; GetRequirements()
+    {
+        yield return this;
+    }
+}
+</code></pre>
+<p>The <code>GreetingsController</code> displays the user's name when they satisfy the minimum <code>age</code> policy:</p>
+<pre><code class="language-csharp">using AuthRequirementsData.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AuthRequirementsData.Controllers;
+
+[ApiController]
+[Route(&quot;api/[controller]&quot;)]
+public class GreetingsController : Controller
+{
+    [MinimumAgeAuthorize(16)]
+    [HttpGet(&quot;hello&quot;)]
+    public string Hello() =&gt; $&quot;Hello {(HttpContext.User.Identity?.Name ?? &quot;world&quot;)}!&quot;;
+}
+</code></pre>
+<p>The complete sample can be found in the AuthRequirementsData folder of the AspNetCore.Docs.Samples repository.</p>
+<p>The sample can be tested with <code>dotnet user-jwts</code> and curl:</p>
+<ul>
+<li>
+<p><code>dotnet user-jwts create --claim http://schemas.xmlsoap.org/ws/2005/05/identity/claims/dateofbirth=1989-01-01</code></p>
+</li>
+<li>
+<p><code>curl -i -H &quot;Authorization: Bearer &lt;token from</code>dotnet user-jwts<code>&gt;&quot; http://localhost:&lt;port&gt;/api/greetings/hello</code></p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/iard?view=aspnetcore-8.0">Custom authorization policies with IAuthorizationRequirementData</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

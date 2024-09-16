@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Role-based authorization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Role-based authorization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#add-role-services-to-identity" aria-hidden="true" class="anchor" id="add-role-services-to-identity"></a>Add Role services to Identity</h2>
+<pre><code class="language-csharp">builder.Services.AddDefaultIdentity&lt;IdentityUser&gt;( ... )
+    .AddRoles&lt;IdentityRole&gt;()
+    ...
+</code></pre>
+<h2><a href="#adding-role-checks" aria-hidden="true" class="anchor" id="adding-role-checks"></a>Adding role checks</h2>
+<ul>
+<li>
+<p>Are declarative and specify roles which the current user must be a member of to access the requested resource.</p>
+</li>
+<li>
+<p>Are applied to Razor Pages, controllers, or actions within a controller.</p>
+</li>
+<li>
+<p>Can not be applied at the Razor Page handler level, they must be applied to the Page.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Authorize(Roles = &quot;Administrator&quot;)]
+public class AdministrationController : Controller
+{
+    public IActionResult Index() =&gt;
+        Content(&quot;Administrator&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Roles = &quot;HRManager,Finance&quot;)]
+public class SalaryController : Controller
+{
+    public IActionResult Payslip() =&gt;
+                    Content(&quot;HRManager || Finance&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Roles = &quot;PowerUser&quot;)]
+[Authorize(Roles = &quot;ControlPanelUser&quot;)]
+public class ControlPanelController : Controller
+{
+    public IActionResult Index() =&gt;
+        Content(&quot;PowerUser &amp;&amp; ControlPanelUser&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Roles = &quot;Administrator, PowerUser&quot;)]
+public class ControlAllPanelController : Controller
+{
+    public IActionResult SetTime() =&gt;
+        Content(&quot;Administrator || PowerUser&quot;);
+
+    [Authorize(Roles = &quot;Administrator&quot;)]
+    public IActionResult ShutDown() =&gt;
+        Content(&quot;Administrator only&quot;);
+}
+</code></pre>
+<ul>
+<li>
+<p>Members of the <code>Administrator</code> role or the <code>PowerUser</code> role can access the controller and the <code>SetTime</code> action.</p>
+</li>
+<li>
+<p>Only members of the <code>Administrator</code> role can access the <code>ShutDown</code> action.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Authorize]
+public class Control3PanelController : Controller
+{
+    public IActionResult SetTime() =&gt;
+        Content(&quot;[Authorize]&quot;);
+
+    [AllowAnonymous]
+    public IActionResult Login() =&gt;
+        Content(&quot;[AllowAnonymous]&quot;);
+}
+</code></pre>
+<ul>
+<li>
+<p>Using a convention, or</p>
+</li>
+<li>
+<p>Applying the [Authorize] to the <code>PageModel</code> instance:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;RequireAdministratorRole&quot;)]
+public class UpdateModel : PageModel
+{
+    public IActionResult OnPost() =&gt;
+         Content(&quot;OnPost RequireAdministratorRole&quot;);
+}
+</code></pre>
+<blockquote>
+<p class='important'>Important
+Filter attributes, including <code>AuthorizeAttribute</code>, can only be applied to <code>PageModel</code> and cannot be applied to specific page handler methods.</p>
+</blockquote>
+<h2><a href="#policy-based-role-checks" aria-hidden="true" class="anchor" id="policy-based-role-checks"></a>Policy based role checks</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.AddPolicy(&quot;RequireAdministratorRole&quot;,
+         policy =&gt; policy.RequireRole(&quot;Administrator&quot;));
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapDefaultControllerRoute();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;RequireAdministratorRole&quot;)]
+public IActionResult Shutdown()
+{
+    return View();
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthorization(options =&gt;
+{
+    options.AddPolicy(&quot;ElevatedRights&quot;, policy =&gt;
+          policy.RequireRole(&quot;Administrator&quot;, &quot;PowerUser&quot;, &quot;BackupAdministrator&quot;));
+});
+
+var app = builder.Build();
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/roles?view=aspnetcore-8.0">Role-based authorization in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

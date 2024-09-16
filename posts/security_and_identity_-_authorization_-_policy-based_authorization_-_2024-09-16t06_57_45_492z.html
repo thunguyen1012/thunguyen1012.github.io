@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Authorization - Policy-based authorization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Authorization - Policy-based authorization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<pre><code class="language-csharp">builder.Services.AddAuthorization(options =&gt;
+{
+    options.AddPolicy(&quot;AtLeast21&quot;, policy =&gt;
+        policy.Requirements.Add(new MinimumAgeRequirement(21)));
+});
+</code></pre>
+<h2><a href="#iauthorizationservice" aria-hidden="true" class="anchor" id="iauthorizationservice"></a>IAuthorizationService</h2>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Checks policy based permissions for a user
+/// &lt;/summary&gt;
+public interface IAuthorizationService
+{
+    /// &lt;summary&gt;
+    /// Checks if a user meets a specific set of requirements for the specified resource
+    /// &lt;/summary&gt;
+    /// &lt;param name=&quot;user&quot;&gt;The user to evaluate the requirements against.&lt;/param&gt;
+    /// &lt;param name=&quot;resource&quot;&gt;
+    /// An optional resource the policy should be checked with.
+    /// If a resource is not required for policy evaluation you may pass null as the value
+    /// &lt;/param&gt;
+    /// &lt;param name=&quot;requirements&quot;&gt;The requirements to evaluate.&lt;/param&gt;
+    /// &lt;returns&gt;
+    /// A flag indicating whether authorization has succeeded.
+    /// This value is &lt;value&gt;true&lt;/value&gt; when the user fulfills the policy; 
+    /// otherwise &lt;value&gt;false&lt;/value&gt;.
+    /// &lt;/returns&gt;
+    /// &lt;remarks&gt;
+    /// Resource is an optional parameter and may be null. Please ensure that you check 
+    /// it is not null before acting upon it.
+    /// &lt;/remarks&gt;
+    Task&lt;AuthorizationResult&gt; AuthorizeAsync(ClaimsPrincipal user, object resource, 
+                                     IEnumerable&lt;IAuthorizationRequirement&gt; requirements);
+
+    /// &lt;summary&gt;
+    /// Checks if a user meets a specific authorization policy
+    /// &lt;/summary&gt;
+    /// &lt;param name=&quot;user&quot;&gt;The user to check the policy against.&lt;/param&gt;
+    /// &lt;param name=&quot;resource&quot;&gt;
+    /// An optional resource the policy should be checked with.
+    /// If a resource is not required for policy evaluation you may pass null as the value
+    /// &lt;/param&gt;
+    /// &lt;param name=&quot;policyName&quot;&gt;The name of the policy to check against a specific 
+    /// context.&lt;/param&gt;
+    /// &lt;returns&gt;
+    /// A flag indicating whether authorization has succeeded.
+    /// Returns a flag indicating whether the user, and optional resource has fulfilled 
+    /// the policy.    
+    /// &lt;value&gt;true&lt;/value&gt; when the policy has been fulfilled; 
+    /// otherwise &lt;value&gt;false&lt;/value&gt;.
+    /// &lt;/returns&gt;
+    /// &lt;remarks&gt;
+    /// Resource is an optional parameter and may be null. Please ensure that you check
+    /// it is not null before acting upon it.
+    /// &lt;/remarks&gt;
+    Task&lt;AuthorizationResult&gt; AuthorizeAsync(
+                                ClaimsPrincipal user, object resource, string policyName);
+}
+</code></pre>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Classes implementing this interface are able to make a decision if authorization
+/// is allowed.
+/// &lt;/summary&gt;
+public interface IAuthorizationHandler
+{
+    /// &lt;summary&gt;
+    /// Makes a decision if authorization is allowed.
+    /// &lt;/summary&gt;
+    /// &lt;param name=&quot;context&quot;&gt;The authorization information.&lt;/param&gt;
+    Task HandleAsync(AuthorizationHandlerContext context);
+}
+</code></pre>
+<pre><code class="language-csharp">context.Succeed(requirement)
+</code></pre>
+<pre><code class="language-csharp">public async Task&lt;AuthorizationResult&gt; AuthorizeAsync(ClaimsPrincipal user, 
+             object resource, IEnumerable&lt;IAuthorizationRequirement&gt; requirements)
+{
+    // Create a tracking context from the authorization inputs.
+    var authContext = _contextFactory.CreateContext(requirements, user, resource);
+
+    // By default this returns an IEnumerable&lt;IAuthorizationHandler&gt; from DI.
+    var handlers = await _handlers.GetHandlersAsync(authContext);
+
+    // Invoke all handlers.
+    foreach (var handler in handlers)
+    {
+        await handler.HandleAsync(authContext);
+    }
+
+    // Check the context, by default success is when all requirements have been met.
+    return _evaluator.Evaluate(authContext);
+}
+</code></pre>
+<pre><code class="language-csharp">// Add all of your handlers to DI.
+builder.Services.AddSingleton&lt;IAuthorizationHandler, MyHandler1&gt;();
+// MyHandler2, ...
+
+builder.Services.AddSingleton&lt;IAuthorizationHandler, MyHandlerN&gt;();
+
+// Configure your policies
+builder.Services.AddAuthorization(options =&gt;
+      options.AddPolicy(&quot;Something&quot;,
+      policy =&gt; policy.RequireClaim(&quot;Permission&quot;, &quot;CanViewPage&quot;, &quot;CanViewAnything&quot;)));
+</code></pre>
+<h2><a href="#apply-policies-to-mvc-controllers" aria-hidden="true" class="anchor" id="apply-policies-to-mvc-controllers"></a>Apply policies to MVC controllers</h2>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;AtLeast21&quot;)]
+public class AtLeast21Controller : Controller
+{
+    public IActionResult Index() =&gt; View();
+}
+</code></pre>
+<pre><code class="language-csharp">[Authorize(Policy = &quot;AtLeast21&quot;)]
+public class AtLeast21Controller2 : Controller
+{
+    [Authorize(Policy = &quot;IdentificationValidated&quot;)]
+    public IActionResult Index() =&gt; View();
+}
+</code></pre>
+<h2><a href="#apply-policies-to-razor-pages" aria-hidden="true" class="anchor" id="apply-policies-to-razor-pages"></a>Apply policies to Razor Pages</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace AuthorizationPoliciesSample.Pages;
+
+[Authorize(Policy = &quot;AtLeast21&quot;)]
+public class AtLeast21Model : PageModel { }
+</code></pre>
+<h2><a href="#apply-policies-to-endpoints" aria-hidden="true" class="anchor" id="apply-policies-to-endpoints"></a>Apply policies to endpoints</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/helloworld&quot;, () =&gt; &quot;Hello World!&quot;)
+    .RequireAuthorization(&quot;AtLeast21&quot;);
+</code></pre>
+<h2><a href="#requirements" aria-hidden="true" class="anchor" id="requirements"></a>Requirements</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+
+namespace AuthorizationPoliciesSample.Policies.Requirements;
+
+public class MinimumAgeRequirement : IAuthorizationRequirement
+{
+    public MinimumAgeRequirement(int minimumAge) =&gt;
+        MinimumAge = minimumAge;
+
+    public int MinimumAge { get; }
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+A requirement doesn't need to have data or properties.</p>
+</blockquote>
+<h2><a href="#authorization-handlers" aria-hidden="true" class="anchor" id="authorization-handlers"></a>Authorization handlers</h2>
+<h3><a href="#use-a-handler-for-one-requirement" aria-hidden="true" class="anchor" id="use-a-handler-for-one-requirement"></a>Use a handler for one requirement</h3>
+<pre><code class="language-csharp">using System.Security.Claims;
+using AuthorizationPoliciesSample.Policies.Requirements;
+using Microsoft.AspNetCore.Authorization;
+
+namespace AuthorizationPoliciesSample.Policies.Handlers;
+
+public class MinimumAgeHandler : AuthorizationHandler&lt;MinimumAgeRequirement&gt;
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context, MinimumAgeRequirement requirement)
+    {
+        var dateOfBirthClaim = context.User.FindFirst(
+            c =&gt; c.Type == ClaimTypes.DateOfBirth &amp;&amp; c.Issuer == &quot;http://contoso.com&quot;);
+
+        if (dateOfBirthClaim is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var dateOfBirth = Convert.ToDateTime(dateOfBirthClaim.Value);
+        int calculatedAge = DateTime.Today.Year - dateOfBirth.Year;
+        if (dateOfBirth &gt; DateTime.Today.AddYears(-calculatedAge))
+        {
+            calculatedAge--;
+        }
+
+        if (calculatedAge &gt;= requirement.MinimumAge)
+        {
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<h3><a href="#use-a-handler-for-multiple-requirements" aria-hidden="true" class="anchor" id="use-a-handler-for-multiple-requirements"></a>Use a handler for multiple requirements</h3>
+<pre><code class="language-csharp">using System.Security.Claims;
+using AuthorizationPoliciesSample.Policies.Requirements;
+using Microsoft.AspNetCore.Authorization;
+
+namespace AuthorizationPoliciesSample.Policies.Handlers;
+
+public class PermissionHandler : IAuthorizationHandler
+{
+    public Task HandleAsync(AuthorizationHandlerContext context)
+    {
+        var pendingRequirements = context.PendingRequirements.ToList();
+
+        foreach (var requirement in pendingRequirements)
+        {
+            if (requirement is ReadPermission)
+            {
+                if (IsOwner(context.User, context.Resource)
+                    || IsSponsor(context.User, context.Resource))
+                {
+                    context.Succeed(requirement);
+                }
+            }
+            else if (requirement is EditPermission || requirement is DeletePermission)
+            {
+                if (IsOwner(context.User, context.Resource))
+                {
+                    context.Succeed(requirement);
+                }
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static bool IsOwner(ClaimsPrincipal user, object? resource)
+    {
+        // Code omitted for brevity
+        return true;
+    }
+
+    private static bool IsSponsor(ClaimsPrincipal user, object? resource)
+    {
+        // Code omitted for brevity
+        return true;
+    }
+}
+</code></pre>
+<h3><a href="#handler-registration" aria-hidden="true" class="anchor" id="handler-registration"></a>Handler registration</h3>
+<pre><code class="language-csharp">builder.Services.AddSingleton&lt;IAuthorizationHandler, MinimumAgeHandler&gt;();
+</code></pre>
+<h2><a href="#what-should-a-handler-return" aria-hidden="true" class="anchor" id="what-should-a-handler-return"></a>What should a handler return?</h2>
+<ul>
+<li>
+<p>A handler indicates success by calling <code>context.Succeed(IAuthorizationRequirement requirement)</code>, passing the requirement that has been successfully validated.</p>
+</li>
+<li>
+<p>A handler doesn't need to handle failures generally, as other handlers for the same requirement may succeed.</p>
+</li>
+<li>
+<p>To guarantee failure, even if other requirement handlers succeed, call <code>context.Fail</code>.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Authorization handlers are called even if authentication fails. Also handlers can execute in any order, so do not depend on them being called in any particular order.</p>
+</blockquote>
+<h2><a href="#why-would-i-want-multiple-handlers-for-a-requirement" aria-hidden="true" class="anchor" id="why-would-i-want-multiple-handlers-for-a-requirement"></a>Why would I want multiple handlers for a requirement?</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Authorization;
+
+namespace AuthorizationPoliciesSample.Policies.Requirements;
+
+public class BuildingEntryRequirement : IAuthorizationRequirement { }
+</code></pre>
+<pre><code class="language-csharp">using AuthorizationPoliciesSample.Policies.Requirements;
+using Microsoft.AspNetCore.Authorization;
+
+namespace AuthorizationPoliciesSample.Policies.Handlers;
+
+public class BadgeEntryHandler : AuthorizationHandler&lt;BuildingEntryRequirement&gt;
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context, BuildingEntryRequirement requirement)
+    {
+        if (context.User.HasClaim(
+            c =&gt; c.Type == &quot;BadgeId&quot; &amp;&amp; c.Issuer == &quot;https://microsoftsecurity&quot;))
+        {
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using AuthorizationPoliciesSample.Policies.Requirements;
+using Microsoft.AspNetCore.Authorization;
+
+namespace AuthorizationPoliciesSample.Policies.Handlers;
+
+public class TemporaryStickerHandler : AuthorizationHandler&lt;BuildingEntryRequirement&gt;
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context, BuildingEntryRequirement requirement)
+    {
+        if (context.User.HasClaim(
+            c =&gt; c.Type == &quot;TemporaryBadgeId&quot; &amp;&amp; c.Issuer == &quot;https://microsoftsecurity&quot;))
+        {
+            // Code to check expiration date omitted for brevity.
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<h2><a href="#use-a-func-to-fulfill-a-policy" aria-hidden="true" class="anchor" id="use-a-func-to-fulfill-a-policy"></a>Use a func to fulfill a policy</h2>
+<pre><code class="language-csharp">builder.Services.AddAuthorization(options =&gt;
+{
+    options.AddPolicy(&quot;BadgeEntry&quot;, policy =&gt;
+        policy.RequireAssertion(context =&gt; context.User.HasClaim(c =&gt;
+            (c.Type == &quot;BadgeId&quot; || c.Type == &quot;TemporaryBadgeId&quot;)
+            &amp;&amp; c.Issuer == &quot;https://microsoftsecurity&quot;)));
+});
+</code></pre>
+<h2><a href="#access-mvc-request-context-in-handlers" aria-hidden="true" class="anchor" id="access-mvc-request-context-in-handlers"></a>Access MVC request context in handlers</h2>
+<pre><code class="language-csharp">if (context.Resource is HttpContext httpContext)
+{
+    var endpoint = httpContext.GetEndpoint();
+    var actionDescriptor = endpoint.Metadata.GetMetadata&lt;ControllerActionDescriptor&gt;();
+    ...
+}
+</code></pre>
+<pre><code class="language-csharp">// Requires the following import:
+//     using Microsoft.AspNetCore.Mvc.Filters;
+if (context.Resource is AuthorizationFilterContext mvcContext)
+{
+    // Examine MVC-specific things like routing data.
+}
+</code></pre>
+<h2><a href="#globally-require-all-users-to-be-authenticated" aria-hidden="true" class="anchor" id="globally-require-all-users-to-be-authenticated"></a>Globally require all users to be authenticated</h2>
+<h2><a href="#authorization-with-external-service-sample" aria-hidden="true" class="anchor" id="authorization-with-external-service-sample"></a>Authorization with external service sample</h2>
+<h3><a href="#configure-the-sample" aria-hidden="true" class="anchor" id="configure-the-sample"></a>Configure the sample</h3>
+<ul>
+<li>
+<p>Create an application registration in your Microsoft Entra ID tenant:</p>
+</li>
+<li>
+<p>Assign it an AppRole.</p>
+</li>
+<li>
+<p>Under API permissions, add the AppRole as a permission and grant Admin consent. Note that in this setup, this app registration represents both the API and the client invoking the API. If you like, you can create two app registrations. If you are using this setup, be sure to only perform the API permissions, add AppRole as a permission step for only the client. Only the client app registration requires a client secret to be generated.</p>
+</li>
+<li>
+<p>Configure the <code>Contoso.API</code> project with the following settings:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">{
+  &quot;AzureAd&quot;: {
+    &quot;Instance&quot;: &quot;https://login.microsoftonline.com/&quot;,
+    &quot;Domain&quot;: &quot;&lt;Tenant name from AAD properties&gt;.onmicrosoft.com&quot;&gt;,
+    &quot;TenantId&quot;: &quot;&lt;Tenant Id from AAD properties&gt;&quot;,
+    &quot;ClientId&quot;: &quot;&lt;Client Id from App Registration representing the API&gt;&quot;
+  },
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;
+}
+</code></pre>
+<ul>
+<li>Configure <code>Contoso.Security.API</code> with the following settings:</li>
+</ul>
+<pre><code class="language-csharp">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;,
+  &quot;AllowedClients&quot;: [
+    &quot;&lt;Use the appropriate Client Id representing the Client calling the API&gt;&quot;
+  ]
+}
+</code></pre>
+<ul>
+<li>
+<p>Open the <code>ContosoAPI.collection.json</code> file and configure an environment with the following:</p>
+<ul>
+<li>
+<p><code>ClientId</code>: Client Id from app registration representing the client calling the API.</p>
+</li>
+<li>
+<p><code>clientSecret</code>: Client Secret from app registration representing the client calling the API.</p>
+</li>
+<li>
+<p><code>TenantId</code>: Tenant Id from AAD properties</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Extract the commands from the <code>ContosoAPI.collection.json</code> file and use them to construct cURL commands to test the app.</p>
+</li>
+<li>
+<p>Run the solution and use cURL to invoke the API. You can add breakpoints in the <code>Contoso.Security.API.SecurityPolicyController</code> and observe the client Id is being passed in that is used to assert whether it is allowed to Get Weather.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Quickstart: Configure an application to expose a web API</p>
+</li>
+<li>
+<p>AspNetCore.Docs.Samples code</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/policies?view=aspnetcore-8.0">Policy-based authorization in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

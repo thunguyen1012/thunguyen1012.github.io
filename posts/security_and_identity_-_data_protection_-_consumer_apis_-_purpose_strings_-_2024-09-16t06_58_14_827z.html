@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Consumer APIs - Purpose strings | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Components which consume IDataProtectionProvider must pass a unique purposes parameter to the CreateProtector method. The purposes parameter is inherent to the security of the data protection system, as it provides isolation between cryptographic consumers, even if the root cryptographic keys are the same.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Consumer APIs - Purpose strings</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Components which consume <code>IDataProtectionProvider</code> must pass a unique purposes parameter to the <code>CreateProtector</code> method. The purposes parameter is inherent to the security of the data protection system, as it provides isolation between cryptographic consumers, even if the root cryptographic keys are the same.</p>
+<p>We show how to isolate a cryptographic consumer from all other cryptographic consumers in an application.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/purpose-strings/_static/purposes.png?view=aspnetcore-8.0" alt="Purpose Diagram Example!" title="Purpose Diagram Example" /></p>
+<p>In the diagram above, <code>IDataProtector</code> instances A and B cannot read each other's payloads, only their own.</p>
+<p>The purpose string doesn't have to be secret. It should simply be unique in the sense that no other well-behaved component will ever provide the same purpose string.</p>
+<blockquote>
+<p class='tip'>Tip
+Using the namespace and type name of the component consuming the data protection APIs is a good rule of thumb, as in practice this information will never conflict.
+A Contoso-authored component which is responsible for minting bearer tokens might use Contoso.Security.BearerToken as its purpose string. Or - even better - it might use Contoso.Security.BearerToken.v1 as its purpose string. Appending the version number allows a future version to use Contoso.Security.BearerToken.v2 as its purpose, and the different versions would be completely isolated from one another as far as payloads go.</p>
+</blockquote>
+<p>Since the purposes parameter to <code>CreateProtector</code> is a string array, the above could've been instead specified as [ &quot;Contoso.Security.BearerToken&quot;, &quot;v1&quot; ]. This allows establishing a hierarchy of purposes and opens up the possibility of multi-tenancy scenarios with the data protection system.</p>
+<blockquote>
+<p class='warning'>Warning
+Components shouldn't allow untrusted user input to be the sole source of input for the purposes chain.
+For example, consider a component Contoso.Messaging.SecureMessage which is responsible for storing secure messages. If the secure messaging component were to call <code>CreateProtector([ username ])</code>, then a malicious user might create an account with username &quot;Contoso.Security.BearerToken&quot; in an attempt to get the component to call <code>CreateProtector([ &quot;Contoso.Security.BearerToken&quot; ])</code>, thus inadvertently causing the secure messaging system to mint payloads that could be perceived as authentication tokens.
+A better purposes chain for the messaging component would be <code>CreateProtector([ &quot;Contoso.Messaging.SecureMessage&quot;, $&quot;User: {username}&quot; ])</code>, which provides proper isolation.</p>
+</blockquote>
+<p>The isolation provided by and behaviors of <code>IDataProtectionProvider</code>, <code>IDataProtector</code>, and purposes are as follows:</p>
+<ul>
+<li>
+<p>For a given <code>IDataProtectionProvider</code> object, the <code>CreateProtector</code> method will create an <code>IDataProtector</code> object uniquely tied to both the <code>IDataProtectionProvider</code> object which created it and the purposes parameter which was passed into the method.</p>
+</li>
+<li>
+<p>The purpose parameter must not be null. (If purposes is specified as an array, this means that the array must not be of zero length and all elements of the array must be non-null.) An empty string purpose is technically allowed but is discouraged.</p>
+</li>
+<li>
+<p>Two purposes arguments are equivalent if and only if they contain the same strings (using an ordinal comparer) in the same order. A single purpose argument is equivalent to the corresponding single-element purposes array.</p>
+</li>
+<li>
+<p>Two <code>IDataProtector</code> objects are equivalent if and only if they're created from equivalent <code>IDataProtectionProvider</code> objects with equivalent purposes parameters.</p>
+</li>
+<li>
+<p>For a given <code>IDataProtector</code> object, a call to Unprotect(protectedData) will return the original <code>unprotectedData</code> if and only if protectedData := Protect(unprotectedData) for an equivalent <code>IDataProtector</code> object.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+We're not considering the case where some component intentionally chooses a purpose string which is known to conflict with another component. Such a component would essentially be considered malicious, and this system isn't intended to provide security guarantees in the event that malicious code is already running inside of the worker process.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/purpose-strings?view=aspnetcore-8.0">Purpose strings in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

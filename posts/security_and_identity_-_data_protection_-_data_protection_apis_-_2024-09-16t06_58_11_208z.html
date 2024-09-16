@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Data protection APIs | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Basically, protecting data consists of the following steps:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Data protection APIs</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Basically, protecting data consists of the following steps:</p>
+<ul>
+<li>
+<p>Create a data protector from a data protection provider.</p>
+</li>
+<li>
+<p>Call the <code>Protect</code> method with the data you want to protect.</p>
+</li>
+<li>
+<p>Call the <code>Unprotect</code> method with the data you want to turn back into plain text.</p>
+</li>
+</ul>
+<p>In this article, I will show you how to add a data protection system to a service container.</p>
+<ul>
+<li>
+<p>Configuring a service container for dependency injection and registering the data protection stack.</p>
+</li>
+<li>
+<p>Receiving the data protection provider via DI.</p>
+</li>
+<li>
+<p>Creating a protector.</p>
+</li>
+<li>
+<p>Protecting then unprotecting data.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // add data protection services
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDataProtection();
+        var services = serviceCollection.BuildServiceProvider();
+
+        // create an instance of MyClass using the service provider
+        var instance = ActivatorUtilities.CreateInstance&lt;MyClass&gt;(services);
+        instance.RunSample();
+    }
+
+    public class MyClass
+    {
+        IDataProtector _protector;
+
+        // the 'provider' parameter is provided by DI
+        public MyClass(IDataProtectionProvider provider)
+        {
+            _protector = provider.CreateProtector(&quot;Contoso.MyClass.v1&quot;);
+        }
+
+        public void RunSample()
+        {
+            Console.Write(&quot;Enter input: &quot;);
+            string input = Console.ReadLine();
+
+            // protect the payload
+            string protectedPayload = _protector.Protect(input);
+            Console.WriteLine($&quot;Protect returned: {protectedPayload}&quot;);
+
+            // unprotect the payload
+            string unprotectedPayload = _protector.Unprotect(protectedPayload);
+            Console.WriteLine($&quot;Unprotect returned: {unprotectedPayload}&quot;);
+        }
+    }
+}
+
+/*
+ * SAMPLE OUTPUT
+ *
+ * Enter input: Hello world!
+ * Protect returned: CfDJ8ICcgQwZZhlAlTZT...OdfH66i1PnGmpCR5e441xQ
+ * Unprotect returned: Hello world!
+ */
+</code></pre>
+<p>This example shows how to define a purpose string for a data protector.</p>
+<blockquote>
+<p class='tip'>Tip
+Instances of <code>IDataProtectionProvider</code> and <code>IDataProtector</code> are thread-safe for multiple callers. It's intended that once a component gets a reference to an <code>IDataProtector</code> via a call to <code>CreateProtector</code>, it will use that reference for multiple calls to <code>Protect</code> and <code>Unprotect</code>.
+A call to <code>Unprotect</code> will throw CryptographicException if the protected payload cannot be verified or deciphered. Some components may wish to ignore errors during unprotect operations; a component which reads authentication cookies might handle this error and treat the request as if it had no cookie at all rather than fail the request outright. Components which want this behavior should specifically catch CryptographicException instead of swallowing all exceptions.</p>
+</blockquote>
+<h2><a href="#use-addoptions-to-configure-custom-repository" aria-hidden="true" class="anchor" id="use-addoptions-to-configure-custom-repository"></a>Use AddOptions to configure custom repository</h2>
+<p>Consider the following code which uses a service provider because the implementation of <code>IXmlRepository</code> has a dependency on a singleton service:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    // ...
+
+    var sp = services.BuildServiceProvider();
+    services.AddDataProtection()
+      .AddKeyManagementOptions(o =&gt; o.XmlRepository = sp.GetService&lt;IXmlRepository&gt;());
+}
+</code></pre>
+<p>The preceding code logs the following warning:</p>
+<p>In our series of letters from African journalists, film-maker and columnist Farai Sevenzo looks at some of the issues that matter to him.</p>
+<p>The following code provides the <code>IXmlRepository</code> implementation without having to build the service provider and therefore making additional copies of singleton services:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDbContext&lt;DataProtectionDbContext&gt;(options =&gt;
+        options.UseSqlServer(
+            Configuration.GetConnectionString(&quot;DefaultConnection&quot;)));
+
+    // Register XmlRepository for data protection.
+    services.AddOptions&lt;KeyManagementOptions&gt;()
+    .Configure&lt;IServiceScopeFactory&gt;((options, factory) =&gt;
+    {
+        options.XmlRepository = new CustomXmlRepository(factory);
+    });
+
+    services.AddRazorPages();
+}
+</code></pre>
+<p>The preceding code removes the call to <code>GetService</code> and hides IConfigureOptions<T>.</p>
+<p>The following code shows the custom XML repository:</p>
+<pre><code class="language-csharp">using CustomXMLrepo.Data;
+using Microsoft.AspNetCore.DataProtection.Repositories;
+using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
+
+public class CustomXmlRepository : IXmlRepository
+{
+    private readonly IServiceScopeFactory factory;
+
+    public CustomXmlRepository(IServiceScopeFactory factory)
+    {
+        this.factory = factory;
+    }
+
+    public IReadOnlyCollection&lt;XElement&gt; GetAllElements()
+    {
+        using (var scope = factory.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService&lt;DataProtectionDbContext&gt;();
+            var keys = context.XmlKeys.ToList()
+                .Select(x =&gt; XElement.Parse(x.Xml))
+                .ToList();
+            return keys;
+        }
+    }
+
+    public void StoreElement(XElement element, string friendlyName)
+    {
+        var key = new XmlKey
+        {
+            Xml = element.ToString(SaveOptions.DisableFormatting)
+        };
+
+        using (var scope = factory.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService&lt;DataProtectionDbContext&gt;();
+            context.XmlKeys.Add(key);
+            context.SaveChanges();
+        }
+    }
+}
+</code></pre>
+<p>The following code shows the XmlKey class:</p>
+<pre><code class="language-csharp">public class XmlKey
+{
+    public Guid Id { get; set; }
+    public string Xml { get; set; }
+
+    public XmlKey()
+    {
+        this.Id = Guid.NewGuid();
+    }
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/using-data-protection?view=aspnetcore-8.0">Get started with the Data Protection APIs in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

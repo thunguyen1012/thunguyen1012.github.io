@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Consumer APIs - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The IDataProtectionProvider and IDataProtector interfaces are the basic interfaces through which consumers use the data protection system. They're located in the Microsoft.AspNetCore.DataProtection.Abstractions package.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Consumer APIs - Overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The <code>IDataProtectionProvider</code> and <code>IDataProtector</code> interfaces are the basic interfaces through which consumers use the data protection system. They're located in the <code>Microsoft.AspNetCore.DataProtection.Abstractions</code> package.</p>
+<h2><a href="#idataprotectionprovider" aria-hidden="true" class="anchor" id="idataprotectionprovider"></a><code>IDataProtectionProvider</code></h2>
+<p>The provider interface represents the root of the data protection system. It cannot directly be used to protect or unprotect data. Instead, the consumer must get a reference to an <code>IDataProtector</code> by calling <code>IDataProtectionProvider.CreateProtector(purpose)</code>, where purpose is a string that describes the intended consumer use case. See Purpose Strings for much more information on the intent of this parameter and how to choose an appropriate value.</p>
+<h2><a href="#idataprotector" aria-hidden="true" class="anchor" id="idataprotector"></a><code>IDataProtector</code></h2>
+<p>The protector interface is returned by a call to <code>CreateProtector</code>, and it's this interface which consumers can use to perform protect and unprotect operations.</p>
+<p>To protect a piece of data, pass the data to the <code>Protect</code> method. The basic interface defines a method which converts byte[] -&gt; byte[], but there's also an overload (provided as an extension method) which converts string -&gt; string. The security offered by the two methods is identical; the developer should choose whichever overload is most convenient for their use case. Irrespective of the overload chosen, the value returned by the <code>Protect</code> method is now protected (enciphered and tamper-proofed), and the application can send it to an untrusted client.</p>
+<p>To unprotect a previously-protected piece of data, pass the protected data to the <code>Unprotect</code> method. (There are byte[]-based and string-based overloads for developer convenience.) If the protected payload was generated by an earlier call to <code>Protect</code> on this same <code>IDataProtector</code>, the <code>Unprotect</code> method will return the original unprotected payload. If the protected payload has been tampered with or was produced by a different <code>IDataProtector</code>, the <code>Unprotect</code> method will throw CryptographicException.</p>
+<p>The concept of same vs. different <code>IDataProtector</code> ties back to the concept of purpose. If two <code>IDataProtector</code> instances were generated from the same root <code>IDataProtectionProvider</code> but via different purpose strings in the call to <code>IDataProtectionProvider.CreateProtector</code>, then they're considered different protectors, and one won't be able to unprotect payloads generated by the other.</p>
+<h2><a href="#consuming-these-interfaces" aria-hidden="true" class="anchor" id="consuming-these-interfaces"></a>Consuming these interfaces</h2>
+<p>For a DI-aware component, the intended usage is that the component takes an <code>IDataProtectionProvider</code> parameter in its constructor and that the DI system automatically provides this service when the component is instantiated.</p>
+<blockquote>
+<p class='note'>Note
+Some applications (such as console applications or ASP.NET 4.x applications) might not be DI-aware so cannot use the mechanism described here. For these scenarios consult the Non DI Aware Scenarios document for more information on getting an instance of an <code>IDataProtection</code> provider without going through DI.</p>
+</blockquote>
+<p>The following sample demonstrates three concepts:</p>
+<ul>
+<li>
+<p>Add the data protection system to the service container,</p>
+</li>
+<li>
+<p>Using DI to receive an instance of an <code>IDataProtectionProvider</code>, and</p>
+</li>
+<li>
+<p>Creating an <code>IDataProtector</code> from an <code>IDataProtectionProvider</code> and using it to protect and unprotect data.</p>
+</li>
+</ul>
+<h2><a href="#console-app" aria-hidden="true" class="anchor" id="console-app"></a>Console app</h2>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // add data protection services
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDataProtection();
+        var services = serviceCollection.BuildServiceProvider();
+
+        // create an instance of MyClass using the service provider
+        var instance = ActivatorUtilities.CreateInstance&lt;MyClass&gt;(services);
+        instance.RunSample();
+    }
+
+    public class MyClass
+    {
+        IDataProtector _protector;
+
+        // the 'provider' parameter is provided by DI
+        public MyClass(IDataProtectionProvider provider)
+        {
+            _protector = provider.CreateProtector(&quot;Contoso.MyClass.v1&quot;);
+        }
+
+        public void RunSample()
+        {
+            Console.Write(&quot;Enter input: &quot;);
+            string input = Console.ReadLine();
+
+            // protect the payload
+            string protectedPayload = _protector.Protect(input);
+            Console.WriteLine($&quot;Protect returned: {protectedPayload}&quot;);
+
+            // unprotect the payload
+            string unprotectedPayload = _protector.Unprotect(protectedPayload);
+            Console.WriteLine($&quot;Unprotect returned: {unprotectedPayload}&quot;);
+        }
+    }
+}
+
+/*
+ * SAMPLE OUTPUT
+ *
+ * Enter input: Hello world!
+ * Protect returned: CfDJ8ICcgQwZZhlAlTZT...OdfH66i1PnGmpCR5e441xQ
+ * Unprotect returned: Hello world!
+ */
+</code></pre>
+<h2><a href="#web-app" aria-hidden="true" class="anchor" id="web-app"></a>Web app</h2>
+<p>Call AddDataProtection(IServiceCollection, Action<DataProtectionOptions>) in <code>Program.cs</code>:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllersWithViews();
+builder.Services.AddDataProtection();
+
+var app = builder.Build();
+</code></pre>
+<p>The following highlighted code shows how to use <code>IDataProtector</code> in a controller:</p>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    private readonly IDataProtector _dataProtector;
+
+    public HomeController(IDataProtectionProvider dataProtectionProvider)
+    {
+        _dataProtector = dataProtectionProvider.CreateProtector(&quot;HomeControllerPurpose&quot;);
+    }
+
+    // ...
+
+    public IActionResult Privacy()
+    {
+        // The original data to protect
+        string originalData = &quot;original data&quot;;
+
+        // Protect the data (encrypt)
+        string protectedData = _dataProtector.Protect(originalData);
+        Console.WriteLine($&quot;Protected Data: {protectedData}&quot;);
+
+        // Unprotect the data (decrypt)
+        string unprotectedData = _dataProtector.Unprotect(protectedData);
+        Console.WriteLine($&quot;Unprotected Data: {unprotectedData}&quot;);
+
+        return View();
+    }
+    
+    // ...
+</code></pre>
+<p>The package <code>Microsoft.AspNetCore.DataProtection.Abstractions</code> contains an extension method GetDataProtector as a developer convenience. It encapsulates as a single operation both retrieving an <code>IDataProtectionProvider</code> from the service provider and calling <code>IDataProtectionProvider.CreateProtector</code>. The following sample demonstrates its usage:</p>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+ 
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // add data protection services
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDataProtection();
+        var services = serviceCollection.BuildServiceProvider();
+ 
+        // get an IDataProtector from the IServiceProvider
+        var protector = services.GetDataProtector(&quot;Contoso.Example.v2&quot;);
+        Console.Write(&quot;Enter input: &quot;);
+        string input = Console.ReadLine();
+ 
+        // protect the payload
+        string protectedPayload = protector.Protect(input);
+        Console.WriteLine($&quot;Protect returned: {protectedPayload}&quot;);
+ 
+        // unprotect the payload
+        string unprotectedPayload = protector.Unprotect(protectedPayload);
+        Console.WriteLine($&quot;Unprotect returned: {unprotectedPayload}&quot;);
+    }
+}
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+Instances of <code>IDataProtectionProvider</code> and <code>IDataProtector</code> are thread-safe for multiple callers. It's intended that once a component gets a reference to an <code>IDataProtector</code> via a call to <code>CreateProtector</code>, it will use that reference for multiple calls to <code>Protect</code> and <code>Unprotect</code>. A call to <code>Unprotect</code> will throw CryptographicException if the protected payload cannot be verified or deciphered. Some components may wish to ignore errors during unprotect operations; a component which reads authentication cookies might handle this error and treat the request as if it had no cookie at all rather than fail the request outright. Components which want this behavior should specifically catch CryptographicException instead of swallowing all exceptions.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/overview?view=aspnetcore-8.0">Consumer APIs overview for ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
