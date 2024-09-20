@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Configuration - Configure data protection | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Configuration - Configure data protection</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>The app is spread across multiple machines.</p>
+</li>
+<li>
+<p>For compliance reasons.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Similar to configuration files, the data protection key ring should be protected using appropriate permissions. You can choose to encrypt keys at rest, but this doesn't prevent attackers from creating new keys. Consequently, your app's security is impacted. The storage location configured with Data Protection should have its access limited to the app itself, similar to the way you would protect configuration files. For example, if you choose to store your key ring on disk, use file system permissions. Ensure only the identity under which your web app runs has read, write, and create access to that directory. If you use Azure Blob Storage, only the web app should have the ability to read, write, or create new entries in the blob store, etc.
+The extension method AddDataProtection returns an <code>IDataProtectionBuilder</code>. <code>IDataProtectionBuilder</code> exposes extension methods that you can chain together to configure Data Protection options.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+This article was written for an app that runs within a docker container. In a docker container the app always has the same path and, therefore, the same application discriminator. Apps that need to run in multiple environments (e.g. local and deployed), must set the default application discriminator for the environment.
+Running an app in multiple environments is beyond the scope of this article.</p>
+</blockquote>
+<ul>
+<li>
+<p>Azure.Extensions.AspNetCore.DataProtection.Blobs</p>
+</li>
+<li>
+<p>Azure.Extensions.AspNetCore.DataProtection.Keys</p>
+</li>
+</ul>
+<h2><a href="#protectkeyswithazurekeyvault" aria-hidden="true" class="anchor" id="protectkeyswithazurekeyvault"></a><code>ProtectKeysWithAzureKeyVault</code></h2>
+<pre><code class="language-azurecli">az login
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .PersistKeysToAzureBlobStorage(new Uri(&quot;&lt;blobUriWithSasToken&gt;&quot;))
+    .ProtectKeysWithAzureKeyVault(new Uri(&quot;&lt;keyIdentifier&gt;&quot;), new DefaultAzureCredential());
+</code></pre>
+<ul>
+<li>
+<p><code>ProtectKeysWithAzureKeyVault</code>(IDataProtectionBuilder, Uri, TokenCredential) permits the use of a <code>keyIdentifier</code> Uri and a tokenCredential to enable the data protection system to use the key vault.</p>
+</li>
+<li>
+<p><code>ProtectKeysWithAzureKeyVault</code>(IDataProtectionBuilder, String, IKeyEncryptionKeyResolver) permits the use of a <code>keyIdentifier</code> string and IKeyEncryptionKeyResolver to enable the data protection system to use the key vault.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    // This blob must already exist before the application is run
+    .PersistKeysToAzureBlobStorage(&quot;&lt;storageAccountConnectionString&quot;, &quot;&lt;containerName&gt;&quot;, &quot;&lt;blobName&gt;&quot;)
+    // Removing this line below for an initial run will ensure the file is created correctly
+    .ProtectKeysWithAzureKeyVault(new Uri(&quot;&lt;keyIdentifier&gt;&quot;), new DefaultAzureCredential());
+</code></pre>
+<h2><a href="#persistkeystofilesystem" aria-hidden="true" class="anchor" id="persistkeystofilesystem"></a>PersistKeysToFileSystem</h2>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@&quot;\\server\share\directory\&quot;));
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+If you change the key persistence location, the system no longer automatically encrypts keys at rest, since it doesn't know whether DPAPI is an appropriate encryption mechanism.</p>
+</blockquote>
+<h2><a href="#persistkeystodbcontext" aria-hidden="true" class="anchor" id="persistkeystodbcontext"></a>PersistKeysToDbContext</h2>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .PersistKeysToDbContext&lt;SampleDbContext&gt;();
+</code></pre>
+<pre><code class="language-csharp">public DbSet&lt;DataProtectionKey&gt; DataProtectionKeys { get; set; } = null!;
+</code></pre>
+<h2><a href="#protectkeyswith" aria-hidden="true" class="anchor" id="protectkeyswith"></a>ProtectKeysWith*</h2>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@&quot;\\server\share\directory\&quot;))
+    .ProtectKeysWithCertificate(builder.Configuration[&quot;CertificateThumbprint&quot;]);
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@&quot;\\server\share\directory\&quot;))
+    .ProtectKeysWithCertificate(
+        new X509Certificate2(&quot;certificate.pfx&quot;, builder.Configuration[&quot;CertificatePassword&quot;]));
+</code></pre>
+<h2><a href="#unprotectkeyswithanycertificate" aria-hidden="true" class="anchor" id="unprotectkeyswithanycertificate"></a>UnprotectKeysWithAnyCertificate</h2>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@&quot;\\server\share\directory\&quot;))
+    .ProtectKeysWithCertificate(
+        new X509Certificate2(&quot;certificate.pfx&quot;, builder.Configuration[&quot;CertificatePassword&quot;]))
+    .UnprotectKeysWithAnyCertificate(
+        new X509Certificate2(&quot;certificate_1.pfx&quot;, builder.Configuration[&quot;CertificatePassword_1&quot;]),
+        new X509Certificate2(&quot;certificate_2.pfx&quot;, builder.Configuration[&quot;CertificatePassword_2&quot;]));
+</code></pre>
+<h2><a href="#setdefaultkeylifetime" aria-hidden="true" class="anchor" id="setdefaultkeylifetime"></a>SetDefaultKeyLifetime</h2>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(14));
+</code></pre>
+<h2><a href="#setapplicationname" aria-hidden="true" class="anchor" id="setapplicationname"></a><code>SetApplicationName</code></h2>
+<ul>
+<li>
+<p>Configure <code>SetApplicationName</code> in each app with the same value.</p>
+</li>
+<li>
+<p>Use the same version of the Data Protection API stack across the apps. Perform either of the following in the apps' project files:</p>
+<ul>
+<li>
+<p>Reference the same shared framework version via the Microsoft.AspNetCore.App metapackage.</p>
+</li>
+<li>
+<p>Reference the same Data Protection package version.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .SetApplicationName(&quot;&lt;sharedApplicationName&gt;&quot;);
+</code></pre>
+<pre><code class="language-csharp">var discriminator = app.Services.GetRequiredService&lt;IOptions&lt;DataProtectionOptions&gt;&gt;()
+    .Value.ApplicationDiscriminator;
+app.Logger.LogInformation(&quot;ApplicationDiscriminator: {ApplicationDiscriminator}&quot;, discriminator);
+</code></pre>
+<ul>
+<li>
+<p>Per-application isolation</p>
+</li>
+<li>
+<p>Data Protection and app isolation</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+In .NET 6, WebApplicationBuilder normalizes the content root path to end with a <code>DirectorySeparatorChar</code>. For example, on Windows the content root path ends in \ and on Linux /. Other hosts don't normalize the path. Most apps migrating from HostBuilder or  WebHostBuilder won't share the same app name because they won't have the terminating <code>DirectorySeparatorChar</code>. To work around this issue, remove the directory separator character and set the app name manually, as shown in the following code:</p>
+</blockquote>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.DataProtection;
+using System.Reflection;
+
+var builder = WebApplication.CreateBuilder(args);
+var trimmedContentRootPath = builder.Environment.ContentRootPath.TrimEnd(Path.DirectorySeparatorChar);
+builder.Services.AddDataProtection()
+ .SetApplicationName(trimmedContentRootPath);
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; Assembly.GetEntryAssembly()!.GetName().Name);
+
+app.Run();
+</code></pre>
+<h2><a href="#disableautomatickeygeneration" aria-hidden="true" class="anchor" id="disableautomatickeygeneration"></a>DisableAutomaticKeyGeneration</h2>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .DisableAutomaticKeyGeneration();
+</code></pre>
+<h2><a href="#per-application-isolation" aria-hidden="true" class="anchor" id="per-application-isolation"></a>Per-application isolation</h2>
+<ul>
+<li>
+<p>For apps hosted in IIS, the unique ID is the IIS physical path of the app. If an app is deployed in a web farm environment, this value is stable assuming that the IIS environments are configured similarly across all machines in the web farm.</p>
+</li>
+<li>
+<p>For self-hosted apps running on the Kestrel server, the unique ID is the physical path to the app on disk.</p>
+</li>
+</ul>
+<h3><a href="#data-protection-and-app-isolation" aria-hidden="true" class="anchor" id="data-protection-and-app-isolation"></a>Data Protection and app isolation</h3>
+<ul>
+<li>
+<p>When multiple apps are pointed at the same key repository, the intention is that the apps share the same master key material. Data Protection is developed with the assumption that all apps sharing a key ring can access all items in that key ring. The application unique identifier is used to isolate application specific keys derived from the key ring provided keys. It doesn't expect item level permissions, such as those provided by Azure KeyVault to be used to enforce extra isolation. Attempting item level permissions generates application errors. If you don't want to rely on the built-in application isolation, separate key store locations should be used and not shared between applications.</p>
+</li>
+<li>
+<p>The application discriminator (ApplicationDiscriminator) is used to allow different apps to share the same master key material but to keep their cryptographic payloads distinct from one another.  For the apps to be able to read each other's cryptographic payloads, they must have the same application discriminator, which can be set by calling <code>SetApplicationName</code>.</p>
+</li>
+<li>
+<p>If an app is compromised (for example, by an RCE attack), all master key material accessible to that app must also be considered compromised, regardless of its protection-at-rest state. This implies that if two apps are pointed at the same repository, even if they use different app discriminators, a compromise of one is functionally equivalent to a compromise of both.
+This &quot;functionally equivalent to a compromise of both&quot; clause holds even if the two apps use different mechanisms for key protection at rest. Typically, this isn't an expected configuration. The protection-at-rest mechanism is intended to provide protection in the event an adversary gains read access to the repository. An adversary who gains write access to the repository (perhaps because they attained code execution permission within an app) can insert malicious keys into storage. The Data Protection system intentionally doesn't provide protection against an adversary who gains write access to the key repository.</p>
+</li>
+<li>
+<p>If apps need to remain truly isolated from one another, they should use different key repositories. This naturally falls out of the definition of &quot;isolated&quot;. Apps are not isolated if they all have Read and Write access to each other's data stores.</p>
+</li>
+</ul>
+<h2><a href="#changing-algorithms-with-usecryptographicalgorithms" aria-hidden="true" class="anchor" id="changing-algorithms-with-usecryptographicalgorithms"></a>Changing algorithms with <code>UseCryptographicAlgorithms</code></h2>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
+    {
+        EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
+        ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+    });
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+Changing algorithms doesn't affect existing keys in the key ring. It only affects newly-generated keys.</p>
+</blockquote>
+<h3><a href="#specifying-custom-managed-algorithms" aria-hidden="true" class="anchor" id="specifying-custom-managed-algorithms"></a>Specifying custom managed algorithms</h3>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .UseCustomCryptographicAlgorithms(new ManagedAuthenticatedEncryptorConfiguration
+    {
+        // A type that subclasses SymmetricAlgorithm
+        EncryptionAlgorithmType = typeof(Aes),
+
+        // Specified in bits
+        EncryptionAlgorithmKeySize = 256,
+
+        // A type that subclasses KeyedHashAlgorithm
+        ValidationAlgorithmType = typeof(HMACSHA256)
+    });
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The SymmetricAlgorithm must have a key length of ≥ 128 bits and a block size of ≥ 64 bits, and it must support CBC-mode encryption with PKCS #7 padding. The KeyedHashAlgorithm must have a digest size of &gt;= 128 bits, and it must support keys of length equal to the hash algorithm's digest length. The KeyedHashAlgorithm isn't strictly required to be HMAC.</p>
+</blockquote>
+<h3><a href="#specifying-custom-windows-cng-algorithms" aria-hidden="true" class="anchor" id="specifying-custom-windows-cng-algorithms"></a>Specifying custom Windows CNG algorithms</h3>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .UseCustomCryptographicAlgorithms(new CngCbcAuthenticatedEncryptorConfiguration
+    {
+        // Passed to BCryptOpenAlgorithmProvider
+        EncryptionAlgorithm = &quot;AES&quot;,
+        EncryptionAlgorithmProvider = null,
+
+        // Specified in bits
+        EncryptionAlgorithmKeySize = 256,
+
+        // Passed to BCryptOpenAlgorithmProvider
+        HashAlgorithm = &quot;SHA256&quot;,
+        HashAlgorithmProvider = null
+    });
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The symmetric block cipher algorithm must have a key length of &gt;= 128 bits, a block size of &gt;= 64 bits, and it must support CBC-mode encryption with PKCS #7 padding. The hash algorithm must have a digest size of &gt;= 128 bits and must support being opened with the BCRYPT_ALG_HANDLE_HMAC_FLAG flag. The *Provider properties can be set to null to use the default provider for the specified algorithm. For more information, see the BCryptOpenAlgorithmProvider documentation.</p>
+</blockquote>
+<pre><code class="language-csharp">builder.Services.AddDataProtection()
+    .UseCustomCryptographicAlgorithms(new CngGcmAuthenticatedEncryptorConfiguration
+    {
+        // Passed to BCryptOpenAlgorithmProvider
+        EncryptionAlgorithm = &quot;AES&quot;,
+        EncryptionAlgorithmProvider = null,
+
+        // Specified in bits
+        EncryptionAlgorithmKeySize = 256
+    });
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The symmetric block cipher algorithm must have a key length of &gt;= 128 bits, a block size of exactly 128 bits, and it must support GCM encryption. You can set the EncryptionAlgorithmProvider property to null to use the default provider for the specified algorithm. For more information, see the BCryptOpenAlgorithmProvider documentation.</p>
+</blockquote>
+<h3><a href="#specifying-other-custom-algorithms" aria-hidden="true" class="anchor" id="specifying-other-custom-algorithms"></a>Specifying other custom algorithms</h3>
+<h2><a href="#persisting-keys-when-hosting-in-a-docker-container" aria-hidden="true" class="anchor" id="persisting-keys-when-hosting-in-a-docker-container"></a>Persisting keys when hosting in a Docker container</h2>
+<ul>
+<li>
+<p>A folder that's a Docker volume that persists beyond the container's lifetime, such as a shared volume or a host-mounted volume.</p>
+</li>
+<li>
+<p>An external provider, such as Azure Blob Storage (shown in the <code>ProtectKeysWithAzureKeyVault</code> section) or Redis.</p>
+</li>
+</ul>
+<h2><a href="#persisting-keys-with-redis" aria-hidden="true" class="anchor" id="persisting-keys-with-redis"></a>Persisting keys with Redis</h2>
+<h2><a href="#logging-dataprotection" aria-hidden="true" class="anchor" id="logging-dataprotection"></a>Logging DataProtection</h2>
+<pre><code class="language-csharp">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;,
+      &quot;Microsoft.AspNetCore.DataProtection&quot;: &quot;Information&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Non-DI aware scenarios for Data Protection in ASP.NET Core</p>
+</li>
+<li>
+<p>Data Protection machine-wide policy support in ASP.NET Core</p>
+</li>
+<li>
+<p>Host ASP.NET Core in a web farm</p>
+</li>
+<li>
+<p>Key storage providers in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview?view=aspnetcore-8.0">Configure ASP.NET Core Data Protection</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Configuration - Default settings | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Configuration - Default settings</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#key-management" aria-hidden="true" class="anchor" id="key-management"></a>Key management</h2>
+<ul>
+<li>
+<p>If the app is hosted in Azure Apps, keys are persisted to the <code>%HOME%\ASP.NET\DataProtection-Keys</code> folder. This folder is backed by network storage and is synchronized across all machines hosting the app.</p>
+<ul>
+<li>
+<p>Keys aren't protected at rest.</p>
+</li>
+<li>
+<p>The DataProtection-Keys folder supplies the key ring to all instances of an app in a single deployment slot.</p>
+</li>
+<li>
+<p>Separate deployment slots, such as Staging and Production, don't share a key ring. When you swap between deployment slots, for example swapping Staging to Production or using A/B testing, any app using Data Protection won't be able to decrypt stored data using the key ring inside the previous slot. This leads to users being logged out of an app that uses the standard ASP.NET Core cookie authentication, as it uses Data Protection to protect its cookies. If you desire slot-independent key rings, use an external key ring provider, such as Azure Blob Storage, Azure Key Vault, a SQL store, or Redis cache.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>If the user profile is available, keys are persisted to the <code>%LOCALAPPDATA%\ASP.NET\DataProtection-Keys</code> folder. If the operating system is Windows, the keys are encrypted at rest using DPAPI.
+The app pool's <code>setProfileEnvironment</code> attribute must also be enabled. The default value of <code>setProfileEnvironment</code> is <code>true</code>. In some scenarios (for example, Windows OS), <code>setProfileEnvironment</code> is set to <code>false</code>. If keys aren't stored in the user profile directory as expected:</p>
+<ul>
+<li>
+<p>Navigate to the <code>%windir%/system32/inetsrv/config</code> folder.</p>
+</li>
+<li>
+<p>Open the applicationHost.config file.</p>
+</li>
+<li>
+<p>Locate the <code>&lt;system.applicationHost&gt;&lt;applicationPools&gt;&lt;applicationPoolDefaults&gt;&lt;processModel&gt;</code> element.</p>
+</li>
+<li>
+<p>Confirm that the <code>setProfileEnvironment</code> attribute isn't present, which defaults the value to <code>true</code>, or explicitly set the attribute's value to <code>true</code>.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>If the app is hosted in IIS, keys are persisted to the HKLM registry in a special registry key that's ACLed only to the worker process account. Keys are encrypted at rest using DPAPI.</p>
+</li>
+<li>
+<p>If none of these conditions match, keys aren't persisted outside of the current process. When the process shuts down, all generated keys are lost.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+If the developer overrides the rules outlined above and points the Data Protection system at a specific key repository, automatic encryption of keys at rest is disabled. At-rest protection can be re-enabled via configuration.</p>
+</blockquote>
+<h2><a href="#key-lifetime" aria-hidden="true" class="anchor" id="key-lifetime"></a>Key lifetime</h2>
+<h2><a href="#default-algorithms" aria-hidden="true" class="anchor" id="default-algorithms"></a>Default algorithms</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Key management extensibility in ASP.NET Core</p>
+</li>
+<li>
+<p>Host ASP.NET Core in a web farm</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/default-settings?view=aspnetcore-8.0">Data Protection key management and lifetime in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

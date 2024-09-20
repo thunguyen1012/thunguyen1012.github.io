@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Consumer APIs - Unprotect payloads whose keys have been revoked | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The ASP.NET Core data protection APIs are not primarily intended for indefinite persistence of confidential payloads. Other technologies like Windows CNG DPAPI and Azure Rights Management are more suited to the scenario of indefinite storage, and they have correspondingly strong key management capabilities. That said, there's nothing prohibiting a developer from using the ASP.NET Core data protection APIs for long-term protection of confidential data. Keys are never removed from the key ring, so IDataProtector.Unprotect can always recover existing payloads as long as the keys are available and valid.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Consumer APIs - Unprotect payloads whose keys have been revoked</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The ASP.NET Core data protection APIs are not primarily intended for indefinite persistence of confidential payloads. Other technologies like Windows CNG DPAPI and Azure Rights Management are more suited to the scenario of indefinite storage, and they have correspondingly strong key management capabilities. That said, there's nothing prohibiting a developer from using the ASP.NET Core data protection APIs for long-term protection of confidential data. Keys are never removed from the key ring, so <code>IDataProtector.Unprotect</code> can always recover existing payloads as long as the keys are available and valid.</p>
+<p>However, an issue arises when the developer tries to unprotect data that has been protected with a revoked key, as <code>IDataProtector.Unprotect</code> will throw an exception in this case. This might be fine for short-lived or transient payloads (like authentication tokens), as these kinds of payloads can easily be recreated by the system, and at worst the site visitor might be required to log in again. But for persisted payloads, having <code>Unprotect</code> throw could lead to unacceptable data loss.</p>
+<h2><a href="#ipersisteddataprotector" aria-hidden="true" class="anchor" id="ipersisteddataprotector"></a><code>IPersistedDataProtector</code></h2>
+<p>To support the scenario of allowing payloads to be unprotected even in the face of revoked keys, the data protection system contains an <code>IPersistedDataProtector</code> type. To get an instance of <code>IPersistedDataProtector</code>, simply get an instance of <code>IDataProtector</code> in the normal fashion and try casting the <code>IDataProtector</code> to <code>IPersistedDataProtector</code>.</p>
+<blockquote>
+<p class='note'>Note
+Not all <code>IDataProtector</code> instances can be cast to <code>IPersistedDataProtector</code>. Developers should use the C# as operator or similar to avoid runtime exceptions caused by invalid casts, and they should be prepared to handle the failure case appropriately.</p>
+</blockquote>
+<p><code>IPersistedDataProtector</code> exposes the following API surface:</p>
+<pre><code class="language-csharp">DangerousUnprotect(byte[] protectedData, bool ignoreRevocationErrors,
+     out bool requiresMigration, out bool wasRevoked) : byte[]
+</code></pre>
+<p>This API takes the protected payload (as a byte array) and returns the unprotected payload. There's no string-based overload. The two out parameters are as follows.</p>
+<ul>
+<li>
+<p><code>requiresMigration</code>: will be set to true if the key used to protect this payload is no longer the active default key, e.g., the key used to protect this payload is old and a key rolling operation has since taken place. The caller may wish to consider reprotecting the payload depending on their business needs.</p>
+</li>
+<li>
+<p><code>wasRevoked</code>: will be set to true if the key used to protect this payload was revoked.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Exercise extreme caution when passing <code>ignoreRevocationErrors: true</code> to the <code>DangerousUnprotect</code> method. If after calling this method the <code>wasRevoked</code> value is true, then the key used to protect this payload was revoked, and the payload's authenticity should be treated as suspect. In this case, only continue operating on the unprotected payload if you have some separate assurance that it's authentic, e.g. that it's coming from a secure database rather than being sent by an untrusted web client.</p>
+</blockquote>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using System.Text;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.Extensions.DependencyInjection;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDataProtection()
+            // point at a specific folder and use DPAPI to encrypt keys
+            .PersistKeysToFileSystem(new DirectoryInfo(@&quot;c:\temp-keys&quot;))
+            .ProtectKeysWithDpapi();
+        var services = serviceCollection.BuildServiceProvider();
+
+        // get a protector and perform a protect operation
+        var protector = services.GetDataProtector(&quot;Sample.DangerousUnprotect&quot;);
+        Console.Write(&quot;Input: &quot;);
+        byte[] input = Encoding.UTF8.GetBytes(Console.ReadLine());
+        var protectedData = protector.Protect(input);
+        Console.WriteLine($&quot;Protected payload: {Convert.ToBase64String(protectedData)}&quot;);
+
+        // demonstrate that the payload round-trips properly
+        var roundTripped = protector.Unprotect(protectedData);
+        Console.WriteLine($&quot;Round-tripped payload: {Encoding.UTF8.GetString(roundTripped)}&quot;);
+
+        // get a reference to the key manager and revoke all keys in the key ring
+        var keyManager = services.GetService&lt;IKeyManager&gt;();
+        Console.WriteLine(&quot;Revoking all keys in the key ring...&quot;);
+        keyManager.RevokeAllKeys(DateTimeOffset.Now, &quot;Sample revocation.&quot;);
+
+        // try calling Protect - this should throw
+        Console.WriteLine(&quot;Calling Unprotect...&quot;);
+        try
+        {
+            var unprotectedPayload = protector.Unprotect(protectedData);
+            Console.WriteLine($&quot;Unprotected payload: {Encoding.UTF8.GetString(unprotectedPayload)}&quot;);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($&quot;{ex.GetType().Name}: {ex.Message}&quot;);
+        }
+
+        // try calling DangerousUnprotect
+        Console.WriteLine(&quot;Calling DangerousUnprotect...&quot;);
+        try
+        {
+            IPersistedDataProtector persistedProtector = protector as IPersistedDataProtector;
+            if (persistedProtector == null)
+            {
+                throw new Exception(&quot;Can't call DangerousUnprotect.&quot;);
+            }
+
+            bool requiresMigration, wasRevoked;
+            var unprotectedPayload = persistedProtector.DangerousUnprotect(
+                protectedData: protectedData,
+                ignoreRevocationErrors: true,
+                requiresMigration: out requiresMigration,
+                wasRevoked: out wasRevoked);
+            Console.WriteLine($&quot;Unprotected payload: {Encoding.UTF8.GetString(unprotectedPayload)}&quot;);
+            Console.WriteLine($&quot;Requires migration = {requiresMigration}, was revoked = {wasRevoked}&quot;);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($&quot;{ex.GetType().Name}: {ex.Message}&quot;);
+        }
+    }
+}
+
+/*
+ * SAMPLE OUTPUT
+ *
+ * Input: Hello!
+ * Protected payload: CfDJ8LHIzUCX1ZVBn2BZ...
+ * Round-tripped payload: Hello!
+ * Revoking all keys in the key ring...
+ * Calling Unprotect...
+ * CryptographicException: The key {...} has been revoked.
+ * Calling DangerousUnprotect...
+ * Unprotected payload: Hello!
+ * Requires migration = True, was revoked = True
+ */
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/dangerous-unprotect?view=aspnetcore-8.0">Unprotect payloads whose keys have been revoked in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

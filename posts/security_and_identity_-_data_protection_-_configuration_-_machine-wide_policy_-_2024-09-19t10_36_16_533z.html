@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Configuration - Machine-wide policy | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Configuration - Machine-wide policy</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The ASP.NET Data Protection system is a wrapper around ASP.NET Core Data Protection.</p>
+<blockquote>
+<p class='warning'>Warning
+The system administrator can set default policy, but they can't enforce it. The app developer can always override any value with one of their own choosing. The default policy only affects apps where the developer hasn't specified an explicit value for a setting.</p>
+</blockquote>
+<h2><a href="#setting-default-policy" aria-hidden="true" class="anchor" id="setting-default-policy"></a>Setting default policy</h2>
+<p>To set default policy, an administrator can set known values in the system registry under the following registry key:</p>
+<p><code>HKLM\SOFTWARE\Microsoft\DotNetPackages\Microsoft.AspNetCore.DataProtection</code></p>
+<p>If you're on a 64-bit operating system and want to affect the behavior of 32-bit apps, remember to configure the Wow6432Node equivalent of the above key.</p>
+<p>The supported values are shown below.</p>
+<table><thead>
+<tr>
+<th>Value</th>
+<th style="text-align: center;">Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EncryptionType</td>
+<td style="text-align: center;">string</td>
+<td>Specifies which algorithms should be used for data protection. The value must be CNG-CBC, CNG-GCM, or Managed and is described in more detail below.</td>
+</tr>
+<tr>
+<td>DefaultKeyLifetime</td>
+<td style="text-align: center;">DWORD</td>
+<td>Specifies the lifetime for newly-generated keys. The value is specified in days and must be &gt;= 7.</td>
+</tr>
+<tr>
+<td>KeyEscrowSinks</td>
+<td style="text-align: center;">string</td>
+<td>Specifies the types that are used for key escrow. The value is a semicolon-delimited list of key escrow sinks, where each element in the list is the assembly-qualified name of a type that implements <a href="/en-us/dotnet/api/microsoft.aspnetcore.dataprotection.keymanagement.ikeyescrowsink" class="no-loc" data-linktype="absolute-path">IKeyEscrowSink</a>.</td>
+</tr>
+</tbody></table>
+<h2><a href="#encryption-types" aria-hidden="true" class="anchor" id="encryption-types"></a>Encryption types</h2>
+<p>The <code>CngCbcAuthenticatedEncryptionSettings</code> type is a property of the <code>EncryptionType</code> class in the <code>CngCertificate</code> class.</p>
+<table><thead>
+<tr>
+<th>Value</th>
+<th style="text-align: center;">Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EncryptionAlgorithm</td>
+<td style="text-align: center;">string</td>
+<td>The name of a symmetric block cipher algorithm understood by CNG. This algorithm is opened in CBC mode.</td>
+</tr>
+<tr>
+<td>EncryptionAlgorithmProvider</td>
+<td style="text-align: center;">string</td>
+<td>The name of the CNG provider implementation that can produce the algorithm EncryptionAlgorithm.</td>
+</tr>
+<tr>
+<td>EncryptionAlgorithmKeySize</td>
+<td style="text-align: center;">DWORD</td>
+<td>The length (in bits) of the key to derive for the symmetric block cipher algorithm.</td>
+</tr>
+<tr>
+<td>HashAlgorithm</td>
+<td style="text-align: center;">string</td>
+<td>The name of a hash algorithm understood by CNG. This algorithm is opened in HMAC mode.</td>
+</tr>
+<tr>
+<td>HashAlgorithmProvider</td>
+<td style="text-align: center;">string</td>
+<td>The name of the CNG provider implementation that can produce the algorithm HashAlgorithm.</td>
+</tr>
+</tbody></table>
+<p>The <code>CngGcmAuthenticatedEncryptionSettings</code> type is a property of the <code>EncryptionType</code> type.</p>
+<table><thead>
+<tr>
+<th>Value</th>
+<th style="text-align: center;">Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EncryptionAlgorithm</td>
+<td style="text-align: center;">string</td>
+<td>The name of a symmetric block cipher algorithm understood by CNG. This algorithm is opened in Galois/Counter Mode.</td>
+</tr>
+<tr>
+<td>EncryptionAlgorithmProvider</td>
+<td style="text-align: center;">string</td>
+<td>The name of the CNG provider implementation that can produce the algorithm EncryptionAlgorithm.</td>
+</tr>
+<tr>
+<td>EncryptionAlgorithmKeySize</td>
+<td style="text-align: center;">DWORD</td>
+<td>The length (in bits) of the key to derive for the symmetric block cipher algorithm.</td>
+</tr>
+</tbody></table>
+<p><code>EncryptionType</code> is a property of the <code>ManagedAuthenticatedEncryptionSettings</code> type.</p>
+<table><thead>
+<tr>
+<th>Value</th>
+<th style="text-align: center;">Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EncryptionAlgorithmType</td>
+<td style="text-align: center;">string</td>
+<td>The assembly-qualified name of a type that implements SymmetricAlgorithm.</td>
+</tr>
+<tr>
+<td>EncryptionAlgorithmKeySize</td>
+<td style="text-align: center;">DWORD</td>
+<td>The length (in bits) of the key to derive for the symmetric encryption algorithm.</td>
+</tr>
+<tr>
+<td>ValidationAlgorithmType</td>
+<td style="text-align: center;">string</td>
+<td>The assembly-qualified name of a type that implements KeyedHashAlgorithm.</td>
+</tr>
+</tbody></table>
+<p>If <code>EncryptionType</code> has any other value other than null or empty, the Data Protection system throws an exception at startup.</p>
+<blockquote>
+<p class='warning'>Warning
+When configuring a default policy setting that involves type names (EncryptionAlgorithmType, ValidationAlgorithmType, KeyEscrowSinks), the types must be available to the app. This means that for apps running on Desktop CLR, the assemblies that contain these types should be present in the Global Assembly Cache (GAC). For ASP.NET Core apps running on .NET Core, the packages that contain these types should be installed.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/machine-wide-policy?view=aspnetcore-8.0">Data Protection machine-wide policy support in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

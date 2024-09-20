@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Extensibility APIs - Core cryptography extensibility | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The IAuthenticatedEncryptor interface is the basic building block of the cryptographic subsystem. There's generally one IAuthenticatedEncryptor per key, and the IAuthenticatedEncryptor instance wraps all cryptographic key material and algorithmic information necessary to perform cryptographic operations.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Extensibility APIs - Core cryptography extensibility</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p class='warning'>Warning
+Types that implement any of the following interfaces should be thread-safe for multiple callers.</p>
+</blockquote>
+<h2><a href="#iauthenticatedencryptor" aria-hidden="true" class="anchor" id="iauthenticatedencryptor"></a><code>IAuthenticatedEncryptor</code></h2>
+<p>The <code>IAuthenticatedEncryptor</code> interface is the basic building block of the cryptographic.</p>
+<p>As its name suggests, the type is responsible for providing authenticated encryption and decryption services. It exposes the following two APIs.</p>
+<ul>
+<li>
+<p><code>Decrypt(ArraySegment&lt;byte&gt; ciphertext, ArraySegment&lt;byte&gt; additionalAuthenticatedData) : byte[]</code></p>
+</li>
+<li>
+<p><code>Encrypt(ArraySegment&lt;byte&gt; plaintext, ArraySegment&lt;byte&gt; additionalAuthenticatedData) : byte[]</code></p>
+</li>
+</ul>
+<p>The following methods can be used to encrypt and decrypt data.</p>
+<blockquote>
+<p class='note'>Note
+The <code>IAuthenticatedEncryptor</code> instance itself doesn't actually need to contain the key material. For example, the implementation could delegate to an HSM for all operations.</p>
+</blockquote>
+<h2><a href="#how-to-create-an-iauthenticatedencryptor" aria-hidden="true" class="anchor" id="how-to-create-an-iauthenticatedencryptor"></a>How to create an IAuthenticatedEncryptor</h2>
+<ul>
+<li>
+<p>ASP.NET Core 2.x</p>
+</li>
+<li>
+<p>ASP.NET Core 1.x</p>
+</li>
+<li>
+<p><code>CreateEncryptorInstance(IKey key) : IAuthenticatedEncryptor</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">// we have an IAuthenticatedEncryptorFactory instance and an IKey instance
+IAuthenticatedEncryptorFactory factory = ...;
+IKey key = ...;
+
+// get an encryptor instance and perform an authenticated encryption operation
+ArraySegment&lt;byte&gt; plaintext = new ArraySegment&lt;byte&gt;(Encoding.UTF8.GetBytes(&quot;plaintext&quot;));
+ArraySegment&lt;byte&gt; aad = new ArraySegment&lt;byte&gt;(Encoding.UTF8.GetBytes(&quot;AAD&quot;));
+var encryptor1 = factory.CreateEncryptorInstance(key);
+byte[] ciphertext = encryptor1.Encrypt(plaintext, aad);
+
+// get another encryptor instance and perform an authenticated decryption operation
+var encryptor2 = factory.CreateEncryptorInstance(key);
+byte[] roundTripped = encryptor2.Decrypt(new ArraySegment&lt;byte&gt;(ciphertext), aad);
+
+
+// the 'roundTripped' and 'plaintext' buffers should be equivalent
+</code></pre>
+<ul>
+<li>
+<p><code>CreateEncryptorInstance() : IAuthenticatedEncryptor</code></p>
+</li>
+<li>
+<p><code>ExportToXml() : XmlSerializedDescriptorInfo</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">// we have an IAuthenticatedEncryptorDescriptor instance
+IAuthenticatedEncryptorDescriptor descriptor = ...;
+
+// get an encryptor instance and perform an authenticated encryption operation
+ArraySegment&lt;byte&gt; plaintext = new ArraySegment&lt;byte&gt;(Encoding.UTF8.GetBytes(&quot;plaintext&quot;));
+ArraySegment&lt;byte&gt; aad = new ArraySegment&lt;byte&gt;(Encoding.UTF8.GetBytes(&quot;AAD&quot;));
+var encryptor1 = descriptor.CreateEncryptorInstance();
+byte[] ciphertext = encryptor1.Encrypt(plaintext, aad);
+
+// get another encryptor instance and perform an authenticated decryption operation
+var encryptor2 = descriptor.CreateEncryptorInstance();
+byte[] roundTripped = encryptor2.Decrypt(new ArraySegment&lt;byte&gt;(ciphertext), aad);
+
+
+// the 'roundTripped' and 'plaintext' buffers should be equivalent
+</code></pre>
+<h2><a href="#iauthenticatedencryptordescriptor-asp.net-core-2.x-only)" aria-hidden="true" class="anchor" id="iauthenticatedencryptordescriptor-asp.net-core-2.x-only)"></a>IAuthenticatedEncryptorDescriptor (ASP.NET Core 2.x only)</h2>
+<ul>
+<li>
+<p>ASP.NET Core 2.x</p>
+</li>
+<li>
+<p>ASP.NET Core 1.x</p>
+</li>
+<li>
+<p><code>ExportToXml() : XmlSerializedDescriptorInfo</code></p>
+</li>
+</ul>
+<h2><a href="#xml-serialization" aria-hidden="true" class="anchor" id="xml-serialization"></a>XML Serialization</h2>
+<p><code>IAuthenticatedEncryptor</code> is an <code>IAuthenticatedEncryptor</code> whose implementation relies on an <code>IAuthenticatedEncryptor</code> descriptor.</p>
+<p>A descriptor is a piece of code that describes a property.</p>
+<p>The serialized descriptor may contain sensitive information such as cryptographic key material. The data protection system has built-in support for encrypting information before it's persisted to storage. To take advantage of this, the descriptor should mark the element which contains sensitive information with the attribute name &quot;requiresEncryption&quot; (xmlns &quot;<a href="http://schemas.asp.net/2015/03/dataProtection">http://schemas.asp.net/2015/03/dataProtection</a>&quot;), value &quot;true&quot;.</p>
+<blockquote>
+<p class='tip'>Tip
+There's a helper API for setting this attribute. Call the extension method <code>XElement.MarkAsRequiresEncryption()</code> located in namespace Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.</p>
+</blockquote>
+<p>In some cases, the descriptor may contain sensitive information.</p>
+<h2><a href="#iauthenticatedencryptordescriptordeserializer" aria-hidden="true" class="anchor" id="iauthenticatedencryptordescriptordeserializer"></a>IAuthenticatedEncryptorDescriptorDeserializer</h2>
+<p>The IAuthenticatedEncryptorDescriptorDeserializer interface represents a type that knows how to deserialize an IAuthenticatedEncryptorDescriptor instance from an XElement. It exposes a single method:</p>
+<ul>
+<li><code>ImportFromXml(XElement element) : IAuthenticatedEncryptorDescriptor</code></li>
+</ul>
+<p>The <code>ImportFromXml</code> method takes the XElement that was returned by <code>IAuthenticatedEncryptorDescriptor.ExportToXml</code> and creates an equivalent of the original <code>IAuthenticatedEncryptorDescriptor</code>.</p>
+<p>Types which implement IAuthenticatedEncryptorDescriptorDeserializer should have one of the following two public constructors:</p>
+<ul>
+<li>
+<p><code>.ctor(IServiceProvider)</code></p>
+</li>
+<li>
+<p><code>.ctor()</code></p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+The IServiceProvider passed to the constructor may be null.</p>
+</blockquote>
+<h2><a href="#the-top-level-factory" aria-hidden="true" class="anchor" id="the-top-level-factory"></a>The top-level factory</h2>
+<ul>
+<li>
+<p>ASP.NET Core 2.x</p>
+</li>
+<li>
+<p>ASP.NET Core 1.x</p>
+</li>
+<li>
+<p><code>CreateNewDescriptor() : IAuthenticatedEncryptorDescriptor</code></p>
+</li>
+<li>
+<p><code>CreateNewDescriptor() : IAuthenticatedEncryptorDescriptor</code></p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/extensibility/core-crypto?view=aspnetcore-8.0">Core cryptography extensibility in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Consumer APIs - Limit the lifetime of protected payloads | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='There are scenarios where the application developer wants to create a protected payload that expires after a set period of time. For instance, the protected payload might represent a password reset token that should only be valid for one hour. It's certainly possible for the developer to create their own payload format that contains an embedded expiration date, and advanced developers may wish to do this anyway, but for the majority of developers managing these expirations can grow tedious.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Consumer APIs - Limit the lifetime of protected payloads</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In this article I'm going to show you how to create a protected payload that expires after a set period of time.</p>
+<p>To make this easier for our developer audience, the package Microsoft.AspNetCore.DataProtection.Extensions contains utility APIs for creating payloads that automatically expire after a set period of time. These APIs implement the <code>ITimeLimitedDataProtector</code> interface.</p>
+<h2><a href="#api-usage" aria-hidden="true" class="anchor" id="api-usage"></a>API usage</h2>
+<p>The <code>ITimeLimitedDataProtector</code> interface is the core interface for protecting and unprotecting time-limited / self-expiring payloads. To create an instance of an <code>ITimeLimitedDataProtector</code>, you'll first need an instance of a regular <code>IDataProtector</code> constructed with a specific purpose. Once the <code>IDataProtector</code> instance is available, call the <code>IDataProtector.ToTimeLimitedDataProtector</code> extension method to get back a protector with built-in expiration capabilities.</p>
+<p><code>ITimeLimitedDataProtector</code> exposes the following API surface and extension methods:</p>
+<ul>
+<li>
+<p>CreateProtector(string purpose) : <code>ITimeLimitedDataProtector</code> - This API is similar to the existing <code>IDataProtectionProvider.CreateProtector</code> in that it can be used to create purpose chains from a root time-limited protector.</p>
+</li>
+<li>
+<p><code>Protect(byte[] plaintext, DateTimeOffset expiration) : byte[]</code></p>
+</li>
+<li>
+<p><code>Protect(byte[] plaintext, TimeSpan lifetime) : byte[]</code></p>
+</li>
+<li>
+<p><code>Protect(byte[] plaintext) : byte[]</code></p>
+</li>
+<li>
+<p><code>Protect(string plaintext, DateTimeOffset expiration) : string</code></p>
+</li>
+<li>
+<p><code>Protect(string plaintext, TimeSpan lifetime) : string</code></p>
+</li>
+<li>
+<p><code>Protect(string plaintext) : string</code></p>
+</li>
+</ul>
+<p>In addition to the core <code>Protect</code> methods which take only the plaintext, there are new overloads which allow specifying the payload's expiration date. The expiration date can be specified as an absolute date (via a <code>DateTimeOffset</code>) or as a relative time (from the current system time, via a <code>TimeSpan</code>). If an overload which doesn't take an expiration is called, the payload is assumed never to expire.</p>
+<ul>
+<li>
+<p><code>Unprotect(byte[] protectedData, out DateTimeOffset expiration) : byte[]</code></p>
+</li>
+<li>
+<p><code>Unprotect(byte[] protectedData) : byte[]</code></p>
+</li>
+<li>
+<p><code>Unprotect(string protectedData, out DateTimeOffset expiration) : string</code></p>
+</li>
+<li>
+<p><code>Unprotect(string protectedData) : string</code></p>
+</li>
+</ul>
+<p>The <code>Unprotect</code> methods return the original unprotected data. If the payload hasn't yet expired, the absolute expiration is returned as an optional out parameter along with the original unprotected data. If the payload is expired, all overloads of the <code>Unprotect</code> method will throw CryptographicException.</p>
+<blockquote>
+<p class='warning'>Warning
+It's not advised to use these APIs to protect payloads which require long-term or indefinite persistence. &quot;Can I afford for the protected payloads to be permanently unrecoverable after a month?&quot; can serve as a good rule of thumb; if the answer is no then developers should consider alternative APIs.</p>
+</blockquote>
+<p>The sample below uses the non-DI code paths for instantiating the data protection system. To run this sample, ensure that you have first added a reference to the Microsoft.AspNetCore.DataProtection.Extensions package.</p>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using System.Threading;
+using Microsoft.AspNetCore.DataProtection;
+ 
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // create a protector for my application
+ 
+        var provider = DataProtectionProvider.Create(new DirectoryInfo(@&quot;c:\myapp-keys\&quot;));
+        var baseProtector = provider.CreateProtector(&quot;Contoso.TimeLimitedSample&quot;);
+ 
+        // convert the normal protector into a time-limited protector
+        var timeLimitedProtector = baseProtector.ToTimeLimitedDataProtector();
+ 
+        // get some input and protect it for five seconds
+        Console.Write(&quot;Enter input: &quot;);
+        string input = Console.ReadLine();
+        string protectedData = timeLimitedProtector.Protect(input, lifetime: TimeSpan.FromSeconds(5));
+        Console.WriteLine($&quot;Protected data: {protectedData}&quot;);
+ 
+        // unprotect it to demonstrate that round-tripping works properly
+        string roundtripped = timeLimitedProtector.Unprotect(protectedData);
+        Console.WriteLine($&quot;Round-tripped data: {roundtripped}&quot;);
+ 
+        // wait 6 seconds and perform another unprotect, demonstrating that the payload self-expires
+        Console.WriteLine(&quot;Waiting 6 seconds...&quot;);
+        Thread.Sleep(6000);
+        timeLimitedProtector.Unprotect(protectedData);
+    }
+}
+ 
+/*
+ * SAMPLE OUTPUT
+ *
+ * Enter input: Hello!
+ * Protected data: CfDJ8Hu5z0zwxn...nLk7Ok
+ * Round-tripped data: Hello!
+ * Waiting 6 seconds...
+ * &lt;&lt;throws CryptographicException with message 'The payload expired at ...'&gt;&gt;
+
+ */
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/limited-lifetime-payloads?view=aspnetcore-8.0">Limit the lifetime of protected payloads in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

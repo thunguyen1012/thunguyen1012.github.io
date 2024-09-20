@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Implementation - Subkey derivation and authenticated encryption | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Most keys in the key ring will contain some form of entropy and will have algorithmic information stating "CBC-mode encryption + HMAC validation" or "GCM encryption + validation". In these cases, we refer to the embedded entropy as the master keying material (or KM) for this key, and we perform a key derivation function to derive the keys that will be used for the actual cryptographic operations.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Implementation - Subkey derivation and authenticated encryption</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In this paper, we derive a key derivation function for a key ring.</p>
+<blockquote>
+<p class='note'>Note
+Keys are abstract, and a custom implementation might not behave as below. If the key provides its own implementation of <code>IAuthenticatedEncryptor</code> rather than using one of our built-in factories, the mechanism described in this section no longer applies.</p>
+</blockquote>
+<h2><a href="#additional-authenticated-data-and-subkey-derivation" aria-hidden="true" class="anchor" id="additional-authenticated-data-and-subkey-derivation"></a>Additional authenticated data and subkey derivation</h2>
+<p>The <code>IAuthenticatedEncryptor</code> interface serves as the core interface for all authenticated encryption operations. Its <code>Encrypt</code> method takes two buffers: plaintext and additionalAuthenticatedData (AAD). The plaintext contents flow unchanged the call to <code>IDataProtector.Protect</code>, but the AAD is generated by the system and consists of three components:</p>
+<ul>
+<li>
+<p>The 32-bit magic header 09 F0 C9 F0 that identifies this version of the data protection system.</p>
+</li>
+<li>
+<p>The 128-bit key id.</p>
+</li>
+<li>
+<p>A variable-length string formed from the purpose chain that created the <code>IDataProtector</code> that's performing this operation.</p>
+</li>
+</ul>
+<p>Because the AAD is unique for the tuple of all three components, we can use it to derive new keys from KM instead of using KM itself in all of our cryptographic operations. For every call to <code>IAuthenticatedEncryptor.Encrypt</code>, the following key derivation process takes place:</p>
+<p><code>( K_E, K_H ) = SP800_108_CTR_HMACSHA512(K_M, AAD, contextHeader || keyModifier)</code></p>
+<p>Here, we're calling the NIST SP800-108 KDF in Counter Mode (see NIST SP800-108, Sec. 5.1) with the following parameters:</p>
+<ul>
+<li>
+<p>Key derivation key (KDK) = <code>K_M</code></p>
+</li>
+<li>
+<p>PRF = HMACSHA512</p>
+</li>
+<li>
+<p>label = additionalAuthenticatedData</p>
+</li>
+<li>
+<p>context = contextHeader || keyModifier</p>
+</li>
+</ul>
+<p>The context header is of variable length and essentially serves as a thumbprint of the algorithms for which we're deriving <code>K_E</code> and <code>K_H</code>. The key modifier is a 128-bit string randomly generated for each call to <code>Encrypt</code> and serves to ensure with overwhelming probability that KE and KH are unique for this specific authentication encryption operation, even if all other input to the KDF is constant.</p>
+<p>For CBC-mode encryption + HMAC validation operations, | <code>K_E</code> | is the length of the symmetric block cipher key, and | <code>K_H</code> | is the digest size of the HMAC routine. For GCM encryption + validation operations, <code>|</code>K_H<code>| = 0</code>.</p>
+<h2><a href="#cbc-mode-encryption--hmac-validation" aria-hidden="true" class="anchor" id="cbc-mode-encryption--hmac-validation"></a>CBC-mode encryption + HMAC validation</h2>
+<p>Once <code>K_E</code> is generated via the above mechanism, we generate a random initialization vector and run the symmetric block cipher algorithm to encipher the plaintext. The initialization vector and ciphertext are then run through the HMAC routine initialized with the key <code>K_H</code> to produce the MAC. This process and the return value is represented graphically below.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/subkeyderivation/_static/cbcprocess.png?view=aspnetcore-8.0" alt="CBC-mode process and return!" title="CBC-mode process and return" /></p>
+<p><code>output:= keyModifier || iv || E_cbc (K_E,iv,data) || HMAC(K_H, iv || E_cbc (K_E,iv,data))</code></p>
+<blockquote>
+<p class='note'>Note
+The <code>IDataProtector.Protect</code> implementation will prepend the magic header and key id to output before returning it to the caller. Because the magic header and key id are implicitly part of AAD, and because the key modifier is fed as input to the KDF, this means that every single byte of the final returned payload is authenticated by the MAC.</p>
+</blockquote>
+<h2><a href="#galoiscounter-mode-encryption-+-validation" aria-hidden="true" class="anchor" id="galoiscounter-mode-encryption-+-validation"></a>Galois/Counter Mode encryption + validation</h2>
+<p>Once <code>K_E</code> is generated via the above mechanism, we generate a random 96-bit nonce and run the symmetric block cipher algorithm to encipher the plaintext and produce the 128-bit authentication tag.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/subkeyderivation/_static/galoisprocess.png?view=aspnetcore-8.0" alt="GCM-mode process and return!" title="GCM-mode process and return" /></p>
+<p><code>output := keyModifier || nonce || E_gcm (K_E,nonce,data) || authTag</code></p>
+<blockquote>
+<p class='note'>Note
+Even though GCM natively supports the concept of AAD, we're still feeding AAD only to the original KDF, opting to pass an empty string into GCM for its AAD parameter. The reason for this is two-fold. First, to support agility we never want to use <code>K_M</code> directly as the encryption key. Additionally, GCM imposes very strict uniqueness requirements on its inputs. The probability that the GCM encryption routine is ever invoked on two or more distinct sets of input data with the same (key, nonce) pair must not exceed 2^-32. If we fix <code>K_E</code> we cannot perform more than 2^32 encryption operations before we run afoul of the 2^-32 limit. This might seem like a very large number of operations, but a high-traffic web server can go through 4 billion requests in mere days, well within the normal lifetime for these keys. To stay compliant of the 2^-32 probability limit, we continue to use a 128-bit key modifier and 96-bit nonce, which radically extends the usable operation count for any given <code>K_M</code>. For simplicity of design we share the KDF code path between CBC and GCM operations, and since AAD is already considered in the KDF there's no need to forward it to the GCM routine.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/subkeyderivation?view=aspnetcore-8.0">Subkey derivation and authenticated encryption in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

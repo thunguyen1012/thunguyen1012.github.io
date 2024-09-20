@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Configuration - Non-DI aware scenarios | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Configuration - Non-DI aware scenarios</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The ASP.NET Core Data Protection system is normally added to a service container and consumed by dependent components via dependency injection (DI).</p>
+<p>To support these scenarios, the Microsoft.AspNetCore.DataProtection.Extensions package provides a concrete type, <code>DataProtectionProvider</code>, which offers a simple way to use Data Protection without relying on DI. The <code>DataProtectionProvider</code> type implements IDataProtectionProvider. Constructing <code>DataProtectionProvider</code> only requires providing a DirectoryInfo instance to indicate where the provider's cryptographic keys should be stored, as seen in the following code sample:</p>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using Microsoft.AspNetCore.DataProtection;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Get the path to %LOCALAPPDATA%\myapp-keys
+        var destFolder = Path.Combine(
+            System.Environment.GetEnvironmentVariable(&quot;LOCALAPPDATA&quot;),
+            &quot;myapp-keys&quot;);
+
+        // Instantiate the data protection system at this folder
+        var dataProtectionProvider = DataProtectionProvider.Create(
+            new DirectoryInfo(destFolder));
+
+        var protector = dataProtectionProvider.CreateProtector(&quot;Program.No-DI&quot;);
+        Console.Write(&quot;Enter input: &quot;);
+        var input = Console.ReadLine();
+
+        // Protect the payload
+        var protectedPayload = protector.Protect(input);
+        Console.WriteLine($&quot;Protect returned: {protectedPayload}&quot;);
+
+        // Unprotect the payload
+        var unprotectedPayload = protector.Unprotect(protectedPayload);
+        Console.WriteLine($&quot;Unprotect returned: {unprotectedPayload}&quot;);
+
+        Console.WriteLine();
+        Console.WriteLine(&quot;Press any key...&quot;);
+        Console.ReadKey();
+    }
+}
+
+/*
+ * SAMPLE OUTPUT
+ *
+ * Enter input: Hello world!
+ * Protect returned: CfDJ8FWbAn6...ch3hAPm1NJA
+ * Unprotect returned: Hello world!
+ *
+ * Press any key...
+*/
+</code></pre>
+<p>By default, the <code>DataProtectionProvider</code> concrete type doesn't encrypt raw key material before persisting it to the file system. This is to support scenarios where the developer points to a network share and the Data Protection system can't automatically deduce an appropriate at-rest key encryption mechanism.</p>
+<p>Additionally, the <code>DataProtectionProvider</code> concrete type doesn't isolate apps by default. All apps using the same key directory can share payloads as long as their purpose parameters match.</p>
+<p>The <code>DataProtectionProvider</code> constructor accepts an optional configuration callback that can be used to adjust the behaviors of the system. The sample below demonstrates restoring isolation with an explicit call to SetApplicationName. The sample also demonstrates configuring the system to automatically encrypt persisted keys using Windows DPAPI. If the directory points to a UNC share, you may wish to distribute a shared certificate across all relevant machines and to configure the system to use certificate-based encryption with a call to ProtectKeysWithCertificate.</p>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using Microsoft.AspNetCore.DataProtection;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Get the path to %LOCALAPPDATA%\myapp-keys
+        var destFolder = Path.Combine(
+            System.Environment.GetEnvironmentVariable(&quot;LOCALAPPDATA&quot;),
+            &quot;myapp-keys&quot;);
+
+        // Instantiate the data protection system at this folder
+        var dataProtectionProvider = DataProtectionProvider.Create(
+            new DirectoryInfo(destFolder),
+            configuration =&gt;
+            {
+                configuration.SetApplicationName(&quot;my app name&quot;);
+                configuration.ProtectKeysWithDpapi();
+            });
+
+        var protector = dataProtectionProvider.CreateProtector(&quot;Program.No-DI&quot;);
+        Console.Write(&quot;Enter input: &quot;);
+        var input = Console.ReadLine();
+
+        // Protect the payload
+        var protectedPayload = protector.Protect(input);
+        Console.WriteLine($&quot;Protect returned: {protectedPayload}&quot;);
+
+        // Unprotect the payload
+        var unprotectedPayload = protector.Unprotect(protectedPayload);
+        Console.WriteLine($&quot;Unprotect returned: {unprotectedPayload}&quot;);
+
+        Console.WriteLine();
+        Console.WriteLine(&quot;Press any key...&quot;);
+        Console.ReadKey();
+    }
+}
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+Instances of the <code>DataProtectionProvider</code> concrete type are expensive to create. If an app maintains multiple instances of this type and if they're all using the same key storage directory, app performance might degrade. If you use the <code>DataProtectionProvider</code> type, we recommend that you create this type once and reuse it as much as possible. The <code>DataProtectionProvider</code> type and all IDataProtector instances created from it are thread-safe for multiple callers.</p>
+</blockquote>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/non-di-scenarios?view=aspnetcore-8.0">Non-DI aware scenarios for Data Protection in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

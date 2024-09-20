@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Extensibility APIs - Key management extensibility | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Read the key management section before reading this section, as it explains some of the fundamental concepts behind these APIs.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Extensibility APIs - Key management extensibility</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Read the key management section before reading this section, as it explains some of the fundamental concepts behind these APIs.</p>
+<p class='warning'>Warning: Types that implement any of the following interfaces should be thread-safe for multiple callers.</p>
+<h2><a href="#key" aria-hidden="true" class="anchor" id="key"></a>Key</h2>
+<p>The <code>IKey</code> interface is the basic representation of a key in cryptosystem. The term key is used here in the abstract sense, not in the literal sense of &quot;cryptographic key material&quot;. A key has the following properties:</p>
+<ul>
+<li>
+<p>Activation, creation, and expiration dates</p>
+</li>
+<li>
+<p>Revocation status</p>
+</li>
+<li>
+<p>Key identifier (a GUID)</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+There's no API to retrieve the raw cryptographic material from an <code>IKey</code> instance.</p>
+</blockquote>
+<h2><a href="#ikeymanager" aria-hidden="true" class="anchor" id="ikeymanager"></a><code>IKeyManager</code></h2>
+<p>The <code>IKeyManager</code> interface represents an object responsible for general key storage, retrieval, and manipulation. It exposes three high-level operations:</p>
+<ul>
+<li>
+<p>Create a new key and persist it to storage.</p>
+</li>
+<li>
+<p>Get all keys from storage.</p>
+</li>
+<li>
+<p>Revoke one or more keys and persist the revocation information to storage.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+Writing an <code>IKeyManager</code> is a very advanced task, and the majority of developers shouldn't attempt it. Instead, most developers should take advantage of the facilities offered by the <code>XmlKeyManager</code> class.</p>
+</blockquote>
+<h2><a href="#xmlkeymanager" aria-hidden="true" class="anchor" id="xmlkeymanager"></a><code>XmlKeyManager</code></h2>
+<p>The <code>XmlKeyManager</code> type is the in-box concrete implementation of <code>IKeyManager</code>. It provides several useful facilities, including key escrow and encryption of keys at rest. Keys in this system are represented as XML elements (specifically, <code>XElement</code>).</p>
+<p><code>XmlKeyManager</code> depends on several other components in the course of fulfilling its tasks:</p>
+<ul>
+<li>
+<p><code>AlgorithmConfiguration</code>, which dictates the algorithms used by new keys.</p>
+</li>
+<li>
+<p><code>IXmlRepository</code>, which controls where keys are persisted in storage.</p>
+</li>
+<li>
+<p><code>IXmlEncryptor</code> [optional], which allows encrypting keys at rest.</p>
+</li>
+<li>
+<p><code>IKeyEscrowSink</code> [optional], which provides key escrow services.</p>
+</li>
+</ul>
+<p>Below are high-level diagrams which indicate how these components are wired together within <code>XmlKeyManager</code>.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/extensibility/key-management/_static/keycreation2.png?view=aspnetcore-8.0" alt="Key Creation!" title="Key Creation" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/extensibility/key-management/_static/keyretrieval2.png?view=aspnetcore-8.0" alt="Key Retrieval!" title="Key Retrieval" /></p>
+<p>Key Retrieval / <code>GetAllKeys</code></p>
+<p>In the implementation of <code>GetAllKeys</code>, the XML documents representing keys and revocations are read from the underlying <code>IXmlRepository</code>. If these documents are encrypted, the system will automatically decrypt them. <code>XmlKeyManager</code> creates the appropriate <code>IAuthenticatedEncryptorDescriptorDeserializer</code> instances to deserialize the documents back into <code>IAuthenticatedEncryptorDescriptor</code> instances, which are then wrapped in individual <code>IKey</code> instances. This collection of <code>IKey</code> instances is returned to the caller.</p>
+<p>Further information on the particular XML elements can be found in the key storage format document.</p>
+<h2><a href="#ixmlrepository" aria-hidden="true" class="anchor" id="ixmlrepository"></a><code>IXmlRepository</code></h2>
+<p>The <code>IXmlRepository</code> interface represents a type that can persist XML to and retrieve XML from a backing store. It exposes two APIs:</p>
+<ul>
+<li>
+<p><code>GetAllElements :IReadOnlyCollection&lt;XElement&gt;</code></p>
+</li>
+<li>
+<p><code>StoreElement(XElement element, string friendlyName)</code></p>
+</li>
+</ul>
+<p>Implementations of <code>IXmlRepository</code> don't need to parse the XML passing through them. They should treat the XML documents as opaque and let higher layers worry about generating and parsing the documents.</p>
+<p>There are four built-in concrete types which implement <code>IXmlRepository</code>:</p>
+<ul>
+<li>
+<p><code>FileSystemXmlRepository</code></p>
+</li>
+<li>
+<p><code>RegistryXmlRepository</code></p>
+</li>
+<li>
+<p><code>AzureStorage.AzureBlobXmlRepository</code></p>
+</li>
+<li>
+<p><code>RedisXmlRepository</code></p>
+</li>
+</ul>
+<p>See the key storage providers document for more information.</p>
+<p>Registering a custom <code>IXmlRepository</code> is appropriate when using a different backing store (for example, Azure Table Storage).</p>
+<p>To change the default repository application-wide, register a custom <code>IXmlRepository</code> instance:</p>
+<pre><code class="language-csharp">services.Configure&lt;KeyManagementOptions&gt;(options =&gt; options.XmlRepository = new MyCustomXmlRepository());
+</code></pre>
+<h2><a href="#ixmlencryptor" aria-hidden="true" class="anchor" id="ixmlencryptor"></a><code>IXmlEncryptor</code></h2>
+<p>The <code>IXmlEncryptor</code> interface represents a type that can encrypt a plaintext XML element. It exposes a single API:</p>
+<ul>
+<li><code>Encrypt(XElement plaintextElement) : EncryptedXmlInfo</code></li>
+</ul>
+<p>If a serialized <code>IAuthenticatedEncryptorDescriptor</code> contains any elements marked as &quot;requires encryption&quot;, then <code>XmlKeyManager</code> will run those elements through the configured <code>IXmlEncryptor</code>'s <code>Encrypt</code> method, and it will persist the enciphered element rather than the plaintext element to the <code>IXmlRepository</code>. The output of the <code>Encrypt</code> method is an <code>EncryptedXmlInfo</code> object. This object is a wrapper which contains both the resultant enciphered <code>XElement</code> and the Type which represents an <code>IXmlDecryptor</code> which can be used to decipher the corresponding element.</p>
+<p>There are four built-in concrete types which implement <code>IXmlEncryptor</code>:</p>
+<ul>
+<li>
+<p><code>CertificateXmlEncryptor</code></p>
+</li>
+<li>
+<p><code>DpapiNGXmlEncryptor</code></p>
+</li>
+<li>
+<p><code>DpapiXmlEncryptor</code></p>
+</li>
+<li>
+<p><code>NullXmlEncryptor</code></p>
+</li>
+</ul>
+<p>See the key encryption at rest document for more information.</p>
+<p>To change the default key-encryption-at-rest mechanism application-wide, register a custom <code>IXmlEncryptor</code> instance:</p>
+<pre><code class="language-csharp">services.Configure&lt;KeyManagementOptions&gt;(options =&gt; options.XmlEncryptor = new MyCustomXmlEncryptor());
+</code></pre>
+<h2><a href="#ixmldecryptor" aria-hidden="true" class="anchor" id="ixmldecryptor"></a><code>IXmlDecryptor</code></h2>
+<p>The <code>IXmlDecryptor</code> interface represents a type that knows how to decrypt an <code>XElement</code> that was enciphered via an <code>IXmlEncryptor</code>. It exposes a single API:</p>
+<ul>
+<li><code>Decrypt(XElement encryptedElement) : XElement</code></li>
+</ul>
+<p>The <code>Decrypt</code> method undoes the encryption performed by <code>IXmlEncryptor.Encrypt</code>. Generally, each concrete <code>IXmlEncryptor</code> implementation will have a corresponding concrete <code>IXmlDecryptor</code> implementation.</p>
+<p>Types which implement <code>IXmlDecryptor</code> should have one of the following two public constructors:</p>
+<ul>
+<li>
+<p><code>.ctor(IServiceProvider)</code></p>
+</li>
+<li>
+<p><code>.ctor()</code></p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+The <code>IServiceProvider</code> passed to the constructor may be null.</p>
+</blockquote>
+<h2><a href="#ikeyescrowsink" aria-hidden="true" class="anchor" id="ikeyescrowsink"></a><code>IKeyEscrowSink</code></h2>
+<p>The <code>IKeyEscrowSink</code> interface represents a type that can perform escrow of sensitive information. Recall that serialized descriptors might contain sensitive information (such as cryptographic material), and this is what led to the introduction of the <code>IXmlEncryptor</code> type in the first place. However, accidents happen, and key rings can be deleted or become corrupted.</p>
+<p>The escrow interface provides an emergency escape hatch, allowing access to the raw serialized XML before it's transformed by any configured <code>IXmlEncryptor</code>. The interface exposes a single API:</p>
+<ul>
+<li><code>Store(Guid keyId, XElement element)</code></li>
+</ul>
+<p>It's up to the <code>IKeyEscrowSink</code> implementation to handle the provided element in a secure manner consistent with business policy. One possible implementation could be for the escrow sink to encrypt the XML element using a known corporate X.509 certificate where the certificate's private key has been escrowed; the <code>CertificateXmlEncryptor</code> type can assist with this. The <code>IKeyEscrowSink</code> implementation is also responsible for persisting the provided element appropriately.</p>
+<p>By default no escrow mechanism is enabled, though server administrators can configure this globally. It can also be configured programmatically via the <code>IDataProtectionBuilder.AddKeyEscrowSink</code> method as shown in the sample below. The <code>AddKeyEscrowSink</code> method overloads mirror the <code>IServiceCollection.AddSingleton</code> and <code>IServiceCollection.AddInstance</code> overloads, as <code>IKeyEscrowSink</code> instances are intended to be singletons. If multiple <code>IKeyEscrowSink</code> instances are registered, each one will be called during key generation, so keys can be escrowed to multiple mechanisms simultaneously.</p>
+<p>There's no API to read material from an <code>IKeyEscrowSink</code> instance. This is consistent with the design theory of the escrow mechanism: it's intended to make the key material accessible to a trusted authority, and since the application is itself not a trusted authority, it shouldn't have access to its own escrowed material.</p>
+<p>The following sample code demonstrates creating and registering an <code>IKeyEscrowSink</code> where keys are escrowed such that only members of &quot;CONTOSODomain Admins&quot; can recover them.</p>
+<blockquote>
+<p class='note'>Note
+To run this sample, you must be on a domain-joined Windows 8 / Windows Server 2012 machine, and the domain controller must be Windows Server 2012 or later.</p>
+</blockquote>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using System.Xml.Linq;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.XmlEncryption;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(@&quot;c:\temp-keys&quot;))
+            .ProtectKeysWithDpapi()
+            .AddKeyEscrowSink(sp =&gt; new MyKeyEscrowSink(sp));
+        var services = serviceCollection.BuildServiceProvider();
+
+        // get a reference to the key manager and force a new key to be generated
+        Console.WriteLine(&quot;Generating new key...&quot;);
+        var keyManager = services.GetService&lt;IKeyManager&gt;();
+        keyManager.CreateNewKey(
+            activationDate: DateTimeOffset.Now,
+            expirationDate: DateTimeOffset.Now.AddDays(7));
+    }
+
+    // A key escrow sink where keys are escrowed such that they
+    // can be read by members of the CONTOSO\Domain Admins group.
+    private class MyKeyEscrowSink : IKeyEscrowSink
+    {
+        private readonly IXmlEncryptor _escrowEncryptor;
+
+        public MyKeyEscrowSink(IServiceProvider services)
+        {
+            // Assuming I'm on a machine that's a member of the CONTOSO
+            // domain, I can use the Domain Admins SID to generate an
+            // encrypted payload that only they can read. Sample SID from
+            // https://technet.microsoft.com/library/cc778824(v=ws.10).aspx.
+            _escrowEncryptor = new DpapiNGXmlEncryptor(
+                &quot;SID=S-1-5-21-1004336348-1177238915-682003330-512&quot;,
+                DpapiNGProtectionDescriptorFlags.None,
+                new LoggerFactory());
+        }
+
+        public void Store(Guid keyId, XElement element)
+        {
+            // Encrypt the key element to the escrow encryptor.
+            var encryptedXmlInfo = _escrowEncryptor.Encrypt(element);
+
+            // A real implementation would save the escrowed key to a
+            // write-only file share or some other stable storage, but
+            // in this sample we'll just write it out to the console.
+            Console.WriteLine($&quot;Escrowing key {keyId}&quot;);
+            Console.WriteLine(encryptedXmlInfo.EncryptedElement);
+
+            // Note: We cannot read the escrowed key material ourselves.
+            // We need to get a member of CONTOSO\Domain Admins to read
+            // it for us in the event we need to recover it.
+        }
+    }
+}
+
+/*
+ * SAMPLE OUTPUT
+ *
+ * Generating new key...
+ * Escrowing key 38e74534-c1b8-4b43-aea1-79e856a822e5
+ * &lt;encryptedKey&gt;
+ *   &lt;!-- This key is encrypted with Windows DPAPI-NG. --&gt;
+ *   &lt;!-- Rule: SID=S-1-5-21-1004336348-1177238915-682003330-512 --&gt;
+ *   &lt;value&gt;MIIIfAYJKoZIhvcNAQcDoIIIbTCCCGkCAQ...T5rA4g==&lt;/value&gt;
+ * &lt;/encryptedKey&gt;
+ */
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/extensibility/key-management?view=aspnetcore-8.0">Key management extensibility in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
