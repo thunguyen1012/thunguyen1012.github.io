@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - SameSite cookies | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - SameSite cookies</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p><code>SameSite</code> is an IETF draft standard designed to provide some protection against cross-site request forgery (CSRF) attacks. Originally drafted in 2016, the draft standard was updated in 2019. The updated standard is not backward compatible with the previous standard, with the following being the most noticeable differences:</p>
+<ul>
+<li>
+<p>Cookies without <code>SameSite</code> header are treated as <code>SameSite=Lax</code> by default.</p>
+</li>
+<li>
+<p><code>SameSite=None</code> must be used to allow cross-site cookie use.</p>
+</li>
+<li>
+<p>Cookies that assert <code>SameSite=None</code> must also be marked as <code>Secure</code>.</p>
+</li>
+<li>
+<p>Applications that use <iframe> may experience issues with <code>sameSite=Lax</code> or <code>sameSite=Strict</code> cookies because <iframe> is treated as cross-site scenarios.</p>
+</li>
+<li>
+<p>The value <code>SameSite=None</code> is not allowed by the 2016 standard and causes some implementations to treat such cookies as <code>SameSite=Strict</code>. See Supporting older browsers in this document.</p>
+</li>
+</ul>
+<p>The <code>SameSite=Lax</code> setting works for most application cookies. Some forms of authentication like OpenID Connect (OIDC) and WS-Federation default to POST based redirects. The POST based redirects trigger the <code>SameSite</code> browser protections, so <code>SameSite</code> is disabled for these components. Most OAuth logins are not affected due to differences in how the request flows.</p>
+<p>Each ASP.NET Core component that emits cookies needs to decide if <code>SameSite</code> is appropriate.</p>
+<h2><a href="#samesite-and-identity" aria-hidden="true" class="anchor" id="samesite-and-identity"></a><code>SameSite</code> and <code>Identity</code></h2>
+<p>ASP.NET Core <code>Identity</code> is largely unaffected by <code>SameSite</code> cookies except for advanced scenarios like <code>IFrames</code> or <code>OpenIdConnect</code> integration.</p>
+<p>When using <code>Identity</code>, do not add any cookie providers or call  <code>services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)</code>, <code>Identity</code> takes care of that.</p>
+<h2><a href="#samesite-test-sample-code" aria-hidden="true" class="anchor" id="samesite-test-sample-code"></a><code>SameSite</code> test sample code</h2>
+<table><thead>
+<tr>
+<th>Sample</th>
+<th>Document</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/blowdart/AspNetSameSiteSamples/tree/master/AspNetCore31RazorPages" data-linktype="external">.NET Core Razor Pages</a></td>
+<td><a href="samesite/rp31?view=aspnetcore-8.0" data-linktype="relative-path">ASP.NET Core 3.1 Razor Pages ```SameSite``` cookie sample</a></td>
+</tr>
+</tbody></table>
+<h2><a href="#net-core-support-for-the-samesite-attribute" aria-hidden="true" class="anchor" id="net-core-support-for-the-samesite-attribute"></a>.NET Core support for the sameSite attribute</h2>
+<pre><code class="language-csharp">var cookieOptions = new CookieOptions
+    {
+        // Set the secure flag, which Chrome's changes will require for SameSite none.
+        // Note this will also require you to be running on HTTPS.
+        Secure = true,
+
+        // Set the cookie to HTTP only which is good practice unless you really do need
+        // to access it client side in scripts.
+        HttpOnly = true,
+
+        // Add the SameSite attribute, this will emit the attribute with a value of none.
+        SameSite = SameSiteMode.None
+
+        // The client should follow its default cookie policy.
+        // SameSite = SameSiteMode.Unspecified
+    };
+
+    // Add the cookie to the response cookie collection
+    Response.Cookies.Append(&quot;MyCookie&quot;, &quot;cookieValue&quot;, cookieOptions);
+}
+</code></pre>
+<h2><a href="#api-usage-with-samesite" aria-hidden="true" class="anchor" id="api-usage-with-samesite"></a>API usage with <code>SameSite</code></h2>
+<pre><code class="language-csharp">HttpContext.Response.Cookies.Append(
+                     &quot;name&quot;, &quot;value&quot;,
+                     new CookieOptions() { SameSite = SameSiteMode.Lax });
+</code></pre>
+<table><thead>
+<tr>
+<th>Component</th>
+<th>cookie</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.cookiebuilder" class="no-loc" data-linktype="absolute-path">CookieBuilder</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.cookiebuilder.samesite#microsoft-aspnetcore-http-cookiebuilder-samesite" class="no-loc" data-linktype="absolute-path">SameSite</a></td>
+<td><code>Unspecified</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.httpcontext.session#microsoft-aspnetcore-http-httpcontext-session" class="no-loc" data-linktype="absolute-path">Session</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.sessionoptions.cookie#microsoft-aspnetcore-builder-sessionoptions-cookie" data-linktype="absolute-path">SessionOptions.Cookie</a></td>
+<td><code>Lax</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.viewfeatures.cookietempdataprovider" class="no-loc" data-linktype="absolute-path">CookieTempDataProvider</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.mvc.cookietempdataprovideroptions.cookie#microsoft-aspnetcore-mvc-cookietempdataprovideroptions-cookie" data-linktype="absolute-path">CookieTempDataProviderOptions.Cookie</a></td>
+<td><code>Lax</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.antiforgery.iantiforgery" class="no-loc" data-linktype="absolute-path">IAntiforgery</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.antiforgery.antiforgeryoptions.cookie#microsoft-aspnetcore-antiforgery-antiforgeryoptions-cookie" data-linktype="absolute-path">AntiforgeryOptions.Cookie</a></td>
+<td><code>Strict</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.dependencyinjection.cookieextensions.addcookie" data-linktype="absolute-path">Cookie Authentication</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.cookieauthenticationoptions.cookiename#microsoft-aspnetcore-builder-cookieauthenticationoptions-cookiename" data-linktype="absolute-path">CookieAuthenticationOptions.Cookie</a></td>
+<td><code>Lax</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.dependencyinjection.twitterextensions.addtwitter" class="no-loc" data-linktype="absolute-path">AddTwitter</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.authentication.twitter.twitteroptions.statecookie#microsoft-aspnetcore-authentication-twitter-twitteroptions-statecookie" data-linktype="absolute-path">TwitterOptions.StateCookie</a></td>
+<td><code>Lax</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.authentication.remoteauthenticationhandler-1" class="no-loc" data-linktype="absolute-path">RemoteAuthenticationHandler&lt;TOptions&gt;</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.authentication.remoteauthenticationoptions.correlationcookie#microsoft-aspnetcore-authentication-remoteauthenticationoptions-correlationcookie" data-linktype="absolute-path">RemoteAuthenticationOptions.CorrelationCookie</a></td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.extensions.dependencyinjection.openidconnectextensions.addopenidconnect" class="no-loc" data-linktype="absolute-path">AddOpenIdConnect</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.authentication.openidconnect.openidconnectoptions.noncecookie#microsoft-aspnetcore-authentication-openidconnect-openidconnectoptions-noncecookie" data-linktype="absolute-path">OpenIdConnectOptions.NonceCookie</a></td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.iresponsecookies.append" data-linktype="absolute-path">HttpContext.Response.Cookies.Append</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.http.cookieoptions" class="no-loc" data-linktype="absolute-path">CookieOptions</a></td>
+<td><code>Unspecified</code></td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p>Redefines the behavior of <code>SameSiteMode.None</code> to emit <code>SameSite=None</code></p>
+</li>
+<li>
+<p>Adds a new value <code>SameSiteMode.Unspecified</code> to omit the <code>SameSite</code> attribute.</p>
+</li>
+<li>
+<p>All cookies APIs default to <code>Unspecified</code>. Some components that use cookies set values more specific to their scenarios. See the table above for examples.</p>
+</li>
+<li>
+<p><code>CookieOptions</code> used with HttpContext.Response.Cookies.Append</p>
+</li>
+<li>
+<p>CookieBuilder  used as a factory for <code>CookieOptions</code></p>
+</li>
+<li>
+<p>CookiePolicyOptions.MinimumSameSitePolicy</p>
+</li>
+</ul>
+<h2><a href="#history-and-changes" aria-hidden="true" class="anchor" id="history-and-changes"></a>History and changes</h2>
+<ul>
+<li>
+<p>Is not backwards compatible with the 2016 draft. For more information, see Supporting older browsers in this document.</p>
+</li>
+<li>
+<p>Specifies cookies are treated as <code>SameSite=Lax</code> by default.</p>
+</li>
+<li>
+<p>Specifies cookies that explicitly assert <code>SameSite=None</code> in order to enable cross-site delivery should be marked as <code>Secure</code>. <code>None</code> is a new entry to opt out.</p>
+</li>
+<li>
+<p>Is supported by patches issued for ASP.NET Core 2.1, 2.2, and 3.0. ASP.NET Core 3.1 and later has additional <code>SameSite</code> support.</p>
+</li>
+<li>
+<p>Is scheduled to be enabled by Chrome by default in Feb 2020. Browsers started moving to this standard in 2019.</p>
+</li>
+</ul>
+<h2><a href="#apis-impacted-by-the-change-from-the-2016-samesite-draft-standard-to-the-2019-draft-standard" aria-hidden="true" class="anchor" id="apis-impacted-by-the-change-from-the-2016-samesite-draft-standard-to-the-2019-draft-standard"></a>APIs impacted by the change from the 2016 <code>SameSite</code> draft standard to the 2019 draft standard</h2>
+<ul>
+<li>
+<p>Http.SameSiteMode</p>
+</li>
+<li>
+<p>CookieOptions.SameSite</p>
+</li>
+<li>
+<p>CookieBuilder.SameSite</p>
+</li>
+<li>
+<p>CookiePolicyOptions.MinimumSameSitePolicy</p>
+</li>
+<li>
+<p>Microsoft.Net.Http.Headers.SameSiteMode</p>
+</li>
+<li>
+<p>Microsoft.Net.Http.Headers.SetCookieHeaderValue.SameSite</p>
+</li>
+</ul>
+<h2><a href="#supporting-older-browsers" aria-hidden="true" class="anchor" id="supporting-older-browsers"></a>Supporting older browsers</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure&lt;CookiePolicyOptions&gt;(options =&gt;
+{
+    options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
+    options.OnAppendCookie = cookieContext =&gt;
+        CheckSameSite(cookieContext.Context, cookieContext.CookieOptions);
+    options.OnDeleteCookie = cookieContext =&gt;
+        CheckSameSite(cookieContext.Context, cookieContext.CookieOptions);
+});
+
+void CheckSameSite(HttpContext httpContext, CookieOptions options)
+{
+    if (options.SameSite == SameSiteMode.None)
+    {
+        var userAgent = httpContext.Request.Headers[&quot;User-Agent&quot;].ToString();
+        if (MyUserAgentDetectionLib.DisallowsSameSiteNone(userAgent))
+        {
+            options.SameSite = SameSiteMode.Unspecified;
+        }
+    }
+}
+
+    builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseCookiePolicy();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure&lt;CookiePolicyOptions&gt;(options =&gt;
+{
+    options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
+    options.OnAppendCookie = cookieContext =&gt;
+        CheckSameSite(cookieContext.Context, cookieContext.CookieOptions);
+    options.OnDeleteCookie = cookieContext =&gt;
+        CheckSameSite(cookieContext.Context, cookieContext.CookieOptions);
+});
+
+void CheckSameSite(HttpContext httpContext, CookieOptions options)
+{
+    if (options.SameSite == SameSiteMode.None)
+    {
+        var userAgent = httpContext.Request.Headers[&quot;User-Agent&quot;].ToString();
+        if (MyUserAgentDetectionLib.DisallowsSameSiteNone(userAgent))
+        {
+            options.SameSite = SameSiteMode.Unspecified;
+        }
+    }
+}
+
+    builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseCookiePolicy();
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">if (MyUserAgentDetectionLib.DisallowsSameSiteNone(userAgent))
+{
+    options.SameSite = SameSiteMode.Unspecified;
+}
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+The following code is for demonstration only:</p>
+</blockquote>
+<p>It should not be considered complete.
+It is not maintained or supported.</p>
+<ul>
+<li>
+<p>It should not be considered complete.</p>
+</li>
+<li>
+<p>It is not maintained or supported.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public static bool DisallowsSameSiteNone(string userAgent)
+{
+    // Check if a null or empty string has been passed in, since this
+    // will cause further interrogation of the useragent to fail.
+     if (String.IsNullOrWhiteSpace(userAgent))
+        return false;
+    
+    // Cover all iOS based browsers here. This includes:
+    // - Safari on iOS 12 for iPhone, iPod Touch, iPad
+    // - WkWebview on iOS 12 for iPhone, iPod Touch, iPad
+    // - Chrome on iOS 12 for iPhone, iPod Touch, iPad
+    // All of which are broken by SameSite=None, because they use the iOS networking
+    // stack.
+    if (userAgent.Contains(&quot;CPU iPhone OS 12&quot;) ||
+        userAgent.Contains(&quot;iPad; CPU OS 12&quot;))
+    {
+        return true;
+    }
+
+    // Cover Mac OS X based browsers that use the Mac OS networking stack. 
+    // This includes:
+    // - Safari on Mac OS X.
+    // This does not include:
+    // - Chrome on Mac OS X
+    // Because they do not use the Mac OS networking stack.
+    if (userAgent.Contains(&quot;Macintosh; Intel Mac OS X 10_14&quot;) &amp;&amp;
+        userAgent.Contains(&quot;Version/&quot;) &amp;&amp; userAgent.Contains(&quot;Safari&quot;))
+    {
+        return true;
+    }
+
+    // Cover Chrome 50-69, because some versions are broken by SameSite=None, 
+    // and none in this range require it.
+    // Note: this covers some pre-Chromium Edge versions, 
+    // but pre-Chromium Edge does not require SameSite=None.
+    if (userAgent.Contains(&quot;Chrome/5&quot;) || userAgent.Contains(&quot;Chrome/6&quot;))
+    {
+        return true;
+    }
+
+    return false;
+}
+</code></pre>
+<h2><a href="#test-apps-for-samesite-problems" aria-hidden="true" class="anchor" id="test-apps-for-samesite-problems"></a>Test apps for <code>SameSite</code> problems</h2>
+<ul>
+<li>
+<p>Test the interaction on multiple browsers.</p>
+</li>
+<li>
+<p>Apply the CookiePolicy browser detection and mitigation discussed in this document.</p>
+</li>
+</ul>
+<h3><a href="#test-with-chrome" aria-hidden="true" class="anchor" id="test-with-chrome"></a>Test with Chrome</h3>
+<ul>
+<li>
+<p>Chromium 76 Win64</p>
+</li>
+<li>
+<p>Chromium 74 Win64</p>
+</li>
+</ul>
+<h3><a href="#test-with-safari" aria-hidden="true" class="anchor" id="test-with-safari"></a>Test with Safari</h3>
+<h3><a href="#test-with-firefox" aria-hidden="true" class="anchor" id="test-with-firefox"></a>Test with Firefox</h3>
+<h3><a href="#test-with-edge-browser" aria-hidden="true" class="anchor" id="test-with-edge-browser"></a>Test with Edge browser</h3>
+<h3><a href="#test-with-edge-chromium)" aria-hidden="true" class="anchor" id="test-with-edge-chromium)"></a>Test with Edge (Chromium)</h3>
+<h3><a href="#test-with-electron" aria-hidden="true" class="anchor" id="test-with-electron"></a>Test with Electron</h3>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Chromium Blog:Developers: Get Ready for New <code>SameSite=None</code>; <code>Secure</code> Cookie Settings</p>
+</li>
+<li>
+<p><code>SameSite</code> cookies explained</p>
+</li>
+<li>
+<p>November 2019 Patches</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Sample</th>
+<th>Document</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/blowdart/AspNetSameSiteSamples/tree/master/AspNetCore31RazorPages" data-linktype="external">.NET Core Razor Pages</a></td>
+<td><a href="samesite/rp31?view=aspnetcore-8.0" data-linktype="relative-path">ASP.NET Core 3.1 Razor Pages ```SameSite``` cookie sample</a></td>
+</tr>
+</tbody></table>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/samesite?view=aspnetcore-8.0">Work with <code>SameSite</code> cookies in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

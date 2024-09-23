@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Prevent Cross-Site Scripting (XSS) | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Prevent Cross-Site Scripting (XSS)</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Researchers at the University of British Columbia have discovered and fixed a cross-site scripting (XSS) vulnerability in the UBC website.</p>
+<p>Web APIs that return data in the form of HTML Pages can trigger XSS attacks in their client apps if they don't properly accept user input, depending on how much trust the client app places in the API.</p>
+<p>A vulnerability in a web API has been discovered that could allow a malicious third-party to gain access to the user's personal data.</p>
+<h2><a href="#protecting-your-application-against-xss" aria-hidden="true" class="anchor" id="protecting-your-application-against-xss"></a>Protecting your application against XSS</h2>
+<p>At a basic level, XSS works by tricking your application into inserting a <script> tag into your rendered page, or by inserting an On* event into an element. Developers should use the following prevention steps to avoid introducing XSS into their applications:</p>
+<ul>
+<li>
+<p>Never put untrusted data into your HTML input, unless you follow the rest of the steps below. Untrusted data is any data that may be controlled by an attacker, such as HTML form inputs, query strings, HTTP headers, or even data sourced from a database, as an attacker may be able to breach your database even if they can't breach your application.</p>
+</li>
+<li>
+<p>Before putting untrusted data inside an HTML element, ensure it's HTML encoded. HTML encoding takes characters such as &lt; and changes them into a safe form like &lt;</p>
+</li>
+<li>
+<p>Before putting untrusted data into an HTML attribute, ensure it's HTML encoded. HTML attribute encoding is a superset of HTML encoding and encodes additional characters such as &quot; and &quot;.</p>
+</li>
+<li>
+<p>Before putting untrusted data into JavaScript, place the data in an HTML element whose contents you retrieve at runtime. If this isn't possible, then ensure the data is JavaScript encoded. JavaScript encoding takes dangerous characters for JavaScript and replaces them with their hex, for example, &lt; would be encoded as <code>\u003C</code>.</p>
+</li>
+<li>
+<p>Before putting untrusted data into a URL query string ensure it's URL encoded.</p>
+</li>
+</ul>
+<h2><a href="#html-encoding-using-razor" aria-hidden="true" class="anchor" id="html-encoding-using-razor"></a>HTML Encoding using Razor</h2>
+<p>In our series of articles on how to use MVC, we're going to look at how to encode input using the Razor engine.</p>
+<p>Take the following Razor view:</p>
+<pre><code class="language-cshtml">@{
+    var untrustedInput = &quot;&lt;\&quot;123\&quot;&gt;&quot;;
+}
+
+@untrustedInput
+</code></pre>
+<p>This view outputs the contents of the untrustedInput variable.</p>
+<pre><code class="language-html">&amp;lt;&amp;quot;123&amp;quot;&amp;gt;
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+ASP.NET Core MVC provides an <code>HtmlString</code> class which isn't automatically encoded upon output. This should never be used in combination with untrusted input as this will expose an XSS vulnerability.</p>
+</blockquote>
+<h2><a href="#javascript-encoding-using-razor" aria-hidden="true" class="anchor" id="javascript-encoding-using-razor"></a>JavaScript Encoding using Razor</h2>
+<p>In this article I will show you how to insert values into JavaScript.</p>
+<pre><code class="language-cshtml">@{
+    var untrustedInput = &quot;&lt;script&gt;alert(1)&lt;/script&gt;&quot;;
+}
+
+&lt;div id=&quot;injectedData&quot;
+     data-untrustedinput=&quot;@untrustedInput&quot; /&gt;
+
+&lt;div id=&quot;scriptedWrite&quot; /&gt;
+&lt;div id=&quot;scriptedWrite-html5&quot; /&gt;
+
+&lt;script&gt;
+    var injectedData = document.getElementById(&quot;injectedData&quot;);
+
+    // All clients
+    var clientSideUntrustedInputOldStyle =
+        injectedData.getAttribute(&quot;data-untrustedinput&quot;);
+
+    // HTML 5 clients only
+    var clientSideUntrustedInputHtml5 =
+        injectedData.dataset.untrustedinput;
+
+    // Put the injected, untrusted data into the scriptedWrite div tag.
+    // Do NOT use document.write() on dynamically generated data as it
+    // can lead to XSS.
+
+    document.getElementById(&quot;scriptedWrite&quot;).innerText += clientSideUntrustedInputOldStyle;
+
+    // Or you can use createElement() to dynamically create document elements
+    // This time we're using textContent to ensure the data is properly encoded.
+    var x = document.createElement(&quot;div&quot;);
+    x.textContent = clientSideUntrustedInputHtml5;
+    document.body.appendChild(x);
+
+    // You can also use createTextNode on an element to ensure data is properly encoded.
+    var y = document.createElement(&quot;div&quot;);
+    y.appendChild(document.createTextNode(clientSideUntrustedInputHtml5));
+    document.body.appendChild(y);
+
+&lt;/script&gt;
+</code></pre>
+<p>The preceding markup generates the following HTML:</p>
+<pre><code class="language-html">&lt;div id=&quot;injectedData&quot;
+     data-untrustedinput=&quot;&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;&quot; /&gt;
+
+&lt;div id=&quot;scriptedWrite&quot; /&gt;
+&lt;div id=&quot;scriptedWrite-html5&quot; /&gt;
+
+&lt;script&gt;
+    var injectedData = document.getElementById(&quot;injectedData&quot;);
+
+    // All clients
+    var clientSideUntrustedInputOldStyle =
+        injectedData.getAttribute(&quot;data-untrustedinput&quot;);
+
+    // HTML 5 clients only
+    var clientSideUntrustedInputHtml5 =
+        injectedData.dataset.untrustedinput;
+
+    // Put the injected, untrusted data into the scriptedWrite div tag.
+    // Do NOT use document.write() on dynamically generated data as it can
+    // lead to XSS.
+
+    document.getElementById(&quot;scriptedWrite&quot;).innerText += clientSideUntrustedInputOldStyle;
+
+    // Or you can use createElement() to dynamically create document elements
+    // This time we're using textContent to ensure the data is properly encoded.
+    var x = document.createElement(&quot;div&quot;);
+    x.textContent = clientSideUntrustedInputHtml5;
+    document.body.appendChild(x);
+
+    // You can also use createTextNode on an element to ensure data is properly encoded.
+    var y = document.createElement(&quot;div&quot;);
+    y.appendChild(document.createTextNode(clientSideUntrustedInputHtml5));
+    document.body.appendChild(y);
+
+&lt;/script&gt;
+</code></pre>
+<p>The preceding code generates the following output:</p>
+<blockquote>
+<p class='warning'>Warning
+Do NOT concatenate untrusted input in JavaScript to create DOM elements or use document.write() on dynamically generated content.
+Use one of the following approaches to prevent code from being exposed to DOM-based XSS:</p>
+</blockquote>
+<p>createElement() and assign property values with appropriate methods or properties such as node.textContent= or node.InnerText=.
+document.CreateTextNode() and append it in the appropriate DOM location.
+element.SetAttribute()
+element[attribute]=</p>
+<ul>
+<li>
+<p>createElement() and assign property values with appropriate methods or properties such as node.textContent= or node.InnerText=.</p>
+</li>
+<li>
+<p>document.CreateTextNode() and append it in the appropriate DOM location.</p>
+</li>
+<li>
+<p>element.SetAttribute()</p>
+</li>
+<li>
+<p>element[attribute]=</p>
+</li>
+</ul>
+<h2><a href="#accessing-encoders-in-code" aria-hidden="true" class="anchor" id="accessing-encoders-in-code"></a>Accessing encoders in code</h2>
+<p>The HTML, JavaScript and URL encoders are available to your code in two ways:</p>
+<ul>
+<li>
+<p>Inject them via dependency injection.</p>
+</li>
+<li>
+<p>Use the default encoders contained in the <code>System.Text.Encodings.Web</code> namespace.</p>
+</li>
+</ul>
+<p>When using the default encoders, then any customizations applied to character ranges to be treated as safe won't take effect. The default encoders use the safest encoding rules possible.</p>
+<p>To use the configurable encoders via DI your constructors should take an HtmlEncoder, JavaScriptEncoder and <code>UrlEncoder</code> parameter as appropriate. For example;</p>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    HtmlEncoder _htmlEncoder;
+    JavaScriptEncoder _javaScriptEncoder;
+    UrlEncoder _urlEncoder;
+
+    public HomeController(HtmlEncoder htmlEncoder,
+                          JavaScriptEncoder javascriptEncoder,
+                          UrlEncoder urlEncoder)
+    {
+        _htmlEncoder = htmlEncoder;
+        _javaScriptEncoder = javascriptEncoder;
+        _urlEncoder = urlEncoder;
+    }
+}
+</code></pre>
+<h2><a href="#encoding-url-parameters" aria-hidden="true" class="anchor" id="encoding-url-parameters"></a>Encoding URL Parameters</h2>
+<p>If you want to build a URL query string with untrusted input as a value use the <code>UrlEncoder</code> to encode the value. For example,</p>
+<pre><code class="language-csharp">var example = &quot;\&quot;Quoted Value with spaces and &amp;\&quot;&quot;;
+var encodedValue = _urlEncoder.Encode(example);
+</code></pre>
+<p>After encoding the encodedValue variable contains <code>%22Quoted%20Value%20with%20spaces%20and%20%26%22</code>. Spaces, quotes, punctuation and other unsafe characters are percent encoded to their hexadecimal value, for example a space character will become %20.</p>
+<blockquote>
+<p class='warning'>Warning
+Don't use untrusted input as part of a URL path. Always pass untrusted input as a query string value.</p>
+</blockquote>
+<h2><a href="#customizing-the-encoders" aria-hidden="true" class="anchor" id="customizing-the-encoders"></a>Customizing the Encoders</h2>
+<p>Razor uses encoders to output its strings.</p>
+<p>If your web site uses a lot of non-English characters, you might want to consider changing the language you use.</p>
+<pre><code class="language-html">&lt;p&gt;This link text is in Chinese: @Html.ActionLink(&quot;汉语/漢語&quot;, &quot;Index&quot;)&lt;/p&gt;
+</code></pre>
+<pre><code class="language-html">&lt;p&gt;This link text is in Chinese: &lt;a href=&quot;/&quot;&gt;&amp;#x6C49;&amp;#x8BED;/&amp;#x6F22;&amp;#x8A9E;&lt;/a&gt;&lt;/p&gt;
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddSingleton&lt;HtmlEncoder&gt;(
+     HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.BasicLatin,
+                                               UnicodeRanges.CjkUnifiedIdeographs }));
+</code></pre>
+<p>This example widens the safe list to include the Unicode Range CjkUnifiedIdeographs. The rendered output would now become</p>
+<pre><code class="language-html">&lt;p&gt;This link text is in Chinese: &lt;a href=&quot;/&quot;&gt;汉语/漢語&lt;/a&gt;&lt;/p&gt;
+</code></pre>
+<p>There are two ways to find a safe list.</p>
+<blockquote>
+<p class='note'>Note
+Customization of the safe list only affects encoders sourced via DI. If you directly access an encoder via <code>System.Text.Encodings.Web.*Encoder.Default</code> then the default, Basic Latin only safelist will be used.</p>
+</blockquote>
+<h2><a href="#where-should-encoding-take-place" aria-hidden="true" class="anchor" id="where-should-encoding-take-place"></a>Where should encoding take place?</h2>
+<p>An encoder is a piece of software that converts data into a format that can be stored in a database.</p>
+<h2><a href="#validation-as-an-xss-prevention-technique" aria-hidden="true" class="anchor" id="validation-as-an-xss-prevention-technique"></a>Validation as an XSS prevention technique</h2>
+<p>In our series of articles on cross-site scripting (XSS), we take a look at how to limit the impact of XSS attacks on websites.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/cross-site-scripting?view=aspnetcore-8.0">Prevent Cross-Site Scripting (XSS) in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

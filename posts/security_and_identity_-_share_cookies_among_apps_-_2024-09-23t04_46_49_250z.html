@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Share cookies among apps | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Share cookies among apps</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The ASP.NET Core cookie protection stack allows web apps to share cookie authentication tickets.</p>
+<ul>
+<li>
+<p>The authentication cookie name is set to a common value of <code>.AspNet.SharedCookie</code>.</p>
+</li>
+<li>
+<p>The <code>AuthenticationType</code> is set to <code>Identity.Application</code> either explicitly or by default.</p>
+</li>
+<li>
+<p>A common app name, <code>SharedCookieApp</code>, is used to enable the data protection system to share data protection keys.</p>
+</li>
+<li>
+<p><code>Identity.Application</code> is used as the authentication scheme. Whatever scheme is used, it must be used consistently within and across the shared cookie apps either as the default scheme or by explicitly setting it. The scheme is used when encrypting and decrypting cookies, so a consistent scheme must be used across apps.</p>
+</li>
+<li>
+<p>A common data protection key storage location is used.</p>
+<ul>
+<li>
+<p>In ASP.NET Core apps, PersistKeysToFileSystem is used to set the key storage location.</p>
+</li>
+<li>
+<p>In .NET Framework apps, Cookie Authentication Middleware uses an implementation of <code>DataProtectionProvider</code>. <code>DataProtectionProvider</code> provides data protection services for the encryption and decryption of authentication cookie payload data. The <code>DataProtectionProvider</code> instance is isolated from the data protection system used by other parts of the app. <code>DataProtectionProvider.Create(System.IO.DirectoryInfo, Action&lt;IDataProtectionBuilder&gt;)</code> accepts a DirectoryInfo to specify the location for data protection key storage.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>DataProtectionProvider</code> requires the Microsoft.AspNetCore.DataProtection.Extensions NuGet package:</p>
+<ul>
+<li>In .NET Framework apps, add a package reference to Microsoft.AspNetCore.DataProtection.Extensions.</li>
+</ul>
+</li>
+<li>
+<p>SetApplicationName sets the common app name.</p>
+</li>
+</ul>
+<h2><a href="#share-authentication-cookies-with-aspnet-core-identity" aria-hidden="true" class="anchor" id="share-authentication-cookies-with-aspnet-core-identity"></a>Share authentication cookies with ASP.NET Core Identity</h2>
+<ul>
+<li>
+<p>Data protection keys and the app name must be shared among apps. A common key storage location is provided to the PersistKeysToFileSystem method in the following examples. Use SetApplicationName to configure a common shared app name (SharedCookieApp in the following examples). For more information, see Configure ASP.NET Core Data Protection.</p>
+</li>
+<li>
+<p>Use the ConfigureApplicationCookie extension method to set up the data protection service for cookies.</p>
+</li>
+<li>
+<p>The default authentication type is <code>Identity.Application</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.DataProtection;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@&quot;c:\PATH TO COMMON KEY RING FOLDER&quot;))
+    .SetApplicationName(&quot;SharedCookieApp&quot;);
+
+builder.Services.ConfigureApplicationCookie(options =&gt; {
+    options.Cookie.Name = &quot;.AspNet.SharedCookie&quot;;
+});
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#share-authentication-cookies-without-aspnet-core-identity" aria-hidden="true" class="anchor" id="share-authentication-cookies-without-aspnet-core-identity"></a>Share authentication cookies without ASP.NET Core Identity</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.DataProtection;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@&quot;c:\PATH TO COMMON KEY RING FOLDER&quot;))
+    .SetApplicationName(&quot;SharedCookieApp&quot;);
+
+builder.Services.AddAuthentication(&quot;Identity.Application&quot;)
+    .AddCookie(&quot;Identity.Application&quot;, options =&gt;
+    {
+        options.Cookie.Name = &quot;.AspNet.SharedCookie&quot;;
+    });
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#share-cookies-across-different-base-paths" aria-hidden="true" class="anchor" id="share-cookies-across-different-base-paths"></a>Share cookies across different base paths</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.DataProtection;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@&quot;c:\PATH TO COMMON KEY RING FOLDER&quot;))
+    .SetApplicationName(&quot;SharedCookieApp&quot;);
+
+builder.Services.ConfigureApplicationCookie(options =&gt; {
+    options.Cookie.Name = &quot;.AspNet.SharedCookie&quot;;
+    options.Cookie.Path = &quot;/&quot;;
+});
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#share-cookies-across-subdomains" aria-hidden="true" class="anchor" id="share-cookies-across-subdomains"></a>Share cookies across subdomains</h2>
+<pre><code class="language-csharp">options.Cookie.Domain = &quot;.contoso.com&quot;;
+</code></pre>
+<h2><a href="#encrypt-data-protection-keys-at-rest" aria-hidden="true" class="anchor" id="encrypt-data-protection-keys-at-rest"></a>Encrypt data protection keys at rest</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.DataProtection;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddDataProtection()
+    .ProtectKeysWithCertificate(&quot;{CERTIFICATE THUMBPRINT}&quot;);
+</code></pre>
+<h2><a href="#use-a-common-user-database" aria-hidden="true" class="anchor" id="use-a-common-user-database"></a>Use a common user database</h2>
+<h2><a href="#application-name-change" aria-hidden="true" class="anchor" id="application-name-change"></a>Application name change</h2>
+<h2><a href="#share-authentication-cookies-between-aspnet-4.x-and-asp.net-core-apps" aria-hidden="true" class="anchor" id="share-authentication-cookies-between-aspnet-4.x-and-asp.net-core-apps"></a>Share authentication cookies between ASP.NET 4.x and ASP.NET Core apps</h2>
+<ul>
+<li>
+<p>Using the System.Web adapters' remote authentication feature, which uses the ASP.NET app to sign users in.</p>
+</li>
+<li>
+<p>Configuring the ASP.NET app to use Microsoft.Owin Cookie Authentication Middleware so that authentication cookies are shared with the ASP.NET Core app.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.UseCookieAuthentication(new CookieAuthenticationOptions
+{
+    LoginPath = new PathString(&quot;/Account/Login&quot;),
+    Provider = new CookieAuthenticationProvider
+    { 
+        OnValidateIdentity = SecurityStampValidator.OnValidateIdentity&lt;ApplicationUserManager, ApplicationUser&gt;(
+            validateInterval: TimeSpan.FromMinutes(30),
+            regenerateIdentity: (manager, user) =&gt; user.GenerateUserIdentityAsync(manager))
+    },
+
+    // Settings to configure shared cookie with ASP.NET Core app
+    CookieName = &quot;.AspNet.ApplicationCookie&quot;,
+    AuthenticationType = &quot;Identity.Application&quot;,                
+    TicketDataFormat = new AspNetTicketDataFormat(
+        new DataProtectorShim(
+            DataProtectionProvider.Create(new DirectoryInfo(@&quot;c:\PATH TO COMMON KEY RING FOLDER&quot;),
+            builder =&gt; builder.SetApplicationName(&quot;SharedCookieApp&quot;))
+            .CreateProtector(
+                &quot;Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationMiddleware&quot;,
+                // Must match the Scheme name used in the ASP.NET Core app, i.e. IdentityConstants.ApplicationScheme
+                &quot;Identity.Application&quot;,
+                &quot;v2&quot;))),
+    CookieManager = new ChunkingCookieManager()
+});
+</code></pre>
+<ul>
+<li>
+<p>The cookie name is set to the same name as in the ASP.NET Core app.</p>
+</li>
+<li>
+<p>A data protection provider is created using the same key ring path. Note that in these examples, data protection keys are stored on disk but other data protection providers can be used. For example, Redis or Azure Blob Storage can be used for data protection providers as long as the configuration matches between the apps. See Configure ASP.NET Core Data Protection for more information on persisting data protection keys.</p>
+</li>
+<li>
+<p>The app name is set to be the same as the app name used in the ASP.NET Core app.</p>
+</li>
+<li>
+<p>The authentication type is set to the name of the authentication scheme in the ASP.NET Core app.</p>
+</li>
+<li>
+<p><code>System.Web.Helpers.AntiForgeryConfig.UniqueClaimTypeIdentifier</code> is set to a claim from the ASP.NET Core identity that will be unique to a user.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class ApplicationUser : IdentityUser
+{
+    public async Task&lt;ClaimsIdentity&gt; GenerateUserIdentityAsync(UserManager&lt;ApplicationUser&gt; manager)
+    {
+        // Note the authenticationType must match the one defined in CookieAuthenticationOptions.AuthenticationType
+        var userIdentity = await manager.CreateIdentityAsync(this, &quot;Identity.Application&quot;);
+        
+        // Add custom user claims here
+        return userIdentity;
+    }
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Host ASP.NET Core in a web farm</p>
+</li>
+<li>
+<p>A primer on OWIN cookie authentication middleware for the ASP.NET developer by Brock Allen</p>
+</li>
+<li>
+<p>OWIN Authentication Middleware Architecture by Brock Allen</p>
+</li>
+<li>
+<p>Posts from the ‘OWIN / Katana’ Category by Brock Allen</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/cookie-sharing?view=aspnetcore-8.0">Share authentication cookies among ASP.NET apps</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

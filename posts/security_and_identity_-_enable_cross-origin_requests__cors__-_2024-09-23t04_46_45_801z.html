@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Enable Cross-Origin Requests (CORS) | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Enable Cross-Origin Requests (CORS)</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Is a W3C standard that allows a server to relax the same-origin policy.</p>
+</li>
+<li>
+<p>Is not a security feature, CORS relaxes security. An API is not safer by allowing CORS. For more information, see How CORS works.</p>
+</li>
+<li>
+<p>Allows a server to explicitly allow some cross-origin requests while rejecting others.</p>
+</li>
+<li>
+<p>Is safer and more flexible than earlier techniques, such as JSONP.</p>
+</li>
+</ul>
+<h2><a href="#same-origin" aria-hidden="true" class="anchor" id="same-origin"></a>Same origin</h2>
+<ul>
+<li>
+<p><code>https://example.com/foo.html</code></p>
+</li>
+<li>
+<p><code>https://example.com/bar.html</code></p>
+</li>
+<li>
+<p><code>https://example.net</code>: Different domain</p>
+</li>
+<li>
+<p><code>https://contoso.example.com/foo.html</code>: Different subdomain</p>
+</li>
+<li>
+<p><code>http://example.com/foo.html</code>: Different scheme</p>
+</li>
+<li>
+<p><code>https://example.com:9000/foo.html</code>: Different port</p>
+</li>
+</ul>
+<h2><a href="#enable-cors" aria-hidden="true" class="anchor" id="enable-cors"></a>Enable CORS</h2>
+<ul>
+<li>
+<p>In middleware using a named policy or default policy.</p>
+</li>
+<li>
+<p>Using endpoint routing.</p>
+</li>
+<li>
+<p>With the [EnableCors] attribute.</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+UseCors must be called in the correct order. For more information, see Middleware order. For example, <code>UseCors</code> must be called before <code>UseResponseCaching</code> when using <code>UseResponseCaching</code>.</p>
+</blockquote>
+<h2><a href="#cors-with-named-policy-and-middleware" aria-hidden="true" class="anchor" id="cors-with-named-policy-and-middleware"></a>CORS with named policy and middleware</h2>
+<pre><code class="language-csharp">var  MyAllowSpecificOrigins = &quot;_myAllowSpecificOrigins&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy  =&gt;
+                      {
+                          policy.WithOrigins(&quot;http://example.com&quot;,
+                                              &quot;http://www.contoso.com&quot;);
+                      });
+});
+
+// services.AddResponseCaching();
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors(MyAllowSpecificOrigins);
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Sets the policy name to <code>_myAllowSpecificOrigins</code>. The policy name is arbitrary.</p>
+</li>
+<li>
+<p>Calls the <code>UseCors</code> extension method and specifies the  <code>_myAllowSpecificOrigins</code> CORS policy. <code>UseCors</code> adds the CORS middleware. The call to <code>UseCors</code> must be placed after <code>UseRouting</code>, but before <code>UseAuthorization</code>. For more information, see Middleware order.</p>
+</li>
+<li>
+<p>Calls AddCors with a lambda expression. The lambda takes a CorsPolicyBuilder object. Configuration options, such as <code>WithOrigins</code>, are described later in this article.</p>
+</li>
+<li>
+<p>Enables the <code>_myAllowSpecificOrigins</code> CORS policy for all controller endpoints. See endpoint routing to apply a CORS policy to specific endpoints.</p>
+</li>
+<li>
+<p>When using Response Caching Middleware, call <code>UseCors</code> before <code>UseResponseCaching</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var  MyAllowSpecificOrigins = &quot;_myAllowSpecificOrigins&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy  =&gt;
+                      {
+                          policy.WithOrigins(&quot;http://example.com&quot;,
+                                              &quot;http://www.contoso.com&quot;);
+                      });
+});
+
+// services.AddResponseCaching();
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors(MyAllowSpecificOrigins);
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">var MyAllowSpecificOrigins = &quot;_myAllowSpecificOrigins&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(MyAllowSpecificOrigins,
+                          policy =&gt;
+                          {
+                              policy.WithOrigins(&quot;http://example.com&quot;,
+                                                  &quot;http://www.contoso.com&quot;)
+                                                  .AllowAnyHeader()
+                                                  .AllowAnyMethod();
+                          });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors(MyAllowSpecificOrigins);
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#usecors-and-usestaticfiles-order" aria-hidden="true" class="anchor" id="usecors-and-usestaticfiles-order"></a><code>UseCors</code> and <code>UseStaticFiles</code> order</h2>
+<h3><a href="#cors-with-default-policy-and-middleware" aria-hidden="true" class="anchor" id="cors-with-default-policy-and-middleware"></a>CORS with default policy and middleware</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddDefaultPolicy(
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://example.com&quot;,
+                                &quot;http://www.contoso.com&quot;);
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#enable-cors-with-endpoint-routing" aria-hidden="true" class="anchor" id="enable-cors-with-endpoint-routing"></a>Enable Cors with endpoint routing</h2>
+<pre><code class="language-csharp">var MyAllowSpecificOrigins = &quot;_myAllowSpecificOrigins&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy =&gt;
+                      {
+                          policy.WithOrigins(&quot;http://example.com&quot;,
+                                              &quot;http://www.contoso.com&quot;);
+                      });
+});
+
+builder.Services.AddControllers();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors();
+
+app.UseAuthorization();
+
+app.UseEndpoints(endpoints =&gt;
+{
+    endpoints.MapGet(&quot;/echo&quot;,
+        context =&gt; context.Response.WriteAsync(&quot;echo&quot;))
+        .RequireCors(MyAllowSpecificOrigins);
+
+    endpoints.MapControllers()
+             .RequireCors(MyAllowSpecificOrigins);
+
+    endpoints.MapGet(&quot;/echo2&quot;,
+        context =&gt; context.Response.WriteAsync(&quot;echo2&quot;));
+
+    endpoints.MapRazorPages();
+});
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p><code>app.UseCors</code> enables the CORS middleware. Because a default policy hasn't been configured, <code>app.UseCors</code>() alone doesn't enable CORS.</p>
+</li>
+<li>
+<p>The <code>/echo</code> and controller endpoints allow cross-origin requests using the specified policy.</p>
+</li>
+<li>
+<p>The <code>/echo2</code> and Razor Pages endpoints do not allow cross-origin requests because no default policy was specified.</p>
+</li>
+</ul>
+<h2><a href="#enable-cors-with-attributes" aria-hidden="true" class="anchor" id="enable-cors-with-attributes"></a>Enable CORS with attributes</h2>
+<ul>
+<li>
+<p>[EnableCors] specifies the default policy.</p>
+</li>
+<li>
+<p>[EnableCors(&quot;{Policy String}&quot;)] specifies a named policy.</p>
+</li>
+<li>
+<p>Razor Page <code>PageModel</code></p>
+</li>
+<li>
+<p>Controller</p>
+</li>
+<li>
+<p>Controller action method</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]&quot;)]
+[ApiController]
+public class WidgetController : ControllerBase
+{
+    // GET api/values
+    [EnableCors(&quot;AnotherPolicy&quot;)]
+    [HttpGet]
+    public ActionResult&lt;IEnumerable&lt;string&gt;&gt; Get()
+    {
+        return new string[] { &quot;green widget&quot;, &quot;red widget&quot; };
+    }
+
+    // GET api/values/5
+    [EnableCors(&quot;Policy1&quot;)]
+    [HttpGet(&quot;{id}&quot;)]
+    public ActionResult&lt;string&gt; Get(int id)
+    {
+        return id switch
+        {
+            1 =&gt; &quot;green widget&quot;,
+            2 =&gt; &quot;red widget&quot;,
+            _ =&gt; NotFound(),
+        };
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(&quot;Policy1&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://example.com&quot;,
+                                &quot;http://www.contoso.com&quot;);
+        });
+
+    options.AddPolicy(&quot;AnotherPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://www.contoso.com&quot;)
+                                .AllowAnyHeader()
+                                .AllowAnyMethod();
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseRouting();
+
+app.UseCors();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Use [EnableCors(&quot;MyPolicy&quot;)] with a named policy.</p>
+</li>
+<li>
+<p>Don't define a default policy.</p>
+</li>
+<li>
+<p>Don't use endpoint routing.</p>
+</li>
+</ul>
+<h3><a href="#disable-cors" aria-hidden="true" class="anchor" id="disable-cors"></a>Disable CORS</h3>
+<pre><code class="language-csharp">var MyAllowSpecificOrigins = &quot;_myAllowSpecificOrigins&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: &quot;MyPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://example.com&quot;,
+                                &quot;http://www.contoso.com&quot;)
+                    .WithMethods(&quot;PUT&quot;, &quot;DELETE&quot;, &quot;GET&quot;);
+        });
+});
+
+builder.Services.AddControllers();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors();
+
+app.UseAuthorization();
+
+app.UseEndpoints(endpoints =&gt; {
+    endpoints.MapControllers();
+    endpoints.MapRazorPages();
+});
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[EnableCors(&quot;MyPolicy&quot;)]
+[Route(&quot;api/[controller]&quot;)]
+[ApiController]
+public class ValuesController : ControllerBase
+{
+    // GET api/values
+    [HttpGet]
+    public IActionResult Get() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+    // GET api/values/5
+    [HttpGet(&quot;{id}&quot;)]
+    public IActionResult Get(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+
+    // PUT api/values/5
+    [HttpPut(&quot;{id}&quot;)]
+    public IActionResult Put(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+
+
+    // GET: api/values/GetValues2
+    [DisableCors]
+    [HttpGet(&quot;{action}&quot;)]
+    public IActionResult GetValues2() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+}
+</code></pre>
+<ul>
+<li>
+<p>Doesn't enable CORS with endpoint routing.</p>
+</li>
+<li>
+<p>Doesn't define a default CORS policy.</p>
+</li>
+<li>
+<p>Uses [EnableCors(&quot;MyPolicy&quot;)] to enable the &quot;MyPolicy&quot; CORS policy for the controller.</p>
+</li>
+<li>
+<p>Disables CORS for the <code>GetValues2</code> method.</p>
+</li>
+</ul>
+<h2><a href="#cors-policy-options" aria-hidden="true" class="anchor" id="cors-policy-options"></a>CORS policy options</h2>
+<ul>
+<li>
+<p>Set the allowed origins</p>
+</li>
+<li>
+<p>Set the allowed HTTP methods</p>
+</li>
+<li>
+<p>Set the allowed request headers</p>
+</li>
+<li>
+<p>Set the exposed response headers</p>
+</li>
+<li>
+<p>Credentials in cross-origin requests</p>
+</li>
+<li>
+<p>Set the preflight expiration time</p>
+</li>
+</ul>
+<h2><a href="#set-the-allowed-origins" aria-hidden="true" class="anchor" id="set-the-allowed-origins"></a>Set the allowed origins</h2>
+<blockquote>
+<p class='note'>Note
+Specifying <code>AllowAnyOrigin</code> and <code>AllowCredentials</code> is an insecure configuration and can result in cross-site request forgery. The CORS service returns an invalid CORS response when an app is configured with both methods.</p>
+</blockquote>
+<pre><code class="language-csharp">var MyAllowSpecificOrigins = &quot;_MyAllowSubdomainPolicy&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;https://*.example.com&quot;)
+                .SetIsOriginAllowedToAllowWildcardSubdomains();
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#set-the-allowed-http-methods" aria-hidden="true" class="anchor" id="set-the-allowed-http-methods"></a>Set the allowed HTTP methods</h3>
+<ul>
+<li>
+<p>Allows any HTTP method:</p>
+</li>
+<li>
+<p>Affects preflight requests and the <code>Access-Control-Allow-Methods</code> header. For more information, see the Preflight requests section.</p>
+</li>
+</ul>
+<h3><a href="#set-the-allowed-request-headers" aria-hidden="true" class="anchor" id="set-the-allowed-request-headers"></a>Set the allowed request headers</h3>
+<pre><code class="language-csharp">using Microsoft.Net.Http.Headers;
+
+var MyAllowSpecificOrigins = &quot;_MyAllowSubdomainPolicy&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+       policy =&gt;
+       {
+           policy.WithOrigins(&quot;http://example.com&quot;)
+                  .WithHeaders(HeaderNames.ContentType, &quot;x-custom-header&quot;);
+       });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">var MyAllowSpecificOrigins = &quot;_MyAllowSubdomainPolicy&quot;;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;https://*.example.com&quot;)
+                   .AllowAnyHeader();
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">app.UseCors(policy =&gt; policy.WithHeaders(HeaderNames.CacheControl));
+</code></pre>
+<h3><a href="#set-the-exposed-response-headers" aria-hidden="true" class="anchor" id="set-the-exposed-response-headers"></a>Set the exposed response headers</h3>
+<ul>
+<li>
+<p><code>Cache-Control</code></p>
+</li>
+<li>
+<p><code>Content-Language</code></p>
+</li>
+<li>
+<p><code>Content-Type</code></p>
+</li>
+<li>
+<p><code>Expires</code></p>
+</li>
+<li>
+<p><code>Last-Modified</code></p>
+</li>
+<li>
+<p><code>Pragma</code></p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(&quot;MyExposeResponseHeadersPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;https://*.example.com&quot;)
+                   .WithExposedHeaders(&quot;x-custom-header&quot;);
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<h3><a href="#credentials-in-cross-origin-requests" aria-hidden="true" class="anchor" id="credentials-in-cross-origin-requests"></a>Credentials in cross-origin requests</h3>
+<pre><code class="language-javascript">var xhr = new XMLHttpRequest();
+xhr.open('get', 'https://www.example.com/api/test');
+xhr.withCredentials = true;
+</code></pre>
+<pre><code class="language-javascript">$.ajax({
+  type: 'get',
+  url: 'https://www.example.com/api/test',
+  xhrFields: {
+    withCredentials: true
+  }
+});
+</code></pre>
+<pre><code class="language-javascript">fetch('https://www.example.com/api/test', {
+    credentials: 'include'
+});
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(&quot;MyMyAllowCredentialsPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://example.com&quot;)
+                   .AllowCredentials();
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#preflight-requests" aria-hidden="true" class="anchor" id="preflight-requests"></a>Preflight requests</h2>
+<ul>
+<li>
+<p>The request method is GET, HEAD, or POST.</p>
+</li>
+<li>
+<p>The app doesn't set request headers other than <code>Accept</code>, <code>Accept-Language</code>, <code>Content-Language</code>, <code>Content-Type</code>, or <code>Last-Event-ID</code>.</p>
+</li>
+<li>
+<p>The <code>Content-Type</code> header, if set, has one of the following values:</p>
+<ul>
+<li>
+<p><code>application/x-www-form-urlencoded</code></p>
+</li>
+<li>
+<p><code>multipart/form-data</code></p>
+</li>
+<li>
+<p><code>text/plain</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+This article contains URLs created by deploying the sample code to two Azure web sites, <code>https://cors3.azurewebsites.net</code> and <code>https://cors.azurewebsites.net</code>.</p>
+</blockquote>
+<ul>
+<li>
+<p>Access-Control-Request-Method: The HTTP method that will be used for the actual request.</p>
+</li>
+<li>
+<p><code>Access-Control-Request-Headers</code>: A list of request headers that the app sets on the actual request. As stated earlier, this doesn't include headers that the browser sets, such as <code>User-Agent</code>.</p>
+</li>
+<li>
+<p>Firefox: Cross-Origin Request Blocked: The Same <code>Origin</code> Policy disallows reading the remote resource at <code>https://cors1.azurewebsites.net/api/TodoItems1/MyDelete2/5</code>. (Reason: CORS request did not succeed). Learn More</p>
+</li>
+<li>
+<p>Chromium based: Access to fetch at '<a href="https://cors1.azurewebsites.net/api/TodoItems1/MyDelete2/5">https://cors1.azurewebsites.net/api/TodoItems1/MyDelete2/5</a>' from origin '<a href="https://cors3.azurewebsites.net">https://cors3.azurewebsites.net</a>' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.Net.Http.Headers;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(&quot;MyAllowHeadersPolicy&quot;,
+        policy =&gt;
+        {
+        policy.WithOrigins(&quot;http://example.com&quot;)
+                   .WithHeaders(HeaderNames.ContentType, &quot;x-custom-header&quot;);
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.Net.Http.Headers;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(&quot;MyAllowAllHeadersPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;https://*.example.com&quot;)
+                   .AllowAnyHeader();
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<ul>
+<li>
+<p>Headers are set to anything other than &quot;*&quot;</p>
+</li>
+<li>
+<p><code>AllowAnyHeader</code> is called:
+Include at least <code>Accept</code>, <code>Content-Type</code>, and <code>Origin</code>, plus any custom headers that you want to support.</p>
+</li>
+</ul>
+<h3><a href="#automatic-preflight-request-code" aria-hidden="true" class="anchor" id="automatic-preflight-request-code"></a>Automatic preflight request code</h3>
+<ul>
+<li>
+<p>Globally by calling <code>app.UseCors</code> in  <code>Program.cs</code>.</p>
+</li>
+<li>
+<p>Using the [EnableCors] attribute.</p>
+</li>
+</ul>
+<h3><a href="#httpoptions]-attribute-for-preflight-requests" aria-hidden="true" class="anchor" id="httpoptions]-attribute-for-preflight-requests"></a>[HttpOptions] attribute for preflight requests</h3>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]&quot;)]
+[ApiController]
+public class TodoItems2Controller : ControllerBase
+{
+    // OPTIONS: api/TodoItems2/5
+    [HttpOptions(&quot;{id}&quot;)]
+    public IActionResult PreflightRoute(int id)
+    {
+        return NoContent();
+    }
+
+    // OPTIONS: api/TodoItems2 
+    [HttpOptions]
+    public IActionResult PreflightRoute()
+    {
+        return NoContent();
+    }
+
+    [HttpPut(&quot;{id}&quot;)]
+    public IActionResult PutTodoItem(int id)
+    {
+        if (id &lt; 1)
+        {
+            return BadRequest();
+        }
+
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+</code></pre>
+<h3><a href="#set-the-preflight-expiration-time" aria-hidden="true" class="anchor" id="set-the-preflight-expiration-time"></a>Set the preflight expiration time</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(&quot;MySetPreflightExpirationPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://example.com&quot;)
+                   .SetPreflightMaxAge(TimeSpan.FromSeconds(2520));
+        });
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#enable-cors-on-an-endpoint" aria-hidden="true" class="anchor" id="enable-cors-on-an-endpoint"></a>Enable CORS on an endpoint</h2>
+<h2><a href="#how-cors-works" aria-hidden="true" class="anchor" id="how-cors-works"></a>How CORS works</h2>
+<ul>
+<li>
+<p>CORS is not a security feature. CORS is a W3C standard that allows a server to relax the same-origin policy.</p>
+<ul>
+<li>For example, a malicious actor could use Cross-Site Scripting (XSS) against your site and execute a cross-site request to their CORS enabled site to steal information.</li>
+</ul>
+</li>
+<li>
+<p>An API isn't safer by allowing CORS.</p>
+<ul>
+<li>
+<p>It's up to the client (browser) to enforce CORS. The server executes the request and returns the response, it's the client that returns an error and blocks the response. For example, any of the following tools will display the server response:</p>
+<ul>
+<li>
+<p>Fiddler</p>
+</li>
+<li>
+<p>.NET HttpClient</p>
+</li>
+<li>
+<p>A web browser by entering the URL in the address bar.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>It's a way for a server to allow browsers to execute a cross-origin XHR or Fetch API request that otherwise would be forbidden.</p>
+<ul>
+<li>Browsers without CORS can't do cross-origin requests. Before CORS, JSONP was used to circumvent this restriction. JSONP doesn't use XHR, it uses the <script> tag to receive the response. Scripts are allowed to be loaded cross-origin.</li>
+</ul>
+</li>
+<li>
+<p>Provides the domain of the site that's making the request.</p>
+</li>
+<li>
+<p>Is required and must be different from the host.</p>
+</li>
+</ul>
+<h3><a href="#http-redirection-to-https-causes-err_invalid_redirect-on-the-cors-preflight-request" aria-hidden="true" class="anchor" id="http-redirection-to-https-causes-err_invalid_redirect-on-the-cors-preflight-request"></a>HTTP redirection to HTTPS causes <code>ERR_INVALID_REDIRECT on the CORS preflight request</code></h3>
+<h2><a href="#cors-in-iis" aria-hidden="true" class="anchor" id="cors-in-iis"></a>CORS in IIS</h2>
+<h2><a href="#test-cors" aria-hidden="true" class="anchor" id="test-cors"></a>Test CORS</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: &quot;MyPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://example.com&quot;,
+                    &quot;http://www.contoso.com&quot;,
+                    &quot;https://cors1.azurewebsites.net&quot;,
+                    &quot;https://cors3.azurewebsites.net&quot;,
+                    &quot;https://localhost:44398&quot;,
+                    &quot;https://localhost:5001&quot;)
+                .WithMethods(&quot;PUT&quot;, &quot;DELETE&quot;, &quot;GET&quot;);
+        });
+});
+
+builder.Services.AddControllers();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors();
+
+app.UseAuthorization();
+
+app.MapControllers();
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+WithOrigins(&quot;https://localhost:<port>&quot;); should only be used for testing a sample app similar to the download sample code.</p>
+</blockquote>
+<pre><code class="language-csharp">[EnableCors(&quot;MyPolicy&quot;)]
+[Route(&quot;api/[controller]&quot;)]
+[ApiController]
+public class ValuesController : ControllerBase
+{
+    // GET api/values
+    [HttpGet]
+    public IActionResult Get() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+    // GET api/values/5
+    [HttpGet(&quot;{id}&quot;)]
+    public IActionResult Get(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+
+    // PUT api/values/5
+    [HttpPut(&quot;{id}&quot;)]
+    public IActionResult Put(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+
+
+    // GET: api/values/GetValues2
+    [DisableCors]
+    [HttpGet(&quot;{action}&quot;)]
+    public IActionResult GetValues2() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+}
+</code></pre>
+<ul>
+<li>
+<p>Run the sample with <code>dotnet run</code> using the default URL of <code>https://localhost:5001</code>.</p>
+</li>
+<li>
+<p>Run the sample from Visual Studio with the port set to 44398 for a URL of <code>https://localhost:44398</code>.</p>
+</li>
+<li>
+<p>Select the Values button and review the headers in the Network tab.</p>
+</li>
+<li>
+<p>Select the PUT test button. See Display <code>OPTIONS</code> requests for instructions on displaying the <code>OPTIONS</code> request. The PUT test creates two requests, an <code>OPTIONS</code> preflight request and the PUT request.</p>
+</li>
+<li>
+<p>Select the <code>GetValues2</code> [DisableCors] button to trigger a failed CORS request. As mentioned in the document, the response returns 200 success, but the CORS request is not made. Select the Console tab to see the CORS error. Depending on the browser, an error similar to the following is displayed:
+Access to fetch at '<a href="https://cors1.azurewebsites.net/api/values/GetValues2">https://cors1.azurewebsites.net/api/values/GetValues2</a>' from origin '<a href="https://cors3.azurewebsites.net">https://cors3.azurewebsites.net</a>' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.</p>
+</li>
+<li>
+<p>There's no need for CORS Middleware to process the request.</p>
+</li>
+<li>
+<p>CORS headers aren't returned in the response.</p>
+</li>
+</ul>
+<pre><code class="language-bash">curl -X OPTIONS https://cors3.azurewebsites.net/api/TodoItems2/5 -i
+</code></pre>
+<h3><a href="#test-cors-with-enablecors]-attribute-and-requirecors-method" aria-hidden="true" class="anchor" id="test-cors-with-enablecors]-attribute-and-requirecors-method"></a>Test CORS with [EnableCors] attribute and <code>RequireCors</code> method</h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =&gt;
+{
+    options.AddPolicy(name: &quot;MyPolicy&quot;,
+        policy =&gt;
+        {
+            policy.WithOrigins(&quot;http://example.com&quot;,
+                    &quot;http://www.contoso.com&quot;,
+                    &quot;https://cors1.azurewebsites.net&quot;,
+                    &quot;https://cors3.azurewebsites.net&quot;,
+                    &quot;https://localhost:44398&quot;,
+                    &quot;https://localhost:5001&quot;)
+                .WithMethods(&quot;PUT&quot;, &quot;DELETE&quot;, &quot;GET&quot;);
+        });
+});
+
+builder.Services.AddControllers();
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors();
+
+app.UseAuthorization();
+
+app.UseEndpoints(endpoints =&gt;
+{
+    endpoints.MapGet(&quot;/echo&quot;,
+        context =&gt; context.Response.WriteAsync(&quot;echo&quot;))
+        .RequireCors(&quot;MyPolicy&quot;);
+
+    endpoints.MapControllers();
+    endpoints.MapRazorPages();
+});
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]&quot;)]
+[ApiController]
+public class TodoItems1Controller : ControllerBase 
+{
+    // PUT: api/TodoItems1/5
+    [HttpPut(&quot;{id}&quot;)]
+    public IActionResult PutTodoItem(int id) {
+        if (id &lt; 1) {
+            return Content($&quot;ID = {id}&quot;);
+        }
+
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    // Delete: api/TodoItems1/5
+    [HttpDelete(&quot;{id}&quot;)]
+    public IActionResult MyDelete(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+
+    // GET: api/TodoItems1
+    [HttpGet]
+    public IActionResult GetTodoItems() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+    [EnableCors(&quot;MyPolicy&quot;)]
+    [HttpGet(&quot;{action}&quot;)]
+    public IActionResult GetTodoItems2() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+    // Delete: api/TodoItems1/MyDelete2/5
+    [EnableCors(&quot;MyPolicy&quot;)]
+    [HttpDelete(&quot;{action}/{id}&quot;)]
+    public IActionResult MyDelete2(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+}
+</code></pre>
+<pre><code class="language-javascript">headers: {
+      &quot;Content-Type&quot;: &quot;x-custom-header&quot;
+ },
+</code></pre>
+<pre><code class="language-csharp">[Route(&quot;api/[controller]&quot;)]
+[ApiController]
+public class TodoItems2Controller : ControllerBase
+{
+    // OPTIONS: api/TodoItems2/5
+    [HttpOptions(&quot;{id}&quot;)]
+    public IActionResult PreflightRoute(int id)
+    {
+        return NoContent();
+    }
+
+    // OPTIONS: api/TodoItems2 
+    [HttpOptions]
+    public IActionResult PreflightRoute()
+    {
+        return NoContent();
+    }
+
+    [HttpPut(&quot;{id}&quot;)]
+    public IActionResult PutTodoItem(int id)
+    {
+        if (id &lt; 1)
+        {
+            return BadRequest();
+        }
+
+        return ControllerContext.MyDisplayRouteInfo(id);
+    }
+
+    // [EnableCors] // Not needed as OPTIONS path provided.
+    [HttpDelete(&quot;{id}&quot;)]
+    public IActionResult MyDelete(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+
+    // [EnableCors] //  Warning ASP0023 Route '{id}' conflicts with another action route.
+    //                  An HTTP request that matches multiple routes results in an ambiguous
+    //                  match error.
+    [EnableCors(&quot;MyPolicy&quot;)] // Required for this path.
+    [HttpGet]
+    public IActionResult GetTodoItems() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+    [HttpGet(&quot;{action}&quot;)]
+    public IActionResult GetTodoItems2() =&gt;
+        ControllerContext.MyDisplayRouteInfo();
+
+    [EnableCors(&quot;MyPolicy&quot;)]  // Required for this path.
+    [HttpDelete(&quot;{action}/{id}&quot;)]
+    public IActionResult MyDelete2(int id) =&gt;
+        ControllerContext.MyDisplayRouteInfo(id);
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Cross-Origin Resource Sharing (CORS)</p>
+</li>
+<li>
+<p>IIS CORS module Configuration Reference</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/cors?view=aspnetcore-8.0">Enable Cross-Origin Requests (CORS) in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

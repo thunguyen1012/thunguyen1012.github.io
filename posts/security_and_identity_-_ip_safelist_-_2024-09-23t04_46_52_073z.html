@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - IP safelist | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - IP safelist</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article shows three ways to implement an IP address safelist (also known as an allow list) in an ASP.NET Core app. An accompanying sample app demonstrates all three approaches. You can use:</p>
+<ul>
+<li>
+<p>Middleware to check the remote IP address of every request.</p>
+</li>
+<li>
+<p>MVC action filters to check the remote IP address of requests for specific controllers or action methods.</p>
+</li>
+<li>
+<p>Razor Pages filters to check the remote IP address of requests for Razor pages.</p>
+</li>
+</ul>
+<p>In each case, a string containing approved client IP addresses is stored in an app setting. The middleware or filter:</p>
+<ul>
+<li>
+<p>Parses the string into an array.</p>
+</li>
+<li>
+<p>Checks if the remote IP address exists in the array.</p>
+</li>
+</ul>
+<p>Access is allowed if the array contains the IP address. Otherwise, an HTTP 403 Forbidden status code is returned.</p>
+<p>View or download sample code (how to download)</p>
+<h2><a href="#ip-address-safelist" aria-hidden="true" class="anchor" id="ip-address-safelist"></a>IP address safelist</h2>
+<p>In the sample app, the IP address safelist is:</p>
+<ul>
+<li>
+<p>Defined by the <code>AdminSafeList</code> property in the <code>appsettings.json</code> file.</p>
+</li>
+<li>
+<p>A semicolon-delimited string that may contain both Internet Protocol version 4 (IPv4) and Internet Protocol version 6 (IPv6) addresses.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;AdminSafeList&quot;: &quot;127.0.0.1;192.168.1.5;::1&quot;,
+  &quot;Logging&quot;: {
+</code></pre>
+<p>In the preceding example, the IPv4 addresses of <code>127.0.0.1</code> and <code>192.168.1.5</code> and the IPv6 loopback address of <code>::1</code> (compressed format for <code>0:0:0:0:0:0:0:1</code>) are allowed.</p>
+<h2><a href="#middleware" aria-hidden="true" class="anchor" id="middleware"></a>Middleware</h2>
+<p>The <code>Startup.Configure</code> method adds the custom <code>AdminSafeListMiddleware</code> middleware type to the app's request pipeline. The safelist is retrieved with the .NET Core configuration provider and is passed as a constructor parameter.</p>
+<pre><code class="language-csharp">app.UseMiddleware&lt;AdminSafeListMiddleware&gt;(Configuration[&quot;AdminSafeList&quot;]);
+</code></pre>
+<p>This method searches for a remote IP address in a string.</p>
+<pre><code class="language-csharp">public class AdminSafeListMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger&lt;AdminSafeListMiddleware&gt; _logger;
+    private readonly byte[][] _safelist;
+
+    public AdminSafeListMiddleware(
+        RequestDelegate next,
+        ILogger&lt;AdminSafeListMiddleware&gt; logger,
+        string safelist)
+    {
+        var ips = safelist.Split(';');
+        _safelist = new byte[ips.Length][];
+        for (var i = 0; i &lt; ips.Length; i++)
+        {
+            _safelist[i] = IPAddress.Parse(ips[i]).GetAddressBytes();
+        }
+
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task Invoke(HttpContext context)
+    {
+        if (context.Request.Method != HttpMethod.Get.Method)
+        {
+            var remoteIp = context.Connection.RemoteIpAddress;
+            _logger.LogDebug(&quot;Request from Remote IP address: {RemoteIp}&quot;, remoteIp);
+
+            var bytes = remoteIp.GetAddressBytes();
+            var badIp = true;
+            foreach (var address in _safelist)
+            {
+                if (address.SequenceEqual(bytes))
+                {
+                    badIp = false;
+                    break;
+                }
+            }
+
+            if (badIp)
+            {
+                _logger.LogWarning(
+                    &quot;Forbidden Request from Remote IP address: {RemoteIp}&quot;, remoteIp);
+                context.Response.StatusCode = (int) HttpStatusCode.Forbidden;
+                return;
+            }
+        }
+
+        await _next.Invoke(context);
+    }
+}
+</code></pre>
+<h2><a href="#action-filter" aria-hidden="true" class="anchor" id="action-filter"></a>Action filter</h2>
+<p>If you want safelist-driven access control for specific MVC controllers or action methods, use an action filter. For example:</p>
+<pre><code class="language-csharp">public class ClientIpCheckActionFilter : ActionFilterAttribute
+{
+    private readonly ILogger _logger;
+    private readonly string _safelist;
+
+    public ClientIpCheckActionFilter(string safelist, ILogger logger)
+    {
+        _safelist = safelist;
+        _logger = logger;
+    }
+
+    public override void OnActionExecuting(ActionExecutingContext context)
+    {
+        var remoteIp = context.HttpContext.Connection.RemoteIpAddress;
+        _logger.LogDebug(&quot;Remote IpAddress: {RemoteIp}&quot;, remoteIp);
+        var ip = _safelist.Split(';');
+        var badIp = true;
+        
+        if (remoteIp.IsIPv4MappedToIPv6)
+        {
+            remoteIp = remoteIp.MapToIPv4();
+        }
+        
+        foreach (var address in ip)
+        {
+            var testIp = IPAddress.Parse(address);
+            
+            if (testIp.Equals(remoteIp))
+            {
+                badIp = false;
+                break;
+            }
+        }
+
+        if (badIp)
+        {
+            _logger.LogWarning(&quot;Forbidden Request from IP: {RemoteIp}&quot;, remoteIp);
+            context.Result = new StatusCodeResult(StatusCodes.Status403Forbidden);
+            return;
+        }
+
+        base.OnActionExecuting(context);
+    }
+}
+</code></pre>
+<p>In <code>Startup.ConfigureServices</code>, add the action filter to the MVC filters collection. In the following example, a <code>ClientIpCheckActionFilter</code> action filter is added. A safelist and a console logger instance are passed as constructor parameters.</p>
+<pre><code class="language-csharp">services.AddScoped&lt;ClientIpCheckActionFilter&gt;(container =&gt;
+{
+    var loggerFactory = container.GetRequiredService&lt;ILoggerFactory&gt;();
+    var logger = loggerFactory.CreateLogger&lt;ClientIpCheckActionFilter&gt;();
+
+    return new ClientIpCheckActionFilter(
+        Configuration[&quot;AdminSafeList&quot;], logger);
+});
+</code></pre>
+<p>The action filter can then be applied to a controller or action method with the [ServiceFilter] attribute:</p>
+<pre><code class="language-csharp">[ServiceFilter(typeof(ClientIpCheckActionFilter))]
+[HttpGet]
+public IEnumerable&lt;string&gt; Get()
+</code></pre>
+<p>In the sample app, the action filter is applied to the controller's <code>Get</code> action method. When you test the app by sending:</p>
+<ul>
+<li>
+<p>An HTTP GET request, the [ServiceFilter] attribute validates the client IP address. If access is allowed to the <code>Get</code> action method, a variation of the following console output is produced by the action filter and action method:
+dbug: ClientIpSafelistComponents.Filters.ClientIpCheckActionFilter[0]
+Remote IpAddress: <code>::1</code>
+dbug: ClientIpAspNetCore.Controllers.ValuesController[0]
+successful HTTP GET</p>
+</li>
+<li>
+<p>An HTTP request verb other than GET, the <code>AdminSafeListMiddleware</code> middleware validates the client IP address.</p>
+</li>
+</ul>
+<h2><a href="#razor-pages-filter" aria-hidden="true" class="anchor" id="razor-pages-filter"></a>Razor Pages filter</h2>
+<p>If you want safelist-driven access control for a Razor Pages app, use a Razor Pages filter. For example:</p>
+<pre><code class="language-csharp">public class ClientIpCheckPageFilter : IPageFilter
+{
+    private readonly ILogger _logger;
+    private readonly IPAddress[] _safelist;
+
+    public ClientIpCheckPageFilter(
+        string safelist,
+        ILogger logger)
+    {
+        var ips = safelist.Split(';');
+        _safelist = new IPAddress[ips.Length];
+        for (var i = 0; i &lt; ips.Length; i++)
+        {
+            _safelist[i] = IPAddress.Parse(ips[i]);
+        }
+
+        _logger = logger;
+    }
+
+    public void OnPageHandlerExecuting(PageHandlerExecutingContext context)
+    {
+        var remoteIp = context.HttpContext.Connection.RemoteIpAddress;
+        if (remoteIp.IsIPv4MappedToIPv6)
+        {
+            remoteIp = remoteIp.MapToIPv4();
+        }
+        _logger.LogDebug(
+            &quot;Remote IpAddress: {RemoteIp}&quot;, remoteIp);
+
+        var badIp = true;
+        foreach (var testIp in _safelist)
+        {
+            if (testIp.Equals(remoteIp))
+            {
+                badIp = false;
+                break;
+            }
+        }
+
+        if (badIp)
+        {
+            _logger.LogWarning(
+                &quot;Forbidden Request from Remote IP address: {RemoteIp}&quot;, remoteIp);
+            context.Result = new StatusCodeResult(StatusCodes.Status403Forbidden);
+            return;
+        }
+    }
+
+    public void OnPageHandlerExecuted(PageHandlerExecutedContext context)
+    {
+    }
+
+    public void OnPageHandlerSelected(PageHandlerSelectedContext context)
+    {
+    }
+}
+</code></pre>
+<p>In <code>Startup.ConfigureServices</code>, enable the Razor Pages filter by adding it to the MVC filters collection. In the following example, a <code>ClientIpCheckPageFilter</code> Razor Pages filter is added. A safelist and a console logger instance are passed as constructor parameters.</p>
+<pre><code class="language-csharp">services.AddRazorPages()
+    .AddMvcOptions(options =&gt;
+    {
+        var logger = LoggerFactory.Create(builder =&gt; builder.AddConsole())
+                        .CreateLogger&lt;ClientIpCheckPageFilter&gt;();
+        var filter = new ClientIpCheckPageFilter(
+            Configuration[&quot;AdminSafeList&quot;], logger);
+        
+        options.Filters.Add(filter);
+    });
+</code></pre>
+<p>When the sample app's Index Razor page is requested, the Razor Pages filter validates the client IP address. The filter produces a variation of the following console output:</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>ASP.NET Core Middleware</p>
+</li>
+<li>
+<p>Action filters</p>
+</li>
+<li>
+<p>Filter methods for Razor Pages in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/ip-safelist?view=aspnetcore-8.0">Client IP safelist for ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

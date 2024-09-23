@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Prevent open redirect attacks | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A web app that redirects to a URL that's specified via the request such as the querystring or form data can potentially be tampered with to redirect users to an external, malicious URL. This tampering is called an open redirection attack.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Prevent open redirect attacks</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A security flaw in web apps has been discovered by researchers at the University of California, Berkeley.</p>
+<p>ASP.NET Core has built-in functionality to help protect apps from open redirect attacks.</p>
+<h2><a href="#what-is-an-open-redirect-attack" aria-hidden="true" class="anchor" id="what-is-an-open-redirect-attack"></a>What is an open redirect attack?</h2>
+<p>Web applications frequently redirect users to a login page when they access resources that require authentication. The redirection typically includes a <code>returnUrl</code> querystring parameter so that the user can be returned to the originally requested URL after they have successfully logged in. After the user authenticates, they're redirected to the URL they had originally requested.</p>
+<p>A vulnerability in the Apache web server could allow a malicious user to change the destination URL of a request.</p>
+<h3><a href="#an-example-attack" aria-hidden="true" class="anchor" id="an-example-attack"></a>An example attack</h3>
+<p>A malicious user can develop an attack intended to allow the malicious user access to a user's credentials or sensitive information. To begin the attack, the malicious user convinces the user to click a link to your site's login page with a <code>returnUrl</code> querystring value added to the URL. For example, consider an app at <code>contoso.com</code> that includes a login page at <code>http://contoso.com/Account/LogOn?returnUrl=/Home/About</code>. The attack follows these steps:</p>
+<ul>
+<li>
+<p>The user clicks a malicious link to <code>http://contoso.com/Account/LogOn?returnUrl=http://contoso1.com/Account/LogOn</code> (the second URL is &quot;contoso1.com&quot;, not &quot;contoso.com&quot;).</p>
+</li>
+<li>
+<p>The user logs in successfully.</p>
+</li>
+<li>
+<p>The user is redirected (by the site) to <code>http://contoso1.com/Account/LogOn</code> (a malicious site that looks exactly like real site).</p>
+</li>
+<li>
+<p>The user logs in again (giving malicious site their credentials) and is redirected back to the real site.</p>
+</li>
+</ul>
+<p>The user likely believes that their first attempt to log in failed and that their second attempt is successful. The user most likely remains unaware that their credentials are compromised.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/preventing-open-redirects/_static/open-redirection-attack-process.png?view=aspnetcore-8.0" alt="Open Redirection Attack Process!" title="Open Redirection Attack Process" /></p>
+<p>In addition to login pages, some sites provide redirect pages or endpoints. Imagine your app has a page with an open redirect, <code>/Home/Redirect</code>. An attacker could create, for example, a link in an email that goes to <code>[yoursite]/Home/Redirect?url=http://phishingsite.com/Home/Login</code>. A typical user will look at the URL and see it begins with your site name. Trusting that, they will click the link. The open redirect would then send the user to the phishing site, which looks identical to yours, and the user would likely login to what they believe is your site.</p>
+<h2><a href="#protecting-against-open-redirect-attacks" aria-hidden="true" class="anchor" id="protecting-against-open-redirect-attacks"></a>Protecting against open redirect attacks</h2>
+<p>In this article, we will look at how to protect yourself from being targeted by hackers.</p>
+<h3><a href="#localredirect" aria-hidden="true" class="anchor" id="localredirect"></a><code>LocalRedirect</code></h3>
+<p>Use the <code>LocalRedirect</code> helper method from the base <code>Controller</code> class:</p>
+<pre><code class="language-csharp">public IActionResult SomeAction(string redirectUrl)
+{
+    return LocalRedirect(redirectUrl);
+}
+</code></pre>
+<p><code>LocalRedirect</code> will throw an exception if a non-local URL is specified. Otherwise, it behaves just like the <code>Redirect</code> method.</p>
+<h3><a href="#islocalurl" aria-hidden="true" class="anchor" id="islocalurl"></a><code>IsLocalUrl</code></h3>
+<p>Use the <code>IsLocalUrl</code> method to test URLs before redirecting:</p>
+<p>The following example shows how to check whether a URL is local before redirecting.</p>
+<pre><code class="language-csharp">private IActionResult RedirectToLocal(string returnUrl)
+{
+    if (Url.IsLocalUrl(returnUrl))
+    {
+        return Redirect(returnUrl);
+    }
+    else
+    {
+        return RedirectToAction(nameof(HomeController.Index), &quot;Home&quot;);
+    }
+}
+</code></pre>
+<p>The <code>IsLocalUrl</code> method protects users from being inadvertently redirected to a malicious site. You can log the details of the URL that was provided when a non-local URL is supplied in a situation where you expected a local URL. Logging redirect URLs may help in diagnosing redirection attacks.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/preventing-open-redirects?view=aspnetcore-8.0">Prevent open redirect attacks in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
