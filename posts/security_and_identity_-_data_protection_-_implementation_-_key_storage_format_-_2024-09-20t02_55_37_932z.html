@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Implementation - Key storage format | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Objects are stored at rest in XML representation. The default directory for key storage is:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Implementation - Key storage format</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Objects are stored at rest in XML representation. The default directory for key storage is:</p>
+<ul>
+<li>
+<p>Windows: <code>*%LOCALAPPDATA%\ASP.NET\DataProtection-Keys*</code></p>
+</li>
+<li>
+<p>macOS / Linux: <code>$HOME/.aspnet/DataProtection-Keys</code></p>
+</li>
+</ul>
+<h2><a href="#the--element" aria-hidden="true" class="anchor" id="the--element"></a>The <key> element</h2>
+<p>Keys exist as top-level objects in the key repository. By convention keys have the filename <code>key-{guid}.xml</code>, where {guid} is the id of the key. Each such file contains a single key. The format of the file is as follows.</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;key id=&quot;80732141-ec8f-4b80-af9c-c4d2d1ff8901&quot; version=&quot;1&quot;&gt;
+  &lt;creationDate&gt;2015-03-19T23:32:02.3949887Z&lt;/creationDate&gt;
+  &lt;activationDate&gt;2015-03-19T23:32:02.3839429Z&lt;/activationDate&gt;
+  &lt;expirationDate&gt;2015-06-17T23:32:02.3839429Z&lt;/expirationDate&gt;
+  &lt;descriptor deserializerType=&quot;{deserializerType}&quot;&gt;
+    &lt;descriptor&gt;
+      &lt;encryption algorithm=&quot;AES_256_CBC&quot; /&gt;
+      &lt;validation algorithm=&quot;HMACSHA256&quot; /&gt;
+      &lt;enc:encryptedSecret decryptorType=&quot;{decryptorType}&quot; xmlns:enc=&quot;...&quot;&gt;
+        &lt;encryptedKey&gt;
+          &lt;!-- This key is encrypted with Windows DPAPI. --&gt;
+          &lt;value&gt;AQAAANCM...8/zeP8lcwAg==&lt;/value&gt;
+        &lt;/encryptedKey&gt;
+      &lt;/enc:encryptedSecret&gt;
+    &lt;/descriptor&gt;
+  &lt;/descriptor&gt;
+&lt;/key&gt;
+</code></pre>
+<p>The <key> element contains the following attributes and child elements:</p>
+<ul>
+<li>
+<p>The key id. This value is treated as authoritative; the filename is simply a nicety for human readability.</p>
+</li>
+<li>
+<p>The version of the <key> element, currently fixed at 1.</p>
+</li>
+<li>
+<p>The key's creation, activation, and expiration dates.</p>
+</li>
+<li>
+<p>A <descriptor> element, which contains information on the authenticated encryption implementation contained within this key.</p>
+</li>
+</ul>
+<p>In this article I'll show you how to create and activate a key.</p>
+<h2><a href="#the--element-1" aria-hidden="true" class="anchor" id="the--element-1"></a>The <descriptor> element</h2>
+<p>The outer <descriptor> element contains an attribute deserializerType, which is the assembly-qualified name of a type which implements IAuthenticatedEncryptorDescriptorDeserializer. This type is responsible for reading the inner <descriptor> element and for parsing the information contained within.</p>
+<p>The particular format of the <descriptor> element depends on the authenticated encryptor implementation encapsulated by the key, and each deserializer type expects a slightly different format for this. In general, though, this element will contain algorithmic information (names, types, OIDs, or similar) and secret key material. In the above example, the descriptor specifies that this key wraps AES-256-CBC encryption + HMACSHA256 validation.</p>
+<h2><a href="#the--element-2" aria-hidden="true" class="anchor" id="the--element-2"></a>The <encryptedSecret> element</h2>
+<p>An <encryptedSecret> element which contains the encrypted form of the secret key material may be present if encryption of secrets at rest is enabled. The attribute <code>decryptorType</code> is the assembly-qualified name of a type which implements IXmlDecryptor. This type is responsible for reading the inner <encryptedKey> element and decrypting it to recover the original plaintext.</p>
+<p>As with <descriptor>, the particular format of the <encryptedSecret> element depends on the at-rest encryption mechanism in use. In the above example, the master key is encrypted using Windows DPAPI per the comment.</p>
+<h2><a href="#the--element-3" aria-hidden="true" class="anchor" id="the--element-3"></a>The <revocation> element</h2>
+<p>Revocations exist as top-level objects in the key repository. By convention revocations have the filename <code>revocation-{timestamp}.xml</code> (for revoking all keys before a specific date) or <code>revocation-{guid}.xml</code> (for revoking a specific key). Each file contains a single <revocation> element.</p>
+<p>For revocations of individual keys, the file contents will be as below.</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;revocation version=&quot;1&quot;&gt;
+  &lt;revocationDate&gt;2015-03-20T22:45:30.2616742Z&lt;/revocationDate&gt;
+  &lt;key id=&quot;eb4fc299-8808-409d-8a34-23fc83d026c9&quot; /&gt;
+  &lt;reason&gt;human-readable reason&lt;/reason&gt;
+&lt;/revocation&gt;
+</code></pre>
+<p>In this case, only the specified key is revoked. If the key id is &quot;*&quot;, however, as in the below example, all keys whose creation date is prior to the specified revocation date are revoked.</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;revocation version=&quot;1&quot;&gt;
+  &lt;revocationDate&gt;2015-03-20T15:45:45.7366491-07:00&lt;/revocationDate&gt;
+  &lt;!-- All keys created before the revocation date are revoked. --&gt;
+  &lt;key id=&quot;*&quot; /&gt;
+  &lt;reason&gt;human-readable reason&lt;/reason&gt;
+&lt;/revocation&gt;
+</code></pre>
+<p>The <reason> element is never read by the system. It's simply a convenient place to store a human-readable reason for revocation.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-storage-format?view=aspnetcore-8.0">Key storage format in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

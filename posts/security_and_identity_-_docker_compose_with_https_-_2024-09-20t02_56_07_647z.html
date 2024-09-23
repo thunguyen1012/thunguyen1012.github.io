@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Docker Compose with HTTPS | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Docker Compose with HTTPS</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<h2><a href="#certificates" aria-hidden="true" class="anchor" id="certificates"></a>Certificates</h2>
+<ul>
+<li>
+<p>The <code>dotnet dev-certs</code> tool is not required.</p>
+</li>
+<li>
+<p>Certificates don't need to be stored in the location used in the instructions. Store the certificates in any location outside the site directory.</p>
+</li>
+<li>
+<p>It makes it difficult to use the same image for testing with developer certificates.</p>
+</li>
+<li>
+<p>It makes it difficult to use the same image for Hosting with production certificates.</p>
+</li>
+<li>
+<p>There is significant risk of certificate disclosure.</p>
+</li>
+</ul>
+<h2><a href="#starting-a-container-with-https-support-using-docker-compose" aria-hidden="true" class="anchor" id="starting-a-container-with-https-support-using-docker-compose"></a>Starting a container with https support using docker compose</h2>
+<h3><a href="#windows-using-linux-containers" aria-hidden="true" class="anchor" id="windows-using-linux-containers"></a>Windows using Linux containers</h3>
+<pre><code class="language-powershell">dotnet dev-certs https -ep &quot;$env:USERPROFILE\.aspnet\https\aspnetapp.pfx&quot;  -p $CREDENTIAL_PLACEHOLDER$
+dotnet dev-certs https --trust
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet dev-certs https -ep %USERPROFILE%\.aspnet\https\aspnetapp.pfx -p $CREDENTIAL_PLACEHOLDER$
+dotnet dev-certs https --trust
+</code></pre>
+<pre><code class="language-yaml">version: '3.4'
+
+services:
+  webapp:
+    image: mcr.microsoft.com/dotnet/samples:aspnetapp
+    ports:
+      - 80
+      - 443
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+</code></pre>
+<pre><code class="language-console">docker-compose -f &quot;docker-compose.debug.yml&quot; up -d
+</code></pre>
+<h3><a href="#macos-or-linux" aria-hidden="true" class="anchor" id="macos-or-linux"></a>macOS or Linux</h3>
+<pre><code class="language-dotnetcli">dotnet dev-certs https -ep ${HOME}/.aspnet/https/aspnetapp.pfx -p $CREDENTIAL_PLACEHOLDER$
+dotnet dev-certs https --trust
+</code></pre>
+<pre><code class="language-yaml">version: '3.4'
+
+services:
+  webapp:
+    image: mcr.microsoft.com/dotnet/samples:aspnetapp
+    ports:
+      - 80
+      - 443
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+</code></pre>
+<pre><code class="language-console">docker-compose -f &quot;docker-compose.debug.yml&quot; up -d
+</code></pre>
+<h3><a href="#windows-using-windows-containers" aria-hidden="true" class="anchor" id="windows-using-windows-containers"></a>Windows using Windows containers</h3>
+<pre><code class="language-dotnetcli">dotnet dev-certs https -ep %USERPROFILE%\.aspnet\https\aspnetapp.pfx -p $CREDENTIAL_PLACEHOLDER$
+dotnet dev-certs https --trust
+</code></pre>
+<pre><code class="language-yaml">version: '3.4'
+
+services:
+  webapp:
+    image: mcr.microsoft.com/dotnet/samples:aspnetapp
+    ports:
+      - 80
+      - 443
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=C:\https\aspnetapp.pfx
+    volumes:
+      - ${USERPROFILE}\.aspnet\https:C:\https:ro
+</code></pre>
+<pre><code class="language-console">docker-compose -f &quot;docker-compose.debug.yml&quot; up -d
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li><code>dotnet dev-certs</code></li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/docker-compose-https?view=aspnetcore-8.0">Hosting ASP.NET Core images with Docker Compose over HTTPS</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

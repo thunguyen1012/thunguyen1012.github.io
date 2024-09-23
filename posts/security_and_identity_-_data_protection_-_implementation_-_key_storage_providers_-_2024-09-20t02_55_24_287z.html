@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Implementation - Key storage providers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The data protection system employs a discovery mechanism by default to determine where cryptographic keys should be persisted. The developer can override the default discovery mechanism and manually specify the location.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Implementation - Key storage providers</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This example shows how to set up a data protection system with a single line of code.</p>
+<blockquote>
+<p class='warning'>Warning
+If you specify an explicit key persistence location, the data protection system deregisters the default key encryption at rest mechanism, so keys are no longer encrypted at rest. It's recommended that you additionally specify an explicit key encryption mechanism for production deployments.</p>
+</blockquote>
+<h2><a href="#file-system" aria-hidden="true" class="anchor" id="file-system"></a>File system</h2>
+<p>To configure a file system-based key repository, call the PersistKeysToFileSystem configuration routine as shown below. Provide a <code>DirectoryInfo</code> pointing to the repository where keys should be stored:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(@&quot;c:\temp-keys\&quot;));
+}
+</code></pre>
+<p>The <code>DirectoryInfo</code> can point to a directory on the local machine, or it can point to a folder on a network share. If pointing to a directory on the local machine (and the scenario is that only apps on the local machine require access to use this repository), consider using Windows DPAPI (on Windows) to encrypt the keys at rest. Otherwise, consider using an X.509 certificate to encrypt keys at rest.</p>
+<h2><a href="#azure-storage" aria-hidden="true" class="anchor" id="azure-storage"></a>Azure Storage</h2>
+<p>Microsoft has released a new data protection package for its Azure platform.</p>
+<p>To configure the Azure Blob Storage provider, call one of the PersistKeysToAzureBlobStorage overloads.</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDataProtection()
+        .PersistKeysToAzureBlobStorage(new Uri(&quot;&lt;blob URI including SAS token&gt;&quot;));
+}
+</code></pre>
+<p>If the web app is running as an Azure service, connection <code>string</code> can be used to authenticate to Azure storage by using Azure.Storage.Blobs.</p>
+<pre><code class="language-csharp">string connectionString = &quot;&lt;connection_string&gt;&quot;;
+string containerName = &quot;my-key-container&quot;;
+string blobName = &quot;keys.xml&quot;;
+BlobContainerClient container = new BlobContainerClient(connectionString, containerName);
+
+// optional - provision the container automatically
+await container.CreateIfNotExistsAsync();
+
+BlobClient blobClient = container.GetBlobClient(blobName);
+
+services.AddDataProtection()
+    .PersistKeysToAzureBlobStorage(blobClient);
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The connection <code>string</code> to your storage account can be found in the Azure Portal under the &quot;Access Keys&quot; section or by running the following CLI command:</p>
+</blockquote>
+<pre><code class="language-bash">az storage account show-connection-string --name &lt;account_name&gt; --resource-group &lt;resource_group&gt;
+</code></pre>
+<h2><a href="#redis" aria-hidden="true" class="anchor" id="redis"></a>Redis</h2>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    var redis = ConnectionMultiplexer.Connect(&quot;&lt;URI&gt;&quot;);
+    services.AddDataProtection()
+        .PersistKeysToStackExchangeRedis(redis, &quot;DataProtection-Keys&quot;);
+}
+</code></pre>
+<p>For more information, see the following topics:</p>
+<ul>
+<li>
+<p>StackExchange.Redis ConnectionMultiplexer</p>
+</li>
+<li>
+<p>Azure Redis Cache</p>
+</li>
+<li>
+<p>ASP.NET Core DataProtection samples</p>
+</li>
+</ul>
+<h2><a href="#registry" aria-hidden="true" class="anchor" id="registry"></a>Registry</h2>
+<p>Only applies to Windows deployments.</p>
+<p>Sometimes the app might not have write access to the file system. Consider a scenario where an app is running as a virtual service account (such as w3wp.exe's app pool identity). In these cases, the administrator can provision a registry key that's accessible by the service account identity. Call the PersistKeysToRegistry extension method as shown below. Provide a RegistryKey pointing to the location where cryptographic keys should be stored:</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDataProtection()
+        .PersistKeysToRegistry(Registry.CurrentUser.OpenSubKey(@&quot;SOFTWARE\Sample\keys&quot;, true));
+}
+</code></pre>
+<blockquote>
+<p class='important'>Important
+We recommend using Windows DPAPI to encrypt the keys at rest.</p>
+</blockquote>
+<h2><a href="#entity-framework-core" aria-hidden="true" class="anchor" id="entity-framework-core"></a>Entity Framework Core</h2>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.Configure&lt;CookiePolicyOptions&gt;(options =&gt;
+    {
+        options.CheckConsentNeeded = context =&gt; true;
+        options.MinimumSameSitePolicy = SameSiteMode.None;
+    });
+
+    services.AddDbContext&lt;ApplicationDbContext&gt;(options =&gt;
+        options.UseSqlServer(
+            Configuration.GetConnectionString(&quot;DefaultConnection&quot;)));
+
+    // Add a DbContext to store your Database Keys
+    services.AddDbContext&lt;MyKeysContext&gt;(options =&gt;
+        options.UseSqlServer(
+            Configuration.GetConnectionString(&quot;MyKeysConnection&quot;)));
+
+    // using Microsoft.AspNetCore.DataProtection;
+    services.AddDataProtection()
+        .PersistKeysToDbContext&lt;MyKeysContext&gt;();
+
+    services.AddDefaultIdentity&lt;IdentityUser&gt;()
+        .AddDefaultUI(UIFramework.Bootstrap4)
+        .AddEntityFrameworkStores&lt;ApplicationDbContext&gt;();
+    services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+}
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using WebApp1.Data;
+
+namespace WebApp1
+{
+    class MyKeysContext : DbContext, IDataProtectionKeyContext
+    {
+        // A recommended constructor overload when using EF Core 
+        // with dependency injection.
+        public MyKeysContext(DbContextOptions&lt;MyKeysContext&gt; options) 
+            : base(options) { }
+
+        // This maps to the table that stores keys.
+        public DbSet&lt;DataProtectionKey&gt; DataProtectionKeys { get; set; }
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+</ul>
+<pre><code class="language-powershell">Add-Migration AddDataProtectionKeys -Context MyKeysContext
+Update-Database -Context MyKeysContext
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet ef migrations add AddDataProtectionKeys --context MyKeysContext
+dotnet ef database update --context MyKeysContext
+</code></pre>
+<table><thead>
+<tr>
+<th>Property/Field</th>
+<th>CLR Type</th>
+<th>SQL Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Id</code></td>
+<td><code>int</code></td>
+<td><code>int</code>, PK, <code>IDENTITY(1,1)</code>, not null</td>
+</tr>
+<tr>
+<td><code>FriendlyName</code></td>
+<td><code>string</code></td>
+<td><code>nvarchar(MAX)</code>, null</td>
+</tr>
+<tr>
+<td><code>Xml</code></td>
+<td><code>string</code></td>
+<td><code>nvarchar(MAX)</code>, null</td>
+</tr>
+</tbody></table>
+<h2><a href="#custom-key-repository" aria-hidden="true" class="anchor" id="custom-key-repository"></a>Custom key repository</h2>
+<p>If the in-box mechanisms aren't appropriate, the developer can specify their own key persistence mechanism by providing a custom IXmlRepository.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-storage-providers?view=aspnetcore-8.0">Key storage providers in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

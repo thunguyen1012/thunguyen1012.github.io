@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Implementation - Context headers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In the data protection system, a "key" means an object that can provide authenticated encryption services. Each key is identified by a unique id (a GUID), and it carries with it algorithmic information and entropic material. It's intended that each key carry unique entropy, but the system cannot enforce that, and we also need to account for developers who might change the key ring manually by modifying the algorithmic information of an existing key in the key ring. To achieve our security requirements given these cases the data protection system has a concept of cryptographic agility, which allows securely using a single entropic value across multiple cryptographic algorithms.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Implementation - Context headers</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#background-and-theory" aria-hidden="true" class="anchor" id="background-and-theory"></a>Background and theory</h2>
+<p>We have developed a data protection system that uses a &quot;key ring&quot; approach to encrypting data.</p>
+<p>We wanted to make it easier for developers to provide their own implementations of the AES algorithm.</p>
+<p>We're trying to solve a problem where we need to use two different algorithms, one for symmetric block ciphers and one for keyed hash functions.</p>
+<p>In this paper we present a new concept of strong PRPs and PRFs based on the idea that strong PRPs and PRFs act as a stable thumbprint over the algorithms in use for any given operation, and it provides the cryptographic agility needed for the data protection system.</p>
+<h2><a href="#cbc-mode-encryption--hmac-authentication" aria-hidden="true" class="anchor" id="cbc-mode-encryption--hmac-authentication"></a>CBC-mode encryption + HMAC authentication</h2>
+<p>The context header consists of the following components:</p>
+<ul>
+<li>
+<p>[16 bits] The value 00 00, which is a marker meaning &quot;CBC encryption + HMAC authentication&quot;.</p>
+</li>
+<li>
+<p>[32 bits] The key length (in bytes, big-endian) of the symmetric block cipher algorithm.</p>
+</li>
+<li>
+<p>[32 bits] The block size (in bytes, big-endian) of the symmetric block cipher algorithm.</p>
+</li>
+<li>
+<p>[32 bits] The key length (in bytes, big-endian) of the HMAC algorithm. (Currently the key size always matches the digest size.)</p>
+</li>
+<li>
+<p>[32 bits] The digest size (in bytes, big-endian) of the HMAC algorithm.</p>
+</li>
+<li>
+<p><code>EncCBC(K_E, IV, &quot;&quot;)</code>, which is the output of the symmetric block cipher algorithm given an empty string input and where IV is an all-zero vector. The construction of <code>K_E</code> is described below.</p>
+</li>
+<li>
+<p><code>MAC(K_H, &quot;&quot;)</code>, which is the output of the HMAC algorithm given an empty string input. The construction of <code>K_H</code> is described below.</p>
+</li>
+</ul>
+<p>Ideally, we could pass all-zero vectors for <code>K_E</code> and <code>K_H</code>. However, we want to avoid the situation where the underlying algorithm checks for the existence of weak keys before performing any operations (notably DES and 3DES), which precludes using a simple or repeatable pattern like an all-zero vector.</p>
+<p>Instead, we use the NIST SP800-108 KDF in Counter Mode (see NIST SP800-108, Sec. 5.1) with a zero-length key, label, and context and HMACSHA512 as the underlying PRF. We derive | <code>K_E</code> | + | <code>K_H</code> | bytes of output, then decompose the result into <code>K_E</code> and <code>K_H</code> themselves. Mathematically, this is represented as follows.</p>
+<p><code>( K_E || K_H ) = SP800_108_CTR(prf = HMACSHA512, key = &quot;&quot;, label = &quot;&quot;, context = &quot;&quot;)</code></p>
+<h3><a href="#example-aes-192-cbc-+-hmacsha256" aria-hidden="true" class="anchor" id="example-aes-192-cbc-+-hmacsha256"></a>Example: AES-192-CBC + HMACSHA256</h3>
+<p>In this article, I will show you how to generate a context header for a validation algorithm.</p>
+<p>First, let <code>( K_E || K_H ) = SP800_108_CTR(prf = HMACSHA512, key = &quot;&quot;, label = &quot;&quot;, context = &quot;&quot;)</code>, where <code>| K_E | = 192 bits</code> and <code>| K_H | = 256 bits</code> per the specified algorithms. This leads to <code>K_E = 5BB6..21DD</code> and <code>K_H = A04A..00A9</code> in the example below:</p>
+<p>Next, compute Enc_CBC (K_E, IV, &quot;&quot;) for AES-192-CBC given IV = 0* and <code>K_E</code> as above.</p>
+<p><code>result := F474B1872B3B53E4721DE19C0841DB6F</code></p>
+<p>Next, compute MAC(K_H, &quot;&quot;) for HMACSHA256 given <code>K_H</code> as above.</p>
+<p><code>result := D4791184B996092EE1202F36E8608FA8FBD98ABDFF5402F264B1D7211536220C</code></p>
+<p>This produces the full context header below:</p>
+<p>This context header is the thumbprint of the authenticated encryption algorithm pair (AES-192-CBC encryption + HMACSHA256 validation). The components, as described above are:</p>
+<ul>
+<li>
+<p>the marker (00 00)</p>
+</li>
+<li>
+<p>the block cipher key length (00 00 00 18)</p>
+</li>
+<li>
+<p>the block cipher block size (00 00 00 10)</p>
+</li>
+<li>
+<p>the HMAC key length (00 00 00 20)</p>
+</li>
+<li>
+<p>the HMAC digest size (00 00 00 20)</p>
+</li>
+<li>
+<p>the block cipher PRP output (F4 74 - DB 6F) and</p>
+</li>
+<li>
+<p>the HMAC PRF output (D4 79 - end).</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+The CBC-mode encryption + HMAC authentication context header is built the same way regardless of whether the algorithms implementations are provided by Windows CNG or by managed SymmetricAlgorithm and KeyedHashAlgorithm types. This allows applications running on different operating systems to reliably produce the same context header even though the implementations of the algorithms differ between OSes. (In practice, the KeyedHashAlgorithm doesn't have to be a proper HMAC. It can be any keyed hash algorithm type.)</p>
+</blockquote>
+<h3><a href="#example-3des-192-cbc-+-hmacsha1" aria-hidden="true" class="anchor" id="example-3des-192-cbc-+-hmacsha1"></a>Example: 3DES-192-CBC + HMACSHA1</h3>
+<p>First, let <code>( K_E || K_H ) = SP800_108_CTR(prf = HMACSHA512, key = &quot;&quot;, label = &quot;&quot;, context = &quot;&quot;)</code>, where <code>| K_E | = 192 bits and | K_H | = 160 bits</code> per the specified algorithms. This leads to <code>K_E = A219..E2BB</code> and <code>K_H = DC4A..B464</code> in the example below:</p>
+<p>Next, compute Enc_CBC (K_E, IV, &quot;&quot;) for 3DES-192-CBC given IV = 0* and <code>K_E</code> as above.</p>
+<p><code>result := ABB100F81E53E10E</code></p>
+<p>Next, compute MAC(K_H, &quot;&quot;) for HMACSHA1 given <code>K_H</code> as above.</p>
+<p><code>result := 76EB189B35CF03461DDF877CD9F4B1B4D63A7555</code></p>
+<p>This produces the full context header which is a thumbprint of the authenticated encryption algorithm pair (3DES-192-CBC encryption + HMACSHA1 validation), shown below:</p>
+<p>The components break down as follows:</p>
+<ul>
+<li>
+<p>the marker (00 00)</p>
+</li>
+<li>
+<p>the block cipher key length (00 00 00 18)</p>
+</li>
+<li>
+<p>the block cipher block size (00 00 00 08)</p>
+</li>
+<li>
+<p>the HMAC key length (00 00 00 14)</p>
+</li>
+<li>
+<p>the HMAC digest size (00 00 00 14)</p>
+</li>
+<li>
+<p>the block cipher PRP output (AB B1 - E1 0E) and</p>
+</li>
+<li>
+<p>the HMAC PRF output (76 EB - end).</p>
+</li>
+</ul>
+<h2><a href="#galoiscounter-mode-encryption-+-authentication" aria-hidden="true" class="anchor" id="galoiscounter-mode-encryption-+-authentication"></a>Galois/Counter Mode encryption + authentication</h2>
+<p>The context header consists of the following components:</p>
+<ul>
+<li>
+<p>[16 bits] The value 00 01, which is a marker meaning &quot;GCM encryption + authentication&quot;.</p>
+</li>
+<li>
+<p>[32 bits] The key length (in bytes, big-endian) of the symmetric block cipher algorithm.</p>
+</li>
+<li>
+<p>[32 bits] The nonce size (in bytes, big-endian) used during authenticated encryption operations. (For our system, this is fixed at nonce size = 96 bits.)</p>
+</li>
+<li>
+<p>[32 bits] The block size (in bytes, big-endian) of the symmetric block cipher algorithm. (For GCM, this is fixed at block size = 128 bits.)</p>
+</li>
+<li>
+<p>[32 bits] The authentication tag size (in bytes, big-endian) produced by the authenticated encryption function. (For our system, this is fixed at tag size = 128 bits.)</p>
+</li>
+<li>
+<p>[128 bits] The tag of Enc_GCM (K_E, nonce, &quot;&quot;), which is the output of the symmetric block cipher algorithm given an empty string input and where nonce is a 96-bit all-zero vector.</p>
+</li>
+</ul>
+<p><code>K_E</code> is derived using the same mechanism as in the CBC encryption + HMAC authentication scenario. However, since there's no <code>K_H</code> in play here, we essentially have <code>| K_H | = 0</code>, and the algorithm collapses to the below form.</p>
+<p><code>K_E = SP800_108_CTR(prf = HMACSHA512, key = &quot;&quot;, label = &quot;&quot;, context = &quot;&quot;)</code></p>
+<h3><a href="#example-aes-256-gcm" aria-hidden="true" class="anchor" id="example-aes-256-gcm"></a>Example: AES-256-GCM</h3>
+<p>First, let <code>K_E = SP800_108_CTR(prf = HMACSHA512, key = &quot;&quot;, label = &quot;&quot;, context = &quot;&quot;)</code>, where <code>| K_E | = 256 bits</code>.</p>
+<p><code>K_E := 22BC6F1B171C08C4AE2F27444AF8FC8B3087A90006CAEA91FDCFB47C1B8733B8</code></p>
+<p>Next, compute the authentication tag of Enc_GCM (K_E, nonce, &quot;&quot;) for AES-256-GCM given <code>nonce = 096</code> and <code>K_E</code> as above.</p>
+<p><code>result := E7DCCE66DF855A323A6BB7BD7A59BE45</code></p>
+<p>This produces the full context header below:</p>
+<p>The components break down as follows:</p>
+<ul>
+<li>
+<p>the marker (00 01)</p>
+</li>
+<li>
+<p>the block cipher key length (00 00 00 20)</p>
+</li>
+<li>
+<p>the nonce size (00 00 00 0C)</p>
+</li>
+<li>
+<p>the block cipher block size (00 00 00 10)</p>
+</li>
+<li>
+<p>the authentication tag size (00 00 00 10) and</p>
+</li>
+<li>
+<p>the authentication tag from running the block cipher (E7 DC - end).</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/context-headers?view=aspnetcore-8.0">Context headers in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

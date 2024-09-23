@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Compatibility - Replace machineKey in ASP.NET | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The implementation of the <machineKey> element in ASP.NET is replaceable. This allows most calls to ASP.NET cryptographic routines to be routed through a replacement data protection mechanism, including the new data protection system.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Compatibility - Replace machineKey in ASP.NET</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The implementation of the <code>&lt;machineKey&gt;</code> element in ASP.NET is replaceable. This allows most calls to ASP.NET cryptographic routines to be routed through a replacement data protection mechanism, including the new data protection system.</p>
+<h2><a href="#package-installation" aria-hidden="true" class="anchor" id="package-installation"></a>Package installation</h2>
+<blockquote>
+<p class='note'>Note
+The new data protection system can only be installed into an existing ASP.NET application targeting .NET 4.5.1 or later. Installation will fail if the application targets .NET 4.5 or lower.</p>
+</blockquote>
+<p>This article describes how to install a new data protection system into an existing ASP.NET 4.5.1+ project.</p>
+<p>This package tells ASP.NET to use cryptographic operations, including forms authentication, view state, and calls to MachineKey.Protect.</p>
+<pre><code class="language-xml">&lt;machineKey compatibilityMode=&quot;Framework45&quot; dataProtectorType=&quot;...&quot; /&gt;
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+You can tell if the new data protection system is active by inspecting fields like <code>__VIEWSTATE</code>, which should begin with &quot;CfDJ8&quot; as in the example below. &quot;CfDJ8&quot; is the base64 representation of the magic &quot;09 F0 C9 F0&quot; header that identifies a payload protected by the data protection system.</p>
+</blockquote>
+<pre><code class="language-html">&lt;input type=&quot;hidden&quot; name=&quot;__VIEWSTATE&quot; id=&quot;__VIEWSTATE&quot; value=&quot;CfDJ8AWPr2EQPTBGs3L2GCZOpk...&quot;&gt;
+</code></pre>
+<h2><a href="#package-configuration" aria-hidden="true" class="anchor" id="package-configuration"></a>Package configuration</h2>
+<p>This article describes how to set up a data protection system on a virtual machine.</p>
+<p>If you'd like to create your own custom data protection startup types, you can find them here.</p>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.SystemWeb;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace DataProtectionDemo
+{
+    public class MyDataProtectionStartup : DataProtectionStartup
+    {
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddDataProtection()
+                .SetApplicationName(&quot;my-app&quot;)
+                .PersistKeysToFileSystem(new DirectoryInfo(@&quot;\\server\share\myapp-keys\&quot;))
+                .ProtectKeysWithCertificate(&quot;thumbprint&quot;);
+        }
+    }
+}
+</code></pre>
+<blockquote>
+<p class='tip'>Tip
+You can also use <code>&lt;machineKey applicationName=&quot;my-app&quot; ... /&gt;</code> in place of an explicit call to <code>SetApplicationName</code>. This is a convenience mechanism to avoid forcing the developer to create a DataProtectionStartup-derived type if all they wanted to configure was setting the application name.</p>
+</blockquote>
+<p>To enable this custom configuration, go back to Web.config and look for the <code>&lt;appSettings&gt;</code> element that the package install added to the config file. It will look like the following markup:</p>
+<pre><code class="language-xml">&lt;appSettings&gt;
+  &lt;!--
+  If you want to customize the behavior of the ASP.NET Core Data Protection stack, set the
+  &quot;aspnet:dataProtectionStartupType&quot; switch below to be the fully-qualified name of a
+  type which subclasses Microsoft.AspNetCore.DataProtection.SystemWeb.DataProtectionStartup.
+  --&gt;
+  &lt;add key=&quot;aspnet:dataProtectionStartupType&quot; value=&quot;&quot; /&gt;
+&lt;/appSettings&gt;
+</code></pre>
+<p>If the name of the application is DataProtectionDemo, this would look like the below.</p>
+<pre><code class="language-xml">&lt;add key=&quot;aspnet:dataProtectionStartupType&quot;
+     value=&quot;DataProtectionDemo.MyDataProtectionStartup, DataProtectionDemo&quot; /&gt;
+</code></pre>
+<p>The newly-configured data protection system is now ready for use inside the application.</p>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/compatibility/replacing-machinekey?view=aspnetcore-8.0">Replace the ASP.NET machineKey in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

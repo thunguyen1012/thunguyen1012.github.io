@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Implementation - Ephemeral data protection providers | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='There are scenarios where an application needs a throwaway IDataProtectionProvider. For example, the developer might just be experimenting in a one-off console application, or the application itself is transient (it's scripted or a unit test project). To support these scenarios the Microsoft.AspNetCore.DataProtection package includes a type EphemeralDataProtectionProvider. This type provides a basic implementation of IDataProtectionProvider whose key repository is held solely in-memory and isn't written out to any backing store.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Implementation - Ephemeral data protection providers</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>There are scenarios where an application needs a throwaway <code>IDataProtectionProvider</code>. For example, the developer might just be experimenting in a one-off console application, or the application itself is transient (it's scripted or a unit test project). To support these scenarios the Microsoft.AspNetCore.DataProtection package includes a type <code>EphemeralDataProtectionProvider</code>. This type provides a basic implementation of <code>IDataProtectionProvider</code> whose key repository is held solely in-memory and isn't written out to any backing store.</p>
+<p>Each instance of <code>EphemeralDataProtectionProvider</code> uses its own unique primary key. Therefore, if an <code>IDataProtector</code> rooted at an <code>EphemeralDataProtectionProvider</code> generates a protected payload, that payload can only be unprotected by an equivalent <code>IDataProtector</code> (given the same purpose chain) rooted at the same <code>EphemeralDataProtectionProvider</code> instance.</p>
+<p>The following sample demonstrates instantiating an <code>EphemeralDataProtectionProvider</code> and using it to protect and unprotect data.</p>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.DataProtection;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        const string purpose = &quot;Ephemeral.App.v1&quot;;
+
+        // create an ephemeral provider and demonstrate that it can round-trip a payload
+        var provider = new EphemeralDataProtectionProvider();
+        var protector = provider.CreateProtector(purpose);
+        Console.Write(&quot;Enter input: &quot;);
+        string input = Console.ReadLine();
+
+        // protect the payload
+        string protectedPayload = protector.Protect(input);
+        Console.WriteLine($&quot;Protect returned: {protectedPayload}&quot;);
+
+        // unprotect the payload
+        string unprotectedPayload = protector.Unprotect(protectedPayload);
+        Console.WriteLine($&quot;Unprotect returned: {unprotectedPayload}&quot;);
+
+        // if I create a new ephemeral provider, it won't be able to unprotect existing
+        // payloads, even if I specify the same purpose
+        provider = new EphemeralDataProtectionProvider();
+        protector = provider.CreateProtector(purpose);
+        unprotectedPayload = protector.Unprotect(protectedPayload); // THROWS
+    }
+}
+
+/*
+* SAMPLE OUTPUT
+*
+* Enter input: Hello!
+* Protect returned: CfDJ8AAAAAAAAAAAAAAAAAAAAA...uGoxWLjGKtm1SkNACQ
+* Unprotect returned: Hello!
+* &lt;&lt; throws CryptographicException &gt;&gt;
+*/
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-storage-ephemeral?view=aspnetcore-8.0">Ephemeral data protection providers in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

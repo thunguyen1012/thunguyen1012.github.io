@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - EU General Data Protection Regulation (GDPR) support | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - EU General Data Protection Regulation (GDPR) support</h1>
+        <ul>
+<li>14 contributors</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>ASP.NET Core provides APIs and templates to help meet some of the EU General Data Protection Regulation (GDPR) requirements:</p>
+<ul>
+<li>
+<p>The project templates include extension points and stubbed markup that you can replace with your privacy and cookie use policy.</p>
+</li>
+<li>
+<p>The <code>Pages/Privacy.cshtml</code> page or <code>Views/Home/Privacy.cshtml</code> view provides a page to detail your site's privacy policy.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.Configure&lt;CookiePolicyOptions&gt;(options =&gt;
+{
+    // This lambda determines whether user consent for non-essential 
+    // cookies is needed for a given request.
+    options.CheckConsentNeeded = context =&gt; true;
+
+    options.MinimumSameSitePolicy = SameSiteMode.None;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseCookiePolicy();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>Add the cookie consent partial to the <code>_Layout.cshtml</code> file:</li>
+</ul>
+<pre><code class="language-cshtml">@*Previous markup removed for brevity*@
+    &lt;/header&gt;
+    &lt;div class=&quot;container&quot;&gt;
+        &lt;partial name=&quot;_CookieConsentPartial&quot; /&gt;
+        &lt;main role=&quot;main&quot; class=&quot;pb-3&quot;&gt;
+            @RenderBody()
+        &lt;/main&gt;
+    &lt;/div&gt;
+
+    &lt;footer class=&quot;border-top footer text-muted&quot;&gt;
+        &lt;div class=&quot;container&quot;&gt;
+            &amp;copy; 2022 - WebGDPR - &lt;a asp-area=&quot;&quot; asp-page=&quot;/Privacy&quot;&gt;Privacy&lt;/a&gt;
+        &lt;/div&gt;
+    &lt;/footer&gt;
+
+    &lt;script src=&quot;~/lib/jquery/dist/jquery.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;~/lib/bootstrap/dist/js/bootstrap.bundle.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;~/js/site.js&quot; asp-append-version=&quot;true&quot;&gt;&lt;/script&gt;
+
+    @await RenderSectionAsync(&quot;Scripts&quot;, required: false)
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<ul>
+<li>Add the <code>_CookieConsentPartial.cshtml</code> file to the project:</li>
+</ul>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Http.Features
+
+@{
+    var consentFeature = Context.Features.Get&lt;ITrackingConsentFeature&gt;();
+    var showBanner = !consentFeature?.CanTrack ?? false;
+    var cookieString = consentFeature?.CreateConsentCookie();
+}
+
+@if (showBanner)
+{
+    &lt;div id=&quot;cookieConsent&quot; class=&quot;alert alert-info alert-dismissible fade show&quot; role=&quot;alert&quot;&gt;
+        Use this space to summarize your privacy and cookie use policy. &lt;a asp-page=&quot;/Privacy&quot;&gt;Learn More&lt;/a&gt;.
+        &lt;button type=&quot;button&quot; class=&quot;accept-policy close&quot; data-bs-dismiss=&quot;alert&quot; aria-label=&quot;Close&quot; data-cookie-string=&quot;@cookieString&quot;&gt;
+            &lt;span aria-hidden=&quot;true&quot;&gt;Accept&lt;/span&gt;
+        &lt;/button&gt;
+    &lt;/div&gt;
+    &lt;script&gt;
+        (function () {
+            var button = document.querySelector(&quot;#cookieConsent button[data-cookie-string]&quot;);
+            button.addEventListener(&quot;click&quot;, function (event) {
+                document.cookie = button.dataset.cookieString;
+            }, false);
+        })();
+    &lt;/script&gt;
+}
+</code></pre>
+<ul>
+<li>Select the ASP.NET Core 2.2 version of this article to read about the cookie consent feature.</li>
+</ul>
+<h2><a href="#customize-the-cookie-consent-value" aria-hidden="true" class="anchor" id="customize-the-cookie-consent-value"></a>Customize the cookie consent value</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.Configure&lt;CookiePolicyOptions&gt;(options =&gt;
+{
+    options.CheckConsentNeeded = context =&gt; true;
+    options.MinimumSameSitePolicy = SameSiteMode.None;
+    options.ConsentCookieValue = &quot;true&quot;;
+});
+
+var app = builder.Build();
+</code></pre>
+<h2><a href="#encryption-at-rest" aria-hidden="true" class="anchor" id="encryption-at-rest"></a>Encryption at rest</h2>
+<ul>
+<li>
+<p>Encrypts stored data automatically.</p>
+</li>
+<li>
+<p>Encrypts without configuration, programming, or other work for the software that accesses the data.</p>
+</li>
+<li>
+<p>Is the easiest and safest option.</p>
+</li>
+<li>
+<p>Allows the database to manage keys and encryption.</p>
+</li>
+<li>
+<p>Microsoft SQL and Azure SQL provide Transparent Data Encryption (TDE).</p>
+</li>
+<li>
+<p>SQL Azure encrypts the database by default</p>
+</li>
+<li>
+<p>Azure Blobs, Files, Table, and Queue Storage are encrypted by default.</p>
+</li>
+<li>
+<p>BitLocker for Windows Server</p>
+</li>
+<li>
+<p>Linux:</p>
+<ul>
+<li>
+<p>eCryptfs</p>
+</li>
+<li>
+<p>EncFS.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>Microsoft.com/GDPR</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/gdpr?view=aspnetcore-8.0">EU General Data Protection Regulation (GDPR) support in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

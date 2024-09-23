@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Data protection - Implementation - Key management | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The data protection system automatically manages the lifetime of master keys used to protect and unprotect payloads. Each key can exist in one of four stages:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Data protection - Implementation - Key management</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The data protection system automatically manages the lifetime of master keys used to protect and unprotect payloads. Each key can exist in one of four stages:</p>
+<ul>
+<li>
+<p>Created - the key exists in the key ring but has not yet been activated. The key shouldn't be used for new <code>Protect</code> operations until sufficient time has elapsed that the key has had a chance to propagate to all machines that are consuming this key ring.</p>
+</li>
+<li>
+<p>Active - the key exists in the key ring and should be used for all new <code>Protect</code> operations.</p>
+</li>
+<li>
+<p>Expired - the key has run its natural lifetime and should no longer be used for new <code>Protect</code> operations.</p>
+</li>
+<li>
+<p>Revoked - the key is compromised and must not be used for new <code>Protect</code> operations.</p>
+</li>
+</ul>
+<p>Encryption keys can be used to protect payloads.</p>
+<blockquote>
+<p class='warning'>Warning
+The developer might be tempted to delete a key from the key ring (e.g., by deleting the corresponding file from the file system). At that point, all data protected by the key is permanently undecipherable, and there's no emergency override like there's with revoked keys. Deleting a key is truly destructive behavior.</p>
+</blockquote>
+<h2><a href="#default-key-selection" aria-hidden="true" class="anchor" id="default-key-selection"></a>Default key selection</h2>
+<p>When the data protection system reads the key ring from the backing repository, it will attempt to locate a &quot;default&quot; key from the key ring. The default key is used for new <code>Protect</code> operations.</p>
+<p>Here's how it works:</p>
+<p>A data protection system generates a new key immediately rather than falling back to a different key, and the system should prefer the current configuration over falling back.</p>
+<p>The default data protection key is always the default key.</p>
+<h2><a href="#key-expiration-and-rolling" aria-hidden="true" class="anchor" id="key-expiration-and-rolling"></a>Key expiration and rolling</h2>
+<p>I'm working on a way to make it easier to create and propagate key rings.</p>
+<p>The data protection system will roll back the default key to the key ring when the default key expires.</p>
+<p>When creating a key for an application, you might want to consider how quickly it will be activated.</p>
+<p>The default key lifetime is 90 days, though this is configurable as in the following example.</p>
+<pre><code class="language-csharp">services.AddDataProtection()
+       // use 14-day lifetime instead of 90-day lifetime
+       .SetDefaultKeyLifetime(TimeSpan.FromDays(14));
+</code></pre>
+<p>An administrator can also change the default system-wide, though an explicit call to <code>SetDefaultKeyLifetime</code> will override any system-wide policy. The default key lifetime cannot be shorter than 7 days.</p>
+<h2><a href="#automatic-key-ring-refresh" aria-hidden="true" class="anchor" id="automatic-key-ring-refresh"></a>Automatic key ring refresh</h2>
+<p>When the data protection system initializes, it reads the key ring from the underlying repository and caches it in memory. This cache allows <code>Protect</code> and <code>Unprotect</code> operations to proceed without hitting the backing store. The system will automatically check the backing store for changes approximately every 24 hours or when the current default key expires, whichever comes first.</p>
+<blockquote>
+<p class='warning'>Warning
+Developers should very rarely (if ever) need to use the key management APIs directly. The data protection system will perform automatic key management as described above.</p>
+</blockquote>
+<p>The data protection system exposes an interface <code>IKeyManager</code> that can be used to inspect and make changes to the key ring. The DI system that provided the instance of <code>IDataProtectionProvider</code> can also provide an instance of <code>IKeyManager</code> for your consumption. Alternatively, you can pull the <code>IKeyManager</code> straight from the <code>IServiceProvider</code> as in the example below.</p>
+<p>Any operation which modifies the key ring (creating a new key explicitly or performing a revocation) will invalidate the in-memory cache. The next call to <code>Protect</code> or <code>Unprotect</code> will cause the data protection system to reread the key ring and recreate the cache.</p>
+<p>The sample below demonstrates using the <code>IKeyManager</code> interface to inspect and manipulate the key ring, including revoking existing keys and generating a new key manually.</p>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using System.Threading;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.Extensions.DependencyInjection;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDataProtection()
+            // point at a specific folder and use DPAPI to encrypt keys
+            .PersistKeysToFileSystem(new DirectoryInfo(@&quot;c:\temp-keys&quot;))
+            .ProtectKeysWithDpapi();
+        var services = serviceCollection.BuildServiceProvider();
+
+        // perform a protect operation to force the system to put at least
+        // one key in the key ring
+        services.GetDataProtector(&quot;Sample.KeyManager.v1&quot;).Protect(&quot;payload&quot;);
+        Console.WriteLine(&quot;Performed a protect operation.&quot;);
+        Thread.Sleep(2000);
+
+        // get a reference to the key manager
+        var keyManager = services.GetService&lt;IKeyManager&gt;();
+
+        // list all keys in the key ring
+        var allKeys = keyManager.GetAllKeys();
+        Console.WriteLine($&quot;The key ring contains {allKeys.Count} key(s).&quot;);
+        foreach (var key in allKeys)
+        {
+            Console.WriteLine($&quot;Key {key.KeyId:B}: Created = {key.CreationDate:u}, IsRevoked = {key.IsRevoked}&quot;);
+        }
+
+        // revoke all keys in the key ring
+        keyManager.RevokeAllKeys(DateTimeOffset.Now, reason: &quot;Revocation reason here.&quot;);
+        Console.WriteLine(&quot;Revoked all existing keys.&quot;);
+
+        // add a new key to the key ring with immediate activation and a 1-month expiration
+        keyManager.CreateNewKey(
+            activationDate: DateTimeOffset.Now,
+            expirationDate: DateTimeOffset.Now.AddMonths(1));
+        Console.WriteLine(&quot;Added a new key.&quot;);
+
+        // list all keys in the key ring
+        allKeys = keyManager.GetAllKeys();
+        Console.WriteLine($&quot;The key ring contains {allKeys.Count} key(s).&quot;);
+        foreach (var key in allKeys)
+        {
+            Console.WriteLine($&quot;Key {key.KeyId:B}: Created = {key.CreationDate:u}, IsRevoked = {key.IsRevoked}&quot;);
+        }
+    }
+}
+
+/*
+ * SAMPLE OUTPUT
+ *
+ * Performed a protect operation.
+ * The key ring contains 1 key(s).
+ * Key {1b948618-be1f-440b-b204-64ff5a152552}: Created = 2015-03-18 22:20:49Z, IsRevoked = False
+ * Revoked all existing keys.
+ * Added a new key.
+ * The key ring contains 2 key(s).
+ * Key {1b948618-be1f-440b-b204-64ff5a152552}: Created = 2015-03-18 22:20:49Z, IsRevoked = True
+ * Key {2266fc40-e2fb-48c6-8ce2-5fde6b1493f7}: Created = 2015-03-18 22:20:51Z, IsRevoked = False
+ */
+</code></pre>
+<p>If you would like to see code comments translated to languages other than English, let us know in this GitHub discussion issue.</p>
+<h2><a href="#key-storage" aria-hidden="true" class="anchor" id="key-storage"></a>Key storage</h2>
+<p>A data protection system and a key persistence mechanism have been developed for the Android operating system.</p>
+<ul>
+<li>
+<p>Key storage providers in ASP.NET Core</p>
+</li>
+<li>
+<p>Key encryption at rest in Windows and Azure using ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-management?view=aspnetcore-8.0">Key management in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

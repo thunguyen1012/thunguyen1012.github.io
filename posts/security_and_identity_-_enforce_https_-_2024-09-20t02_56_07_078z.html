@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Security and Identity - Enforce HTTPS | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Security and Identity - Enforce HTTPS</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>this article shows how to:</p>
+<ul>
+<li>
+<p>Require HTTPS for all requests.</p>
+</li>
+<li>
+<p>Redirect all HTTP requests to HTTPS.</p>
+</li>
+</ul>
+<p>No API can prevent a client from sending sensitive data on the first request.</p>
+<blockquote>
+<p class='note'>Note
+If you're using .NET 9 SDK or later, see the updated Linux procedures in the .NET 9 version of this article.</p>
+</blockquote>
+<blockquote>
+<p class='warning'>Warning
+API projects
+Do not use <code>RequireHttpsAttribute</code> on Web APIs that receive sensitive information. <code>RequireHttpsAttribute</code> uses HTTP status codes to redirect browsers from HTTP to HTTPS. API clients may not understand or obey redirects from HTTP to HTTPS. Such clients may send information over HTTP. Web APIs should either:</p>
+</blockquote>
+<p>Not listen on HTTP.
+Close the connection with status code 400 (Bad Request) and not serve the request.</p>
+<p>To disable HTTP redirection in an API, set the <code>ASPNETCORE_URLS</code> environment variable or use the <code>--urls</code> command line flag. For more information, see Use multiple environments in ASP.NET Core and 8 ways to set the URLs for an ASP.NET Core app by Andrew Lock.
+HSTS and API projects
+The default API projects don't include HSTS because HSTS is generally a browser only instruction. Other callers, such as phone or desktop apps, do not obey the instruction. Even within browsers, a single authenticated call to an API over HTTP has risks on insecure networks. The secure approach is to configure API projects to only listen to and respond over HTTPS.</p>
+<h2><a href="#api-projects" aria-hidden="true" class="anchor" id="api-projects"></a>API projects</h2>
+<ul>
+<li>
+<p>Not listen on HTTP.</p>
+</li>
+<li>
+<p>Close the connection with status code 400 (Bad Request) and not serve the request.</p>
+</li>
+</ul>
+<h2><a href="#hsts-and-api-projects" aria-hidden="true" class="anchor" id="hsts-and-api-projects"></a>HSTS and API projects</h2>
+<h3><a href="#http-redirection-to-https-causes-err_invalid_redirect-on-the-cors-preflight-request" aria-hidden="true" class="anchor" id="http-redirection-to-https-causes-err_invalid_redirect-on-the-cors-preflight-request"></a>HTTP redirection to HTTPS causes <code>ERR_INVALID_REDIRECT</code> on the CORS preflight request</h3>
+<h2><a href="#require-https" aria-hidden="true" class="anchor" id="require-https"></a>Require HTTPS</h2>
+<ul>
+<li>
+<p>HTTPS Redirection Middleware (UseHttpsRedirection) to redirect HTTP requests to HTTPS.</p>
+</li>
+<li>
+<p>HSTS Middleware (UseHsts) to send HTTP Strict Transport Security Protocol (HSTS) headers to clients.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Apps deployed in a reverse proxy configuration allow the proxy to handle connection security (HTTPS). If the proxy also handles HTTPS redirection, there's no need to use HTTPS Redirection Middleware. If the proxy server also handles writing HSTS headers (for example, native HSTS support in IIS 10.0 (1709) or later), HSTS Middleware isn't required by the app. For more information, see Opt-out of HTTPS/HSTS on project creation.</p>
+</blockquote>
+<h3><a href="#usehttpsredirection" aria-hidden="true" class="anchor" id="usehttpsredirection"></a><code>UseHttpsRedirection</code></h3>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Uses the default HttpsRedirectionOptions.RedirectStatusCode (Status307TemporaryRedirect).</p>
+</li>
+<li>
+<p>Uses the default HttpsRedirectionOptions.HttpsPort (null) unless overridden by the <code>ASPNETCORE_HTTPS_PORT</code> environment variable or IServerAddressesFeature.</p>
+</li>
+</ul>
+<h3><a href="#port-configuration" aria-hidden="true" class="anchor" id="port-configuration"></a>Port configuration</h3>
+<ul>
+<li>
+<p>Redirection to HTTPS doesn't occur.</p>
+</li>
+<li>
+<p>The middleware logs the warning &quot;Failed to determine the https port for redirect.&quot;</p>
+</li>
+<li>
+<p>Set HttpsRedirectionOptions.HttpsPort.</p>
+</li>
+<li>
+<p>Set the <code>https_port</code> host setting:</p>
+<ul>
+<li>
+<p>In host configuration.</p>
+</li>
+<li>
+<p>By setting the <code>ASPNETCORE_HTTPS_PORT</code> environment variable.</p>
+</li>
+<li>
+<p>By adding a top-level entry in <code>appsettings.json</code>:</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;https_port&quot;: 443,
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;
+    }
+  },
+  &quot;AllowedHosts&quot;: &quot;*&quot;
+}
+</code></pre>
+<ul>
+<li>
+<p>Indicate a port with the secure scheme using the <code>ASPNETCORE_URLS</code> environment variable. The environment variable configures the server. The middleware indirectly discovers the HTTPS port via IServerAddressesFeature. This approach doesn't work in reverse proxy deployments.</p>
+</li>
+<li>
+<p>The ASP.NET Core web templates set an HTTPS URL in <code>Properties/launchsettings.json</code> for both Kestrel and IIS Express. <code>launchsettings.json</code> is only used on the local machine.</p>
+</li>
+<li>
+<p>Configure an HTTPS URL endpoint for a public-facing edge deployment of Kestrel server or HTTP.sys server. Only one HTTPS port is used by the app. The middleware discovers the port via IServerAddressesFeature.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+When an app is run in a reverse proxy configuration, IServerAddressesFeature isn't available. Set the port using one of the other approaches described in this section.</p>
+</blockquote>
+<h3><a href="#edge-deployments" aria-hidden="true" class="anchor" id="edge-deployments"></a>Edge deployments</h3>
+<ul>
+<li>
+<p>The secure port where the client is redirected (typically, 443 in production and 5001 in development).</p>
+</li>
+<li>
+<p>The insecure port (typically, 80 in production and 5000 in development).</p>
+</li>
+</ul>
+<h3><a href="#deployment-scenarios" aria-hidden="true" class="anchor" id="deployment-scenarios"></a>Deployment scenarios</h3>
+<h3><a href="#options" aria-hidden="true" class="anchor" id="options"></a>Options</h3>
+<pre><code class="language-csharp">using static Microsoft.AspNetCore.Http.StatusCodes;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddHsts(options =&gt;
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(60);
+    options.ExcludedHosts.Add(&quot;example.com&quot;);
+    options.ExcludedHosts.Add(&quot;www.example.com&quot;);
+});
+
+builder.Services.AddHttpsRedirection(options =&gt;
+{
+    options.RedirectStatusCode = Status307TemporaryRedirect;
+    options.HttpsPort = 5001;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Sets HttpsRedirectionOptions.RedirectStatusCode to Status307TemporaryRedirect, which is the default value. Use the fields of the StatusCodes class for assignments to <code>RedirectStatusCode</code>.</p>
+</li>
+<li>
+<p>Sets the HTTPS port to 5001.</p>
+</li>
+</ul>
+<h4><a href="#configure-permanent-redirects-in-production" aria-hidden="true" class="anchor" id="configure-permanent-redirects-in-production"></a>Configure permanent redirects in production</h4>
+<pre><code class="language-csharp">using static Microsoft.AspNetCore.Http.StatusCodes;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHttpsRedirection(options =&gt;
+    {
+        options.RedirectStatusCode = Status308PermanentRedirect;
+        options.HttpsPort = 443;
+    });
+}
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<h2><a href="#https-redirection-middleware-alternative-approach" aria-hidden="true" class="anchor" id="https-redirection-middleware-alternative-approach"></a>HTTPS Redirection Middleware alternative approach</h2>
+<h2><a href="#http-strict-transport-security-protocol-hsts)" aria-hidden="true" class="anchor" id="http-strict-transport-security-protocol-hsts)"></a>HTTP Strict Transport Security Protocol (HSTS)</h2>
+<ul>
+<li>
+<p>The browser stores configuration for the domain that prevents sending any communication over HTTP. The browser forces all communication over HTTPS.</p>
+</li>
+<li>
+<p>The browser prevents the user from using untrusted or invalid certificates. The browser disables prompts that allow a user to temporarily trust such a certificate.</p>
+</li>
+<li>
+<p>The client must support HSTS.</p>
+</li>
+<li>
+<p>HSTS requires at least one successful HTTPS request to establish the HSTS policy.</p>
+</li>
+<li>
+<p>The application must check every HTTP request and redirect or reject the HTTP request.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using static Microsoft.AspNetCore.Http.StatusCodes;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddHsts(options =&gt;
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(60);
+    options.ExcludedHosts.Add(&quot;example.com&quot;);
+    options.ExcludedHosts.Add(&quot;www.example.com&quot;);
+});
+
+builder.Services.AddHttpsRedirection(options =&gt;
+{
+    options.RedirectStatusCode = Status307TemporaryRedirect;
+    options.HttpsPort = 5001;
+});
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(&quot;/Error&quot;);
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Sets the preload parameter of the <code>Strict-Transport-Security</code> header. Preload isn't part of the RFC HSTS specification, but is supported by web browsers to preload HSTS sites on fresh install. For more information, see <a href="https://hstspreload.org/">https://hstspreload.org/</a>.</p>
+</li>
+<li>
+<p>Enables includeSubDomain, which applies the HSTS policy to Host subdomains.</p>
+</li>
+<li>
+<p>Explicitly sets the <code>max-age</code> parameter of the <code>Strict-Transport-Security</code> header to 60 days. If not set, defaults to 30 days. For more information, see the <code>max-age</code> directive.</p>
+</li>
+<li>
+<p>Adds <code>example.com</code> to the list of hosts to exclude.</p>
+</li>
+<li>
+<p><code>localhost</code> : The IPv4 loopback address.</p>
+</li>
+<li>
+<p><code>127.0.0.1</code> : The IPv4 loopback address.</p>
+</li>
+<li>
+<p>[::1] : The IPv6 loopback address.</p>
+</li>
+</ul>
+<h2><a href="#opt-out-of-httpshsts-on-project-creation" aria-hidden="true" class="anchor" id="opt-out-of-httpshsts-on-project-creation"></a>Opt-out of HTTPS/HSTS on project creation</h2>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>.NET CLI</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl/enforcing-ssl/_static/out-vs2019.png?view=aspnetcore-8.0" alt="New ASP.NET Core Web Application dialog showing the Configure for HTTPS checkbox unselected.!" title="New ASP.NET Core Web Application dialog showing the Configure for HTTPS checkbox unselected." /></p>
+<pre><code class="language-dotnetcli">dotnet new webapp --no-https
+</code></pre>
+<h2><a href="#trust-the-aspnet-core-https-development-certificate-on-windows-and-macos" aria-hidden="true" class="anchor" id="trust-the-aspnet-core-https-development-certificate-on-windows-and-macos"></a>Trust the <code>ASP.NET Core HTTPS development certificate</code> on Windows and macOS</h2>
+<pre><code class="language-cli">ASP.NET Core
+------------
+Successfully installed the ASP.NET Core HTTPS Development Certificate.
+To trust the certificate run 'dotnet dev-certs https --trust' (Windows and macOS only).
+For establishing trust on other platforms refer to the platform specific documentation.
+For more information on configuring HTTPS see https://go.microsoft.com/fwlink/?linkid=848054.
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet dev-certs https --trust
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet dev-certs https --help
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+Do not create a development certificate in an environment that will be redistributed, such as a container image or virtual machine. Doing so can lead to spoofing and elevation of privilege. To help prevent this, set the <code>DOTNET_GENERATE_ASPNET_CERTIFICATE</code> environment variable to <code>false</code> prior to calling the .NET CLI for the first time. This will skip the automatic generation of the ASP.NET Core development certificate during the CLI's first-run experience.</p>
+</blockquote>
+<h3><a href="#trust-the-https-certificate-with-firefox-to-prevent-sec_error_inadequate_key_usage-error" aria-hidden="true" class="anchor" id="trust-the-https-certificate-with-firefox-to-prevent-sec_error_inadequate_key_usage-error"></a>Trust the HTTPS certificate with Firefox to prevent SEC_ERROR_INADEQUATE_KEY_USAGE error</h3>
+<h4><a href="#create-a-policy-file-to-trust-https-certificate-with-firefox" aria-hidden="true" class="anchor" id="create-a-policy-file-to-trust-https-certificate-with-firefox"></a>Create a policy file to trust HTTPS certificate with Firefox</h4>
+<ul>
+<li>
+<p>Windows: %PROGRAMFILES%\Mozilla Firefox\distribution\</p>
+</li>
+<li>
+<p>MacOS: <code>Firefox.app/Contents/Resources/distribution</code></p>
+</li>
+<li>
+<p>Linux: See Trust the certificate with Firefox on Linux in this article.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;policies&quot;: {
+    &quot;Certificates&quot;: {
+      &quot;ImportEnterpriseRoots&quot;: true
+    }
+  }
+}
+</code></pre>
+<h3><a href="#configure-trust-of-https-certificate-using-firefox-browser" aria-hidden="true" class="anchor" id="configure-trust-of-https-certificate-using-firefox-browser"></a>Configure trust of HTTPS certificate using Firefox browser</h3>
+<ul>
+<li>
+<p>Enter <code>about:config</code> in the FireFox browser.</p>
+</li>
+<li>
+<p>Select Accept the Risk and Continue if you accept the risk.</p>
+</li>
+<li>
+<p>Select Show All</p>
+</li>
+<li>
+<p>Set <code>security.enterprise_roots.enabled</code> = <code>true</code></p>
+</li>
+<li>
+<p>Exit and restart Firefox</p>
+</li>
+</ul>
+<h2><a href="#how-to-set-up-a-developer-certificate-for-docker" aria-hidden="true" class="anchor" id="how-to-set-up-a-developer-certificate-for-docker"></a>How to set up a developer certificate for Docker</h2>
+<h2><a href="#trust-https-certificate-on-linux" aria-hidden="true" class="anchor" id="trust-https-certificate-on-linux"></a>Trust HTTPS certificate on Linux</h2>
+<h3><a href="#trust-https-certificate-on-linux-with-linux-dev-certs" aria-hidden="true" class="anchor" id="trust-https-certificate-on-linux-with-linux-dev-certs"></a>Trust HTTPS certificate on Linux with linux-dev-certs</h3>
+<pre><code class="language-cli">dotnet tool update -g linux-dev-certs
+dotnet linux-dev-certs install
+</code></pre>
+<h3><a href="#ubuntu-trust-the-certificate-for-service-to-service-communication" aria-hidden="true" class="anchor" id="ubuntu-trust-the-certificate-for-service-to-service-communication"></a>Ubuntu trust the certificate for service-to-service communication</h3>
+<ul>
+<li>
+<p>Install OpenSSL 1.1.1h or later. See your distribution for instructions on how to update OpenSSL.</p>
+</li>
+<li>
+<p>Run the following commands:</p>
+</li>
+</ul>
+<pre><code class="language-cli">dotnet dev-certs https
+sudo -E dotnet dev-certs https -ep /usr/local/share/ca-certificates/aspnet/https.crt --format PEM
+sudo update-ca-certificates
+</code></pre>
+<ul>
+<li>
+<p>Ensure the current user's developer certificate is created.</p>
+</li>
+<li>
+<p>Exports the certificate with elevated permissions needed for the <code>ca-certificates</code> folder, using the current user's environment.</p>
+</li>
+<li>
+<p>Removing the <code>-E</code>  flag exports the root user certificate, generating it if necessary. Each newly generated certificate has a different thumbprint. When running as root, <code>sudo</code>  and  <code>-E</code> are not needed.</p>
+</li>
+</ul>
+<h3><a href="#trust-https-certificate-on-linux-using-edge-or-chrome" aria-hidden="true" class="anchor" id="trust-https-certificate-on-linux-using-edge-or-chrome"></a>Trust HTTPS certificate on Linux using Edge or Chrome</h3>
+<ul>
+<li>
+<p>Ubuntu</p>
+</li>
+<li>
+<p>Red Hat Enterprise Linux</p>
+</li>
+<li>
+<p>SUSE Linux Enterprise Server</p>
+</li>
+<li>
+<p>Install the <code>libnss3-tools</code> for your distribution.</p>
+</li>
+<li>
+<p>Create or verify the <code>$HOME/.pki/nssdb</code> folder exists on the machine.</p>
+</li>
+<li>
+<p>Export the certificate with the following command:</p>
+</li>
+</ul>
+<pre><code class="language-cli">dotnet dev-certs https
+sudo -E dotnet dev-certs https -ep /usr/local/share/ca-certificates/aspnet/https.crt --format PEM
+</code></pre>
+<p>The path in the preceding command is specific for Ubuntu. For other distributions, select an appropriate path or use the path for the Certificate Authorities (CAs).</p>
+<ul>
+<li>Run the following commands:</li>
+</ul>
+<pre><code class="language-cli">certutil -d sql:$HOME/.pki/nssdb -A -t &quot;P,,&quot; -n localhost -i /usr/local/share/ca-certificates/aspnet/https.crt
+</code></pre>
+<ul>
+<li>Exit and restart the browser.</li>
+</ul>
+<h4><a href="#trust-the-certificate-with-firefox-on-linux" aria-hidden="true" class="anchor" id="trust-the-certificate-with-firefox-on-linux"></a>Trust the certificate with Firefox on Linux</h4>
+<ul>
+<li>Export the certificate with the following command:</li>
+</ul>
+<pre><code class="language-vstscli">dotnet dev-certs https
+sudo -E dotnet dev-certs https -ep /usr/local/share/ca-certificates/aspnet/https.crt --format PEM
+</code></pre>
+<p>The path in the preceding command is specific for Ubuntu. For other distributions, select an appropriate path or use the path for the Certificate Authorities (CAs).</p>
+<ul>
+<li>Create a JSON file at <code>/usr/lib/firefox/distribution/policies.json</code> with the following command:</li>
+</ul>
+<pre><code class="language-sh">cat &lt;&lt;EOF | sudo tee /usr/lib/firefox/distribution/policies.json
+{
+    &quot;policies&quot;: {
+        &quot;Certificates&quot;: {
+            &quot;Install&quot;: [
+                &quot;/usr/local/share/ca-certificates/aspnet/https.crt&quot;
+            ]
+        }
+    }
+}
+EOF
+</code></pre>
+<blockquote>
+<p class='warning'>Warning
+The following instructions are intended for development purposes only. Do not use the certificates generated in these instructions for a production environment.</p>
+</blockquote>
+<blockquote>
+<p class='caution'>Caution
+Improper use of TLS certificates could lead to spoofing.</p>
+</blockquote>
+<blockquote>
+<p class='tip'>Tip
+Instructions for valid production certificates can be found in the RHEL Documentation.
+RHEL8 TLS Certificates
+RHEL9 TLS Certificates
+RHEL9 Certificate System</p>
+</blockquote>
+<h3><a href="#install-dependencies" aria-hidden="true" class="anchor" id="install-dependencies"></a>Install Dependencies</h3>
+<pre><code class="language-sh">dnf install nss-tools
+</code></pre>
+<h3><a href="#export-the-aspnet-core-development-certificate" aria-hidden="true" class="anchor" id="export-the-aspnet-core-development-certificate"></a>Export The ASP.NET Core Development Certificate</h3>
+<blockquote>
+<p class='important'>Important
+Replace ${ProjectDirectory} with your projects directory.
+Replace ${CertificateName} with a name you'll be able to identify in the future.</p>
+</blockquote>
+<pre><code class="language-sh">cd ${ProjectDirectory}
+dotnet dev-certs https -ep ${ProjectDirectory}/${CertificateName}.crt --format PEM
+</code></pre>
+<blockquote>
+<p class='caution'>Caution
+If using git, add your certificate to your <code>${ProjectDirectory}/.gitignore</code> or <code>${ProjectDirectory}/.git/info/exclude</code>.
+View the git documentation for information about these files.</p>
+</blockquote>
+<blockquote>
+<p class='tip'>Tip
+You can move your exported certificate outside of your Git repository and replace the occurrences of ${ProjectDirectory}, in the following instructions, with the new location.</p>
+</blockquote>
+<h3><a href="#import-the-aspnet-core-development-certificate" aria-hidden="true" class="anchor" id="import-the-aspnet-core-development-certificate"></a>Import The ASP.NET Core Development Certificate</h3>
+<blockquote>
+<p class='important'>Important
+Replace ${UserProfile} with the profile you intend to use.
+Do not replace <code>$HOME</code>, it is the environment variable to your user directory.</p>
+</blockquote>
+<h4><a href="#chromium-based-browsers" aria-hidden="true" class="anchor" id="chromium-based-browsers"></a>Chromium-based Browsers</h4>
+<pre><code class="language-sh">certutil -d sql:$HOME/.pki/nssdb -A -t &quot;P,,&quot; -n ${CertificateName} -i ${ProjectDirectory}/${CertificateName}.crt
+certutil -d sql:$HOME/.pki/nssdb -A -t &quot;C,,&quot; -n ${CertificateName} -i ${ProjectDirectory}/${CertificateName}.crt
+</code></pre>
+<h4><a href="#mozilla-firefox" aria-hidden="true" class="anchor" id="mozilla-firefox"></a>Mozilla Firefox</h4>
+<pre><code class="language-sh">certutil -d sql:$HOME/.mozilla/firefox/${UserProfile}/ -A -t &quot;P,,&quot; -n ${CertificateName} -i ${ProjectDirectory}/${CertificateName}.crt
+certutil -d sql:$HOME/.mozilla/firefox/${UserProfile}/ -A -t &quot;C,,&quot; -n ${CertificateName} -i ${ProjectDirectory}/${CertificateName}.crt
+</code></pre>
+<h4><a href="#create-an-alias-to-test-with-curl" aria-hidden="true" class="anchor" id="create-an-alias-to-test-with-curl"></a>Create An Alias To Test With Curl</h4>
+<blockquote>
+<p class='important'>Important
+Don't delete the exported certificate if you plan to test with curl.
+You'll need to create an alias referencing it in your <code>$SHELL</code>'s profile</p>
+</blockquote>
+<pre><code class="language-sh">alias curl=&quot;curl --cacert ${ProjectDirectory}/${CertificateName}.crt&quot;
+</code></pre>
+<h3><a href="#cleaning-up-the-development-certificates" aria-hidden="true" class="anchor" id="cleaning-up-the-development-certificates"></a>Cleaning up the Development Certificates</h3>
+<pre><code class="language-sh">certutil -d sql:$HOME/.pki/nssdb -D -n ${CertificateName}
+certutil -d sql:$HOME/.mozilla/firefox/${UserProfile}/ -D -n ${CertificateName}
+rm ${ProjectDirectory}/${CertificateName}.crt
+dotnet dev-certs https --clean
+</code></pre>
+<blockquote>
+<p class='note'>Note
+Remove the curl alias you created earlier</p>
+</blockquote>
+<h3><a href="#trust-the-certificate-with-fedora-34" aria-hidden="true" class="anchor" id="trust-the-certificate-with-fedora-34"></a>Trust the certificate with Fedora 34</h3>
+<ul>
+<li>
+<p>This GitHub comment</p>
+</li>
+<li>
+<p>Fedora: Using Shared System Certificates</p>
+</li>
+<li>
+<p>Set up a .NET development environment on Fedora.</p>
+</li>
+</ul>
+<h3><a href="#trust-the-certificate-with-other-distros" aria-hidden="true" class="anchor" id="trust-the-certificate-with-other-distros"></a>Trust the certificate with other distros</h3>
+<h2><a href="#trust-https-certificate-from-windows-subsystem-for-linux" aria-hidden="true" class="anchor" id="trust-https-certificate-from-windows-subsystem-for-linux"></a>Trust HTTPS certificate from Windows Subsystem for Linux</h2>
+<ul>
+<li>On Windows, export the developer certificate to a file:
+dotnet dev-certs https -ep https.pfx -p $CREDENTIAL_PLACEHOLDER$ --trust</li>
+</ul>
+<p>Where $CREDENTIAL_PLACEHOLDER$ is a password.</p>
+<ul>
+<li>In a WSL window, import the exported certificate on the WSL instance:
+dotnet dev-certs https --clean --import &lt;<path-to-pfx>&gt; --password $CREDENTIAL_PLACEHOLDER$</li>
+</ul>
+<h2><a href="#troubleshoot-certificate-problems-such-as-certificate-not-trusted" aria-hidden="true" class="anchor" id="troubleshoot-certificate-problems-such-as-certificate-not-trusted"></a>Troubleshoot certificate problems such as certificate not trusted</h2>
+<h3><a href="#all-platforms---certificate-not-trusted" aria-hidden="true" class="anchor" id="all-platforms---certificate-not-trusted"></a>All platforms - certificate not trusted</h3>
+<pre><code class="language-dotnetcli">dotnet dev-certs https --clean
+dotnet dev-certs https --trust
+</code></pre>
+<h3><a href="#dotnet-dev-certs-https---clean-fails" aria-hidden="true" class="anchor" id="dotnet-dev-certs-https---clean-fails"></a><code>dotnet dev-certs https --clean</code> Fails</h3>
+<h3><a href="#docker---certificate-not-trusted" aria-hidden="true" class="anchor" id="docker---certificate-not-trusted"></a>Docker - certificate not trusted</h3>
+<ul>
+<li>
+<p>Delete the C:\Users{USER}\AppData\Roaming\ASP.NET\Https folder.</p>
+</li>
+<li>
+<p>Clean the solution. Delete the bin and obj folders.</p>
+</li>
+<li>
+<p>Restart the development tool. For example, Visual Studio or Visual Studio Code.</p>
+</li>
+</ul>
+<h3><a href="#windows---certificate-not-trusted" aria-hidden="true" class="anchor" id="windows---certificate-not-trusted"></a>Windows - certificate not trusted</h3>
+<ul>
+<li>
+<p>Check the certificates in the certificate store. There should be a <code>localhost</code> certificate with the <code>ASP.NET Core HTTPS development certificate</code> friendly name both under <code>Current User &gt; Personal &gt; Certificates</code> and <code>Current User &gt; Trusted root certification authorities &gt; Certificates</code></p>
+</li>
+<li>
+<p>Remove all the found certificates from both Personal and Trusted root certification authorities. Do not remove the IIS Express <code>localhost</code> certificate.</p>
+</li>
+<li>
+<p>Run the following commands:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet dev-certs https --clean
+dotnet dev-certs https --trust
+</code></pre>
+<h3><a href="#os-x---certificate-not-trusted" aria-hidden="true" class="anchor" id="os-x---certificate-not-trusted"></a>OS X - certificate not trusted</h3>
+<ul>
+<li>
+<p>Open KeyChain Access.</p>
+</li>
+<li>
+<p>Select the System keychain.</p>
+</li>
+<li>
+<p>Check for the presence of a <code>localhost</code> certificate.</p>
+</li>
+<li>
+<p>Check that it contains a + symbol on the icon to indicate it's trusted for all users.</p>
+</li>
+<li>
+<p>Remove the certificate from the system keychain.</p>
+</li>
+<li>
+<p>Run the following commands:</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet dev-certs https --clean
+dotnet dev-certs https --trust
+</code></pre>
+<h3><a href="#linux-certificate-not-trusted" aria-hidden="true" class="anchor" id="linux-certificate-not-trusted"></a>Linux certificate not trusted</h3>
+<ul>
+<li>
+<p>An old certificate.</p>
+</li>
+<li>
+<p>An exported a developer certificate for the root user. For this case, export the  certificate.</p>
+</li>
+</ul>
+<h3><a href="#iis-express-ssl-certificate-used-with-visual-studio" aria-hidden="true" class="anchor" id="iis-express-ssl-certificate-used-with-visual-studio"></a>IIS Express SSL certificate used with Visual Studio</h3>
+<h3><a href="#group-policy-prevents-self-signed-certificates-from-being-trusted" aria-hidden="true" class="anchor" id="group-policy-prevents-self-signed-certificates-from-being-trusted"></a>Group policy prevents self-signed certificates from being trusted</h3>
+<h2><a href="#additional-information" aria-hidden="true" class="anchor" id="additional-information"></a>Additional information</h2>
+<ul>
+<li>
+<p>Configure ASP.NET Core to work with proxy servers and load balancers</p>
+</li>
+<li>
+<p>Host ASP.NET Core on Linux with Nginx: HTTPS configuration</p>
+</li>
+<li>
+<p>How to Set Up SSL on IIS</p>
+</li>
+<li>
+<p>Configure endpoints for the ASP.NET Core Kestrel web server</p>
+</li>
+<li>
+<p>OWASP HSTS browser support</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl?view=aspnetcore-8.0">Enforce HTTPS in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
