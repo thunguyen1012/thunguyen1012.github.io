@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Caching - Output caching | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Caching - Output caching</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#add-the-middleware-to-the-app" aria-hidden="true" class="anchor" id="add-the-middleware-to-the-app"></a>Add the middleware to the app</h2>
+<pre><code class="language-csharp">builder.Services.AddOutputCache();
+</code></pre>
+<pre><code class="language-csharp">var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+app.UseHttpsRedirection();
+app.UseOutputCache();
+app.UseAuthorization();
+</code></pre>
+<blockquote>
+<p class='note'>Note</p>
+</blockquote>
+<p>In apps that use CORS middleware, <code>UseOutputCache</code> must be called after UseCors.
+In Razor Pages apps and apps with controllers, <code>UseOutputCache</code> must be called after <code>UseRouting</code>.</p>
+<ul>
+<li>
+<p>In apps that use CORS middleware, <code>UseOutputCache</code> must be called after UseCors.</p>
+</li>
+<li>
+<p>In Razor Pages apps and apps with controllers, <code>UseOutputCache</code> must be called after <code>UseRouting</code>.</p>
+</li>
+</ul>
+<h2><a href="#configure-one-endpoint-or-page" aria-hidden="true" class="anchor" id="configure-one-endpoint-or-page"></a>Configure one endpoint or page</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/cached&quot;, Gravatar.WriteGravatar).CacheOutput();
+app.MapGet(&quot;/attribute&quot;, [OutputCache] (context) =&gt; 
+    Gravatar.WriteGravatar(context));
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;/[controller]&quot;)]
+[OutputCache]
+public class CachedController : ControllerBase
+{
+    public async Task GetAsync()
+    {
+        await Gravatar.WriteGravatar(HttpContext);
+    }
+}
+</code></pre>
+<h2><a href="#configure-multiple-endpoints-or-pages" aria-hidden="true" class="anchor" id="configure-multiple-endpoints-or-pages"></a>Configure multiple endpoints or pages</h2>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; 
+        builder.Expire(TimeSpan.FromSeconds(10)));
+    options.AddPolicy(&quot;Expire20&quot;, builder =&gt; 
+        builder.Expire(TimeSpan.FromSeconds(20)));
+    options.AddPolicy(&quot;Expire30&quot;, builder =&gt; 
+        builder.Expire(TimeSpan.FromSeconds(30)));
+});
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; 
+        builder.Expire(TimeSpan.FromSeconds(10)));
+    options.AddPolicy(&quot;Expire20&quot;, builder =&gt; 
+        builder.Expire(TimeSpan.FromSeconds(20)));
+    options.AddPolicy(&quot;Expire30&quot;, builder =&gt; 
+        builder.Expire(TimeSpan.FromSeconds(30)));
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/20&quot;, Gravatar.WriteGravatar).CacheOutput(&quot;Expire20&quot;);
+app.MapGet(&quot;/30&quot;, [OutputCache(PolicyName = &quot;Expire30&quot;)] (context) =&gt; 
+    Gravatar.WriteGravatar(context));
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;/[controller]&quot;)]
+[OutputCache(PolicyName = &quot;Expire20&quot;)]
+public class Expire20Controller : ControllerBase
+{
+    public async Task GetAsync()
+    {
+        await Gravatar.WriteGravatar(HttpContext);
+    }
+}
+</code></pre>
+<h2><a href="#default-output-caching-policy" aria-hidden="true" class="anchor" id="default-output-caching-policy"></a>Default output caching policy</h2>
+<ul>
+<li>
+<p>Only HTTP 200 responses are cached.</p>
+</li>
+<li>
+<p>Only HTTP GET or HEAD requests are cached.</p>
+</li>
+<li>
+<p>Responses that set cookies aren't cached.</p>
+</li>
+<li>
+<p>Responses to authenticated requests aren't cached.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; builder.Cache());
+});
+</code></pre>
+<h3><a href="#override-the-default-policy" aria-hidden="true" class="anchor" id="override-the-default-policy"></a>Override the default policy</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.Primitives;
+
+namespace OCMinimal;
+
+public sealed class MyCustomPolicy : IOutputCachePolicy
+{
+    public static readonly MyCustomPolicy Instance = new();
+
+    private MyCustomPolicy()
+    {
+    }
+
+    ValueTask IOutputCachePolicy.CacheRequestAsync(
+        OutputCacheContext context, 
+        CancellationToken cancellationToken)
+    {
+        var attemptOutputCaching = AttemptOutputCaching(context);
+        context.EnableOutputCaching = true;
+        context.AllowCacheLookup = attemptOutputCaching;
+        context.AllowCacheStorage = attemptOutputCaching;
+        context.AllowLocking = true;
+
+        // Vary by any query by default
+        context.CacheVaryByRules.QueryKeys = &quot;*&quot;;
+
+        return ValueTask.CompletedTask;
+    }
+
+    ValueTask IOutputCachePolicy.ServeFromCacheAsync
+        (OutputCacheContext context, CancellationToken cancellationToken)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    ValueTask IOutputCachePolicy.ServeResponseAsync
+        (OutputCacheContext context, CancellationToken cancellationToken)
+    {
+        var response = context.HttpContext.Response;
+
+        // Verify existence of cookie headers
+        if (!StringValues.IsNullOrEmpty(response.Headers.SetCookie))
+        {
+            context.AllowCacheStorage = false;
+            return ValueTask.CompletedTask;
+        }
+
+        // Check response code
+        if (response.StatusCode != StatusCodes.Status200OK &amp;&amp; 
+            response.StatusCode != StatusCodes.Status301MovedPermanently)
+        {
+            context.AllowCacheStorage = false;
+            return ValueTask.CompletedTask;
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    private static bool AttemptOutputCaching(OutputCacheContext context)
+    {
+        // Check if the current request fulfills the requirements
+        // to be cached
+        var request = context.HttpContext.Request;
+
+        // Verify the method
+        if (!HttpMethods.IsGet(request.Method) &amp;&amp; 
+            !HttpMethods.IsHead(request.Method) &amp;&amp; 
+            !HttpMethods.IsPost(request.Method))
+        {
+            return false;
+        }
+
+        // Verify existence of authorization headers
+        if (!StringValues.IsNullOrEmpty(request.Headers.Authorization) || 
+            request.HttpContext.User?.Identity?.IsAuthenticated == true)
+        {
+            return false;
+        }
+
+        return true;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddPolicy(&quot;CachePost&quot;, MyCustomPolicy.Instance);
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapPost(&quot;/cachedpost&quot;, Gravatar.WriteGravatar)
+    .CacheOutput(&quot;CachePost&quot;);
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;/[controller]&quot;)]
+[OutputCache(PolicyName = &quot;CachePost&quot;)]
+public class PostController : ControllerBase
+{
+    public async Task GetAsync()
+    {
+        await Gravatar.WriteGravatar(HttpContext);
+    }
+}
+</code></pre>
+<h3><a href="#alternative-default-policy-override" aria-hidden="true" class="anchor" id="alternative-default-policy-override"></a>Alternative default policy override</h3>
+<ul>
+<li>
+<p>A public constructor instead of a private constructor.</p>
+</li>
+<li>
+<p>Eliminate the <code>Instance</code> property in the custom policy class.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public sealed class MyCustomPolicy2 : IOutputCachePolicy
+{
+
+    public MyCustomPolicy2()
+    {
+    }
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; 
+        builder.AddPolicy&lt;MyCustomPolicy2&gt;(), true);
+});
+</code></pre>
+<h2><a href="#specify-the-cache-key" aria-hidden="true" class="anchor" id="specify-the-cache-key"></a>Specify the cache key</h2>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; builder
+        .With(c =&gt; c.HttpContext.Request.Path.StartsWithSegments(&quot;/blog&quot;))
+        .Tag(&quot;tag-blog&quot;));
+    options.AddBasePolicy(builder =&gt; builder.Tag(&quot;tag-all&quot;));
+    options.AddPolicy(&quot;Query&quot;, builder =&gt; builder.SetVaryByQuery(&quot;culture&quot;));
+    options.AddPolicy(&quot;NoCache&quot;, builder =&gt; builder.NoCache());
+    options.AddPolicy(&quot;NoLock&quot;, builder =&gt; builder.SetLocking(false));
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/query&quot;, Gravatar.WriteGravatar).CacheOutput(&quot;Query&quot;);
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;/[controller]&quot;)]
+[OutputCache(PolicyName = &quot;Query&quot;)]
+public class QueryController : ControllerBase
+{
+    public async Task GetAsync()
+    {
+        await Gravatar.WriteGravatar(HttpContext);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>SetVaryByQuery - Specify one or more query string names to add to the cache key.</p>
+</li>
+<li>
+<p>SetVaryByHeader - Specify one or more HTTP headers to add to the cache key.</p>
+</li>
+<li>
+<p>VaryByValue- Specify a value to add to the cache key. The following example uses a value that indicates whether the current server time in seconds is odd or even. A new response is generated only when the number of seconds goes from odd to even or even to odd.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; builder
+        .With(c =&gt; c.HttpContext.Request.Path.StartsWithSegments(&quot;/blog&quot;))
+        .Tag(&quot;tag-blog&quot;));
+    options.AddBasePolicy(builder =&gt; builder.Tag(&quot;tag-all&quot;));
+    options.AddPolicy(&quot;Query&quot;, builder =&gt; builder.SetVaryByQuery(&quot;culture&quot;));
+    options.AddPolicy(&quot;NoCache&quot;, builder =&gt; builder.NoCache());
+    options.AddPolicy(&quot;NoLock&quot;, builder =&gt; builder.SetLocking(false));
+    options.AddPolicy(&quot;VaryByValue&quot;, builder =&gt; 
+        builder.VaryByValue((context) =&gt;
+            new KeyValuePair&lt;string, string&gt;(
+            &quot;time&quot;, (DateTime.Now.Second % 2)
+                .ToString(CultureInfo.InvariantCulture))));
+});
+</code></pre>
+<h2><a href="#cache-revalidation" aria-hidden="true" class="anchor" id="cache-revalidation"></a>Cache revalidation</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/etag&quot;, async (context) =&gt;
+{
+    var etag = $&quot;\&quot;{Guid.NewGuid():n}\&quot;&quot;;
+    context.Response.Headers.ETag = etag;
+    await Gravatar.WriteGravatar(context);
+
+}).CacheOutput();
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;/[controller]&quot;)]
+[OutputCache]
+public class EtagController : ControllerBase
+{
+    public async Task GetAsync()
+    {
+        var etag = $&quot;\&quot;{Guid.NewGuid():n}\&quot;&quot;;
+        HttpContext.Response.Headers.ETag = etag;
+        await Gravatar.WriteGravatar(HttpContext);
+    }
+}
+</code></pre>
+<h2><a href="#use-tags-to-evict-cache-entries" aria-hidden="true" class="anchor" id="use-tags-to-evict-cache-entries"></a>Use tags to evict cache entries</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/blog&quot;, Gravatar.WriteGravatar)
+    .CacheOutput(builder =&gt; builder.Tag(&quot;tag-blog&quot;));
+app.MapGet(&quot;/blog/post/{id}&quot;, Gravatar.WriteGravatar)
+    .CacheOutput(builder =&gt; builder.Tag(&quot;tag-blog&quot;));
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;/[controller]&quot;)]
+[OutputCache(Tags = new[] { &quot;tag-blog&quot;, &quot;tag-all&quot; })]
+public class TagEndpointController : ControllerBase
+{
+    public async Task GetAsync()
+    {
+        await Gravatar.WriteGravatar(HttpContext);
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; builder
+        .With(c =&gt; c.HttpContext.Request.Path.StartsWithSegments(&quot;/blog&quot;))
+        .Tag(&quot;tag-blog&quot;));
+    options.AddBasePolicy(builder =&gt; builder.Tag(&quot;tag-all&quot;));
+    options.AddPolicy(&quot;Query&quot;, builder =&gt; builder.SetVaryByQuery(&quot;culture&quot;));
+    options.AddPolicy(&quot;NoCache&quot;, builder =&gt; builder.NoCache());
+    options.AddPolicy(&quot;NoLock&quot;, builder =&gt; builder.SetLocking(false));
+});
+</code></pre>
+<pre><code class="language-csharp">var blog = app.MapGroup(&quot;blog&quot;)
+    .CacheOutput(builder =&gt; builder.Tag(&quot;tag-blog&quot;));
+blog.MapGet(&quot;/&quot;, Gravatar.WriteGravatar);
+blog.MapGet(&quot;/post/{id}&quot;, Gravatar.WriteGravatar);
+</code></pre>
+<pre><code class="language-csharp">app.MapPost(&quot;/purge/{tag}&quot;, async (IOutputCacheStore cache, string tag) =&gt;
+{
+    await cache.EvictByTagAsync(tag, default);
+});
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; builder
+        .With(c =&gt; c.HttpContext.Request.Path.StartsWithSegments(&quot;/blog&quot;))
+        .Tag(&quot;tag-blog&quot;));
+    options.AddBasePolicy(builder =&gt; builder.Tag(&quot;tag-all&quot;));
+    options.AddPolicy(&quot;Query&quot;, builder =&gt; builder.SetVaryByQuery(&quot;culture&quot;));
+    options.AddPolicy(&quot;NoCache&quot;, builder =&gt; builder.NoCache());
+    options.AddPolicy(&quot;NoLock&quot;, builder =&gt; builder.SetLocking(false));
+});
+</code></pre>
+<h2><a href="#disable-resource-locking" aria-hidden="true" class="anchor" id="disable-resource-locking"></a>Disable resource locking</h2>
+<pre><code class="language-csharp">builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; builder
+        .With(c =&gt; c.HttpContext.Request.Path.StartsWithSegments(&quot;/blog&quot;))
+        .Tag(&quot;tag-blog&quot;));
+    options.AddBasePolicy(builder =&gt; builder.Tag(&quot;tag-all&quot;));
+    options.AddPolicy(&quot;Query&quot;, builder =&gt; builder.SetVaryByQuery(&quot;culture&quot;));
+    options.AddPolicy(&quot;NoCache&quot;, builder =&gt; builder.NoCache());
+    options.AddPolicy(&quot;NoLock&quot;, builder =&gt; builder.SetLocking(false));
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/nolock&quot;, Gravatar.WriteGravatar)
+    .CacheOutput(&quot;NoLock&quot;);
+</code></pre>
+<pre><code class="language-csharp">[ApiController]
+[Route(&quot;/[controller]&quot;)]
+[OutputCache(PolicyName = &quot;NoLock&quot;)]
+public class NoLockController : ControllerBase
+{
+    public async Task GetAsync()
+    {
+        await Gravatar.WriteGravatar(HttpContext);
+    }
+}
+</code></pre>
+<h2><a href="#limits" aria-hidden="true" class="anchor" id="limits"></a>Limits</h2>
+<ul>
+<li>
+<p>SizeLimit - Maximum size of cache storage. When this limit is reached, no new responses are cached until older entries are evicted. Default value is 100 MB.</p>
+</li>
+<li>
+<p>MaximumBodySize - If the response body exceeds this limit, it isn't cached. Default value is 64 MB.</p>
+</li>
+<li>
+<p>DefaultExpirationTimeSpan - The expiration time duration that applies when not specified by a policy. Default value is 60 seconds.</p>
+</li>
+</ul>
+<h2><a href="#cache-storage" aria-hidden="true" class="anchor" id="cache-storage"></a>Cache storage</h2>
+<h3><a href="#redis-cache" aria-hidden="true" class="anchor" id="redis-cache"></a>Redis cache</h3>
+<ul>
+<li>
+<p>Install the Microsoft.AspNetCore.OutputCaching.StackExchangeRedis NuGet package.</p>
+</li>
+<li>
+<p>Call <code>builder.Services.AddStackExchangeRedisOutputCache</code> (not <code>AddStackExchangeRedisCache</code>), and provide a connection string that points to a Redis server.
+For example:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddStackExchangeRedisOutputCache(options =&gt;
+{
+    options.Configuration = 
+        builder.Configuration.GetConnectionString(&quot;MyRedisConStr&quot;);
+    options.InstanceName = &quot;SampleInstance&quot;;
+});
+
+builder.Services.AddOutputCache(options =&gt;
+{
+    options.AddBasePolicy(builder =&gt; 
+        builder.Expire(TimeSpan.FromSeconds(10)));
+});
+</code></pre>
+<p>The configuration options are identical to the Redis-based distributed caching options.</p>
+<ul>
+<li>
+<p><code>options.Configuration</code> - A connection string to an on-premises Redis server or to a hosted offering such as Azure Cache for Redis. For example, <code>&lt;instance_name&gt;.redis.cache.windows.net:6380,password=&lt;password&gt;,ssl=True,abortConnect=False</code> for Azure cache for Redis.</p>
+</li>
+<li>
+<p><code>options.InstanceName</code> - Optional, specifies a logical partition for the cache.</p>
+</li>
+</ul>
+<h3><a href="#idistributedcache-not-recommended" aria-hidden="true" class="anchor" id="idistributedcache-not-recommended"></a><code>IDistributedCache</code> not recommended</h3>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Overview of caching in ASP.NET Core</p>
+</li>
+<li>
+<p>ASP.NET Core Middleware</p>
+</li>
+<li>
+<p>OutputCacheOptions</p>
+</li>
+<li>
+<p>OutputCachePolicyBuilder</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/caching/output?view=aspnetcore-8.0">Output caching middleware in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

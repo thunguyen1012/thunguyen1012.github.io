@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Timeouts middleware | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Timeouts middleware</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#add-the-middleware-to-the-app" aria-hidden="true" class="anchor" id="add-the-middleware-to-the-app"></a>Add the middleware to the app</h2>
+<blockquote>
+<p class='note'>Note</p>
+</blockquote>
+<p>In apps that explicitly call <code>UseRouting</code>, <code>UseRequestTimeouts</code> must be called after <code>UseRouting</code>.</p>
+<h2><a href="#configure-one-endpoint-or-page" aria-hidden="true" class="anchor" id="configure-one-endpoint-or-page"></a>Configure one endpoint or page</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Http.Timeouts;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddRequestTimeouts();
+
+var app = builder.Build();
+app.UseRequestTimeouts();
+
+app.MapGet(&quot;/&quot;, async (HttpContext context) =&gt; {
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    }
+    catch (TaskCanceledException)
+    {
+        return Results.Content(&quot;Timeout!&quot;, &quot;text/plain&quot;);
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+}).WithRequestTimeout(TimeSpan.FromSeconds(2));
+// Returns &quot;Timeout!&quot;
+
+app.MapGet(&quot;/attribute&quot;,
+    [RequestTimeout(milliseconds: 2000)] async (HttpContext context) =&gt; {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+        }
+        catch (TaskCanceledException)
+        {
+            return Results.Content(&quot;Timeout!&quot;, &quot;text/plain&quot;);
+        }
+
+        return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+    });
+// Returns &quot;Timeout!&quot;
+
+app.Run();
+</code></pre>
+<h2><a href="#configure-multiple-endpoints-or-pages" aria-hidden="true" class="anchor" id="configure-multiple-endpoints-or-pages"></a>Configure multiple endpoints or pages</h2>
+<pre><code class="language-csharp">builder.Services.AddRequestTimeouts(options =&gt; {
+    options.DefaultPolicy =
+        new RequestTimeoutPolicy { Timeout = TimeSpan.FromMilliseconds(1500) };
+    options.AddPolicy(&quot;MyPolicy&quot;, TimeSpan.FromSeconds(2));
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/namedpolicy&quot;, async (HttpContext context) =&gt; {
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    }
+    catch (TaskCanceledException)
+    {
+        return Results.Content(&quot;Timeout!&quot;, &quot;text/plain&quot;);
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+}).WithRequestTimeout(&quot;MyPolicy&quot;);
+// Returns &quot;Timeout!&quot;
+</code></pre>
+<h3><a href="#set-global-default-timeout-policy" aria-hidden="true" class="anchor" id="set-global-default-timeout-policy"></a>Set global default timeout policy</h3>
+<pre><code class="language-csharp">builder.Services.AddRequestTimeouts(options =&gt; {
+    options.DefaultPolicy =
+        new RequestTimeoutPolicy { Timeout = TimeSpan.FromMilliseconds(1500) };
+    options.AddPolicy(&quot;MyPolicy&quot;, TimeSpan.FromSeconds(2));
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, async (HttpContext context) =&gt; {
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    }
+    catch
+    {
+        return Results.Content(&quot;Timeout!&quot;, &quot;text/plain&quot;);
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+});
+// Returns &quot;Timeout!&quot; due to default policy.
+</code></pre>
+<h2><a href="#specify-the-status-code-in-a-policy" aria-hidden="true" class="anchor" id="specify-the-status-code-in-a-policy"></a>Specify the status code in a policy</h2>
+<pre><code class="language-csharp">builder.Services.AddRequestTimeouts(options =&gt; {
+    options.DefaultPolicy = new RequestTimeoutPolicy {
+        Timeout = TimeSpan.FromMilliseconds(1000),
+        TimeoutStatusCode = 503
+    };
+    options.AddPolicy(&quot;MyPolicy2&quot;, new RequestTimeoutPolicy {
+        Timeout = TimeSpan.FromMilliseconds(1000),
+        WriteTimeoutResponse = async (HttpContext context) =&gt; {
+            context.Response.ContentType = &quot;text/plain&quot;;
+            await context.Response.WriteAsync(&quot;Timeout from MyPolicy2!&quot;);
+        }
+    });
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, async (HttpContext context) =&gt; {
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    }
+    catch (TaskCanceledException)
+    {
+        throw;
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+});
+// Returns status code 503 due to default policy.
+</code></pre>
+<h2><a href="#use-a-delegate-in-a-policy" aria-hidden="true" class="anchor" id="use-a-delegate-in-a-policy"></a>Use a delegate in a policy</h2>
+<pre><code class="language-csharp">builder.Services.AddRequestTimeouts(options =&gt; {
+    options.DefaultPolicy = new RequestTimeoutPolicy {
+        Timeout = TimeSpan.FromMilliseconds(1000),
+        TimeoutStatusCode = 503
+    };
+    options.AddPolicy(&quot;MyPolicy2&quot;, new RequestTimeoutPolicy {
+        Timeout = TimeSpan.FromMilliseconds(1000),
+        WriteTimeoutResponse = async (HttpContext context) =&gt; {
+            context.Response.ContentType = &quot;text/plain&quot;;
+            await context.Response.WriteAsync(&quot;Timeout from MyPolicy2!&quot;);
+        }
+    });
+});
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/usepolicy2&quot;, async (HttpContext context) =&gt; {
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    }
+    catch (TaskCanceledException)
+    {
+        throw;
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+}).WithRequestTimeout(&quot;MyPolicy2&quot;);
+// Returns &quot;Timeout from MyPolicy2!&quot; due to WriteTimeoutResponse in MyPolicy2.
+</code></pre>
+<h2><a href="#disable-timeouts" aria-hidden="true" class="anchor" id="disable-timeouts"></a>Disable timeouts</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/disablebyattr&quot;, [DisableRequestTimeout] async (HttpContext context) =&gt; {
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    }
+    catch
+    {
+        return Results.Content(&quot;Timeout!&quot;, &quot;text/plain&quot;);
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+});
+// Returns &quot;No timeout!&quot;, ignores default timeout.
+</code></pre>
+<pre><code class="language-csharp">app.MapGet(&quot;/disablebyext&quot;, async (HttpContext context) =&gt; {
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    }
+    catch
+    {
+        return Results.Content(&quot;Timeout!&quot;, &quot;text/plain&quot;);
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+}).DisableRequestTimeout();
+// Returns &quot;No timeout!&quot;, ignores default timeout.
+</code></pre>
+<h2><a href="#cancel-a-timeout" aria-hidden="true" class="anchor" id="cancel-a-timeout"></a>Cancel a timeout</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/canceltimeout&quot;, async (HttpContext context) =&gt; {
+    var timeoutFeature = context.Features.Get&lt;IHttpRequestTimeoutFeature&gt;();
+    timeoutFeature?.DisableTimeout();
+
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), context.RequestAborted);
+    } 
+    catch (TaskCanceledException)
+    {
+        return Results.Content(&quot;Timeout!&quot;, &quot;text/plain&quot;);
+    }
+
+    return Results.Content(&quot;No timeout!&quot;, &quot;text/plain&quot;);
+}).WithRequestTimeout(TimeSpan.FromSeconds(1));
+// Returns &quot;No timeout!&quot; since the default timeout is not triggered.
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Microsoft.AspNetCore.Http.Timeouts</p>
+</li>
+<li>
+<p>ASP.NET Core Middleware</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/timeouts?view=aspnetcore-8.0">Request timeouts middleware in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

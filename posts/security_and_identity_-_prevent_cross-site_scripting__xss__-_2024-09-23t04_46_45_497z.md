@@ -17,7 +17,7 @@ A vulnerability in a web API has been discovered that could allow a malicious th
 
 ## Protecting your application against XSS
 
-At a basic level, XSS works by tricking your application into inserting a <script> tag into your rendered page, or by inserting an On* event into an element. Developers should use the following prevention steps to avoid introducing XSS into their applications:
+At a basic level, XSS works by tricking your application into inserting a `<script>` tag into your rendered page, or by inserting an On* event into an element. Developers should use the following prevention steps to avoid introducing XSS into their applications:
 
 - Never put untrusted data into your HTML input, unless you follow the rest of the steps below. Untrusted data is any data that may be controlled by an attacker, such as HTML form inputs, query strings, HTTP headers, or even data sourced from a database, as an attacker may be able to breach your database even if they can't breach your application.
 

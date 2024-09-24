@@ -271,7 +271,7 @@ No secrets configured for this application.
 
 ## Manage user secrets with Visual Studio
 
-![Visual Studio showing Manage User Secrets!](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets/app-secrets/_static/usvs.png?view=aspnetcore-8.0 "Visual Studio showing Manage User Secrets")
+![Visual Studio showing Manage User Secrets!](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets/_static/usvs.png?view=aspnetcore-8.0 "Visual Studio showing Manage User Secrets")
 
 ## Migrating User Secrets from ASP.NET Framework to ASP.NET Core
 

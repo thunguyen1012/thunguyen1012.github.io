@@ -91,7 +91,7 @@
 <p>Web APIs that return data in the form of HTML Pages can trigger XSS attacks in their client apps if they don't properly accept user input, depending on how much trust the client app places in the API.</p>
 <p>A vulnerability in a web API has been discovered that could allow a malicious third-party to gain access to the user's personal data.</p>
 <h2><a href="#protecting-your-application-against-xss" aria-hidden="true" class="anchor" id="protecting-your-application-against-xss"></a>Protecting your application against XSS</h2>
-<p>At a basic level, XSS works by tricking your application into inserting a <script> tag into your rendered page, or by inserting an On* event into an element. Developers should use the following prevention steps to avoid introducing XSS into their applications:</p>
+<p>At a basic level, XSS works by tricking your application into inserting a <code>&lt;script&gt;</code> tag into your rendered page, or by inserting an On* event into an element. Developers should use the following prevention steps to avoid introducing XSS into their applications:</p>
 <ul>
 <li>
 <p>Never put untrusted data into your HTML input, unless you follow the rest of the steps below. Untrusted data is any data that may be controlled by an attacker, such as HTML form inputs, query strings, HTTP headers, or even data sourced from a database, as an attacker may be able to breach your database even if they can't breach your application.</p>

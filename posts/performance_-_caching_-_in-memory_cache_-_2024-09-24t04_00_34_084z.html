@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Caching - In-memory cache | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Caching - In-memory cache</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#systemruntime.caching/memorycache" aria-hidden="true" class="anchor" id="systemruntime.caching/memorycache"></a><code>System.Runtime.Caching</code>/<code>MemoryCache</code></h2>
+<ul>
+<li>
+<p>.NET Standard 2.0 or later.</p>
+</li>
+<li>
+<p>Any .NET implementation that targets .NET Standard 2.0 or later. For example, ASP.NET Core 3.1 or later.</p>
+</li>
+<li>
+<p>.NET Framework 4.5 or later.</p>
+</li>
+</ul>
+<h2><a href="#cache-guidelines" aria-hidden="true" class="anchor" id="cache-guidelines"></a>Cache guidelines</h2>
+<ul>
+<li>
+<p>Code should always have a fallback option to fetch data and not depend on a cached value being available.</p>
+</li>
+<li>
+<p>The cache uses a scarce resource, memory. Limit cache growth:</p>
+<ul>
+<li>
+<p>Do not insert external input into the cache. As an example, <code>using</code> arbitrary user-provided input as a cache key is not recommended since the input might consume an unpredictable amount of memory.</p>
+</li>
+<li>
+<p>Use expirations to limit cache growth.</p>
+</li>
+<li>
+<p>Use <code>SetSize</code>, <code>Size</code>, and <code>SizeLimit</code> to limit cache size. The ASP.NET Core runtime does not limit cache size based on memory pressure. It's up to the developer to limit cache size.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#use-imemorycache" aria-hidden="true" class="anchor" id="use-imemorycache"></a>Use <code>IMemoryCache</code></h2>
+<blockquote>
+<p class='warning'>Warning
+Using a shared memory cache from Dependency Injection and calling <code>SetSize</code>, <code>Size</code>, or <code>SizeLimit</code> to limit cache size can cause the app to fail. When a size limit is set on a cache, all entries must specify a size when being added. This can lead to issues since developers may not have full control on what uses the shared cache.
+When <code>using</code> <code>SetSize</code>, <code>Size</code>, or <code>SizeLimit</code> to limit cache, create a cache singleton for caching. For more information and an example, see Use <code>SetSize</code>, <code>Size</code>, and <code>SizeLimit</code> to limit cache size.
+A shared cache is one shared by other frameworks or libraries.</p>
+</blockquote>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    private readonly IMemoryCache _memoryCache;
+
+    public IndexModel(IMemoryCache memoryCache) =&gt;
+        _memoryCache = memoryCache;
+
+    // ...
+</code></pre>
+<pre><code class="language-csharp">public void OnGet()
+{
+    CurrentDateTime = DateTime.Now;
+
+    if (!_memoryCache.TryGetValue(CacheKeys.Entry, out DateTime cacheValue))
+    {
+        cacheValue = CurrentDateTime;
+
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromSeconds(3));
+
+        _memoryCache.Set(CacheKeys.Entry, cacheValue, cacheEntryOptions);
+    }
+
+    CacheCurrentDateTime = cacheValue;
+}
+</code></pre>
+<pre><code class="language-cshtml">&lt;ul&gt;
+    &lt;li&gt;Current Time: @Model.CurrentDateTime&lt;/li&gt;
+    &lt;li&gt;Cached Time: @Model.CacheCurrentDateTime&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+<pre><code class="language-csharp">_memoryCache.Set(CacheKeys.Entry, DateTime.Now, TimeSpan.FromDays(1));
+</code></pre>
+<pre><code class="language-csharp">public void OnGetCacheGetOrCreate()
+{
+    var cachedValue = _memoryCache.GetOrCreate(
+        CacheKeys.Entry,
+        cacheEntry =&gt;
+        {
+            cacheEntry.SlidingExpiration = TimeSpan.FromSeconds(3);
+            return DateTime.Now;
+        });
+
+    // ...
+}
+
+public async Task OnGetCacheGetOrCreateAsync()
+{
+    var cachedValue = await _memoryCache.GetOrCreateAsync(
+        CacheKeys.Entry,
+        cacheEntry =&gt;
+        {
+            cacheEntry.SlidingExpiration = TimeSpan.FromSeconds(3);
+            return Task.FromResult(DateTime.Now);
+        });
+
+    // ...
+}
+</code></pre>
+<pre><code class="language-csharp">var cacheEntry = _memoryCache.Get&lt;DateTime?&gt;(CacheKeys.Entry);
+</code></pre>
+<pre><code class="language-csharp">var cachedValue = _memoryCache.GetOrCreate(
+    CacheKeys.Entry,
+    cacheEntry =&gt;
+    {
+        cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(20);
+        return DateTime.Now;
+    });
+</code></pre>
+<pre><code class="language-csharp">var cachedValue = _memoryCache.GetOrCreate(
+    CacheKeys.CallbackEntry,
+    cacheEntry =&gt;
+    {
+        cacheEntry.SlidingExpiration = TimeSpan.FromSeconds(3);
+        cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(20);
+        return DateTime.Now;
+    });
+</code></pre>
+<h2><a href="#memorycacheentryoptions" aria-hidden="true" class="anchor" id="memorycacheentryoptions"></a><code>MemoryCacheEntryOptions</code></h2>
+<ul>
+<li>
+<p>Sets the cache priority to CacheItemPriority.NeverRemove.</p>
+</li>
+<li>
+<p>Sets a PostEvictionDelegate that gets called after the entry is evicted from the cache. The callback is run on a different thread from the code that removes the item from the cache.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public void OnGetCacheRegisterPostEvictionCallback()
+{
+    var memoryCacheEntryOptions = new MemoryCacheEntryOptions()
+        .SetPriority(CacheItemPriority.NeverRemove)
+        .RegisterPostEvictionCallback(PostEvictionCallback, _memoryCache);
+
+    _memoryCache.Set(CacheKeys.CallbackEntry, DateTime.Now, memoryCacheEntryOptions);
+}
+
+private static void PostEvictionCallback(
+    object cacheKey, object cacheValue, EvictionReason evictionReason, object state)
+{
+    var memoryCache = (IMemoryCache)state;
+
+    memoryCache.Set(
+        CacheKeys.CallbackMessage,
+        $&quot;Entry {cacheKey} was evicted: {evictionReason}.&quot;);
+}
+</code></pre>
+<h2><a href="#use-setsize-size,-and-sizelimit-to-limit-cache-size" aria-hidden="true" class="anchor" id="use-setsize-size,-and-sizelimit-to-limit-cache-size"></a>Use <code>SetSize</code>, <code>Size</code>, and <code>SizeLimit</code> to limit cache size</h2>
+<ul>
+<li>
+<p>If the web app was primarily caching strings, each cache entry size could be the string length.</p>
+</li>
+<li>
+<p>The app could specify the size of all entries as 1, and the size limit is the count of entries.</p>
+</li>
+<li>
+<p>Limit cache growth.</p>
+</li>
+<li>
+<p>Call <code>Compact</code> or <code>Remove</code> when available memory is limited.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class MyMemoryCache
+{
+    public MemoryCache Cache { get; } = new MemoryCache(
+        new MemoryCacheOptions
+        {
+            SizeLimit = 1024
+        });
+}
+</code></pre>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddSingleton&lt;MyMemoryCache&gt;();
+</code></pre>
+<pre><code class="language-csharp">if (!_myMemoryCache.Cache.TryGetValue(CacheKeys.Entry, out DateTime cacheValue))
+{
+    var cacheEntryOptions = new MemoryCacheEntryOptions()
+        .SetSize(1);
+
+    // cacheEntryOptions.Size = 1;
+
+    _myMemoryCache.Cache.Set(CacheKeys.Entry, cacheValue, cacheEntryOptions);
+}
+</code></pre>
+<h3><a href="#memorycachecompact" aria-hidden="true" class="anchor" id="memorycachecompact"></a><code>MemoryCache.Compact</code></h3>
+<ul>
+<li>
+<p>All expired items.</p>
+</li>
+<li>
+<p>Items by priority. Lowest priority items are removed first.</p>
+</li>
+<li>
+<p>Least recently used objects.</p>
+</li>
+<li>
+<p>Items with the earliest absolute expiration.</p>
+</li>
+<li>
+<p>Items with the earliest sliding expiration.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">_myMemoryCache.Cache.Remove(CacheKeys.Entry);
+_myMemoryCache.Cache.Compact(.25);
+</code></pre>
+<h2><a href="#cache-dependencies" aria-hidden="true" class="anchor" id="cache-dependencies"></a>Cache dependencies</h2>
+<pre><code class="language-csharp">public void OnGetCacheCreateDependent()
+{
+    var cancellationTokenSource = new CancellationTokenSource();
+
+    _memoryCache.Set(
+        CacheKeys.DependentCancellationTokenSource,
+        cancellationTokenSource);
+
+    using var parentCacheEntry = _memoryCache.CreateEntry(CacheKeys.Parent);
+
+    parentCacheEntry.Value = DateTime.Now;
+
+    _memoryCache.Set(
+        CacheKeys.Child,
+        DateTime.Now,
+        new CancellationChangeToken(cancellationTokenSource.Token));
+}
+
+public void OnGetCacheRemoveDependent()
+{
+    var cancellationTokenSource = _memoryCache.Get&lt;CancellationTokenSource&gt;(
+        CacheKeys.DependentCancellationTokenSource);
+
+    cancellationTokenSource.Cancel();
+}
+</code></pre>
+<h2><a href="#additional-notes" aria-hidden="true" class="anchor" id="additional-notes"></a>Additional notes</h2>
+<ul>
+<li>Expiration doesn't happen in the background. There's no timer that actively scans the cache for expired items. Any activity on the cache (<code>Get</code>, <code>Set</code>, <code>Remove</code>) can trigger a background scan for expired items. A timer on the <code>CancellationTokenSource (CancelAfter)</code> also removes the entry and triggers a scan for expired items. The following example uses <code>CancellationTokenSource(TimeSpan)</code> for the registered token. When this token fires, it removes the entry immediately and fires the eviction callbacks:</li>
+</ul>
+<pre><code class="language-csharp">if (!_memoryCache.TryGetValue(CacheKeys.Entry, out DateTime cacheValue))
+{
+    cacheValue = DateTime.Now;
+
+    var cancellationTokenSource = new CancellationTokenSource(
+        TimeSpan.FromSeconds(10));
+
+    var cacheEntryOptions = new MemoryCacheEntryOptions()
+        .AddExpirationToken(
+            new CancellationChangeToken(cancellationTokenSource.Token))
+        .RegisterPostEvictionCallback((key, value, reason, state) =&gt;
+        {
+            ((CancellationTokenSource)state).Dispose();
+        }, cancellationTokenSource);
+
+    _memoryCache.Set(CacheKeys.Entry, cacheValue, cacheEntryOptions);
+}
+</code></pre>
+<ul>
+<li>
+<p>When <code>using</code> a callback to repopulate a cache item:</p>
+<ul>
+<li>
+<p>Multiple requests can find the cached key value empty because the callback hasn't completed.</p>
+</li>
+<li>
+<p>This can result in several threads repopulating the cached item.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>When one cache entry is used to create another, the child copies the parent entry's expiration tokens and time-based expiration settings. The child isn't expired by manual removal or updating of the parent entry.</p>
+</li>
+<li>
+<p>Use PostEvictionCallbacks to set the callbacks that will be fired after the cache entry is evicted from the cache.</p>
+</li>
+<li>
+<p>For most apps, <code>IMemoryCache</code> is enabled. For example, calling <code>AddMvc</code>, <code>AddControllersWithViews</code>, <code>AddRazorPages</code>, <code>AddMvcCore().AddRazorViewEngine</code>, and many other Add{Service} methods in <code>Program.cs</code>, enables <code>IMemoryCache</code>. For apps that don't call one of the preceding <code>Add{Service}</code> methods, it may be necessary to call AddMemoryCache in <code>Program.cs</code>.</p>
+</li>
+</ul>
+<h2><a href="#background-cache-update" aria-hidden="true" class="anchor" id="background-cache-update"></a>Background cache update</h2>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Distributed caching in ASP.NET Core</p>
+</li>
+<li>
+<p>Detect changes with change tokens in ASP.NET Core</p>
+</li>
+<li>
+<p>Response caching in ASP.NET Core</p>
+</li>
+<li>
+<p>Response Caching Middleware in ASP.NET Core</p>
+</li>
+<li>
+<p>Cache Tag Helper in ASP.NET Core MVC</p>
+</li>
+<li>
+<p>Distributed Cache Tag Helper in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/caching/memory?view=aspnetcore-8.0">Cache in-memory in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Response compression | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Response compression</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#compression-with-https" aria-hidden="true" class="anchor" id="compression-with-https"></a>Compression with HTTPS</h2>
+<h2><a href="#when-to-use-response-compression-middleware" aria-hidden="true" class="anchor" id="when-to-use-response-compression-middleware"></a>When to use Response Compression Middleware</h2>
+<ul>
+<li>
+<p>Unable to use the following server-based compression technologies:</p>
+<ul>
+<li>
+<p>IIS Dynamic Compression module</p>
+</li>
+<li>
+<p>Apache mod_deflate module</p>
+</li>
+<li>
+<p>Nginx Compression and Decompression</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Hosting directly on:</p>
+<ul>
+<li>
+<p>HTTP.sys server</p>
+</li>
+<li>
+<p>Kestrel server</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#response-compression" aria-hidden="true" class="anchor" id="response-compression"></a>Response compression</h2>
+<table><thead>
+<tr>
+<th><a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Accept-Encoding" data-linktype="external"><code>Accept-Encoding</code></a> header values</th>
+<th style="text-align: center;">Middleware Supported</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>br</code></td>
+<td style="text-align: center;">Yes (default)</td>
+<td><a href="https://tools.ietf.org/html/rfc7932" data-linktype="external">Brotli compressed data format</a></td>
+</tr>
+<tr>
+<td><code>deflate</code></td>
+<td style="text-align: center;">No</td>
+<td><a href="https://tools.ietf.org/html/rfc1951" data-linktype="external">DEFLATE compressed data format</a></td>
+</tr>
+<tr>
+<td><code>exi</code></td>
+<td style="text-align: center;">No</td>
+<td><a href="https://www.w3.org/TR/exi/" data-linktype="external">W3C Efficient XML Interchange</a></td>
+</tr>
+<tr>
+<td><code>gzip</code></td>
+<td style="text-align: center;">Yes</td>
+<td><a href="https://tools.ietf.org/html/rfc1952" data-linktype="external">Gzip file format</a></td>
+</tr>
+<tr>
+<td><code>identity</code></td>
+<td style="text-align: center;">Yes</td>
+<td>"No encoding" identifier: The response must not be encoded.</td>
+</tr>
+<tr>
+<td><code>pack200-gzip</code></td>
+<td style="text-align: center;">No</td>
+<td><a href="https://jcp.org/aboutJava/communityprocess/review/jsr200/index.html" data-linktype="external">Network Transfer Format for Java Archives</a></td>
+</tr>
+<tr>
+<td><code>*</code></td>
+<td style="text-align: center;">Yes</td>
+<td>Any available content encoding not explicitly requested</td>
+</tr>
+</tbody></table>
+<table><thead>
+<tr>
+<th>Header</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Accept-Encoding" data-linktype="external"><code>Accept-Encoding</code></a></td>
+<td>Sent from the client to the server to indicate the content encoding schemes acceptable to the client.</td>
+</tr>
+<tr>
+<td><a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Encoding" data-linktype="external"><code>Content-Encoding</code></a></td>
+<td>Sent from the server to the client to indicate the encoding of the content in the payload.</td>
+</tr>
+<tr>
+<td><a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Length" data-linktype="external"><code>Content-Length</code></a></td>
+<td>When compression occurs, the <code>Content-Length</code> header is removed, since the body content changes when the response is compressed.</td>
+</tr>
+<tr>
+<td><a href="https://datatracker.ietf.org/doc/html/rfc1864" data-linktype="external"><code>Content-MD5</code></a></td>
+<td>When compression occurs, the <code>Content-MD5</code> header is removed, since the body content has changed and the hash is no longer valid.</td>
+</tr>
+<tr>
+<td><a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Type" data-linktype="external"><code>Content-Type</code></a></td>
+<td>Specifies the <a href="https://developer.mozilla.org/docs/Web/HTTP/Basics_of_HTTP/MIME_types" data-linktype="external">MIME type</a> of the content. Every response should specify its <code>Content-Type</code>. The response compression middleware checks this value to determine if the response should be compressed. The response compression middleware specifies a set of <a href="#mime-types" data-linktype="self-bookmark">default MIME types</a> that it can encode, and they can bed replaced or added.</td>
+</tr>
+<tr>
+<td><a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Vary" data-linktype="external"><code>Vary</code></a></td>
+<td>When sent by the server with a value of <code>Accept-Encoding</code> to clients and proxies, the <code>Vary</code> header indicates to the client or proxy that it should cache (vary) responses based on the value of the <code>Accept-Encoding</code> header of the request. The result of returning content with the <code>Vary: ```Accept-Encoding```</code> header is that both compressed and uncompressed responses are cached separately.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p>The compression of app responses using Gzip and custom compression providers.</p>
+</li>
+<li>
+<p>How to add a MIME type to the default list of MIME types for compression.</p>
+</li>
+<li>
+<p>How to add a custom response compression provider.</p>
+</li>
+</ul>
+<h2><a href="#configuration" aria-hidden="true" class="anchor" id="configuration"></a>Configuration</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddResponseCompression(options =&gt;
+{
+    options.EnableForHttps = true;
+});
+
+var app = builder.Build();
+
+app.UseResponseCompression();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>Setting <code>EnableForHttps</code> to <code>true</code> is a security risk. See Compression with HTTPS in this article for more information.</p>
+</li>
+<li>
+<p><code>app.UseResponseCompression</code> must be called before any middleware that compresses responses. For more information, see ASP.NET Core Middleware.</p>
+</li>
+<li>
+<p>Use a tool such as Firefox Browser Developer to set the <code>Accept-Encoding</code> request header and examine the response headers, size, and body.</p>
+</li>
+<li>
+<p>Select the network tab.</p>
+</li>
+<li>
+<p>Right click the request in the Network request list and select Edit and resend</p>
+</li>
+<li>
+<p>Change <code>Accept-Encoding</code>: from  <code>gzip, deflate, br</code> to <code>none</code>.</p>
+</li>
+<li>
+<p>Select Send.</p>
+</li>
+</ul>
+<h2><a href="#providers" aria-hidden="true" class="anchor" id="providers"></a>Providers</h2>
+<h3><a href="#brotli-and-gzip-compression-providers" aria-hidden="true" class="anchor" id="brotli-and-gzip-compression-providers"></a>Brotli and Gzip compression providers</h3>
+<ul>
+<li>
+<p>The Brotli compression provider and Gzip compression provider are added by default to the array of compression providers.</p>
+</li>
+<li>
+<p>Compression defaults to Brotli compression when the Brotli compressed data format is supported by the client. If Brotli isn't supported by the client, compression defaults to Gzip when the client supports Gzip compression.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).</p>
+</blockquote>
+<ul>
+<li>
+<p>Enables response compression for HTTPS requests.</p>
+</li>
+<li>
+<p>Adds the Brotli and Gzip response compression providers.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.IO.Compression;
+using Microsoft.AspNetCore.ResponseCompression;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddResponseCompression(options =&gt;
+{
+    options.EnableForHttps = true;
+    options.Providers.Add&lt;BrotliCompressionProvider&gt;();
+    options.Providers.Add&lt;GzipCompressionProvider&gt;();
+});
+
+builder.Services.Configure&lt;BrotliCompressionProviderOptions&gt;(options =&gt;
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure&lt;GzipCompressionProviderOptions&gt;(options =&gt;
+{
+    options.Level = CompressionLevel.SmallestSize;
+});
+
+var app = builder.Build();
+
+app.UseResponseCompression();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using System.IO.Compression;
+using Microsoft.AspNetCore.ResponseCompression;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddResponseCompression(options =&gt;
+{
+    options.EnableForHttps = true;
+    options.Providers.Add&lt;BrotliCompressionProvider&gt;();
+    options.Providers.Add&lt;GzipCompressionProvider&gt;();
+});
+
+builder.Services.Configure&lt;BrotliCompressionProviderOptions&gt;(options =&gt;
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure&lt;GzipCompressionProviderOptions&gt;(options =&gt;
+{
+    options.Level = CompressionLevel.SmallestSize;
+});
+
+var app = builder.Build();
+
+app.UseResponseCompression();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<h3><a href="#custom-providers" aria-hidden="true" class="anchor" id="custom-providers"></a>Custom providers</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.ResponseCompression;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddResponseCompression(options =&gt;
+{
+    options.Providers.Add&lt;BrotliCompressionProvider&gt;();
+    options.Providers.Add&lt;GzipCompressionProvider&gt;();
+    options.Providers.Add&lt;CustomCompressionProvider&gt;();
+});
+
+var app = builder.Build();
+
+app.UseResponseCompression();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.ResponseCompression;
+
+public class CustomCompressionProvider : ICompressionProvider
+{
+    public string EncodingName =&gt; &quot;mycustomcompression&quot;;
+    public bool SupportsFlush =&gt; true;
+
+    public Stream CreateStream(Stream outputStream)
+    {
+        // Replace with a custom compression stream wrapper.
+        return outputStream;
+    }
+}
+</code></pre>
+<h2><a href="#mime-types" aria-hidden="true" class="anchor" id="mime-types"></a>MIME types</h2>
+<blockquote>
+<p class='note'>Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).</p>
+</blockquote>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.ResponseCompression;
+using ResponseCompressionSample;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddResponseCompression(options =&gt;
+{
+    options.EnableForHttps = true;
+    options.Providers.Add&lt;BrotliCompressionProvider&gt;();
+    options.Providers.Add&lt;GzipCompressionProvider&gt;();
+    options.Providers.Add&lt;CustomCompressionProvider&gt;();
+    options.MimeTypes =
+    ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { &quot;image/svg+xml&quot; });
+});
+
+var app = builder.Build();
+
+app.UseResponseCompression();
+</code></pre>
+<h2><a href="#adding-the-vary-header" aria-hidden="true" class="anchor" id="adding-the-vary-header"></a>Adding the <code>Vary</code> header</h2>
+<blockquote>
+<p class='note'>Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).</p>
+</blockquote>
+<h2><a href="#middleware-issue-when-behind-an-nginx-reverse-proxy" aria-hidden="true" class="anchor" id="middleware-issue-when-behind-an-nginx-reverse-proxy"></a>Middleware issue when behind an Nginx reverse proxy</h2>
+<h2><a href="#disabling-iis-dynamic-compression" aria-hidden="true" class="anchor" id="disabling-iis-dynamic-compression"></a>Disabling IIS dynamic compression</h2>
+<h2><a href="#troubleshoot-response-compression" aria-hidden="true" class="anchor" id="troubleshoot-response-compression"></a>Troubleshoot response compression</h2>
+<ul>
+<li>
+<p>The <code>Accept-Encoding</code> header is present with a value of <code>br</code>, <code>gzip</code>, *, or custom encoding that matches a custom compression provider. The value must not be <code>identity</code> or have a quality value (qvalue, <code>q</code>) setting of 0 (zero).</p>
+</li>
+<li>
+<p>The MIME type (Content-Type) must be set and must match a MIME type configured on the ResponseCompressionOptions.</p>
+</li>
+<li>
+<p>The request must not include the <code>Content-Range</code> header.</p>
+</li>
+<li>
+<p>The request must use insecure protocol (http), unless secure protocol (https) is configured in the Response Compression Middleware options. Note the danger described above when enabling secure content compression.</p>
+</li>
+</ul>
+<h2><a href="#azure-deployed-sample" aria-hidden="true" class="anchor" id="azure-deployed-sample"></a>Azure deployed sample</h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.ResponseCompression;
+using ResponseCompressionSample;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddResponseCompression(options =&gt;
+{
+    options.EnableForHttps = true;
+    options.Providers.Add&lt;BrotliCompressionProvider&gt;();
+    options.Providers.Add&lt;GzipCompressionProvider&gt;();
+    options.Providers.Add&lt;CustomCompressionProvider&gt;();
+    options.MimeTypes =
+    ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { &quot;image/svg+xml&quot; });
+});
+
+var app = builder.Build();
+
+app.UseResponseCompression();
+
+app.Map(&quot;/trickle&quot;, async (HttpResponse httpResponse) =&gt;
+{
+    httpResponse.ContentType = &quot;text/plain;charset=utf-8&quot;;
+
+    for (int i = 0; i &lt; 20; i++)
+    {
+        await httpResponse.WriteAsync(&quot;a&quot;);
+        await httpResponse.Body.FlushAsync();
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
+    }
+});
+
+app.Map(&quot;/testfile1kb.txt&quot;, () =&gt; Results.File(
+    app.Environment.ContentRootFileProvider.GetFileInfo(&quot;testfile1kb.txt&quot;).PhysicalPath,
+    &quot;text/plain;charset=utf-8&quot;));
+
+app.Map(&quot;/banner.svg&quot;, () =&gt; Results.File(
+    app.Environment.ContentRootFileProvider.GetFileInfo(&quot;banner.svg&quot;).PhysicalPath,
+    &quot;image/svg+xml;charset=utf-8&quot;));
+
+app.MapFallback(() =&gt; LoremIpsum.Text);
+
+app.Run();
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<blockquote>
+<p class='note'>Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).</p>
+</blockquote>
+<ul>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Response compression middleware source</p>
+</li>
+<li>
+<p>ASP.NET Core Middleware</p>
+</li>
+<li>
+<p>Mozilla Developer Network: <code>Accept-Encoding</code></p>
+</li>
+<li>
+<p>RFC 9110 Section 8.4.1: Content Codings</p>
+</li>
+<li>
+<p>RFC 9110 Section 8.4.1.3: Gzip Coding</p>
+</li>
+<li>
+<p>GZIP file format specification version 4.3</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/response-compression?view=aspnetcore-8.0">Response compression in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

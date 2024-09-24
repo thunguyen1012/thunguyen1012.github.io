@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Object reuse with ObjectPool | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Object reuse with ObjectPool</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Expensive to allocate/initialize.</p>
+</li>
+<li>
+<p>Represent a limited resource.</p>
+</li>
+<li>
+<p>Used predictably and frequently.</p>
+</li>
+<li>
+<p>Unless the initialization cost of an object is high, it's usually slower to get the object from the pool.</p>
+</li>
+<li>
+<p>Objects managed by the pool aren't de-allocated until the pool is de-allocated.</p>
+</li>
+</ul>
+<h2><a href="#objectpool-concepts" aria-hidden="true" class="anchor" id="objectpool-concepts"></a><code>ObjectPool</code> concepts</h2>
+<ul>
+<li>
+<p>Items that are not returned to the pool will be disposed.</p>
+</li>
+<li>
+<p>When the pool gets disposed by DI, all items in the pool are disposed.</p>
+</li>
+<li>
+<p>Calling <code>Get</code> throws an <code>ObjectDisposedException</code>.</p>
+</li>
+<li>
+<p>Calling <code>Return</code> disposes the given item.</p>
+</li>
+<li>
+<p><code>ObjectPool</code><T> : The basic object pool abstraction. Used to get and return objects.</p>
+</li>
+<li>
+<p><code>PooledObjectPolicy&lt;T&gt;</code> : Implement this to customize how an object is created and how it's reset when returned to the pool. This can be passed into an object pool that's constructed directly.</p>
+</li>
+<li>
+<p><code>IResettable</code> : Automatically resets the object when returned to an object pool.</p>
+</li>
+<li>
+<p>Instantiating a pool.</p>
+</li>
+<li>
+<p>Registering a pool in Dependency injection (DI) as an instance.</p>
+</li>
+<li>
+<p>Registering the <code>ObjectPoolProvider&lt;&gt;</code> in DI and using it as a factory.</p>
+</li>
+</ul>
+<h2><a href="#how-to-use-objectpool" aria-hidden="true" class="anchor" id="how-to-use-objectpool"></a>How to use <code>ObjectPool</code></h2>
+<h2><a href="#objectpool-sample" aria-hidden="true" class="anchor" id="objectpool-sample"></a><code>ObjectPool</code> sample</h2>
+<ul>
+<li>
+<p>Adds <code>ObjectPoolProvider</code> to the Dependency injection (DI) container.</p>
+</li>
+<li>
+<p>Implements the <code>IResettable</code> interface to automatically clear the contents of the buffer when returned to the object pool.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.ObjectPool;
+using System.Security.Cryptography;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.TryAddSingleton&lt;ObjectPoolProvider, DefaultObjectPoolProvider&gt;();
+
+builder.Services.TryAddSingleton&lt;ObjectPool&lt;ReusableBuffer&gt;&gt;(serviceProvider =&gt;
+{
+    var provider = serviceProvider.GetRequiredService&lt;ObjectPoolProvider&gt;();
+    var policy = new DefaultPooledObjectPolicy&lt;ReusableBuffer&gt;();
+    return provider.Create(policy);
+});
+
+var app = builder.Build();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+// return the SHA256 hash of a word 
+// https://localhost:7214/hash/SamsonAmaugo
+app.MapGet(&quot;/hash/{name}&quot;, (string name, ObjectPool&lt;ReusableBuffer&gt; bufferPool) =&gt;
+{
+
+    var buffer = bufferPool.Get();
+    try
+    {
+        // Set the buffer data to the ASCII values of a word
+        for (var i = 0; i &lt; name.Length; i++)
+        {
+            buffer.Data[i] = (byte)name[i];
+        }
+
+        Span&lt;byte&gt; hash = stackalloc byte[32];
+        SHA256.HashData(buffer.Data.AsSpan(0, name.Length), hash);
+        return &quot;Hash: &quot; + Convert.ToHexString(hash);
+    }
+    finally
+    {
+        // Data is automatically reset because this type implemented IResettable
+        bufferPool.Return(buffer); 
+    }
+});
+app.Run();
+
+public class ReusableBuffer : IResettable
+{
+    public byte[] Data { get; } = new byte[1024 * 1024]; // 1 MB
+
+    public bool TryReset()
+    {
+        Array.Clear(Data);
+        return true;
+    }
+}
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/objectpool?view=aspnetcore-8.0">Object reuse with <code>ObjectPool</code> in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

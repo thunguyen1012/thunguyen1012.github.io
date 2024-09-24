@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Caching - Distributed caching | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Caching - Distributed caching</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<ul>
+<li>
+<p>Is coherent (consistent) across requests to multiple servers.</p>
+</li>
+<li>
+<p>Survives server restarts and app deployments.</p>
+</li>
+<li>
+<p>Doesn't use local memory.</p>
+</li>
+</ul>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<ul>
+<li>
+<p>For a Redis distributed cache, Microsoft.Extensions.Caching.StackExchangeRedis.</p>
+</li>
+<li>
+<p>For SQL Server, Microsoft.Extensions.Caching.SqlServer.</p>
+</li>
+<li>
+<p>For the NCache distributed cache, NCache.Microsoft.Extensions.Caching.OpenSource.</p>
+</li>
+</ul>
+<h2><a href="#idistributedcache-interface" aria-hidden="true" class="anchor" id="idistributedcache-interface"></a><code>IDistributedCache</code> interface</h2>
+<ul>
+<li>
+<p>Get, GetAsync: Accepts a string key and retrieves a cached item as a byte[] array if found in the cache.</p>
+</li>
+<li>
+<p>Set, SetAsync: Adds an item (as byte[] array) to the cache using a string key.</p>
+</li>
+<li>
+<p>Refresh, RefreshAsync: Refreshes an item in the cache based on its key, resetting its sliding expiration timeout (if any).</p>
+</li>
+<li>
+<p>Remove, RemoveAsync: Removes a cache item based on its string key.</p>
+</li>
+</ul>
+<h2><a href="#establish-distributed-caching-services" aria-hidden="true" class="anchor" id="establish-distributed-caching-services"></a>Establish distributed caching services</h2>
+<ul>
+<li>
+<p>Distributed Redis cache</p>
+</li>
+<li>
+<p>Distributed Memory Cache</p>
+</li>
+<li>
+<p>Distributed SQL Server cache</p>
+</li>
+<li>
+<p>Distributed NCache cache</p>
+</li>
+<li>
+<p>Distributed Azure CosmosDB cache</p>
+</li>
+</ul>
+<h3><a href="#distributed-redis-cache" aria-hidden="true" class="anchor" id="distributed-redis-cache"></a>Distributed Redis Cache</h3>
+<ul>
+<li>
+<p>Create an Azure Cache for Redis.</p>
+</li>
+<li>
+<p>Copy the Primary connection string (StackExchange.Redis) to Configuration.</p>
+<ul>
+<li>
+<p>Local development: Save the connection string with Secret Manager.</p>
+</li>
+<li>
+<p>Azure: Save the connection string in the App Service Configuration or another secure store.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddStackExchangeRedisCache(options =&gt;
+ {
+     options.Configuration = builder.Configuration.GetConnectionString(&quot;MyRedisConStr&quot;);
+     options.InstanceName = &quot;SampleInstance&quot;;
+ });
+</code></pre>
+<h3><a href="#distributed-memory-cache" aria-hidden="true" class="anchor" id="distributed-memory-cache"></a>Distributed Memory Cache</h3>
+<ul>
+<li>
+<p>In development and testing scenarios.</p>
+</li>
+<li>
+<p>When a single server is used in production and memory consumption isn't an issue. Implementing the Distributed Memory Cache abstracts cached data storage. It allows for implementing a true distributed caching solution in the future if multiple nodes or fault tolerance become necessary.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddDistributedMemoryCache();
+</code></pre>
+<h3><a href="#distributed-sql-server-cache" aria-hidden="true" class="anchor" id="distributed-sql-server-cache"></a>Distributed SQL Server Cache</h3>
+<pre><code class="language-dotnetcli">dotnet sql-cache create &quot;Data Source=(localdb)/MSSQLLocalDB;Initial Catalog=DistCache;Integrated Security=True;&quot; dbo TestCache
+</code></pre>
+<pre><code class="language-console">Table and index were created successfully.
+</code></pre>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/caching/distributed/_static/sqlservercachetable.png?view=aspnetcore-8.0" alt="SqlServer Cache Table!" title="SqlServer Cache Table" /></p>
+<blockquote>
+<p class='note'>Note
+An app should manipulate cache values using an instance of <code>IDistributedCache</code>, not a SqlServerCache.</p>
+</blockquote>
+<pre><code class="language-csharp">builder.Services.AddDistributedSqlServerCache(options =&gt;
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString(
+        &quot;DistCache_ConnectionString&quot;);
+    options.SchemaName = &quot;dbo&quot;;
+    options.TableName = &quot;TestCache&quot;;
+});
+</code></pre>
+<blockquote>
+<p class='note'>Note
+A ConnectionString (and optionally, SchemaName and TableName) are typically stored outside of source control (for example, stored by the Secret Manager or in <code>appsettings.json</code>/<code>appsettings.{Environment}.json</code> files). The connection string may contain credentials that should be kept out of source control systems.</p>
+</blockquote>
+<h3><a href="#distributed-ncache-cache" aria-hidden="true" class="anchor" id="distributed-ncache-cache"></a>Distributed NCache Cache</h3>
+<ul>
+<li>
+<p>Install NCache open source NuGet.</p>
+</li>
+<li>
+<p>Configure the cache cluster in client.ncconf.</p>
+</li>
+<li>
+<p>Add the following code to <code>Program.cs</code>:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddNCacheDistributedCache(configuration =&gt;
+{
+    configuration.CacheName = &quot;democache&quot;;
+    configuration.EnableLogs = true;
+    configuration.ExceptionsEnabled = true;
+});
+</code></pre>
+<h3><a href="#distributed-azure-cosmosdb-cache" aria-hidden="true" class="anchor" id="distributed-azure-cosmosdb-cache"></a>Distributed Azure CosmosDB Cache</h3>
+<h4><a href="#reuse-an-existing-client" aria-hidden="true" class="anchor" id="reuse-an-existing-client"></a>Reuse an existing client</h4>
+<pre><code class="language-csharp">services.AddCosmosCache((CosmosCacheOptions cacheOptions) =&gt;
+{
+    cacheOptions.ContainerName = Configuration[&quot;CosmosCacheContainer&quot;];
+    cacheOptions.DatabaseName = Configuration[&quot;CosmosCacheDatabase&quot;];
+    cacheOptions.CosmosClient = existingCosmosClient;
+    cacheOptions.CreateIfNotExists = true;
+});
+</code></pre>
+<h4><a href="#create-a-new-client" aria-hidden="true" class="anchor" id="create-a-new-client"></a>Create a new client</h4>
+<pre><code class="language-csharp">services.AddCosmosCache((CosmosCacheOptions cacheOptions) =&gt;
+{
+    cacheOptions.ContainerName = Configuration[&quot;CosmosCacheContainer&quot;];
+    cacheOptions.DatabaseName = Configuration[&quot;CosmosCacheDatabase&quot;];
+    cacheOptions.ClientBuilder = new CosmosClientBuilder(Configuration[&quot;CosmosConnectionString&quot;]);
+    cacheOptions.CreateIfNotExists = true;
+});
+</code></pre>
+<h2><a href="#use-the-distributed-cache" aria-hidden="true" class="anchor" id="use-the-distributed-cache"></a>Use the distributed cache</h2>
+<pre><code class="language-csharp">app.Lifetime.ApplicationStarted.Register(() =&gt;
+{
+    var currentTimeUTC = DateTime.UtcNow.ToString();
+    byte[] encodedCurrentTimeUTC = System.Text.Encoding.UTF8.GetBytes(currentTimeUTC);
+    var options = new DistributedCacheEntryOptions()
+        .SetSlidingExpiration(TimeSpan.FromSeconds(20));
+    app.Services.GetService&lt;IDistributedCache&gt;()
+                              .Set(&quot;cachedTimeUTC&quot;, encodedCurrentTimeUTC, options);
+});
+</code></pre>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    private readonly IDistributedCache _cache;
+
+    public IndexModel(IDistributedCache cache)
+    {
+        _cache = cache;
+    }
+
+    public string? CachedTimeUTC { get; set; }
+    public string? ASP_Environment { get; set; }
+
+    public async Task OnGetAsync()
+    {
+        CachedTimeUTC = &quot;Cached Time Expired&quot;;
+        var encodedCachedTimeUTC = await _cache.GetAsync(&quot;cachedTimeUTC&quot;);
+
+        if (encodedCachedTimeUTC != null)
+        {
+            CachedTimeUTC = Encoding.UTF8.GetString(encodedCachedTimeUTC);
+        }
+
+        ASP_Environment = Environment.GetEnvironmentVariable(&quot;ASPNETCORE_ENVIRONMENT&quot;);
+        if (String.IsNullOrEmpty(ASP_Environment))
+        {
+            ASP_Environment = &quot;Null, so Production&quot;;
+        }
+    }
+
+    public async Task&lt;IActionResult&gt; OnPostResetCachedTime()
+    {
+        var currentTimeUTC = DateTime.UtcNow.ToString();
+        byte[] encodedCurrentTimeUTC = Encoding.UTF8.GetBytes(currentTimeUTC);
+        var options = new DistributedCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromSeconds(20));
+        await _cache.SetAsync(&quot;cachedTimeUTC&quot;, encodedCurrentTimeUTC, options);
+
+        return RedirectToPage();
+    }
+}
+</code></pre>
+<h2><a href="#recommendations" aria-hidden="true" class="anchor" id="recommendations"></a>Recommendations</h2>
+<ul>
+<li>
+<p>Existing infrastructure</p>
+</li>
+<li>
+<p>Performance requirements</p>
+</li>
+<li>
+<p>Cost</p>
+</li>
+<li>
+<p>Team experience</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Redis Cache on Azure</p>
+</li>
+<li>
+<p>SQL Database on Azure</p>
+</li>
+<li>
+<p>ASP.NET Core <code>IDistributedCache</code> Provider for NCache in Web Farms (NCache on GitHub)</p>
+</li>
+<li>
+<p>Repository README file for Microsoft.Extensions.Caching.Cosmos</p>
+</li>
+<li>
+<p>Cache in-memory in ASP.NET Core</p>
+</li>
+<li>
+<p>Detect changes with change tokens in ASP.NET Core</p>
+</li>
+<li>
+<p>Response caching in ASP.NET Core</p>
+</li>
+<li>
+<p>Response Caching Middleware in ASP.NET Core</p>
+</li>
+<li>
+<p>Cache Tag Helper in ASP.NET Core MVC</p>
+</li>
+<li>
+<p>Distributed Cache Tag Helper in ASP.NET Core</p>
+</li>
+<li>
+<p>Host ASP.NET Core in a web farm</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/caching/distributed?view=aspnetcore-8.0">Distributed caching in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -9,7 +9,7 @@ image:
 
 ## In this article
 
-The ```dotnet ```user-jwts`````` command line tool can create and manage app specific local JSON Web Tokens (JWTs).
+The ```dotnet user-jwts``` command line tool can create and manage app specific local JSON Web Tokens (JWTs).
 
 ## Synopsis
 
@@ -65,7 +65,7 @@ The MSBuild project to apply a command on. If a project is not specified, MSBuil
 
 ### Create
 
-Usage: ```dotnet ```user-jwts`````` create [options]
+Usage: ```dotnet user-jwts create [options]```
 
 <table><thead>
 <tr>
@@ -159,7 +159,7 @@ app.MapGet("/secret", (ClaimsPrincipal user) => $"Hello {user.Identity?.Name}. M
 app.Run();
 ```
 
-In the preceding code, a GET request to ```/secret``` returns an ```401 Unauthorized``` error. A production app might get the JWT from a Security token service (STS), perhaps in response to logging in via a set of credentials. For the purpose of working with the API during local development, the ```dotnet ```user-jwts`````` command line tool can be used to create and manage app-specific local JWTs.
+In the preceding code, a GET request to ```/secret``` returns an ```401 Unauthorized``` error. A production app might get the JWT from a Security token service (STS), perhaps in response to logging in via a set of credentials. For the purpose of working with the API during local development, the ```dotnet user-jwts``` command line tool can be used to create and manage app-specific local JWTs.
 
 The ```user-jwts``` tool is similar in concept to the  ```user-secrets``` tool, it can be used to manage values for the app that are only valid for the developer on the local machine. In fact, the ```user-jwts``` tool utilizes the ```user-secrets``` infrastructure to manage the key that the JWTs are signed with, ensuring it’s stored safely in the user profile.
 

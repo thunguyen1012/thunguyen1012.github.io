@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Memory and GC | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Memory and GC</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Memory management is complex, even in a managed framework like .NET. Analyzing and understanding memory issues can be challenging. This article:</p>
+<ul>
+<li>
+<p>Was motivated by many memory leak and GC not working issues. Most of these issues were caused by not understanding how memory consumption works in .NET Core, or not understanding how it's measured.</p>
+</li>
+<li>
+<p>Demonstrates problematic memory use, and suggests alternative approaches.</p>
+</li>
+</ul>
+<h2><a href="#how-garbage-collection-gc)-works-in-.net-core" aria-hidden="true" class="anchor" id="how-garbage-collection-gc)-works-in-.net-core"></a>How garbage collection (GC) works in .NET Core</h2>
+<p>The heap controller (GC) allocates memory on managed objects that are no longer referenced by the app.</p>
+<p>Objects are moved from one generation to another based on their lifetime.</p>
+<p>When an ASP.NET Core app starts, the GC:</p>
+<ul>
+<li>
+<p>Reserves some memory for the initial heap segments.</p>
+</li>
+<li>
+<p>Commits a small portion of memory when the runtime is loaded.</p>
+</li>
+</ul>
+<p>The preceding memory allocations are done for performance reasons. The performance benefit comes from heap segments in contiguous memory.</p>
+<h3><a href="#gccollect-caveats" aria-hidden="true" class="anchor" id="gccollect-caveats"></a>GC.Collect caveats</h3>
+<p>In general, ASP.NET Core apps in production should not use GC.Collect explicitly. Inducing garbage collections at sub-optimal times can decrease performance significantly.</p>
+<p>GC.Collect is useful when investigating memory leaks. Calling GC.Collect() triggers a blocking garbage collection cycle that tries to reclaim all objects inaccessible from managed code. It's a useful way to understand the size of the reachable live objects in the heap, and track growth of memory size over time.</p>
+<h2><a href="#analyzing-the-memory-usage-of-an-app" aria-hidden="true" class="anchor" id="analyzing-the-memory-usage-of-an-app"></a>Analyzing the memory usage of an app</h2>
+<p>Dedicated tools can help analyzing memory usage:</p>
+<ul>
+<li>
+<p>Counting object references</p>
+</li>
+<li>
+<p>Measuring how much impact the GC has on CPU usage</p>
+</li>
+<li>
+<p>Measuring memory space used for each generation</p>
+</li>
+</ul>
+<p>Use the following tools to analyze memory usage:</p>
+<ul>
+<li>
+<p>dotnet-trace: Can be  used on production machines.</p>
+</li>
+<li>
+<p>Analyze memory usage without the Visual Studio debugger</p>
+</li>
+<li>
+<p>Profile memory usage in Visual Studio</p>
+</li>
+</ul>
+<h3><a href="#detecting-memory-issues" aria-hidden="true" class="anchor" id="detecting-memory-issues"></a>Detecting memory issues</h3>
+<p>Task Manager can be used to get an idea of how much memory an ASP.NET app is using. The Task Manager memory value:</p>
+<ul>
+<li>
+<p>Represents the amount of memory that is used by the ASP.NET process.</p>
+</li>
+<li>
+<p>Includes the app's living objects and other memory consumers such as native memory usage.</p>
+</li>
+</ul>
+<p>If the Task Manager memory value increases indefinitely and never flattens out, the app has a memory leak. The following sections demonstrate and explain several memory usage patterns.</p>
+<h2><a href="#sample-display-memory-usage-app" aria-hidden="true" class="anchor" id="sample-display-memory-usage-app"></a>Sample display memory usage app</h2>
+<p>The MemoryLeak sample app is available on GitHub. The MemoryLeak app:</p>
+<ul>
+<li>
+<p>Includes a diagnostic controller that gathers real-time memory and GC data for the app.</p>
+</li>
+<li>
+<p>Has an Index page that displays the memory and GC data. The Index page is refreshed every second.</p>
+</li>
+<li>
+<p>Contains an API controller that provides various memory load patterns.</p>
+</li>
+<li>
+<p>Is not a supported tool, however, it can be used to display memory usage patterns of ASP.NET Core apps.</p>
+</li>
+</ul>
+<p>The following image shows the MemoryLeak Index page when a Gen 0 GC occurs.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/0rps.png?view=aspnetcore-8.0" alt="Chart showing 0 Requests Per Second (RPS)!" title="Chart showing 0 Requests Per Second (RPS)" /></p>
+<p>The chart displays two values for the memory usage:</p>
+<ul>
+<li>
+<p>Allocated: the amount of memory occupied by managed objects</p>
+</li>
+<li>
+<p>Working set: The set of pages in the virtual address space of the process that are currently resident in physical memory. The working set shown is the same value Task Manager displays.</p>
+</li>
+</ul>
+<h3><a href="#transient-objects" aria-hidden="true" class="anchor" id="transient-objects"></a>Transient objects</h3>
+<p>The following API creates a 10-KB String instance and returns it to the client. On each request, a new object is allocated in memory and written to the response. Strings are stored as UTF-16 characters in .NET so each character takes 2 bytes in memory.</p>
+<pre><code class="language-csharp">[HttpGet(&quot;bigstring&quot;)]
+public ActionResult&lt;string&gt; GetBigString()
+{
+    return new String('x', 10 * 1024);
+}
+</code></pre>
+<p>The following graph is generated with a relatively small load in to show how memory allocations are impacted by the GC.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/bigstring.png?view=aspnetcore-8.0" alt="Graph showing memory allocations for a relatively small load!" title="Graph showing memory allocations for a relatively small load" /></p>
+<p>The preceding chart shows:</p>
+<ul>
+<li>
+<p>4K RPS (Requests per second).</p>
+</li>
+<li>
+<p>Generation 0 GC collections occur about every two seconds.</p>
+</li>
+<li>
+<p>The working set is constant at approximately 500 MB.</p>
+</li>
+<li>
+<p>CPU is 12%.</p>
+</li>
+<li>
+<p>The memory consumption and release (through GC) is stable.</p>
+</li>
+</ul>
+<p>The following chart is taken at the max throughput that can be handled by the machine.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/bigstring2.png?view=aspnetcore-8.0" alt="Chart showing max throughput!" title="Chart showing max throughput" /></p>
+<p>The preceding chart shows:</p>
+<ul>
+<li>
+<p>22K RPS</p>
+</li>
+<li>
+<p>Generation 0 GC collections occur several times per second.</p>
+</li>
+<li>
+<p>Generation 1 collections are triggered because the app allocated significantly more memory per second.</p>
+</li>
+<li>
+<p>The working set is constant at approximately 500 MB.</p>
+</li>
+<li>
+<p>CPU is 33%.</p>
+</li>
+<li>
+<p>The memory consumption and release (through GC) is stable.</p>
+</li>
+<li>
+<p>The CPU (33%) is not over-utilized, therefore the garbage collection can keep up with a high number of allocations.</p>
+</li>
+</ul>
+<h3><a href="#workstation-gc-vs-server-gc" aria-hidden="true" class="anchor" id="workstation-gc-vs-server-gc"></a>Workstation GC vs. Server GC</h3>
+<p>The .NET Garbage Collector has two different modes:</p>
+<ul>
+<li>
+<p>Workstation GC: Optimized for the desktop.</p>
+</li>
+<li>
+<p>Server GC. The default GC for ASP.NET Core apps. Optimized for the server.</p>
+</li>
+</ul>
+<p>The GC mode can be set explicitly in the project file or in the <code>runtimeconfig.json</code> file of the published app. The following markup shows setting <code>ServerGarbageCollection</code> in the project file:</p>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;ServerGarbageCollection&gt;true&lt;/ServerGarbageCollection&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<p>Changing <code>ServerGarbageCollection</code> in the project file requires the app to be rebuilt.</p>
+<p class='note'>Note: Server garbage collection is not available on machines with a single core. For more information, see IsServerGC.</p>
+<p>The following image shows the memory profile under a 5K RPS using the Workstation GC.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/workstation.png?view=aspnetcore-8.0" alt="Chart showing memory profile for a Workstation GC!" title="Chart showing memory profile for a Workstation GC" /></p>
+<p>The differences between this chart and the server version are significant:</p>
+<ul>
+<li>
+<p>The working set drops from 500 MB to 70 MB.</p>
+</li>
+<li>
+<p>The GC does generation 0 collections multiple times per second instead of every two seconds.</p>
+</li>
+<li>
+<p>GC drops from 300 MB to 10 MB.</p>
+</li>
+</ul>
+<p>The GC is a measure of the amount of memory used by the web server.</p>
+<h3><a href="#gc-using-docker-and-small-containers" aria-hidden="true" class="anchor" id="gc-using-docker-and-small-containers"></a>GC using Docker and small containers</h3>
+<p>In this article, I'll show you how to run Google Chrome (GC) in a small container.</p>
+<h3><a href="#persistent-object-references" aria-hidden="true" class="anchor" id="persistent-object-references"></a>Persistent object references</h3>
+<p>The GC cannot free objects that are referenced.</p>
+<p>The following API creates a 10-KB String instance and returns it to the client.</p>
+<pre><code class="language-csharp">private static ConcurrentBag&lt;string&gt; _staticStrings = new ConcurrentBag&lt;string&gt;();
+
+[HttpGet(&quot;staticstring&quot;)]
+public ActionResult&lt;string&gt; GetStaticString()
+{
+    var bigString = new String('x', 10 * 1024);
+    _staticStrings.Add(bigString);
+    return bigString;
+}
+</code></pre>
+<p>The preceding code:</p>
+<ul>
+<li>
+<p>Is an example of a typical memory leak.</p>
+</li>
+<li>
+<p>With frequent calls, causes app memory to increase until the process crashes with an <code>OutOfMemory</code> exception.</p>
+</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/eternal.png?view=aspnetcore-8.0" alt="Chart showing a memory leak!" title="Chart showing a memory leak" /></p>
+<p>In the preceding image:</p>
+<ul>
+<li>
+<p>Load testing the <code>/api/staticstring</code> endpoint causes a linear increase in memory.</p>
+</li>
+<li>
+<p>The GC tries to free memory as the memory pressure grows, by calling a generation 2 collection.</p>
+</li>
+<li>
+<p>The GC cannot free the leaked memory. Allocated and working set increase with time.</p>
+</li>
+</ul>
+<p>Some scenarios, such as caching, require object references to be held until memory pressure forces them to be released. The <code>WeakReference</code> class can be used for this type of caching code. A <code>WeakReference</code> object is collected under memory pressures. The default implementation of IMemoryCache uses <code>WeakReference</code>.</p>
+<h3><a href="#native-memory" aria-hidden="true" class="anchor" id="native-memory"></a>Native memory</h3>
+<p>Some .NET Core objects rely on native memory. Native memory can not be collected by the GC. The .NET object using native memory must free it using native code.</p>
+<p>.NET provides the <code>IDisposable</code> interface to let developers release native memory. Even if <code>Dispose</code> is not called, correctly implemented classes call <code>Dispose</code> when the finalizer runs.</p>
+<p>Consider the following code:</p>
+<pre><code class="language-csharp">[HttpGet(&quot;fileprovider&quot;)]
+public void GetFileProvider()
+{
+    var fp = new PhysicalFileProvider(TempPath);
+    fp.Watch(&quot;*.*&quot;);
+}
+</code></pre>
+<p>PhysicalFileProvider is a managed class, so any instance will be collected at the end of the request.</p>
+<p>The following image shows the memory profile while invoking the <code>fileprovider</code> API continuously.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/fileprovider.png?view=aspnetcore-8.0" alt="Chart showing a native memory leak!" title="Chart showing a native memory leak" /></p>
+<p>The preceding chart shows an obvious issue with the implementation of this class, as it keeps increasing memory usage. This is a known problem that is being tracked in this issue.</p>
+<p>The same leak could happen in user code, by one of the following:</p>
+<ul>
+<li>
+<p>Not releasing the class correctly.</p>
+</li>
+<li>
+<p>Forgetting to invoke the <code>Dispose</code> method of the dependent objects that should be disposed.</p>
+</li>
+</ul>
+<h3><a href="#large-object-heap" aria-hidden="true" class="anchor" id="large-object-heap"></a>Large object heap</h3>
+<p>Frequent memory allocation/free cycles can fragment memory, especially when allocating large chunks of memory. Objects are allocated in contiguous blocks of memory. To mitigate fragmentation, when the GC frees memory, it tries to defragment it. This process is called compaction. Compaction involves moving objects. Moving large objects imposes a performance penalty. For this reason the GC creates a special memory zone for large objects, called the large object heap (LOH). Objects that are greater than 85,000 bytes (approximately 83 KB) are:</p>
+<ul>
+<li>
+<p>Placed on the LOH.</p>
+</li>
+<li>
+<p>Not compacted.</p>
+</li>
+<li>
+<p>Collected during generation 2 GCs.</p>
+</li>
+</ul>
+<p>When the LOH is full, the GC will trigger a generation 2 collection. Generation 2 collections:</p>
+<ul>
+<li>
+<p>Are inherently slow.</p>
+</li>
+<li>
+<p>Additionally incur the cost of triggering a collection on all other generations.</p>
+</li>
+</ul>
+<p>The following code compacts the LOH immediately:</p>
+<pre><code class="language-csharp">GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+GC.Collect();
+</code></pre>
+<p>See LargeObjectHeapCompactionMode for information on compacting the LOH.</p>
+<p>In containers using .NET Core 3.0 and later, the LOH is automatically compacted.</p>
+<p>The following API that illustrates this behavior:</p>
+<pre><code class="language-csharp">[HttpGet(&quot;loh/{size=85000}&quot;)]
+public int GetLOH1(int size)
+{
+   return new byte[size].Length;
+}
+</code></pre>
+<p>The following chart shows the memory profile of calling the <code>/api/loh/84975</code> endpoint, under maximum load:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/loh1.png?view=aspnetcore-8.0" alt="Chart showing memory profile of allocating bytes!" title="Chart showing memory profile of allocating bytes" /></p>
+<p>The following chart shows the memory profile of calling the <code>/api/loh/84976</code> endpoint, allocating just one more byte:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/loh2.png?view=aspnetcore-8.0" alt="Chart showing memory profile of allocating one more byte!" title="Chart showing memory profile of allocating one more byte" /></p>
+<p class='note'>Note: The <code>byte[]</code> structure has overhead bytes. That's why 84,976 bytes triggers the 85,000 limit.</p>
+<p>Comparing the two preceding charts:</p>
+<ul>
+<li>
+<p>The working set is similar for both scenarios, about 450 MB.</p>
+</li>
+<li>
+<p>The under LOH requests (84,975 bytes) shows mostly generation 0 collections.</p>
+</li>
+<li>
+<p>The over LOH requests generate constant generation 2 collections. Generation 2 collections are expensive. More CPU is required and throughput drops almost 50%.</p>
+</li>
+</ul>
+<p>Temporary large objects are particularly problematic because they cause gen2 GCs.</p>
+<p>For maximum performance, large object use should be minimized. If possible, split up large objects. For example, Response Caching middleware in ASP.NET Core split the cache entries into blocks less than 85,000 bytes.</p>
+<p>The following links show the ASP.NET Core approach to keeping objects under the LOH limit:</p>
+<ul>
+<li>
+<p>ResponseCaching/Streams/StreamUtilities.cs</p>
+</li>
+<li>
+<p>ResponseCaching/MemoryResponseCache.cs</p>
+</li>
+</ul>
+<p>For more information, see:</p>
+<ul>
+<li>
+<p>Large Object Heap Uncovered</p>
+</li>
+<li>
+<p>Large object heap</p>
+</li>
+</ul>
+<h3><a href="#httpclient" aria-hidden="true" class="anchor" id="httpclient"></a><code>HttpClient</code></h3>
+<p>Incorrectly using <code>HttpClient</code> can result in a resource leak. System resources, such as database connections, sockets, file handles, etc.:</p>
+<ul>
+<li>
+<p>Are more scarce than memory.</p>
+</li>
+<li>
+<p>Are more problematic when leaked than memory.</p>
+</li>
+</ul>
+<p>Experienced .NET developers know to call <code>Dispose</code> on objects that implement <code>IDisposable</code>. Not disposing objects that implement <code>IDisposable</code> typically results in leaked memory or leaked system resources.</p>
+<p><code>HttpClient</code> implements <code>IDisposable</code>, but should not be disposed on every invocation. Rather, <code>HttpClient</code> should be reused.</p>
+<p>The following endpoint creates and disposes a new  <code>HttpClient</code> instance on every request:</p>
+<pre><code class="language-csharp">[HttpGet(&quot;httpclient1&quot;)]
+public async Task&lt;int&gt; GetHttpClient1(string url)
+{
+    using (var httpClient = new HttpClient())
+    {
+        var result = await httpClient.GetAsync(url);
+        return (int)result.StatusCode;
+    }
+}
+</code></pre>
+<p>Under load, the following error messages are logged:</p>
+<p>Even though the <code>HttpClient</code> instances are disposed, the actual network connection takes some time to be released by the operating system. By continuously creating new connections, ports exhaustion occurs. Each client connection requires its own client port.</p>
+<p>One way to prevent port exhaustion is to reuse the same <code>HttpClient</code> instance:</p>
+<pre><code class="language-csharp">private static readonly HttpClient _httpClient = new HttpClient();
+
+[HttpGet(&quot;httpclient2&quot;)]
+public async Task&lt;int&gt; GetHttpClient2(string url)
+{
+    var result = await _httpClient.GetAsync(url);
+    return (int)result.StatusCode;
+}
+</code></pre>
+<p>The <code>HttpClient</code> instance is released when the app stops. This example shows that not every disposable resource should be disposed after each use.</p>
+<p>See the following for a better way to handle the lifetime of an <code>HttpClient</code> instance:</p>
+<ul>
+<li>
+<p><code>HttpClient</code> and lifetime management</p>
+</li>
+<li>
+<p>HTTPClient factory blog</p>
+</li>
+</ul>
+<h3><a href="#object-pooling" aria-hidden="true" class="anchor" id="object-pooling"></a>Object pooling</h3>
+<p>The previous example showed how the <code>HttpClient</code> instance can be made static and reused by all requests. Reuse prevents running out of resources.</p>
+<p>Object pooling:</p>
+<ul>
+<li>
+<p>Uses the reuse pattern.</p>
+</li>
+<li>
+<p>Is designed for objects that are expensive to create.</p>
+</li>
+</ul>
+<p>A pool is a collection of pre-initialized objects that can be reserved and released across threads. Pools can define allocation rules such as limits, predefined sizes, or growth rate.</p>
+<p>The NuGet package Microsoft.Extensions.ObjectPool contains classes that help to manage such pools.</p>
+<p>The following API endpoint instantiates a byte buffer that is filled with random numbers on each request:</p>
+<pre><code class="language-csharp">[HttpGet(&quot;array/{size}&quot;)]
+        public byte[] GetArray(int size)
+        {
+            var random = new Random();
+            var array = new byte[size];
+            random.NextBytes(array);
+
+            return array;
+        }
+</code></pre>
+<p>The following chart display calling the preceding API with moderate load:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/array.png?view=aspnetcore-8.0" alt="Chart showing calls to API with moderate load!" title="Chart showing calls to API with moderate load" /></p>
+<p>In the preceding chart, generation 0 collections happen approximately once per second.</p>
+<p>The preceding code can be optimized by pooling the byte buffer by using <code>ArrayPool&lt;T&gt;</code>. A static instance is reused across requests.</p>
+<p>What's different with this approach is that a pooled object is returned from the API. That means:</p>
+<ul>
+<li>
+<p>The object is out of your control as soon as you return from the method.</p>
+</li>
+<li>
+<p>You can't release the object.</p>
+</li>
+</ul>
+<p>To set up disposal of the object:</p>
+<ul>
+<li>
+<p>Encapsulate the pooled array in a disposable object.</p>
+</li>
+<li>
+<p>Register the pooled object with HttpContext.Response.RegisterForDispose.</p>
+</li>
+</ul>
+<p><code>RegisterForDispose</code> will take care of calling <code>Dispose</code> on the target object so that it's only released when the HTTP request is complete.</p>
+<pre><code class="language-csharp">private static ArrayPool&lt;byte&gt; _arrayPool = ArrayPool&lt;byte&gt;.Create();
+
+private class PooledArray : IDisposable
+{
+    public byte[] Array { get; private set; }
+
+    public PooledArray(int size)
+    {
+        Array = _arrayPool.Rent(size);
+    }
+
+    public void Dispose()
+    {
+        _arrayPool.Return(Array);
+    }
+}
+
+[HttpGet(&quot;pooledarray/{size}&quot;)]
+public byte[] GetPooledArray(int size)
+{
+    var pooledArray = new PooledArray(size);
+
+    var random = new Random();
+    random.NextBytes(pooledArray.Array);
+
+    HttpContext.Response.RegisterForDispose(pooledArray);
+
+    return pooledArray.Array;
+}
+</code></pre>
+<p>Applying the same load as the non-pooled version results in the following chart:</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/performance/memory/_static/pooledarray.png?view=aspnetcore-8.0" alt="Chart showing fewer allocations!" title="Chart showing fewer allocations" /></p>
+<p>The main difference is allocated bytes, and as a consequence much fewer generation 0 collections.</p>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Garbage Collection</p>
+</li>
+<li>
+<p>Understanding different GC modes with Concurrency Visualizer</p>
+</li>
+<li>
+<p>Large Object Heap Uncovered</p>
+</li>
+<li>
+<p>Large object heap</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/performance/memory?view=aspnetcore-8.0">Memory management and garbage collection (GC) in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
