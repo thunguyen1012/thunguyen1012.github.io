@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Model binding | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Model binding</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#what-is-model-binding" aria-hidden="true" class="anchor" id="what-is-model-binding"></a>What is Model binding</h2>
+<ul>
+<li>
+<p>Retrieves data from various sources such as route data, form fields, and query strings.</p>
+</li>
+<li>
+<p>Provides the data to controllers and Razor pages in method parameters and public properties.</p>
+</li>
+<li>
+<p>Converts <code>string</code> data to .NET types.</p>
+</li>
+<li>
+<p>Updates properties of complex types.</p>
+</li>
+</ul>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public ActionResult&lt;Pet&gt; GetById(int id, bool dogsOnly)
+</code></pre>
+<pre><code class="language-http">https://contoso.com/api/pets/2?DogsOnly=true
+</code></pre>
+<ul>
+<li>
+<p>Finds the first parameter of <code>GetById</code>, an integer named <code>id</code>.</p>
+</li>
+<li>
+<p>Looks through the available sources in the HTTP request and finds <code>id = &quot;2&quot;</code> in route data.</p>
+</li>
+<li>
+<p>Converts the <code>string</code> &quot;2&quot; into integer 2.</p>
+</li>
+<li>
+<p>Finds the next parameter of <code>GetById</code>, a boolean named <code>dogsOnly</code>.</p>
+</li>
+<li>
+<p>Looks through the sources and finds &quot;DogsOnly=true&quot; in the query <code>string</code>. <code>Name</code> matching is not case-sensitive.</p>
+</li>
+<li>
+<p>Converts the <code>string</code> &quot;true&quot; into boolean <code>true</code>.</p>
+</li>
+</ul>
+<h2><a href="#targets" aria-hidden="true" class="anchor" id="targets"></a>Targets</h2>
+<ul>
+<li>
+<p>Parameters of the controller action method that a request is routed to.</p>
+</li>
+<li>
+<p>Parameters of the Razor Pages handler method that a request is routed to.</p>
+</li>
+<li>
+<p>Public properties of a controller or <code>PageModel</code> class, if specified by attributes.</p>
+</li>
+</ul>
+<h3><a href="#bindproperty]-attribute" aria-hidden="true" class="anchor" id="bindproperty]-attribute"></a>[BindProperty] attribute</h3>
+<pre><code class="language-csharp">public class EditModel : PageModel
+{
+    [BindProperty]
+    public Instructor? Instructor { get; set; }
+
+    // ...
+}
+</code></pre>
+<h3><a href="#bindproperties]-attribute" aria-hidden="true" class="anchor" id="bindproperties]-attribute"></a>[BindProperties] attribute</h3>
+<pre><code class="language-csharp">[BindProperties]
+public class CreateModel : PageModel
+{
+    public Instructor? Instructor { get; set; }
+
+    // ...
+}
+</code></pre>
+<h3><a href="#model-binding-for-http-get-requests" aria-hidden="true" class="anchor" id="model-binding-for-http-get-requests"></a>Model binding for HTTP GET requests</h3>
+<pre><code class="language-csharp">[BindProperty(Name = &quot;ai_user&quot;, SupportsGet = true)]
+public string? ApplicationInsightsCookie { get; set; }
+</code></pre>
+<h2><a href="#model-binding-simple-and-complex-types" aria-hidden="true" class="anchor" id="model-binding-simple-and-complex-types"></a>Model binding simple and complex types</h2>
+<h2><a href="#sources" aria-hidden="true" class="anchor" id="sources"></a>Sources</h2>
+<ul>
+<li>
+<p>Form fields</p>
+</li>
+<li>
+<p>The request body (For controllers that have the [ApiController] attribute.)</p>
+</li>
+<li>
+<p>Route data</p>
+</li>
+<li>
+<p>Query <code>string</code> parameters</p>
+</li>
+<li>
+<p>Uploaded files</p>
+</li>
+<li>
+<p>Route data and query <code>string</code> values are used only for simple types.</p>
+</li>
+<li>
+<p>Uploaded files are bound only to target types that implement <code>IFormFile</code> or IEnumerable<IFormFile>.</p>
+</li>
+<li>
+<p>[FromQuery] - Gets values from the query <code>string</code>.</p>
+</li>
+<li>
+<p>[FromRoute] - Gets values from route data.</p>
+</li>
+<li>
+<p>[FromForm] - Gets values from posted form fields.</p>
+</li>
+<li>
+<p>[FromBody] - Gets values from the request body.</p>
+</li>
+<li>
+<p>[FromHeader] - Gets values from HTTP headers.</p>
+</li>
+<li>
+<p>Are added to model properties individually and not to the model class, as in the following example:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Instructor
+{
+    public int Id { get; set; }
+
+    [FromQuery(Name = &quot;Note&quot;)]
+    public string? NoteFromQueryString { get; set; }
+
+    // ...
+}
+</code></pre>
+<ul>
+<li>Optionally accept a model name value in the constructor. This option is provided in case the property name doesn't match the value in the request. For instance, the value in the request might be a header with a hyphen in its name, as in the following example:</li>
+</ul>
+<pre><code class="language-csharp">public void OnGet([FromHeader(Name = &quot;Accept-Language&quot;)] string language)
+</code></pre>
+<h3><a href="#frombody]-attribute" aria-hidden="true" class="anchor" id="frombody]-attribute"></a>[FromBody] attribute</h3>
+<pre><code class="language-csharp">public ActionResult&lt;Pet&gt; Create([FromBody] Pet pet)
+</code></pre>
+<pre><code class="language-csharp">public class Pet
+{
+    public string Name { get; set; } = null!;
+
+    [FromQuery] // Attribute is ignored.
+    public string Breed { get; set; } = null!;
+}
+</code></pre>
+<ul>
+<li>
+<p>The [FromQuery] attribute is ignored.</p>
+</li>
+<li>
+<p>The <code>Breed</code> property is not populated from a query <code>string</code> parameter.</p>
+</li>
+</ul>
+<h3><a href="#additional-sources" aria-hidden="true" class="anchor" id="additional-sources"></a>Additional sources</h3>
+<ul>
+<li>
+<p><code>Create</code> a class that implements <code>IValueProvider</code>.</p>
+</li>
+<li>
+<p><code>Create</code> a class that implements <code>IValueProviderFactory</code>.</p>
+</li>
+<li>
+<p>Register the factory class in <code>Program.cs</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddControllers(options =&gt;
+{
+    options.ValueProviderFactories.Add(new CookieValueProviderFactory());
+});
+</code></pre>
+<h2><a href="#no-source-for-a-model-property" aria-hidden="true" class="anchor" id="no-source-for-a-model-property"></a>No source for a model property</h2>
+<ul>
+<li>
+<p>Nullable simple types are set to <code>null</code>.</p>
+</li>
+<li>
+<p>Non-nullable value types are set to default(T). For example, a parameter <code>int</code>id`````` is set to 0.</p>
+</li>
+<li>
+<p>For complex Types, model binding creates an instance by using the default constructor, without setting properties.</p>
+</li>
+<li>
+<p>Arrays are set to Array.Empty<T>(), except that byte[] arrays are set to <code>null</code>.</p>
+</li>
+</ul>
+<h2><a href="#type-conversion-errors" aria-hidden="true" class="anchor" id="type-conversion-errors"></a>Type conversion errors</h2>
+<pre><code class="language-csharp">public IActionResult OnPost()
+{
+    if (!ModelState.IsValid)
+    {
+        return Page();
+    }
+
+    // ...
+
+    return RedirectToPage(&quot;./Index&quot;);
+}
+</code></pre>
+<h2><a href="#simple-types" aria-hidden="true" class="anchor" id="simple-types"></a>Simple types</h2>
+<ul>
+<li>
+<p>Boolean</p>
+</li>
+<li>
+<p>Byte, SByte</p>
+</li>
+<li>
+<p>Char</p>
+</li>
+<li>
+<p>DateOnly</p>
+</li>
+<li>
+<p>DateTime</p>
+</li>
+<li>
+<p>DateTimeOffset</p>
+</li>
+<li>
+<p>Decimal</p>
+</li>
+<li>
+<p>Double</p>
+</li>
+<li>
+<p>Enum</p>
+</li>
+<li>
+<p>Guid</p>
+</li>
+<li>
+<p>Int16, Int32, Int64</p>
+</li>
+<li>
+<p>Single</p>
+</li>
+<li>
+<p>TimeOnly</p>
+</li>
+<li>
+<p>TimeSpan</p>
+</li>
+<li>
+<p>UInt16, UInt32, UInt64</p>
+</li>
+<li>
+<p>Uri</p>
+</li>
+<li>
+<p>Version</p>
+</li>
+</ul>
+<h2><a href="#bind-with-iparsablet>.tryparse" aria-hidden="true" class="anchor" id="bind-with-iparsablet>.tryparse"></a><code>Bind</code> with <code>IParsable&lt;T&gt;.TryParse</code></h2>
+<pre><code class="language-csharp">public static bool TryParse (string? s, IFormatProvider? provider, out TSelf result);
+</code></pre>
+<pre><code class="language-csharp">public class DateRange : IParsable&lt;DateRange&gt;
+{
+    public DateOnly? From { get; init; }
+    public DateOnly? To { get; init; }
+
+    public static DateRange Parse(string value, IFormatProvider? provider)
+    {
+        if (!TryParse(value, provider, out var result))
+        {
+           throw new ArgumentException(&quot;Could not parse supplied value.&quot;, nameof(value));
+        }
+
+        return result;
+    }
+
+    public static bool TryParse(string? value,
+                                IFormatProvider? provider, out DateRange dateRange)
+    {
+        var segments = value?.Split(',', StringSplitOptions.RemoveEmptyEntries 
+                                       | StringSplitOptions.TrimEntries);
+
+        if (segments?.Length == 2
+            &amp;&amp; DateOnly.TryParse(segments[0], provider, out var fromDate)
+            &amp;&amp; DateOnly.TryParse(segments[1], provider, out var toDate))
+        {
+            dateRange = new DateRange { From = fromDate, To = toDate };
+            return true;
+        }
+
+        dateRange = new DateRange { From = default, To = default };
+        return false;
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Converts a <code>string</code> representing two dates to a <code>DateRange</code> object</p>
+</li>
+<li>
+<p>The model binder uses the <code>IParsable&lt;TSelf&gt;.TryParse</code> method to bind the <code>DateRange</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">// GET /WeatherForecast/ByRange?range=7/24/2022,07/26/2022
+public IActionResult ByRange([FromQuery] DateRange range)
+{
+    if (!ModelState.IsValid)
+        return View(&quot;Error&quot;, ModelState.Values.SelectMany(v =&gt; v.Errors));
+
+    var weatherForecasts = Enumerable
+        .Range(1, 5).Select(index =&gt; new WeatherForecast
+        {
+            Date = DateTime.Now.AddDays(index),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+        })
+        .Where(wf =&gt; DateOnly.FromDateTime(wf.Date) &gt;= range.From
+                     &amp;&amp; DateOnly.FromDateTime(wf.Date) &lt;= range.To)
+        .Select(wf =&gt; new WeatherForecastViewModel
+        {
+            Date = wf.Date.ToString(&quot;d&quot;),
+            TemperatureC = wf.TemperatureC,
+            TemperatureF = 32 + (int)(wf.TemperatureC / 0.5556),
+            Summary = wf.Summary
+        });
+
+    return View(&quot;Index&quot;, weatherForecasts);
+}
+</code></pre>
+<pre><code class="language-csharp">public class Locale : CultureInfo, IParsable&lt;Locale&gt;
+{
+    public Locale(string culture) : base(culture)
+    {
+    }
+
+    public static Locale Parse(string value, IFormatProvider? provider)
+    {
+        if (!TryParse(value, provider, out var result))
+        {
+           throw new ArgumentException(&quot;Could not parse supplied value.&quot;, nameof(value));
+        }
+
+        return result;
+    }
+
+    public static bool TryParse([NotNullWhen(true)] string? value,
+                                IFormatProvider? provider, out Locale locale)
+    {
+        if (value is null)
+        {
+            locale = new Locale(CurrentCulture.Name);
+            return false;
+        }
+        
+        try
+        {
+            locale = new Locale(value);
+            return true;
+        }
+        catch (CultureNotFoundException)
+        {
+            locale = new Locale(CurrentCulture.Name);
+            return false;
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">// GET /en-GB/WeatherForecast
+public IActionResult Index([FromRoute] Locale locale)
+{
+    var weatherForecasts = Enumerable
+        .Range(1, 5).Select(index =&gt; new WeatherForecast
+        {
+            Date = DateTime.Now.AddDays(index),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+        })
+        .Select(wf =&gt; new WeatherForecastViewModel
+        {
+            Date = wf.Date.ToString(&quot;d&quot;, locale),
+            TemperatureC = wf.TemperatureC,
+            TemperatureF = 32 + (int)(wf.TemperatureC / 0.5556),
+            Summary = wf.Summary
+        });
+
+    return View(weatherForecasts);
+}
+</code></pre>
+<pre><code class="language-csharp">// GET /af-ZA/WeatherForecast/RangeByLocale?range=2022-07-24,2022-07-29
+public IActionResult RangeByLocale([FromRoute] Locale locale, [FromQuery] string range)
+{
+    if (!ModelState.IsValid)
+        return View(&quot;Error&quot;, ModelState.Values.SelectMany(v =&gt; v.Errors));
+
+    if (!DateRange.TryParse(range, locale, out DateRange rangeResult))
+    {
+        ModelState.TryAddModelError(nameof(range),
+            $&quot;Invalid date range: {range} for locale {locale.DisplayName}&quot;);
+
+        return View(&quot;Error&quot;, ModelState.Values.SelectMany(v =&gt; v.Errors));
+    }
+
+    var weatherForecasts = Enumerable
+        .Range(1, 5).Select(index =&gt; new WeatherForecast
+        {
+            Date = DateTime.Now.AddDays(index),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+        })
+        .Where(wf =&gt; DateOnly.FromDateTime(wf.Date) &gt;= rangeResult.From
+                     &amp;&amp; DateOnly.FromDateTime(wf.Date) &lt;= rangeResult.To)
+        .Select(wf =&gt; new WeatherForecastViewModel
+        {
+            Date = wf.Date.ToString(&quot;d&quot;, locale),
+            TemperatureC = wf.TemperatureC,
+            TemperatureF = 32 + (int) (wf.TemperatureC / 0.5556),
+            Summary = wf.Summary
+        });
+
+    return View(&quot;Index&quot;, weatherForecasts);
+}
+</code></pre>
+<h3><a href="#bind-with-tryparse" aria-hidden="true" class="anchor" id="bind-with-tryparse"></a><code>Bind</code> with <code>TryParse</code></h3>
+<pre><code class="language-csharp">public static bool TryParse(string value, T out result);
+public static bool TryParse(string value, IFormatProvider provider, T out result);
+</code></pre>
+<pre><code class="language-csharp">public class DateRangeTP
+{
+    public DateOnly? From { get; }
+    public DateOnly? To { get; }
+
+    public DateRangeTP(string from, string to)
+    {
+        if (string.IsNullOrEmpty(from))
+            throw new ArgumentNullException(nameof(from));
+        if (string.IsNullOrEmpty(to))
+            throw new ArgumentNullException(nameof(to));
+
+        From = DateOnly.Parse(from);
+        To = DateOnly.Parse(to);
+    }
+
+    public static bool TryParse(string? value, out DateRangeTP? result)
+    {
+        var range = value?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (range?.Length != 2)
+        {
+            result = default;
+            return false;
+        }
+
+        result = new DateRangeTP(range[0], range[1]);
+        return true;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">// GET /WeatherForecast/ByRangeTP?range=7/24/2022,07/26/2022
+public IActionResult ByRangeTP([FromQuery] DateRangeTP range)
+{
+    if (!ModelState.IsValid)
+        return View(&quot;Error&quot;, ModelState.Values.SelectMany(v =&gt; v.Errors));
+
+    var weatherForecasts = Enumerable
+        .Range(1, 5).Select(index =&gt; new WeatherForecast
+        {
+            Date = DateTime.Now.AddDays(index),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+        })
+        .Where(wf =&gt; DateOnly.FromDateTime(wf.Date) &gt;= range.From
+                     &amp;&amp; DateOnly.FromDateTime(wf.Date) &lt;= range.To)
+        .Select(wf =&gt; new WeatherForecastViewModel
+        {
+            Date = wf.Date.ToString(&quot;d&quot;),
+            TemperatureC = wf.TemperatureC,
+            TemperatureF = 32 + (int)(wf.TemperatureC / 0.5556),
+            Summary = wf.Summary
+        });
+
+    return View(&quot;Index&quot;, weatherForecasts);
+}
+</code></pre>
+<h2><a href="#complex-types" aria-hidden="true" class="anchor" id="complex-types"></a>Complex types</h2>
+<ul>
+<li>
+<p><code>Id</code> set to <code>100</code>.</p>
+</li>
+<li>
+<p><code>Name</code> set to <code>null</code>. Model binding expects <code>Instructor.Name</code> because <code>Instructor.Id</code> was used in the preceding query parameter.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class Instructor
+{
+    public int ID { get; set; }
+    public string LastName { get; set; }
+    public string FirstName { get; set; }
+}
+</code></pre>
+<h3><a href="#prefix--parameter-name" aria-hidden="true" class="anchor" id="prefix--parameter-name"></a><code>Prefix</code> = parameter name</h3>
+<pre><code class="language-csharp">public IActionResult OnPost(int? id, Instructor instructorToUpdate)
+</code></pre>
+<h3><a href="#prefix--property-name" aria-hidden="true" class="anchor" id="prefix--property-name"></a><code>Prefix</code> = property name</h3>
+<pre><code class="language-csharp">[BindProperty]
+public Instructor Instructor { get; set; }
+</code></pre>
+<h3><a href="#custom-prefix" aria-hidden="true" class="anchor" id="custom-prefix"></a>Custom prefix</h3>
+<pre><code class="language-csharp">public IActionResult OnPost(
+    int? id, [Bind(Prefix = &quot;Instructor&quot;)] Instructor instructorToUpdate)
+</code></pre>
+<h3><a href="#attributes-for-complex-type-targets" aria-hidden="true" class="anchor" id="attributes-for-complex-type-targets"></a>Attributes for complex type targets</h3>
+<ul>
+<li>
+<p>[Bind]</p>
+</li>
+<li>
+<p>[BindRequired]</p>
+</li>
+<li>
+<p>[BindNever]</p>
+</li>
+</ul>
+<blockquote>
+<p class='warning'>Warning
+These attributes affect model binding when posted form data is the source of values. They do not affect input formatters, which process posted JSON and XML request bodies. Input formatters are explained later in this article.</p>
+</blockquote>
+<h3><a href="#bind]-attribute" aria-hidden="true" class="anchor" id="bind]-attribute"></a>[Bind] attribute</h3>
+<pre><code class="language-csharp">[Bind(&quot;LastName,FirstMidName,HireDate&quot;)]
+public class Instructor
+</code></pre>
+<pre><code class="language-csharp">[HttpPost]
+public IActionResult OnPost(
+    [Bind(&quot;LastName,FirstMidName,HireDate&quot;)] Instructor instructor)
+</code></pre>
+<h3><a href="#modelbinder]-attribute" aria-hidden="true" class="anchor" id="modelbinder]-attribute"></a>[ModelBinder] attribute</h3>
+<pre><code class="language-csharp">[HttpPost]
+public IActionResult OnPost(
+    [ModelBinder&lt;MyInstructorModelBinder&gt;] Instructor instructor)
+</code></pre>
+<pre><code class="language-csharp">public class Instructor
+{
+    [ModelBinder(Name = &quot;instructor_id&quot;)]
+    public string Id { get; set; }
+
+    // ...
+}
+</code></pre>
+<h3><a href="#bindrequired]-attribute" aria-hidden="true" class="anchor" id="bindrequired]-attribute"></a>[BindRequired] attribute</h3>
+<pre><code class="language-csharp">public class InstructorBindRequired
+{
+    // ...
+
+    [BindRequired]
+    public DateTime HireDate { get; set; }
+}
+</code></pre>
+<h3><a href="#bindnever]-attribute" aria-hidden="true" class="anchor" id="bindnever]-attribute"></a>[BindNever] attribute</h3>
+<pre><code class="language-csharp">public class InstructorBindNever
+{
+    [BindNever]
+    public int Id { get; set; }
+
+    // ...
+}
+</code></pre>
+<h2><a href="#collections" aria-hidden="true" class="anchor" id="collections"></a>Collections</h2>
+<ul>
+<li>Suppose the parameter to be bound is an array named <code>selectedCourses</code>:</li>
+</ul>
+<pre><code class="language-csharp">public IActionResult OnPost(int? id, int[] selectedCourses)
+</code></pre>
+<ul>
+<li>Form or query <code>string</code> data can be in one of the following formats:</li>
+</ul>
+<pre><code>selectedCourses=1050&amp;selectedCourses=2000 
+
+selectedCourses[0]=1050&amp;selectedCourses[1]=2000
+
+[0]=1050&amp;[1]=2000
+
+selectedCourses[a]=1050&amp;selectedCourses[b]=2000&amp;selectedCourses.index=a&amp;selectedCourses.index=b
+
+[a]=1050&amp;[b]=2000&amp;index=a&amp;index=b
+</code></pre>
+<p>Avoid binding a parameter or a property named <code>index</code> or <code>Index</code> if it is adjacent to a collection value. Model binding attempts to use <code>index</code> as the <code>index</code> for the collection which might result in incorrect binding. For example, consider the following action:</p>
+<pre><code class="language-csharp">public IActionResult Post(string index, List&lt;Product&gt; products)
+</code></pre>
+<p>In the preceding code, the <code>index</code> query <code>string</code> parameter binds to the <code>index</code> method parameter and also is used to bind the product collection. Renaming the <code>index</code> parameter or using a model binding attribute to configure binding avoids this issue:</p>
+<pre><code class="language-csharp">public IActionResult Post(string productIndex, List&lt;Product&gt; products)
+</code></pre>
+<ul>
+<li>
+<p>The following format is supported only in form data:
+<code>selectedCourses[]=1050&amp;selectedCourses[]=2000</code></p>
+</li>
+<li>
+<p>For all of the preceding example formats, model binding passes an array of two items to the <code>selectedCourses</code> parameter:</p>
+</li>
+</ul>
+<p>Data formats that use subscript numbers (... [0] ... [1] ...) must ensure that they are numbered sequentially starting at zero. If there are any gaps in subscript numbering, all items after the gap are ignored. For example, if the subscripts are 0 and 2 instead of 0 and 1, the second item is ignored.</p>
+<ul>
+<li>
+<p><code>selectedCourses</code>[0]=1050</p>
+</li>
+<li>
+<p><code>selectedCourses</code>[1]=2000</p>
+</li>
+</ul>
+<h2><a href="#dictionaries" aria-hidden="true" class="anchor" id="dictionaries"></a>Dictionaries</h2>
+<ul>
+<li>Suppose the target parameter is a <code>Dictionary&lt;int, string&gt; named selectedCourses</code>:</li>
+</ul>
+<pre><code class="language-csharp">public IActionResult OnPost(int? id, Dictionary&lt;int, string&gt; selectedCourses)
+</code></pre>
+<ul>
+<li>The posted form or query <code>string</code> data can look like one of the following examples:</li>
+</ul>
+<pre><code>selectedCourses[1050]=Chemistry&amp;selectedCourses[2000]=Economics
+
+[1050]=Chemistry&amp;selectedCourses[2000]=Economics
+
+selectedCourses[0].Key=1050&amp;selectedCourses[0].Value=Chemistry&amp;
+selectedCourses[1].Key=2000&amp;selectedCourses[1].Value=Economics
+
+
+[0].Key=1050&amp;[0].Value=Chemistry&amp;[1].Key=2000&amp;[1].Value=Economics
+</code></pre>
+<ul>
+<li>
+<p>For all of the preceding example formats, model binding passes a dictionary of two items to the <code>selectedCourses</code> parameter:</p>
+<ul>
+<li>
+<p><code>selectedCourses[&quot;1050&quot;]=&quot;Chemistry&quot;</code></p>
+</li>
+<li>
+<p><code>selectedCourses[&quot;2000&quot;]=&quot;Economics&quot;</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#constructor-binding-and-record-types" aria-hidden="true" class="anchor" id="constructor-binding-and-record-types"></a>Constructor binding and record types</h2>
+<pre><code class="language-csharp">public record Person(
+    [Required] string Name, [Range(0, 150)] int Age, [BindNever] int Id);
+
+public class PersonController
+{
+    public IActionResult Index() =&gt; View();
+
+    [HttpPost]
+    public IActionResult Index(Person person)
+    {
+        // ...
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@model Person
+
+Name: &lt;input asp-for=&quot;Name&quot; /&gt;
+&lt;br /&gt;
+Age: &lt;input asp-for=&quot;Age&quot; /&gt;
+</code></pre>
+<pre><code class="language-csharp">public record Person([Required] string Name, [Range(0, 100)] int Age);
+</code></pre>
+<ul>
+<li>
+<p>Be a record type.</p>
+</li>
+<li>
+<p>Have exactly one public constructor.</p>
+</li>
+<li>
+<p>Contain parameters that have a property with the same name and type. The names must not differ by case.</p>
+</li>
+</ul>
+<h3><a href="#pocos-without-parameterless-constructors" aria-hidden="true" class="anchor" id="pocos-without-parameterless-constructors"></a>POCOs without parameterless constructors</h3>
+<pre><code class="language-csharp">public class Person(string Name)
+
+public record Person([Required] string Name, [Range(0, 100)] int Age)
+{
+    public Person(string Name) : this (Name, 0);
+}
+</code></pre>
+<h3><a href="#record-types-with-manually-authored-constructors" aria-hidden="true" class="anchor" id="record-types-with-manually-authored-constructors"></a>Record types with manually authored constructors</h3>
+<pre><code class="language-csharp">public record Person
+{
+    public Person([Required] string Name, [Range(0, 100)] int Age)
+        =&gt; (this.Name, this.Age) = (Name, Age);
+
+    public string Name { get; set; }
+    public int Age { get; set; }
+}
+</code></pre>
+<h3><a href="#record-types-validation-and-binding-metadata" aria-hidden="true" class="anchor" id="record-types-validation-and-binding-metadata"></a>Record types, validation and binding metadata</h3>
+<pre><code class="language-csharp">public record Person (string Name, int Age)
+{
+   [BindProperty(Name = &quot;SomeName&quot;)] // This does not get used
+   [Required] // This does not get used
+   public string Name { get; init; }
+}
+</code></pre>
+<h3><a href="#validation-and-metadata" aria-hidden="true" class="anchor" id="validation-and-metadata"></a>Validation and metadata</h3>
+<pre><code class="language-csharp">public record Person([Required] string Name)
+{
+    private readonly string _name;
+
+    // The following property is never null.
+    // However this object could have been constructed as &quot;new Person(null)&quot;.
+    public string Name { get; init =&gt; _name = value ?? string.Empty; }
+}
+</code></pre>
+<h3><a href="#tryupdatemodel-does-not-update-parameters-on-a-record-type" aria-hidden="true" class="anchor" id="tryupdatemodel-does-not-update-parameters-on-a-record-type"></a>TryUpdateModel does not update parameters on a record type</h3>
+<pre><code class="language-csharp">public record Person(string Name)
+{
+    public int Age { get; set; }
+}
+
+var person = new Person(&quot;initial-name&quot;);
+TryUpdateModel(person, ...);
+</code></pre>
+<h2><a href="#globalization-behavior-of-model-binding-route-data-and-query-strings" aria-hidden="true" class="anchor" id="globalization-behavior-of-model-binding-route-data-and-query-strings"></a>Globalization behavior of model binding route data and query strings</h2>
+<ul>
+<li>
+<p>Treat values as invariant culture.</p>
+</li>
+<li>
+<p>Expect that URLs are culture-invariant.</p>
+</li>
+<li>
+<p>Inherit from <code>IValueProviderFactory</code></p>
+</li>
+<li>
+<p>Copy the code from QueryStringValueProviderFactory or RouteValueValueProviderFactory</p>
+</li>
+<li>
+<p>Replace the culture value passed to the value provider constructor with <code>CultureInfo</code>.CurrentCulture</p>
+</li>
+<li>
+<p>Replace the default value provider factory in MVC options with your new one:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class CultureQueryStringValueProviderFactory : IValueProviderFactory
+{
+    public Task CreateValueProviderAsync(ValueProviderFactoryContext context)
+    {
+        _ = context ?? throw new ArgumentNullException(nameof(context));
+
+        var query = context.ActionContext.HttpContext.Request.Query;
+        if (query?.Count &gt; 0)
+        {
+            context.ValueProviders.Add(
+                new QueryStringValueProvider(
+                    BindingSource.Query,
+                    query,
+                    CultureInfo.CurrentCulture));
+        }
+
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddControllers(options =&gt;
+{
+    var index = options.ValueProviderFactories.IndexOf(
+        options.ValueProviderFactories.OfType&lt;QueryStringValueProviderFactory&gt;()
+            .Single());
+
+    options.ValueProviderFactories[index] =
+        new CultureQueryStringValueProviderFactory();
+});
+</code></pre>
+<h2><a href="#special-data-types" aria-hidden="true" class="anchor" id="special-data-types"></a>Special data types</h2>
+<h3><a href="#iformfile-and-iformfilecollection" aria-hidden="true" class="anchor" id="iformfile-and-iformfilecollection"></a><code>IFormFile</code> and IFormFileCollection</h3>
+<h3><a href="#cancellationtoken" aria-hidden="true" class="anchor" id="cancellationtoken"></a><code>CancellationToken</code></h3>
+<h3><a href="#formcollection" aria-hidden="true" class="anchor" id="formcollection"></a>FormCollection</h3>
+<h2><a href="#input-formatters" aria-hidden="true" class="anchor" id="input-formatters"></a>Input formatters</h2>
+<ul>
+<li>In <code>Program.cs</code>, call AddXmlSerializerFormatters or AddXmlDataContractSerializerFormatters.</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddControllers()
+    .AddXmlSerializerFormatters();
+</code></pre>
+<ul>
+<li>Apply the <code>Consumes</code> attribute to controller classes or action methods that should expect XML in the request body.</li>
+</ul>
+<pre><code class="language-csharp">[HttpPost]
+[Consumes(&quot;application/xml&quot;)]
+public ActionResult&lt;Pet&gt; Create(Pet pet)
+</code></pre>
+<p>For more information, see Introducing XML Serialization.</p>
+<h3><a href="#customize-model-binding-with-input-formatters" aria-hidden="true" class="anchor" id="customize-model-binding-with-input-formatters"></a>Customize model binding with input formatters</h3>
+<pre><code class="language-csharp">public class InstructorObjectId
+{
+    [Required]
+    public ObjectId ObjectId { get; set; } = null!;
+}
+</code></pre>
+<pre><code class="language-csharp">internal class ObjectIdConverter : JsonConverter&lt;ObjectId&gt;
+{
+    public override ObjectId Read(
+        ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        =&gt; new(JsonSerializer.Deserialize&lt;int&gt;(ref reader, options));
+
+    public override void Write(
+        Utf8JsonWriter writer, ObjectId value, JsonSerializerOptions options)
+        =&gt; writer.WriteNumberValue(value.Id);
+}
+</code></pre>
+<pre><code class="language-csharp">[JsonConverter(typeof(ObjectIdConverter))]
+public record ObjectId(int Id);
+</code></pre>
+<h2><a href="#exclude-specified-types-from-model-binding" aria-hidden="true" class="anchor" id="exclude-specified-types-from-model-binding"></a>Exclude specified types from model binding</h2>
+<pre><code class="language-csharp">builder.Services.AddRazorPages()
+    .AddMvcOptions(options =&gt;
+    {
+        options.ModelMetadataDetailsProviders.Add(
+            new ExcludeBindingMetadataProvider(typeof(Version)));
+        options.ModelMetadataDetailsProviders.Add(
+            new SuppressChildValidationMetadataProvider(typeof(Guid)));
+    });
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddRazorPages()
+    .AddMvcOptions(options =&gt;
+    {
+        options.ModelMetadataDetailsProviders.Add(
+            new ExcludeBindingMetadataProvider(typeof(Version)));
+        options.ModelMetadataDetailsProviders.Add(
+            new SuppressChildValidationMetadataProvider(typeof(Guid)));
+    });
+</code></pre>
+<h2><a href="#custom-model-binders" aria-hidden="true" class="anchor" id="custom-model-binders"></a>Custom model binders</h2>
+<h2><a href="#manual-model-binding" aria-hidden="true" class="anchor" id="manual-model-binding"></a>Manual model binding</h2>
+<pre><code class="language-csharp">if (await TryUpdateModelAsync(
+    newInstructor,
+    &quot;Instructor&quot;,
+    x =&gt; x.Name, x =&gt; x.HireDate!))
+{
+    _instructorStore.Add(newInstructor);
+    return RedirectToPage(&quot;./Index&quot;);
+}
+
+return Page();
+</code></pre>
+<ul>
+<li>
+<p>Used with Razor Pages and MVC apps using controllers and views to prevent over-posting.</p>
+</li>
+<li>
+<p>Not used with a web API unless consumed from form data, query strings, and route data. Web API endpoints that consume JSON use Input formatters to deserialize the request body into an object.</p>
+</li>
+</ul>
+<h2><a href="#fromservices]-attribute" aria-hidden="true" class="anchor" id="fromservices]-attribute"></a>[FromServices] attribute</h2>
+<ul>
+<li>
+<p>Make the parameter nullable.</p>
+</li>
+<li>
+<p>Set a default value for the parameter.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>View or download sample code (how to download)</p>
+</li>
+<li>
+<p>Model validation in ASP.NET Core MVC</p>
+</li>
+<li>
+<p>Custom Model Binding in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/models/model-binding?view=aspnetcore-8.0">Model Binding in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

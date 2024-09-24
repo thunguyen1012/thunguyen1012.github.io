@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Globalization and localization - Make an app's content localizable | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Globalization and localization - Make an app's content localizable</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#istringlocalizer" aria-hidden="true" class="anchor" id="istringlocalizer"></a><code>IStringLocalizer</code></h2>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
+
+namespace Localization.Controllers;
+
+[Route(&quot;api/[controller]&quot;)]
+public class AboutController : Controller
+{
+    private readonly IStringLocalizer&lt;AboutController&gt; _localizer;
+
+    public AboutController(IStringLocalizer&lt;AboutController&gt; localizer)
+    {
+        _localizer = localizer;
+    }
+
+    [HttpGet]
+    public string Get()
+    {
+        return _localizer[&quot;About Title&quot;];
+    }
+}
+</code></pre>
+<h2><a href="#ihtmllocalizer" aria-hidden="true" class="anchor" id="ihtmllocalizer"></a><code>IHtmlLocalizer</code></h2>
+<pre><code class="language-csharp">using System;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Localization;
+
+namespace Localization.Controllers;
+
+public class BookController : Controller
+{
+    private readonly IHtmlLocalizer&lt;BookController&gt; _localizer;
+
+    public BookController(IHtmlLocalizer&lt;BookController&gt; localizer)
+    {
+        _localizer = localizer;
+    }
+
+    public IActionResult Hello(string name)
+    {
+        ViewData[&quot;Message&quot;] = _localizer[&quot;&lt;b&gt;Hello&lt;/b&gt;&lt;i&gt; {0}&lt;/i&gt;&quot;, name];
+
+        return View();
+    }
+</code></pre>
+<h2><a href="#istringlocalizerfactory" aria-hidden="true" class="anchor" id="istringlocalizerfactory"></a><code>IStringLocalizerFactory</code></h2>
+<pre><code class="language-csharp">public class TestController : Controller
+{
+    private readonly IStringLocalizer _localizer;
+    private readonly IStringLocalizer _localizer2;
+
+    public TestController(IStringLocalizerFactory factory)
+    {
+        var type = typeof(SharedResource);
+        var assemblyName = new AssemblyName(type.GetTypeInfo().Assembly.FullName);
+        _localizer = factory.Create(type);
+        _localizer2 = factory.Create(&quot;SharedResource&quot;, assemblyName.Name);
+    }       
+
+    public IActionResult About()
+    {
+        ViewData[&quot;Message&quot;] = _localizer[&quot;Your application description page.&quot;] 
+            + &quot; loc 2: &quot; + _localizer2[&quot;Your application description page.&quot;];
+
+        return View();
+    }
+</code></pre>
+<h2><a href="#shared-resources" aria-hidden="true" class="anchor" id="shared-resources"></a>Shared resources</h2>
+<pre><code class="language-csharp">// Dummy class to group shared resources
+
+namespace Localization;
+
+public class SharedResource
+{
+}
+</code></pre>
+<pre><code class="language-csharp">public class InfoController : Controller
+{
+    private readonly IStringLocalizer&lt;InfoController&gt; _localizer;
+    private readonly IStringLocalizer&lt;SharedResource&gt; _sharedLocalizer;
+
+    public InfoController(IStringLocalizer&lt;InfoController&gt; localizer,
+                   IStringLocalizer&lt;SharedResource&gt; sharedLocalizer)
+    {
+        _localizer = localizer;
+        _sharedLocalizer = sharedLocalizer;
+    }
+
+    public string TestLoc()
+    {
+        string msg = &quot;Shared resx: &quot; + _sharedLocalizer[&quot;Hello!&quot;] +
+                     &quot; Info resx &quot; + _localizer[&quot;Hello!&quot;];
+        return msg;
+    }
+</code></pre>
+<h2><a href="#view-localization" aria-hidden="true" class="anchor" id="view-localization"></a>View localization</h2>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
+
+@{
+    ViewData[&quot;Title&quot;] = Localizer[&quot;About&quot;];
+}
+&lt;h2&gt;@ViewData[&quot;Title&quot;].&lt;/h2&gt;
+&lt;h3&gt;@ViewData[&quot;Message&quot;]&lt;/h3&gt;
+
+&lt;p&gt;@Localizer[&quot;Use this area to provide additional information.&quot;]&lt;/p&gt;
+</code></pre>
+<pre><code class="language-cshtml">@Localizer[&quot;&lt;i&gt;Hello&lt;/i&gt; &lt;b&gt;{0}!&lt;/b&gt;&quot;, UserManager.GetUserName(User)]
+</code></pre>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;i&gt;Hello&lt;/i&gt; &lt;b&gt;{0}!&lt;/b&gt;</code></td>
+<td><code>&lt;i&gt;Bonjour&lt;/i&gt; &lt;b&gt;{0} !&lt;/b&gt;</code></td>
+</tr>
+</tbody></table>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Mvc.Localization
+@using Localization.Services
+
+@inject IViewLocalizer Localizer
+@inject IHtmlLocalizer&lt;SharedResource&gt; SharedLocalizer
+
+@{
+    ViewData[&quot;Title&quot;] = Localizer[&quot;About&quot;];
+}
+&lt;h2&gt;@ViewData[&quot;Title&quot;].&lt;/h2&gt;
+
+&lt;h1&gt;@SharedLocalizer[&quot;Hello!&quot;]&lt;/h1&gt;
+</code></pre>
+<h2><a href="#dataannotations-localization" aria-hidden="true" class="anchor" id="dataannotations-localization"></a><code>DataAnnotations</code> localization</h2>
+<ul>
+<li>
+<p>Resources/ViewModels.Account.RegisterViewModel.fr.resx</p>
+</li>
+<li>
+<p>Resources/ViewModels/Account/RegisterViewModel.fr.resx</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.ComponentModel.DataAnnotations;
+
+namespace Localization.ViewModels.Account;
+
+public class RegisterViewModel
+{
+    [Required(ErrorMessage = &quot;The Email field is required.&quot;)]
+    [EmailAddress(ErrorMessage = &quot;The Email field is not a valid email address.&quot;)]
+    [Display(Name = &quot;Email&quot;)]
+    public string Email { get; set; }
+
+    [Required(ErrorMessage = &quot;The Password field is required.&quot;)]
+    [StringLength(8, ErrorMessage = &quot;The {0} must be at least {2} characters long.&quot;,
+                                                                 MinimumLength = 6)]
+    [DataType(DataType.Password)]
+    [Display(Name = &quot;Password&quot;)]
+    public string Password { get; set; }
+
+    [DataType(DataType.Password)]
+    [Display(Name = &quot;Confirm password&quot;)]
+    [Compare(&quot;Password&quot;, ErrorMessage =
+                            &quot;The password and confirmation password do not match.&quot;)]
+    public string ConfirmPassword { get; set; }
+}
+</code></pre>
+<h3><a href="#how-to-use-one-resource-string-for-multiple-classes" aria-hidden="true" class="anchor" id="how-to-use-one-resource-string-for-multiple-classes"></a>How to use one resource string for multiple classes</h3>
+<pre><code class="language-csharp">services.AddMvc()
+        .AddDataAnnotationsLocalization(options =&gt; {
+            options.DataAnnotationLocalizerProvider = (type, factory) =&gt;
+                factory.Create(typeof(SharedResource));
+        });
+</code></pre>
+<h2><a href="#configure-localization-services" aria-hidden="true" class="anchor" id="configure-localization-services"></a>Configure localization services</h2>
+<pre><code class="language-csharp">builder.Services.AddLocalization(options =&gt; options.ResourcesPath = &quot;Resources&quot;);
+
+builder.Services.AddMvc()
+    .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
+    .AddDataAnnotationsLocalization();
+</code></pre>
+<ul>
+<li>
+<p>AddLocalization adds the localization services to the services container, including implementations for <code>IStringLocalizer</code><T> and <code>IStringLocalizerFactory</code>. The preceding code also sets the resources path to &quot;Resources&quot;.</p>
+</li>
+<li>
+<p>AddViewLocalization adds support for localized view files. In this sample, view localization is based on the view file suffix. For example &quot;fr&quot; in the <code>Index.fr.cshtml</code> file.</p>
+</li>
+<li>
+<p>AddDataAnnotationsLocalization adds support for localized <code>DataAnnotations</code> validation messages through <code>IStringLocalizer</code> abstractions.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+You may not be able to enter decimal commas in decimal fields. To support jQuery validation for non-English locales that use a comma (&quot;,&quot;) for a decimal point, and non US-English date formats, you must take steps to globalize your app. See this GitHub comment 4076 for instructions on adding decimal comma.</p>
+</blockquote>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>Provide localized resources for the languages and cultures the app supports</p>
+</li>
+<li>
+<p>Implement a strategy to select the language/culture for each request</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Url culture provider using middleware as filters in ASP.NET Core</p>
+</li>
+<li>
+<p>Applying the RouteDataRequest CultureProvider globally with middleware as filters</p>
+</li>
+<li>
+<p>Globalization and localization in ASP.NET Core</p>
+</li>
+<li>
+<p>Provide localized resources for languages and cultures in an ASP.NET Core app</p>
+</li>
+<li>
+<p>Strategies for selecting language and culture in a localized ASP.NET Core app</p>
+</li>
+<li>
+<p>Troubleshoot ASP.NET Core localization</p>
+</li>
+<li>
+<p>Globalizing and localizing .NET applications</p>
+</li>
+<li>
+<p>Localization.StarterWeb project used in the article.</p>
+</li>
+<li>
+<p>Resources in .resx Files</p>
+</li>
+<li>
+<p>Microsoft Multilingual App Toolkit</p>
+</li>
+<li>
+<p>Localization &amp; Generics</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization/make-content-localizable?view=aspnetcore-8.0">Make an ASP.NET Core app's content localizable</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

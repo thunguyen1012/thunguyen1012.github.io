@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Performance - Event counters | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article applies to: ✔️ .NET Core 3.0 SDK and later versions'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Performance - Event counters</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article applies to: ✔️ .NET Core 3.0 SDK and later versions</p>
+<p>In this tutorial, you'll learn how an EventCounter can be used to measure performance with a high frequency of events. You can use the available counters published by various official .NET Core packages, third-party providers, or create your own metrics for monitoring.</p>
+<p>In this tutorial, you will:</p>
+<ul>
+<li>
+<p>Implement an EventSource.</p>
+</li>
+<li>
+<p>Monitor counters with dotnet-counters.</p>
+</li>
+</ul>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<p>The tutorial uses:</p>
+<ul>
+<li>
+<p>.NET Core 3.1 SDK or a later version.</p>
+</li>
+<li>
+<p>dotnet-counters to <code>monitor</code> event counters.</p>
+</li>
+<li>
+<p>A sample debug target app to diagnose.</p>
+</li>
+</ul>
+<h2><a href="#get-the-source" aria-hidden="true" class="anchor" id="get-the-source"></a>Get the source</h2>
+<p>The sample application will be used as a basis for monitoring. The sample ASP.NET Core repository is available from the samples browser. You download the zip file, extract it once downloaded, and open it in your favorite IDE. Build and run the application to ensure that it works properly, then stop the application.</p>
+<h2><a href="#implement-an-eventsource" aria-hidden="true" class="anchor" id="implement-an-eventsource"></a>Implement an EventSource</h2>
+<p>You'll want to keep the overhead per event to a minimum.</p>
+<p>Knowing the number of events in a process is not useful.</p>
+<p>Below is an example of how to implement an System.Diagnostics.Tracing.EventSource. Create a new file named <code>MinimalEventCounterSource</code>.cs and use the code snippet as its source:</p>
+<pre><code class="language-csharp">using System.Diagnostics.Tracing;
+
+[EventSource(Name = &quot;Sample.EventCounter.Minimal&quot;)]
+public sealed class MinimalEventCounterSource : EventSource
+{
+    public static readonly MinimalEventCounterSource Log = new MinimalEventCounterSource();
+
+    private EventCounter _requestCounter;
+
+    private MinimalEventCounterSource() =&gt;
+        _requestCounter = new EventCounter(&quot;request-time&quot;, this)
+        {
+            DisplayName = &quot;Request Processing Time&quot;,
+            DisplayUnits = &quot;ms&quot;
+        };
+
+    public void Request(string url, long elapsedMilliseconds)
+    {
+        WriteEvent(1, url, elapsedMilliseconds);
+        _requestCounter?.WriteMetric(elapsedMilliseconds);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        _requestCounter?.Dispose();
+        _requestCounter = null;
+
+        base.Dispose(disposing);
+    }
+}
+</code></pre>
+<p>The EventSource.WriteEvent line is the EventSource part and is not part of EventCounter, it was written to show that you can log a message together with the event counter.</p>
+<h2><a href="#add-an-action-filter" aria-hidden="true" class="anchor" id="add-an-action-filter"></a>Add an action filter</h2>
+<p>In this tutorial, I will show you how to log the time it takes for a request to be replied to.</p>
+<pre><code class="language-csharp">using System.Diagnostics;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Mvc.Filters;
+
+namespace DiagnosticScenarios
+{
+    public class LogRequestTimeFilterAttribute : ActionFilterAttribute
+    {
+        readonly Stopwatch _stopwatch = new Stopwatch();
+
+        public override void OnActionExecuting(ActionExecutingContext context) =&gt; _stopwatch.Start();
+
+        public override void OnActionExecuted(ActionExecutedContext context)
+        {
+            _stopwatch.Stop();
+
+            MinimalEventCounterSource.Log.Request(
+                context.HttpContext.Request.GetDisplayUrl(), _stopwatch.ElapsedMilliseconds);
+        }
+    }
+}
+</code></pre>
+<p>The action filter starts a Stopwatch as the request begins, and stops after it has been completed, capturing the elapsed time. The total milliseconds are logged to the <code>MinimalEventCounterSource</code> singleton instance. For this filter to be applied, you need to add it to the filter collection. In the Startup.cs file, update the <code>ConfigureServices</code> method in include this filter.</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services) =&gt;
+    services.AddControllers(options =&gt; options.Filters.Add&lt;LogRequestTimeFilterAttribute&gt;())
+            .AddNewtonsoftJson();
+</code></pre>
+<h2><a href="#monitor-event-counter" aria-hidden="true" class="anchor" id="monitor-event-counter"></a>Monitor event counter</h2>
+<p>In this article, I will show you how to build a timer that fires when a metric is recorded.</p>
+<p>Use the <code>dotnet-counters ps</code> command to display a list of .NET processes that can be monitored.</p>
+<pre><code class="language-console">dotnet-counters ps
+</code></pre>
+<p>Using the process identifier from the output of the <code>dotnet-counters ps</code> command, you can start monitoring the event counter with the following <code>dotnet-counters</code>monitor`````` command:</p>
+<pre><code class="language-console">dotnet-counters monitor --process-id 2196 --counters Sample.EventCounter.Minimal,Microsoft.AspNetCore.Hosting[total-requests,requests-per-second],System.Runtime[cpu-usage]
+</code></pre>
+<p>While the <code>dotnet-counters</code>monitor`````` command is running, hold F5 on the browser to start issuing continuous requests to the <code>https://localhost:5001/api/values</code> endpoint. After a few seconds stop by pressing q</p>
+<pre><code class="language-console">Press p to pause, r to resume, q to quit.
+    Status: Running
+
+[Microsoft.AspNetCore.Hosting]
+    Request Rate / 1 sec                               9
+    Total Requests                                   134
+[System.Runtime]
+    CPU Usage (%)                                     13
+[Sample.EventCounter.Minimal]
+    Request Processing Time (ms)                      34.5
+</code></pre>
+<p>The <code>dotnet-counters</code>monitor<code>command is great for active monitoring. However, you may want to ```collect``` these diagnostic metrics for post processing and analysis. For that, use the ```dotnet-counters ```collect</code> command. The <code>collect</code> switch command is similar to the <code>monitor</code> command, but accepts a few additional parameters. You can specify the desired output file name and format. For a JSON file named diagnostics.json use the following command:</p>
+<pre><code class="language-console">dotnet-counters collect --process-id 2196 --format json -o diagnostics.json --counters Sample.EventCounter.Minimal,Microsoft.AspNetCore.Hosting[total-requests,requests-per-second],System.Runtime[cpu-usage]
+</code></pre>
+<p>Again, while the command is running, hold F5 on the browser to start issuing continuous requests to the <code>https://localhost:5001/api/values</code> endpoint. After a few seconds stop by pressing q. The diagnostics.json file is written. The JSON file that is written is not indented, however; for readability it is indented here.</p>
+<pre><code class="language-json">{
+  &quot;TargetProcess&quot;: &quot;DiagnosticScenarios&quot;,
+  &quot;StartTime&quot;: &quot;8/5/2020 3:02:45 PM&quot;,
+  &quot;Events&quot;: [
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:47Z&quot;,
+      &quot;provider&quot;: &quot;System.Runtime&quot;,
+      &quot;name&quot;: &quot;CPU Usage (%)&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:47Z&quot;,
+      &quot;provider&quot;: &quot;Microsoft.AspNetCore.Hosting&quot;,
+      &quot;name&quot;: &quot;Request Rate / 1 sec&quot;,
+      &quot;counterType&quot;: &quot;Rate&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:47Z&quot;,
+      &quot;provider&quot;: &quot;Microsoft.AspNetCore.Hosting&quot;,
+      &quot;name&quot;: &quot;Total Requests&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 134
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:47Z&quot;,
+      &quot;provider&quot;: &quot;Sample.EventCounter.Minimal&quot;,
+      &quot;name&quot;: &quot;Request Processing Time (ms)&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:47Z&quot;,
+      &quot;provider&quot;: &quot;System.Runtime&quot;,
+      &quot;name&quot;: &quot;CPU Usage (%)&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:48Z&quot;,
+      &quot;provider&quot;: &quot;Microsoft.AspNetCore.Hosting&quot;,
+      &quot;name&quot;: &quot;Request Rate / 1 sec&quot;,
+      &quot;counterType&quot;: &quot;Rate&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:48Z&quot;,
+      &quot;provider&quot;: &quot;Microsoft.AspNetCore.Hosting&quot;,
+      &quot;name&quot;: &quot;Total Requests&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 134
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:48Z&quot;,
+      &quot;provider&quot;: &quot;Sample.EventCounter.Minimal&quot;,
+      &quot;name&quot;: &quot;Request Processing Time (ms)&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:48Z&quot;,
+      &quot;provider&quot;: &quot;System.Runtime&quot;,
+      &quot;name&quot;: &quot;CPU Usage (%)&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:50Z&quot;,
+      &quot;provider&quot;: &quot;Microsoft.AspNetCore.Hosting&quot;,
+      &quot;name&quot;: &quot;Request Rate / 1 sec&quot;,
+      &quot;counterType&quot;: &quot;Rate&quot;,
+      &quot;value&quot;: 0
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:50Z&quot;,
+      &quot;provider&quot;: &quot;Microsoft.AspNetCore.Hosting&quot;,
+      &quot;name&quot;: &quot;Total Requests&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 134
+    },
+    {
+      &quot;timestamp&quot;: &quot;2020-08-05 15:02:50Z&quot;,
+      &quot;provider&quot;: &quot;Sample.EventCounter.Minimal&quot;,
+      &quot;name&quot;: &quot;Request Processing Time (ms)&quot;,
+      &quot;counterType&quot;: &quot;Metric&quot;,
+      &quot;value&quot;: 0
+    }
+  ]
+}
+</code></pre>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/core/diagnostics/event-counter-perf?view=aspnetcore-8.0">Tutorial: Measure performance using EventCounters in .NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

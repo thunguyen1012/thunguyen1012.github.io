@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Write middleware | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Write middleware</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#middleware-class" aria-hidden="true" class="anchor" id="middleware-class"></a>Middleware class</h2>
+<pre><code class="language-csharp">using System.Globalization;
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.Use(async (context, next) =&gt;
+{
+    var cultureQuery = context.Request.Query[&quot;culture&quot;];
+    if (!string.IsNullOrWhiteSpace(cultureQuery))
+    {
+        var culture = new CultureInfo(cultureQuery);
+
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+    }
+
+    // Call the next delegate/middleware in the pipeline.
+    await next(context);
+});
+
+app.Run(async (context) =&gt;
+{
+    await context.Response.WriteAsync(
+        $&quot;CurrentCulture.DisplayName: {CultureInfo.CurrentCulture.DisplayName}&quot;);
+});
+
+app.Run();
+</code></pre>
+<ul>
+<li>
+<p>One takes a <code>HttpContext</code> and a Func<Task>. <code>Invoke</code> the Func<Task> without any parameters.</p>
+</li>
+<li>
+<p>The other takes a <code>HttpContext</code> and a <code>RequestDelegate</code>. <code>Invoke</code> the <code>RequestDelegate</code> by passing the <code>HttpContext</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.Globalization;
+
+namespace Middleware.Example;
+
+public class RequestCultureMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public RequestCultureMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        var cultureQuery = context.Request.Query[&quot;culture&quot;];
+        if (!string.IsNullOrWhiteSpace(cultureQuery))
+        {
+            var culture = new CultureInfo(cultureQuery);
+
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+        }
+
+        // Call the next delegate/middleware in the pipeline.
+        await _next(context);
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>A public constructor with a parameter of type <code>RequestDelegate</code>.</p>
+</li>
+<li>
+<p>A public method named <code>Invoke</code> or <code>InvokeAsync</code>. This method must:</p>
+<ul>
+<li>
+<p>Return a <code>Task</code>.</p>
+</li>
+<li>
+<p>Accept a first parameter of type <code>HttpContext</code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.Globalization;
+
+namespace Middleware.Example;
+
+public class RequestCultureMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public RequestCultureMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        var cultureQuery = context.Request.Query[&quot;culture&quot;];
+        if (!string.IsNullOrWhiteSpace(cultureQuery))
+        {
+            var culture = new CultureInfo(cultureQuery);
+
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+        }
+
+        // Call the next delegate/middleware in the pipeline.
+        await _next(context);
+    }
+}
+
+public static class RequestCultureMiddlewareExtensions
+{
+    public static IApplicationBuilder UseRequestCulture(
+        this IApplicationBuilder builder)
+    {
+        return builder.UseMiddleware&lt;RequestCultureMiddleware&gt;();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Middleware.Example;
+using System.Globalization;
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseRequestCulture();
+
+app.Run(async (context) =&gt;
+{
+    await context.Response.WriteAsync(
+        $&quot;CurrentCulture.DisplayName: {CultureInfo.CurrentCulture.DisplayName}&quot;);
+});
+
+app.Run();
+</code></pre>
+<h2><a href="#middleware-dependencies" aria-hidden="true" class="anchor" id="middleware-dependencies"></a>Middleware dependencies</h2>
+<h2><a href="#per-request-middleware-dependencies" aria-hidden="true" class="anchor" id="per-request-middleware-dependencies"></a>Per-request middleware dependencies</h2>
+<pre><code class="language-csharp">namespace Middleware.Example;
+
+public class MyCustomMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public MyCustomMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    // IMessageWriter is injected into InvokeAsync
+    public async Task InvokeAsync(HttpContext httpContext, IMessageWriter svc)
+    {
+        svc.Write(DateTime.Now.Ticks.ToString());
+        await _next(httpContext);
+    }
+}
+
+public static class MyCustomMiddlewareExtensions
+{
+    public static IApplicationBuilder UseMyCustomMiddleware(
+        this IApplicationBuilder builder)
+    {
+        return builder.UseMiddleware&lt;MyCustomMiddleware&gt;();
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using Middleware.Example;
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped&lt;IMessageWriter, LoggingMessageWriter&gt;();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseMyCustomMiddleware();
+
+app.MapGet(&quot;/&quot;, () =&gt; &quot;Hello World!&quot;);
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">namespace Middleware.Example;
+
+public interface IMessageWriter
+{
+    void Write(string message);
+}
+
+public class LoggingMessageWriter : IMessageWriter
+{
+
+    private readonly ILogger&lt;LoggingMessageWriter&gt; _logger;
+
+    public LoggingMessageWriter(ILogger&lt;LoggingMessageWriter&gt; logger) =&gt;
+        _logger = logger;
+
+    public void Write(string message) =&gt;
+        _logger.LogInformation(message);
+}
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Sample code used in this article</p>
+</li>
+<li>
+<p>UseExtensions source on GitHub</p>
+</li>
+<li>
+<p>Lifetime and registration options contains a complete sample of middleware with scoped, transient, and singleton lifetime services.</p>
+</li>
+<li>
+<p>DEEP DIVE: HOW IS THE ASP.NET CORE MIDDLEWARE PIPELINE BUILT</p>
+</li>
+<li>
+<p>ASP.NET Core Middleware</p>
+</li>
+<li>
+<p>Test ASP.NET Core middleware</p>
+</li>
+<li>
+<p>Migrate HTTP handlers and modules to ASP.NET Core middleware</p>
+</li>
+<li>
+<p>App startup in ASP.NET Core</p>
+</li>
+<li>
+<p>Request Features in ASP.NET Core</p>
+</li>
+<li>
+<p>Factory-based middleware activation in ASP.NET Core</p>
+</li>
+<li>
+<p>Middleware activation with a third-party container in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/write?view=aspnetcore-8.0">Write custom ASP.NET Core middleware</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

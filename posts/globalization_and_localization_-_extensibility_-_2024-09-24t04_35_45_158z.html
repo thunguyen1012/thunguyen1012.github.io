@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Globalization and localization - Extensibility | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Globalization and localization - Extensibility</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article:</p>
+<ul>
+<li>
+<p>Lists the extensibility points on the localization APIs.</p>
+</li>
+<li>
+<p>Provides instructions on how to extend ASP.NET Core app localization.</p>
+</li>
+</ul>
+<h2><a href="#extensible-points-in-localization-apis" aria-hidden="true" class="anchor" id="extensible-points-in-localization-apis"></a>Extensible Points in Localization APIs</h2>
+<p>ASP.NET Core localization APIs are built to be extensible. Extensibility allows developers to customize the localization according to their needs. For instance, OrchardCore has a <code>POStringLocalizer</code>. <code>POStringLocalizer</code> describes in detail using Portable Object localization to use <code>PO</code> files to store localization resources.</p>
+<p>This article lists the two main extensibility points that localization APIs provide:</p>
+<ul>
+<li>
+<p>RequestCultureProvider</p>
+</li>
+<li>
+<p><code>IStringLocalizer</code></p>
+</li>
+</ul>
+<h2><a href="#localization-culture-providers" aria-hidden="true" class="anchor" id="localization-culture-providers"></a>Localization Culture Providers</h2>
+<p>ASP.NET Core localization APIs have four default providers that can determine the current culture of an executing request:</p>
+<ul>
+<li>
+<p>QueryStringRequestCultureProvider</p>
+</li>
+<li>
+<p>CookieRequestCultureProvider</p>
+</li>
+<li>
+<p>AcceptLanguageHeaderRequestCultureProvider</p>
+</li>
+<li>
+<p>CustomRequestCultureProvider</p>
+</li>
+</ul>
+<p>The following providers are supported by JBoss Middleware.</p>
+<h3><a href="#use-customrequestcultureprovider" aria-hidden="true" class="anchor" id="use-customrequestcultureprovider"></a>Use CustomRequestCultureProvider</h3>
+<p>CustomRequestCultureProvider provides a custom RequestCultureProvider that uses a simple delegate to determine the current localization culture:</p>
+<pre><code class="language-csharp">options.AddInitialRequestCultureProvider(new CustomRequestCultureProvider(async context =&gt;
+{
+    var currentCulture = &quot;en&quot;;
+    var segments = context.Request.Path.Value.Split(new char[] { '/' }, 
+        StringSplitOptions.RemoveEmptyEntries);
+
+    if (segments.Length &gt; 1 &amp;&amp; segments[0].Length == 2)
+    {
+        currentCulture = segments[0];
+    }
+
+    var requestCulture = new ProviderCultureResult(currentCulture);
+
+    return Task.FromResult(requestCulture);
+}));
+</code></pre>
+<h3><a href="#use-a-new-implementation-of-requestcultureprovider" aria-hidden="true" class="anchor" id="use-a-new-implementation-of-requestcultureprovider"></a>Use a new implementation of RequestCultureProvider</h3>
+<p>A new implementation of RequestCultureProvider can be created that determines the request culture information from a custom source.</p>
+<p>The following example shows <code>AppSettingsRequestCultureProvider</code>, which extends the RequestCultureProvider to determine the request culture information from <code>appsettings.json</code>:</p>
+<pre><code class="language-csharp">public class AppSettingsRequestCultureProvider : RequestCultureProvider
+{
+    public string CultureKey { get; set; } = &quot;culture&quot;;
+
+    public string UICultureKey { get; set; } = &quot;ui-culture&quot;;
+
+    public override Task&lt;ProviderCultureResult&gt; DetermineProviderCultureResult(HttpContext httpContext)
+    {
+        if (httpContext == null)
+        {
+            throw new ArgumentNullException();
+        }
+
+        var configuration = httpContext.RequestServices.GetService&lt;IConfigurationRoot&gt;();
+        var culture = configuration[CultureKey];
+        var uiCulture = configuration[UICultureKey];
+
+        if (culture == null &amp;&amp; uiCulture == null)
+        {
+            return Task.FromResult((ProviderCultureResult)null);
+        }
+
+        if (culture != null &amp;&amp; uiCulture == null)
+        {
+            uiCulture = culture;
+        }
+
+        if (culture == null &amp;&amp; uiCulture != null)
+        {
+            culture = uiCulture;
+        }
+        
+        var providerResultCulture = new ProviderCultureResult(culture, uiCulture);
+
+        return Task.FromResult(providerResultCulture);
+    }
+}
+</code></pre>
+<h2><a href="#localization-resources" aria-hidden="true" class="anchor" id="localization-resources"></a>Localization resources</h2>
+<p>ASP.NET Core localization provides ResourceManagerStringLocalizer. ResourceManagerStringLocalizer is an implementation of <code>IStringLocalizer</code> that uses <code>resx</code> to store localization resources.</p>
+<p>You aren't limited to using <code>resx</code> files. By implementing <code>IStringLocalizer</code>, any data source can be used.</p>
+<p>The following example projects implement <code>IStringLocalizer</code>:</p>
+<ul>
+<li>
+<p>EFStringLocalizer</p>
+</li>
+<li>
+<p>JsonStringLocalizer</p>
+</li>
+<li>
+<p>SqlLocalizer</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization-extensibility?view=aspnetcore-8.0">Localization Extensibility</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

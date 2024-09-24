@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Globalization and localization - Provide resources | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Globalization and localization - Provide resources</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#supportedcultures-and-supporteduicultures" aria-hidden="true" class="anchor" id="supportedcultures-and-supporteduicultures"></a><code>SupportedCultures</code> and <code>SupportedUICultures</code></h2>
+<h2><a href="#resource-files" aria-hidden="true" class="anchor" id="resource-files"></a>Resource files</h2>
+<ul>
+<li>In Solution Explorer, right click on the folder that will contain the resource file, and then select Add &gt; New Item.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization/_static/newi.png?view=aspnetcore-8.0" alt="Nested contextual menu: In Solution Explorer, a contextual menu is open for Resources. A second contextual menu is open for Add showing the New Item command highlighted.!" title="Nested contextual menu: In Solution Explorer, a contextual menu is open for Resources. A second contextual menu is open for Add showing the New Item command highlighted." /></p>
+<ul>
+<li>In the Search installed templates box, enter &quot;resource&quot; and name the file.</li>
+</ul>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization/_static/res.png?view=aspnetcore-8.0" alt="Add New Item dialog!" title="Add New Item dialog" /></p>
+<ul>
+<li>Enter the key value (native string) in the Name column and the translated string in the Value column.</li>
+</ul>
+<p>Visual Studio shows the Welcome.es.resx file.</p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization/_static/hola.png?view=aspnetcore-8.0" alt="Welcome.es.resx file (the Welcome resource file for Spanish) with the word Hello in the Name column and the word Hola (Hello in Spanish) in the Value column!" title="Welcome.es.resx file (the Welcome resource file for Spanish) with the word Hello in the Name column and the word Hola (Hello in Spanish) in the Value column" /></p>
+<p><img src="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization/_static/se.png?view=aspnetcore-8.0" alt="Solution Explorer showing the Welcome Spanish (es) resource file!" title="Solution Explorer showing the Welcome Spanish (es) resource file" /></p>
+<h2><a href="#resource-file-naming" aria-hidden="true" class="anchor" id="resource-file-naming"></a>Resource file naming</h2>
+<table><thead>
+<tr>
+<th>Resource name</th>
+<th>Dot or path naming</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resources/Controllers.HomeController.fr.resx</td>
+<td>Dot</td>
+</tr>
+<tr>
+<td>Resources/Controllers/HomeController.fr.resx</td>
+<td>Path</td>
+</tr>
+</tbody></table>
+<ul>
+<li>
+<p>Resources/Views/Home/About.fr.resx</p>
+</li>
+<li>
+<p>Resources/Views.Home.About.fr.resx</p>
+</li>
+</ul>
+<h2><a href="#rootnamespaceattribute" aria-hidden="true" class="anchor" id="rootnamespaceattribute"></a>RootNamespaceAttribute</h2>
+<blockquote>
+<p class='warning'>Warning
+This can occur when a project's name is not a valid .NET identifier. For instance <code>my-project-name.csproj</code> will use the root namespace <code>my_project_name</code> and the assembly name <code>my-project-name</code> leading to this error.</p>
+</blockquote>
+<ul>
+<li>
+<p>Localization does not work by default.</p>
+</li>
+<li>
+<p>Localization fails due to the way resources are searched for within the assembly. <code>RootNamespace</code> is a build-time value which is not available to the executing process.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System.Reflection;
+using Microsoft.Extensions.Localization;
+
+[assembly: ResourceLocation(&quot;Resource Folder Name&quot;)]
+[assembly: RootNamespace(&quot;App Root Namespace&quot;)]
+</code></pre>
+<h2><a href="#culture-fallback-behavior" aria-hidden="true" class="anchor" id="culture-fallback-behavior"></a>Culture fallback behavior</h2>
+<ul>
+<li>
+<p>Welcome.fr-CA.resx</p>
+</li>
+<li>
+<p>Welcome.fr.resx</p>
+</li>
+<li>
+<p>Welcome.resx (if the <code>NeutralResourcesLanguage</code> is &quot;fr-CA&quot;)</p>
+</li>
+</ul>
+<h2><a href="#generate-resource-files-with-visual-studio" aria-hidden="true" class="anchor" id="generate-resource-files-with-visual-studio"></a>Generate resource files with Visual Studio</h2>
+<h3><a href="#add-other-cultures" aria-hidden="true" class="anchor" id="add-other-cultures"></a>Add other cultures</h3>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>Make the app's content localizable.</p>
+</li>
+<li>
+<p>Implement a strategy to select the language/culture for each request</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Url culture provider using middleware as filters in ASP.NET Core</p>
+</li>
+<li>
+<p>Applying the RouteDataRequest CultureProvider globally with middleware as filters</p>
+</li>
+<li>
+<p>Globalization and localization in ASP.NET Core</p>
+</li>
+<li>
+<p>Make an ASP.NET Core app's content localizable</p>
+</li>
+<li>
+<p>Strategies for selecting language and culture in a localized ASP.NET Core app</p>
+</li>
+<li>
+<p>Troubleshoot ASP.NET Core localization</p>
+</li>
+<li>
+<p>Globalizing and localizing .NET applications</p>
+</li>
+<li>
+<p>Localization.StarterWeb project used in the article.</p>
+</li>
+<li>
+<p>Resources in .resx Files</p>
+</li>
+<li>
+<p>Microsoft Multilingual App Toolkit</p>
+</li>
+<li>
+<p>Localization &amp; Generics</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization/provide-resources?view=aspnetcore-8.0">Provide localized resources for languages and cultures in an ASP.NET Core app</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

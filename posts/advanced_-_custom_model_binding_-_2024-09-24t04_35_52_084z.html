@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Custom model binding | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Custom model binding</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#default-model-binder-limitations" aria-hidden="true" class="anchor" id="default-model-binder-limitations"></a>Default model binder limitations</h2>
+<h2><a href="#model-binding-simple-and-complex-types" aria-hidden="true" class="anchor" id="model-binding-simple-and-complex-types"></a>Model binding simple and complex types</h2>
+<h3><a href="#working-with-the-bytearraymodelbinder" aria-hidden="true" class="anchor" id="working-with-the-bytearraymodelbinder"></a>Working with the <code>ByteArrayModelBinder</code></h3>
+<pre><code class="language-csharp">public IModelBinder GetBinder(ModelBinderProviderContext context)
+{
+    if (context == null)
+    {
+        throw new ArgumentNullException(nameof(context));
+    }
+
+    if (context.Metadata.ModelType == typeof(byte[]))
+    {
+        var loggerFactory = context.Services.GetRequiredService&lt;ILoggerFactory&gt;();
+        return new ByteArrayModelBinder(loggerFactory);
+    }
+
+    return null;
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpPost]
+public void Post([FromForm] byte[] file, string filename)
+{
+    // Don't trust the file name sent by the client. Use
+    // Path.GetRandomFileName to generate a safe random
+    // file name. _targetFilePath receives a value
+    // from configuration (the appsettings.json file in
+    // the sample app).
+    var trustedFileName = Path.GetRandomFileName();
+    var filePath = Path.Combine(_targetFilePath, trustedFileName);
+
+    if (System.IO.File.Exists(filePath))
+    {
+        return;
+    }
+
+    System.IO.File.WriteAllBytes(filePath, file);
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpPost(&quot;Profile&quot;)]
+public void SaveProfile([FromForm] ProfileViewModel model)
+{
+    // Don't trust the file name sent by the client. Use
+    // Path.GetRandomFileName to generate a safe random
+    // file name. _targetFilePath receives a value
+    // from configuration (the appsettings.json file in
+    // the sample app).
+    var trustedFileName = Path.GetRandomFileName();
+    var filePath = Path.Combine(_targetFilePath, trustedFileName);
+
+    if (System.IO.File.Exists(filePath))
+    {
+        return;
+    }
+
+    System.IO.File.WriteAllBytes(filePath, model.File);
+}
+
+public class ProfileViewModel
+{
+    public byte[] File { get; set; }
+    public string FileName { get; set; }
+}
+</code></pre>
+<h2><a href="#custom-model-binder-sample" aria-hidden="true" class="anchor" id="custom-model-binder-sample"></a>Custom model binder sample</h2>
+<ul>
+<li>
+<p>Converts incoming request data into strongly typed key arguments.</p>
+</li>
+<li>
+<p>Uses Entity Framework Core to fetch the associated entity.</p>
+</li>
+<li>
+<p>Passes the associated entity as an argument to the action method.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using CustomModelBindingSample.Binders;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CustomModelBindingSample.Data
+{
+    [ModelBinder(BinderType = typeof(AuthorEntityBinder))]
+    public class Author
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string GitHub { get; set; }
+        public string Twitter { get; set; }
+        public string BlogUrl { get; set; }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class AuthorEntityBinder : IModelBinder
+{
+    private readonly AuthorContext _context;
+
+    public AuthorEntityBinder(AuthorContext context)
+    {
+        _context = context;
+    }
+
+    public Task BindModelAsync(ModelBindingContext bindingContext)
+    {
+        if (bindingContext == null)
+        {
+            throw new ArgumentNullException(nameof(bindingContext));
+        }
+
+        var modelName = bindingContext.ModelName;
+
+        // Try to fetch the value of the argument by name
+        var valueProviderResult = bindingContext.ValueProvider.GetValue(modelName);
+
+        if (valueProviderResult == ValueProviderResult.None)
+        {
+            return Task.CompletedTask;
+        }
+
+        bindingContext.ModelState.SetModelValue(modelName, valueProviderResult);
+
+        var value = valueProviderResult.FirstValue;
+
+        // Check if the argument value is null or empty
+        if (string.IsNullOrEmpty(value))
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!int.TryParse(value, out var id))
+        {
+            // Non-integer arguments result in model state errors
+            bindingContext.ModelState.TryAddModelError(
+                modelName, &quot;Author Id must be an integer.&quot;);
+
+            return Task.CompletedTask;
+        }
+
+        // Model will be null if not found, including for
+        // out of range id values (0, -3, etc.)
+        var model = _context.Authors.Find(id);
+        bindingContext.Result = ModelBindingResult.Success(model);
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The preceding <code>AuthorEntityBinder</code> class is intended to illustrate a custom model binder. The class isn't intended to illustrate best practices for a lookup scenario. For lookup, bind the <code>authorId</code> and query the database in an action method. This approach separates model binding failures from <code>NotFound</code> cases.</p>
+</blockquote>
+<pre><code class="language-csharp">[HttpGet(&quot;get/{author}&quot;)]
+public IActionResult Get(Author author)
+{
+    if (author == null)
+    {
+        return NotFound();
+    }
+
+    return Ok(author);
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpGet(&quot;{id}&quot;)]
+public IActionResult GetById([ModelBinder(Name = &quot;id&quot;)] Author author)
+{
+    if (author == null)
+    {
+        return NotFound();
+    }
+
+    return Ok(author);
+}
+</code></pre>
+<h3><a href="#implementing-a-modelbinderprovider" aria-hidden="true" class="anchor" id="implementing-a-modelbinderprovider"></a>Implementing a ModelBinderProvider</h3>
+<pre><code class="language-csharp">using CustomModelBindingSample.Data;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
+using System;
+
+namespace CustomModelBindingSample.Binders
+{
+    public class AuthorEntityBinderProvider : IModelBinderProvider
+    {
+        public IModelBinder GetBinder(ModelBinderProviderContext context)
+        {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            if (context.Metadata.ModelType == typeof(Author))
+            {
+                return new BinderTypeModelBinder(typeof(AuthorEntityBinder));
+            }
+
+            return null;
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDbContext&lt;AuthorContext&gt;(options =&gt; options.UseInMemoryDatabase(&quot;Authors&quot;));
+
+    services.AddControllers(options =&gt;
+    {
+        options.ModelBinderProviders.Insert(0, new AuthorEntityBinderProvider());
+    });
+}
+</code></pre>
+<h3><a href="#polymorphic-model-binding" aria-hidden="true" class="anchor" id="polymorphic-model-binding"></a>Polymorphic model binding</h3>
+<ul>
+<li>
+<p>Isn't typical for a REST API that's designed to interoperate with all languages.</p>
+</li>
+<li>
+<p>Makes it difficult to reason about the bound models.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public abstract class Device
+{
+    public string Kind { get; set; }
+}
+
+public class Laptop : Device
+{
+    public string CPUIndex { get; set; }
+}
+
+public class SmartPhone : Device
+{
+    public string ScreenSize { get; set; }
+}
+
+public class DeviceModelBinderProvider : IModelBinderProvider
+{
+    public IModelBinder GetBinder(ModelBinderProviderContext context)
+    {
+        if (context.Metadata.ModelType != typeof(Device))
+        {
+            return null;
+        }
+
+        var subclasses = new[] { typeof(Laptop), typeof(SmartPhone), };
+
+        var binders = new Dictionary&lt;Type, (ModelMetadata, IModelBinder)&gt;();
+        foreach (var type in subclasses)
+        {
+            var modelMetadata = context.MetadataProvider.GetMetadataForType(type);
+            binders[type] = (modelMetadata, context.CreateBinder(modelMetadata));
+        }
+
+        return new DeviceModelBinder(binders);
+    }
+}
+
+public class DeviceModelBinder : IModelBinder
+{
+    private Dictionary&lt;Type, (ModelMetadata, IModelBinder)&gt; binders;
+
+    public DeviceModelBinder(Dictionary&lt;Type, (ModelMetadata, IModelBinder)&gt; binders)
+    {
+        this.binders = binders;
+    }
+
+    public async Task BindModelAsync(ModelBindingContext bindingContext)
+    {
+        var modelKindName = ModelNames.CreatePropertyModelName(bindingContext.ModelName, nameof(Device.Kind));
+        var modelTypeValue = bindingContext.ValueProvider.GetValue(modelKindName).FirstValue;
+
+        IModelBinder modelBinder;
+        ModelMetadata modelMetadata;
+        if (modelTypeValue == &quot;Laptop&quot;)
+        {
+            (modelMetadata, modelBinder) = binders[typeof(Laptop)];
+        }
+        else if (modelTypeValue == &quot;SmartPhone&quot;)
+        {
+            (modelMetadata, modelBinder) = binders[typeof(SmartPhone)];
+        }
+        else
+        {
+            bindingContext.Result = ModelBindingResult.Failed();
+            return;
+        }
+
+        var newBindingContext = DefaultModelBindingContext.CreateBindingContext(
+            bindingContext.ActionContext,
+            bindingContext.ValueProvider,
+            modelMetadata,
+            bindingInfo: null,
+            bindingContext.ModelName);
+
+        await modelBinder.BindModelAsync(newBindingContext);
+        bindingContext.Result = newBindingContext.Result;
+
+        if (newBindingContext.Result.IsModelSet)
+        {
+            // Setting the ValidationState ensures properties on derived types are correctly 
+            bindingContext.ValidationState[newBindingContext.Result.Model] = new ValidationStateEntry
+            {
+                Metadata = modelMetadata,
+            };
+        }
+    }
+}
+</code></pre>
+<h2><a href="#recommendations-and-best-practices" aria-hidden="true" class="anchor" id="recommendations-and-best-practices"></a>Recommendations and best practices</h2>
+<ul>
+<li>
+<p>Shouldn't attempt to set status codes or return results (for example, 404 Not Found). If model binding fails, an action filter or logic within the action method itself should handle the failure.</p>
+</li>
+<li>
+<p>Are most useful for eliminating repetitive code and cross-cutting concerns from action methods.</p>
+</li>
+<li>
+<p>Typically shouldn't be used to convert a <code>string</code> into a custom type, a <code>TypeConverter</code> is usually a better option.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/advanced/custom-model-binding?view=aspnetcore-8.0">Custom Model Binding in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

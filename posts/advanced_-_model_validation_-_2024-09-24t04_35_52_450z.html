@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Model validation | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Model validation</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#model-state" aria-hidden="true" class="anchor" id="model-state"></a>Model state</h2>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostAsync()
+{
+    if (!ModelState.IsValid)
+    {
+        return Page();
+    }
+
+    _context.Movies.Add(Movie);
+    await _context.SaveChangesAsync();
+
+    return RedirectToPage(&quot;./Index&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; Create(Movie movie)
+{
+    if (!ModelState.IsValid)
+    {
+        return View(movie);
+    }
+
+    _context.Movies.Add(movie);
+    await _context.SaveChangesAsync();
+
+    return RedirectToAction(nameof(Index));
+}
+</code></pre>
+<h2><a href="#rerun-validation" aria-hidden="true" class="anchor" id="rerun-validation"></a>Rerun validation</h2>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostTryValidateAsync()
+{
+    var modifiedReleaseDate = DateTime.Now.Date;
+    Movie.ReleaseDate = modifiedReleaseDate;
+
+    ModelState.ClearValidationState(nameof(Movie));
+    if (!TryValidateModel(Movie, nameof(Movie)))
+    {
+        return Page();
+    }
+
+    _context.Movies.Add(Movie);
+    await _context.SaveChangesAsync();
+
+    return RedirectToPage(&quot;./Index&quot;);
+}
+</code></pre>
+<h2><a href="#validation-attributes" aria-hidden="true" class="anchor" id="validation-attributes"></a>Validation attributes</h2>
+<pre><code class="language-csharp">public class Movie
+{
+    public int Id { get; set; }
+
+    [Required]
+    [StringLength(100)]
+    public string Title { get; set; } = null!;
+
+    [ClassicMovie(1960)]
+    [DataType(DataType.Date)]
+    [Display(Name = &quot;Release Date&quot;)]
+    public DateTime ReleaseDate { get; set; }
+
+    [Required]
+    [StringLength(1000)]
+    public string Description { get; set; } = null!;
+
+    [Range(0, 999.99)]
+    public decimal Price { get; set; }
+
+    public Genre Genre { get; set; }
+
+    public bool Preorder { get; set; }
+}
+</code></pre>
+<h2><a href="#built-in-attributes" aria-hidden="true" class="anchor" id="built-in-attributes"></a>Built-in attributes</h2>
+<ul>
+<li>
+<p>[ValidateNever]: Indicates that a property or parameter should be excluded from validation.</p>
+</li>
+<li>
+<p>[CreditCard]: Validates that the property has a credit card format. Requires jQuery Validation Additional Methods.</p>
+</li>
+<li>
+<p>[Compare]: Validates that two properties in a model match.</p>
+</li>
+<li>
+<p>[EmailAddress]: Validates that the property has an email format.</p>
+</li>
+<li>
+<p>[Phone]: Validates that the property has a telephone number format.</p>
+</li>
+<li>
+<p>[Range]: Validates that the property value falls within a specified range.</p>
+</li>
+<li>
+<p>[RegularExpression]: Validates that the property value matches a specified regular expression.</p>
+</li>
+<li>
+<p>[Required]: Validates that the field isn't <code>null</code>. See [Required] attribute for details about this attribute's behavior.</p>
+</li>
+<li>
+<p>[StringLength]: Validates that a string property value doesn't exceed a specified length limit.</p>
+</li>
+<li>
+<p>[Url]: Validates that the property has a URL format.</p>
+</li>
+<li>
+<p>[Remote]: Validates input on the client by calling an action method on the server. See [Remote] attribute for details about this attribute's behavior.</p>
+</li>
+</ul>
+<h3><a href="#error-messages" aria-hidden="true" class="anchor" id="error-messages"></a>Error messages</h3>
+<pre><code class="language-csharp">[StringLength(8, ErrorMessage = &quot;Name length can't be more than 8.&quot;)]
+</code></pre>
+<pre><code class="language-csharp">[StringLength(8, ErrorMessage = &quot;{0} length must be between {2} and {1}.&quot;, MinimumLength = 6)]
+</code></pre>
+<h3><a href="#use-json-property-names-in-validation-errors" aria-hidden="true" class="anchor" id="use-json-property-names-in-validation-errors"></a>Use JSON property names in validation errors</h3>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers(options =&gt;
+{
+    options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider());
+});
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc.NewtonsoftJson;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers(options =&gt;
+{
+    options.ModelMetadataDetailsProviders.Add(new NewtonsoftJsonValidationMetadataProvider());
+}).AddNewtonsoftJson();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+<h2><a href="#non-nullable-reference-types-and-required]-attribute" aria-hidden="true" class="anchor" id="non-nullable-reference-types-and-required]-attribute"></a>Non-nullable reference types and [Required] attribute</h2>
+<pre><code class="language-csharp">public class Person
+{
+    public string Name { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public class Person
+{
+    public string? Name { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">builder.Services.AddControllers(
+    options =&gt; options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
+</code></pre>
+<h3><a href="#required]-validation-on-the-server" aria-hidden="true" class="anchor" id="required]-validation-on-the-server"></a>[Required] validation on the server</h3>
+<ul>
+<li>
+<p>Make the field nullable (for example, <code>decimal?</code> instead of <code>decimal</code>). <code>Nullable&lt;T&gt;</code> value types are treated like standard nullable types.</p>
+</li>
+<li>
+<p>Specify the default error message to be used by model binding, as shown in the following example:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddRazorPages()
+    .AddMvcOptions(options =&gt;
+    {
+        options.MaxModelValidationErrors = 50;
+        options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(
+            _ =&gt; &quot;The field is required.&quot;);
+    });
+
+builder.Services.AddSingleton
+    &lt;IValidationAttributeAdapterProvider, CustomValidationAttributeAdapterProvider&gt;();
+</code></pre>
+<p>For more information about model binding errors that you can set default messages for, see DefaultModelBindingMessageProvider.</p>
+<h3><a href="#required]-validation-on-the-client" aria-hidden="true" class="anchor" id="required]-validation-on-the-client"></a>[Required] validation on the client</h3>
+<ul>
+<li>
+<p>A value is considered present only if input is entered for it. Therefore, client-side validation handles non-nullable types the same as nullable types.</p>
+</li>
+<li>
+<p>Whitespace in a string field is considered valid input by the jQuery Validation required method. Server-side validation considers a required string field invalid if only whitespace is entered.</p>
+</li>
+</ul>
+<h2><a href="#remote]-attribute" aria-hidden="true" class="anchor" id="remote]-attribute"></a>[Remote] attribute</h2>
+<ul>
+<li>Create an action method for JavaScript to call.  The jQuery Validation remote method expects a JSON response:</li>
+</ul>
+<p>Here's an example of an action method that returns a custom error message:</p>
+<pre><code class="language-csharp">[AcceptVerbs(&quot;GET&quot;, &quot;POST&quot;)]
+public IActionResult VerifyEmail(string email)
+{
+    if (!_userService.VerifyEmail(email))
+    {
+        return Json($&quot;Email {email} is already in use.&quot;);
+    }
+
+    return Json(true);
+}
+</code></pre>
+<ul>
+<li>
+<p><code>true</code> means the input data is valid.</p>
+</li>
+<li>
+<p><code>false</code>, <code>undefined</code>, or <code>null</code> means the input is invalid. Display the default error message.</p>
+</li>
+<li>
+<p>Any other string means the input is invalid. Display the string as a custom error message.</p>
+</li>
+<li>
+<p>In the model class, annotate the property with a [Remote] attribute that points to the validation action method, as shown in the following example:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[Remote(action: &quot;VerifyEmail&quot;, controller: &quot;Users&quot;)]
+public string Email { get; set; } = null!;
+</code></pre>
+<h3><a href="#additional-fields" aria-hidden="true" class="anchor" id="additional-fields"></a>Additional fields</h3>
+<pre><code class="language-csharp">[Remote(action: &quot;VerifyName&quot;, controller: &quot;Users&quot;, AdditionalFields = nameof(LastName))]
+[Display(Name = &quot;First Name&quot;)]
+public string FirstName { get; set; } = null!;
+
+[Remote(action: &quot;VerifyName&quot;, controller: &quot;Users&quot;, AdditionalFields = nameof(FirstName))]
+[Display(Name = &quot;Last Name&quot;)]
+public string LastName { get; set; } = null!;
+</code></pre>
+<pre><code class="language-csharp">[AcceptVerbs(&quot;GET&quot;, &quot;POST&quot;)]
+public IActionResult VerifyName(string firstName, string lastName)
+{
+    if (!_userService.VerifyName(firstName, lastName))
+    {
+        return Json($&quot;A user named {firstName} {lastName} already exists.&quot;);
+    }
+
+    return Json(true);
+}
+</code></pre>
+<pre><code class="language-csharp">[Remote(action: &quot;VerifyName&quot;, controller: &quot;Users&quot;,
+    AdditionalFields = nameof(FirstName) + &quot;,&quot; + nameof(LastName))]
+public string MiddleName { get; set; }
+</code></pre>
+<h2><a href="#alternatives-to-built-in-attributes" aria-hidden="true" class="anchor" id="alternatives-to-built-in-attributes"></a>Alternatives to built-in attributes</h2>
+<ul>
+<li>
+<p>Create custom attributes.</p>
+</li>
+<li>
+<p>Implement IValidatableObject.</p>
+</li>
+</ul>
+<h2><a href="#custom-attributes" aria-hidden="true" class="anchor" id="custom-attributes"></a>Custom attributes</h2>
+<ul>
+<li>
+<p>Is only run on the server.</p>
+</li>
+<li>
+<p>For Classic movies, validates the release date:</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class ClassicMovieAttribute : ValidationAttribute
+{
+    public ClassicMovieAttribute(int year)
+        =&gt; Year = year;
+
+    public int Year { get; }
+
+    public string GetErrorMessage() =&gt;
+        $&quot;Classic movies must have a release year no later than {Year}.&quot;;
+
+    protected override ValidationResult? IsValid(
+        object? value, ValidationContext validationContext)
+    {
+        var movie = (Movie)validationContext.ObjectInstance;
+        var releaseYear = ((DateTime)value!).Year;
+
+        if (movie.Genre == Genre.Classic &amp;&amp; releaseYear &gt; Year)
+        {
+            return new ValidationResult(GetErrorMessage());
+        }
+
+        return ValidationResult.Success;
+    }
+}
+</code></pre>
+<h2><a href="#ivalidatableobject" aria-hidden="true" class="anchor" id="ivalidatableobject"></a>IValidatableObject</h2>
+<pre><code class="language-csharp">public class ValidatableMovie : IValidatableObject
+{
+    private const int _classicYear = 1960;
+
+    public int Id { get; set; }
+
+    [Required]
+    [StringLength(100)]
+    public string Title { get; set; } = null!;
+
+    [DataType(DataType.Date)]
+    [Display(Name = &quot;Release Date&quot;)]
+    public DateTime ReleaseDate { get; set; }
+
+    [Required]
+    [StringLength(1000)]
+    public string Description { get; set; } = null!;
+
+    [Range(0, 999.99)]
+    public decimal Price { get; set; }
+
+    public Genre Genre { get; set; }
+
+    public bool Preorder { get; set; }
+
+    public IEnumerable&lt;ValidationResult&gt; Validate(ValidationContext validationContext)
+    {
+        if (Genre == Genre.Classic &amp;&amp; ReleaseDate.Year &gt; _classicYear)
+        {
+            yield return new ValidationResult(
+                $&quot;Classic movies must have a release year no later than {_classicYear}.&quot;,
+                new[] { nameof(ReleaseDate) });
+        }
+    }
+}
+</code></pre>
+<h2><a href="#custom-validation" aria-hidden="true" class="anchor" id="custom-validation"></a>Custom validation</h2>
+<pre><code class="language-csharp">if (Contact.Name == Contact.ShortName)
+{
+    ModelState.AddModelError(&quot;Contact.ShortName&quot;, 
+                             &quot;Short name can't be the same as Name.&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">if (contact.Name == contact.ShortName)
+{
+    ModelState.AddModelError(nameof(contact.ShortName),
+                             &quot;Short name can't be the same as Name.&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">public async Task&lt;IActionResult&gt; OnPostAsync()
+{
+    // Attach Validation Error Message to the Model on validation failure.          
+
+    if (Contact.Name == Contact.ShortName)
+    {
+        ModelState.AddModelError(&quot;Contact.ShortName&quot;, 
+                                 &quot;Short name can't be the same as Name.&quot;);
+    }
+
+    if (_context.Contact.Any(i =&gt; i.PhoneNumber == Contact.PhoneNumber))
+    {
+        ModelState.AddModelError(&quot;Contact.PhoneNumber&quot;,
+                                  &quot;The Phone number is already in use.&quot;);
+    }
+    if (_context.Contact.Any(i =&gt; i.Email == Contact.Email))
+    {
+        ModelState.AddModelError(&quot;Contact.Email&quot;, &quot;The Email is already in use.&quot;);
+    }
+
+    if (!ModelState.IsValid || _context.Contact == null || Contact == null)
+    {
+        // if model is invalid, return the page with the model state errors.
+        return Page();
+    }
+    _context.Contact.Add(Contact);
+    await _context.SaveChangesAsync();
+
+    return RedirectToPage(&quot;./Index&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task&lt;IActionResult&gt; Create([Bind(&quot;Id,Name,ShortName,Email,PhoneNumber&quot;)] Contact contact)
+{
+    // Attach Validation Error Message to the Model on validation failure.
+    if (contact.Name == contact.ShortName)
+    {
+        ModelState.AddModelError(nameof(contact.ShortName),
+                                 &quot;Short name can't be the same as Name.&quot;);
+    }
+
+    if (_context.Contact.Any(i =&gt; i.PhoneNumber == contact.PhoneNumber))
+    {
+        ModelState.AddModelError(nameof(contact.PhoneNumber),
+                                  &quot;The Phone number is already in use.&quot;);
+    }
+    if (_context.Contact.Any(i =&gt; i.Email == contact.Email))
+    {
+        ModelState.AddModelError(nameof(contact.Email), &quot;The Email is already in use.&quot;);
+    }
+
+    if (ModelState.IsValid)
+    {
+        _context.Add(contact);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+    return View(contact);
+}
+</code></pre>
+<h2><a href="#validationresult" aria-hidden="true" class="anchor" id="validationresult"></a>ValidationResult</h2>
+<pre><code class="language-csharp">public class ValidateNameAttribute : ValidationAttribute
+{
+    public ValidateNameAttribute()
+    {
+        const string defaultErrorMessage = &quot;Error with Name&quot;;
+        ErrorMessage ??= defaultErrorMessage;
+    }
+
+    protected override ValidationResult? IsValid(object? value,
+                                         ValidationContext validationContext)
+    {
+        if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
+        {
+            return new ValidationResult(&quot;Name is required.&quot;);
+        }
+
+        if (value.ToString()!.ToLower().Contains(&quot;zz&quot;))
+        {
+
+            return new ValidationResult(
+                        FormatErrorMessage(validationContext.DisplayName));
+        }
+
+        return ValidationResult.Success;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class Contact
+{
+    public Guid Id { get; set; }
+
+    [ValidateName(ErrorMessage = &quot;Name must not contain `zz`&quot;)] 
+    public string? Name { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+}
+</code></pre>
+<h2><a href="#top-level-node-validation" aria-hidden="true" class="anchor" id="top-level-node-validation"></a>Top-level node validation</h2>
+<ul>
+<li>
+<p>Action parameters</p>
+</li>
+<li>
+<p>Controller properties</p>
+</li>
+<li>
+<p>Page handler parameters</p>
+</li>
+<li>
+<p>Page model properties</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[AcceptVerbs(&quot;GET&quot;, &quot;POST&quot;)]
+public IActionResult VerifyPhone(
+    [RegularExpression(@&quot;^\d{3}-\d{3}-\d{4}$&quot;)] string phone)
+{
+    if (!ModelState.IsValid)
+    {
+        return Json($&quot;Phone {phone} has an invalid format. Format: ###-###-####&quot;);
+    }
+
+    return Json(true);
+}
+</code></pre>
+<pre><code class="language-csharp">[HttpPost]
+public IActionResult CheckAge([BindRequired, FromQuery] int age)
+{
+</code></pre>
+<h2><a href="#maximum-errors" aria-hidden="true" class="anchor" id="maximum-errors"></a>Maximum errors</h2>
+<pre><code class="language-csharp">builder.Services.AddRazorPages()
+    .AddMvcOptions(options =&gt;
+    {
+        options.MaxModelValidationErrors = 50;
+        options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(
+            _ =&gt; &quot;The field is required.&quot;);
+    });
+
+builder.Services.AddSingleton
+    &lt;IValidationAttributeAdapterProvider, CustomValidationAttributeAdapterProvider&gt;();
+</code></pre>
+<h2><a href="#maximum-recursion" aria-hidden="true" class="anchor" id="maximum-recursion"></a>Maximum recursion</h2>
+<h2><a href="#automatic-short-circuit" aria-hidden="true" class="anchor" id="automatic-short-circuit"></a>Automatic short-circuit</h2>
+<h2><a href="#client-side-validation" aria-hidden="true" class="anchor" id="client-side-validation"></a>Client-side validation</h2>
+<pre><code class="language-cshtml">&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<pre><code class="language-cshtml">&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<pre><code class="language-cshtml">&lt;div class=&quot;form-group&quot;&gt;
+    &lt;label asp-for=&quot;Movie.ReleaseDate&quot; class=&quot;control-label&quot;&gt;&lt;/label&gt;
+    &lt;input asp-for=&quot;Movie.ReleaseDate&quot; class=&quot;form-control&quot; /&gt;
+    &lt;span asp-validation-for=&quot;Movie.ReleaseDate&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+&lt;/div&gt;
+</code></pre>
+<pre><code class="language-html">&lt;div class=&quot;form-group&quot;&gt;
+    &lt;label class=&quot;control-label&quot; for=&quot;Movie_ReleaseDate&quot;&gt;Release Date&lt;/label&gt;
+    &lt;input class=&quot;form-control&quot; type=&quot;date&quot; data-val=&quot;true&quot;
+        data-val-required=&quot;The Release Date field is required.&quot;
+        id=&quot;Movie_ReleaseDate&quot; name=&quot;Movie.ReleaseDate&quot; value=&quot;&quot;&gt;
+    &lt;span class=&quot;text-danger field-validation-valid&quot;
+        data-valmsg-for=&quot;Movie.ReleaseDate&quot; data-valmsg-replace=&quot;true&quot;&gt;&lt;/span&gt;
+&lt;/div&gt;
+</code></pre>
+<h2><a href="#unobtrusive-validation" aria-hidden="true" class="anchor" id="unobtrusive-validation"></a>Unobtrusive validation</h2>
+<h3><a href="#add-validation-to-dynamic-forms" aria-hidden="true" class="anchor" id="add-validation-to-dynamic-forms"></a>Add Validation to Dynamic Forms</h3>
+<pre><code class="language-javascript">$.get({
+    url: &quot;https://url/that/returns/a/form&quot;,
+    dataType: &quot;html&quot;,
+    error: function(jqXHR, textStatus, errorThrown) {
+        alert(textStatus + &quot;: Couldn't add form. &quot; + errorThrown);
+    },
+    success: function(newFormHTML) {
+        var container = document.getElementById(&quot;form-container&quot;);
+        container.insertAdjacentHTML(&quot;beforeend&quot;, newFormHTML);
+        var forms = container.getElementsByTagName(&quot;form&quot;);
+        var newForm = forms[forms.length - 1];
+        $.validator.unobtrusive.parse(newForm);
+    }
+})
+</code></pre>
+<h3><a href="#add-validation-to-dynamic-controls" aria-hidden="true" class="anchor" id="add-validation-to-dynamic-controls"></a>Add Validation to Dynamic Controls</h3>
+<pre><code class="language-javascript">$.get({
+    url: &quot;https://url/that/returns/a/control&quot;,
+    dataType: &quot;html&quot;,
+    error: function(jqXHR, textStatus, errorThrown) {
+        alert(textStatus + &quot;: Couldn't add control. &quot; + errorThrown);
+    },
+    success: function(newInputHTML) {
+        var form = document.getElementById(&quot;my-form&quot;);
+        form.insertAdjacentHTML(&quot;beforeend&quot;, newInputHTML);
+        $(form).removeData(&quot;validator&quot;)    // Added by jQuery Validation
+               .removeData(&quot;unobtrusiveValidation&quot;);   // Added by jQuery Unobtrusive Validation
+        $.validator.unobtrusive.parse(form);
+    }
+})
+</code></pre>
+<h2><a href="#custom-client-side-validation" aria-hidden="true" class="anchor" id="custom-client-side-validation"></a>Custom client-side validation</h2>
+<pre><code class="language-javascript">$.validator.addMethod('classicmovie', function (value, element, params) {
+    var genre = $(params[0]).val(), year = params[1], date = new Date(value);
+
+    // The Classic genre has a value of '0'.
+    if (genre &amp;&amp; genre.length &gt; 0 &amp;&amp; genre[0] === '0') {
+        // The release date for a Classic is valid if it's no greater than the given year.
+        return date.getUTCFullYear() &lt;= year;
+    }
+
+    return true;
+});
+
+$.validator.unobtrusive.adapters.add('classicmovie', ['year'], function (options) {
+    var element = $(options.form).find('select#Movie_Genre')[0];
+
+    options.rules['classicmovie'] = [element, parseInt(options.params['year'])];
+    options.messages['classicmovie'] = options.message;
+});
+</code></pre>
+<ul>
+<li>
+<p>Flag the field as being subject to validation (data-val=&quot;true&quot;).</p>
+</li>
+<li>
+<p>Identify a validation rule name and error message text (for example, <code>data-</code>val-rulename=&quot;Error message.&quot;).</p>
+</li>
+<li>
+<p>Provide any additional parameters the validator needs (for example, <code>data-</code>val-rulename-param1=&quot;value&quot;).</p>
+</li>
+</ul>
+<pre><code class="language-html">&lt;input class=&quot;form-control&quot; type=&quot;date&quot;
+    data-val=&quot;true&quot;
+    data-val-classicmovie=&quot;Classic movies must have a release year no later than 1960.&quot;
+    data-val-classicmovie-year=&quot;1960&quot;
+    data-val-required=&quot;The Release Date field is required.&quot;
+    id=&quot;Movie_ReleaseDate&quot; name=&quot;Movie.ReleaseDate&quot; value=&quot;&quot;&gt;
+</code></pre>
+<ul>
+<li>
+<p>Create a class that derives from AttributeAdapterBase<TAttribute> and a class that implements IValidationAttributeAdapterProvider, and register your attribute and its adapter in DI. This method follows the single responsibility principle in that server-related and client-related validation code is in separate classes. The adapter also has the advantage that since it's registered in DI, other services in DI are available to it if needed.</p>
+</li>
+<li>
+<p>Implement IClientModelValidator in your ValidationAttribute class. This method might be appropriate if the attribute doesn't do any server-side validation and doesn't need any services from DI.</p>
+</li>
+</ul>
+<h3><a href="#attributeadapter-for-client-side-validation" aria-hidden="true" class="anchor" id="attributeadapter-for-client-side-validation"></a>AttributeAdapter for client-side validation</h3>
+<ul>
+<li>Create an attribute adapter class for the custom validation attribute. Derive the class from AttributeAdapterBase<TAttribute>. Create an <code>AddValidation</code> method that adds data- attributes to the rendered output, as shown in this example:</li>
+</ul>
+<pre><code class="language-csharp">public class ClassicMovieAttributeAdapter : AttributeAdapterBase&lt;ClassicMovieAttribute&gt;
+{
+    public ClassicMovieAttributeAdapter(
+        ClassicMovieAttribute attribute, IStringLocalizer? stringLocalizer)
+        : base(attribute, stringLocalizer)
+    {
+
+    }
+
+    public override void AddValidation(ClientModelValidationContext context)
+    {
+        MergeAttribute(context.Attributes, &quot;data-val&quot;, &quot;true&quot;);
+        MergeAttribute(context.Attributes, &quot;data-val-classicmovie&quot;, GetErrorMessage(context));
+
+        var year = Attribute.Year.ToString(CultureInfo.InvariantCulture);
+        MergeAttribute(context.Attributes, &quot;data-val-classicmovie-year&quot;, year);
+    }
+
+    public override string GetErrorMessage(ModelValidationContextBase validationContext)
+        =&gt; Attribute.GetErrorMessage();
+}
+</code></pre>
+<ul>
+<li>Create an adapter provider class that implements IValidationAttributeAdapterProvider. In the GetAttributeAdapter method pass in the custom attribute to the adapter's constructor, as shown in this example:</li>
+</ul>
+<pre><code class="language-csharp">public class CustomValidationAttributeAdapterProvider : IValidationAttributeAdapterProvider
+{
+    private readonly IValidationAttributeAdapterProvider baseProvider =
+        new ValidationAttributeAdapterProvider();
+
+    public IAttributeAdapter? GetAttributeAdapter(
+        ValidationAttribute attribute, IStringLocalizer? stringLocalizer)
+    {
+        if (attribute is ClassicMovieAttribute classicMovieAttribute)
+        {
+            return new ClassicMovieAttributeAdapter(classicMovieAttribute, stringLocalizer);
+        }
+
+        return baseProvider.GetAttributeAdapter(attribute, stringLocalizer);
+    }
+}
+</code></pre>
+<ul>
+<li>Register the adapter provider for DI in <code>Program.cs</code>:</li>
+</ul>
+<pre><code class="language-csharp">builder.Services.AddRazorPages()
+    .AddMvcOptions(options =&gt;
+    {
+        options.MaxModelValidationErrors = 50;
+        options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(
+            _ =&gt; &quot;The field is required.&quot;);
+    });
+
+builder.Services.AddSingleton
+    &lt;IValidationAttributeAdapterProvider, CustomValidationAttributeAdapterProvider&gt;();
+</code></pre>
+<h3><a href="#iclientmodelvalidator-for-client-side-validation" aria-hidden="true" class="anchor" id="iclientmodelvalidator-for-client-side-validation"></a>IClientModelValidator for client-side validation</h3>
+<ul>
+<li>In the custom validation attribute, implement the IClientModelValidator interface and create an <code>AddValidation</code> method. In the <code>AddValidation</code> method, add data- attributes for validation, as shown in the following example:</li>
+</ul>
+<pre><code class="language-csharp">public class ClassicMovieWithClientValidatorAttribute :
+    ValidationAttribute, IClientModelValidator
+{
+    public ClassicMovieWithClientValidatorAttribute(int year)
+        =&gt; Year = year;
+
+    public int Year { get; }
+
+    public void AddValidation(ClientModelValidationContext context)
+    {
+        MergeAttribute(context.Attributes, &quot;data-val&quot;, &quot;true&quot;);
+        MergeAttribute(context.Attributes, &quot;data-val-classicmovie&quot;, GetErrorMessage());
+
+        var year = Year.ToString(CultureInfo.InvariantCulture);
+        MergeAttribute(context.Attributes, &quot;data-val-classicmovie-year&quot;, year);
+    }
+
+    public string GetErrorMessage() =&gt;
+        $&quot;Classic movies must have a release year no later than {Year}.&quot;;
+
+    protected override ValidationResult? IsValid(
+        object? value, ValidationContext validationContext)
+    {
+        var movie = (Movie)validationContext.ObjectInstance;
+        var releaseYear = ((DateTime)value!).Year;
+
+        if (movie.Genre == Genre.Classic &amp;&amp; releaseYear &gt; Year)
+        {
+            return new ValidationResult(GetErrorMessage());
+        }
+
+        return ValidationResult.Success;
+    }
+
+    private static bool MergeAttribute(IDictionary&lt;string, string&gt; attributes, string key, string value)
+    {
+        if (attributes.ContainsKey(key))
+        {
+            return false;
+        }
+
+        attributes.Add(key, value);
+        return true;
+    }
+}
+</code></pre>
+<h2><a href="#disable-client-side-validation" aria-hidden="true" class="anchor" id="disable-client-side-validation"></a>Disable client-side validation</h2>
+<pre><code class="language-csharp">builder.Services.AddRazorPages()
+    .AddViewOptions(options =&gt;
+    {
+        options.HtmlHelperOptions.ClientValidationEnabled = false;
+    });
+</code></pre>
+<ul>
+<li>
+<p>Comment out the reference to <code>_ValidationScriptsPartial</code> in all the <code>.cshtml</code> files.</p>
+</li>
+<li>
+<p>Remove the contents of the Pages\Shared_ValidationScriptsPartial.cshtml file.</p>
+</li>
+</ul>
+<h2><a href="#problem-details" aria-hidden="true" class="anchor" id="problem-details"></a>Problem details</h2>
+<ul>
+<li>
+<p>ExceptionHandlerMiddleware: Generates a problem details response when a custom handler is not defined.</p>
+</li>
+<li>
+<p>StatusCodePagesMiddleware: Generates a problem details response by default.</p>
+</li>
+<li>
+<p>DeveloperExceptionPageMiddleware: Generates a problem details response in development when the <code>Accept</code> request HTTP header doesn't include <code>text/html</code>.</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>System.ComponentModel.DataAnnotations</p>
+</li>
+<li>
+<p>Model Binding</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/mvc/models/validation?view=aspnetcore-8.0">Model validation in ASP.NET Core MVC and Razor Pages</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

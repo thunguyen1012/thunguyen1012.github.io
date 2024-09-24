@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Request decompression | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Request decompression</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Request decompression middleware:</p>
+<ul>
+<li>
+<p>Enables API endpoints to accept requests with compressed content.</p>
+</li>
+<li>
+<p>Uses the <code>Content-Encoding</code> HTTP header to automatically identify and decompress requests which contain compressed content.</p>
+</li>
+<li>
+<p>Eliminates the need to write code to handle compressed requests.</p>
+</li>
+</ul>
+<p>When the <code>Content-Encoding</code> header value on a request matches one of the available decompression providers, the middleware:</p>
+<ul>
+<li>
+<p>Uses the matching provider to wrap the HttpRequest.Body in an appropriate decompression stream.</p>
+</li>
+<li>
+<p>Removes the <code>Content-Encoding</code> header, indicating that the request body is no longer compressed.</p>
+</li>
+</ul>
+<p>Requests that don't include a <code>Content-Encoding</code> header are ignored by the request decompression middleware.</p>
+<p>Decompression:</p>
+<ul>
+<li>
+<p>Occurs when the body of the request is read. That is, decompression occurs at the endpoint on model binding. The request body isn't decompressed eagerly.</p>
+</li>
+<li>
+<p>When attempting to read the decompressed request body with invalid compressed data for the specified <code>Content-Encoding</code>, an exception is thrown. Brotli can throw System.InvalidOperationException: Decoder ran into invalid data. Deflate and GZip can throw System.IO.InvalidDataException: The archive entry was compressed using an unsupported compression method.</p>
+</li>
+</ul>
+<p>If the middleware encounters a request with compressed content but is unable to decompress it, the request is passed to the next delegate in the pipeline. For example, a request with an unsupported <code>Content-Encoding</code> header value or multiple <code>Content-Encoding</code> header values is passed to the next delegate in the pipeline.</p>
+<h2><a href="#configuration" aria-hidden="true" class="anchor" id="configuration"></a>Configuration</h2>
+<p>The following code uses AddRequestDecompression(IServiceCollection) and UseRequestDecompression to enable request decompression for the default <code>Content-Encoding</code> types:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRequestDecompression();
+
+var app = builder.Build();
+
+app.UseRequestDecompression();
+
+app.MapPost(&quot;/&quot;, (HttpRequest request) =&gt; Results.Stream(request.Body));
+
+app.Run();
+</code></pre>
+<h2><a href="#default-decompression-providers" aria-hidden="true" class="anchor" id="default-decompression-providers"></a>Default decompression providers</h2>
+<p>The <code>Content-Encoding</code> header values that the request decompression middleware supports by default are listed in the following table:</p>
+<table><thead>
+<tr>
+<th><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding" data-linktype="external"><code>Content-Encoding</code></a> header values</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>br</code></td>
+<td><a href="https://tools.ietf.org/html/rfc7932" data-linktype="external">Brotli compressed data format</a></td>
+</tr>
+<tr>
+<td><code>deflate</code></td>
+<td><a href="https://tools.ietf.org/html/rfc1951" data-linktype="external">DEFLATE compressed data format</a></td>
+</tr>
+<tr>
+<td><code>gzip</code></td>
+<td><a href="https://tools.ietf.org/html/rfc1952" data-linktype="external">Gzip file format</a></td>
+</tr>
+</tbody></table>
+<h2><a href="#custom-decompression-providers" aria-hidden="true" class="anchor" id="custom-decompression-providers"></a>Custom decompression providers</h2>
+<p>Support for custom encodings can be added by creating custom decompression provider classes that implement IDecompressionProvider:</p>
+<pre><code class="language-csharp">public class CustomDecompressionProvider : IDecompressionProvider
+{
+    public Stream GetDecompressionStream(Stream stream)
+    {
+        // Perform custom decompression logic here
+        return stream;
+    }
+}
+</code></pre>
+<p>Custom decompression providers are registered with RequestDecompressionOptions along with their corresponding <code>Content-Encoding</code> header values:</p>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRequestDecompression(options =&gt;
+{
+    options.DecompressionProviders.Add(&quot;custom&quot;, new CustomDecompressionProvider());
+});
+
+var app = builder.Build();
+
+app.UseRequestDecompression();
+
+app.MapPost(&quot;/&quot;, (HttpRequest request) =&gt; Results.Stream(request.Body));
+
+app.Run();
+</code></pre>
+<h2><a href="#request-size-limits" aria-hidden="true" class="anchor" id="request-size-limits"></a>Request size limits</h2>
+<p>In order to guard against zip bombs or decompression bombs:</p>
+<ul>
+<li>
+<p>The maximum size of the decompressed request body is limited to the request body size limit enforced by the endpoint or server.</p>
+</li>
+<li>
+<p>If the number of bytes read from the decompressed request body stream exceeds the limit, an InvalidOperationException is thrown to prevent additional bytes from being read from the stream.</p>
+</li>
+</ul>
+<p>In order of precedence, the maximum request size for an endpoint is set by:</p>
+<ul>
+<li>
+<p>IRequestSizeLimitMetadata.MaxRequestBodySize, such as RequestSizeLimitAttribute or DisableRequestSizeLimitAttribute for MVC endpoints.</p>
+</li>
+<li>
+<p>The global server size limit IHttpMaxRequestBodySizeFeature.MaxRequestBodySize. <code>MaxRequestBodySize</code> can be overridden per request with IHttpMaxRequestBodySizeFeature.MaxRequestBodySize, but defaults to the limit configured for the web server implementation.</p>
+</li>
+</ul>
+<table><thead>
+<tr>
+<th>Web server implementation</th>
+<th><code>MaxRequestBodySize</code> configuration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../servers/httpsys?view=aspnetcore-8.0" data-linktype="relative-path">HTTP.sys</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.server.httpsys.httpsysoptions.maxrequestbodysize#microsoft-aspnetcore-server-httpsys-httpsysoptions-maxrequestbodysize" class="no-loc" data-linktype="absolute-path">HttpSysOptions.MaxRequestBodySize</a></td>
+</tr>
+<tr>
+<td><a href="../../host-and-deploy/iis/?view=aspnetcore-8.0" data-linktype="relative-path">IIS</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.builder.iisserveroptions.maxrequestbodysize#microsoft-aspnetcore-builder-iisserveroptions-maxrequestbodysize" class="no-loc" data-linktype="absolute-path">IISServerOptions.MaxRequestBodySize</a></td>
+</tr>
+<tr>
+<td><a href="../servers/kestrel?view=aspnetcore-8.0" data-linktype="relative-path">Kestrel</a></td>
+<td><a href="/en-us/dotnet/api/microsoft.aspnetcore.server.kestrel.core.kestrelserverlimits.maxrequestbodysize#microsoft-aspnetcore-server-kestrel-core-kestrelserverlimits-maxrequestbodysize" class="no-loc" data-linktype="absolute-path">KestrelServerLimits.MaxRequestBodySize</a></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p class='warning'>Warning
+Disabling the request body size limit poses a security risk in regards to uncontrolled resource consumption, particularly if the request body is being buffered. Ensure that safeguards are in place to mitigate the risk of denial-of-service (DoS) attacks.</p>
+</blockquote>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional Resources</h2>
+<ul>
+<li>
+<p>ASP.NET Core Middleware</p>
+</li>
+<li>
+<p>Mozilla Developer Network: <code>Content-Encoding</code></p>
+</li>
+<li>
+<p>Brotli Compressed Data Format</p>
+</li>
+<li>
+<p>DEFLATE Compressed Data Format Specification version 1.3</p>
+</li>
+<li>
+<p>GZIP file format specification version 4.3</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/request-decompression?view=aspnetcore-8.0">Request decompression in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

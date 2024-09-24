@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Globalization and localization - Troubleshoot | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Globalization and localization - Troubleshoot</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article provides instructions on how to diagnose ASP.NET Core app localization issues.</p>
+<h2><a href="#localization-configuration-issues" aria-hidden="true" class="anchor" id="localization-configuration-issues"></a>Localization configuration issues</h2>
+<p>Localization middleware order
+The app may not localize because the localization middleware isn't ordered as expected.</p>
+<p>To resolve this issue, ensure that localization middleware is registered before MVC middleware. Otherwise, the localization middleware isn't applied.</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services.AddLocalization(options =&gt; options.ResourcesPath = &quot;Resources&quot;);
+
+    services.AddMvc();
+}
+</code></pre>
+<p>Localization resources path not found</p>
+<p>Supported Cultures in RequestCultureProvider don't match with registered once</p>
+<h2><a href="#resource-file-naming-issues" aria-hidden="true" class="anchor" id="resource-file-naming-issues"></a>Resource file naming issues</h2>
+<p>ASP.NET Core has predefined rules and guidelines for localization resources file naming, which are described in Globalization and localization in ASP.NET Core.</p>
+<h2><a href="#missing-resources" aria-hidden="true" class="anchor" id="missing-resources"></a>Missing resources</h2>
+<p>Common causes of resources not being found include:</p>
+<ul>
+<li>
+<p>Resource names are misspelled in either the .NET XML resource file (.resx) or the localizer request.</p>
+</li>
+<li>
+<p>The resource is missing from the resource file for some languages, but exists in others.</p>
+</li>
+<li>
+<p>If you're still having trouble, check the localization log messages (logged at the <code>Debug</code> log level) for more details about the missing resources.</p>
+</li>
+</ul>
+<blockquote>
+<p class='tip'>Tip
+When using CookieRequestCultureProvider, verify single quotes aren't used with the cultures inside the localization cookie value. For example, c='en-UK'|uic='en-US' is an invalid cookie value, while <code>c=en-UK|uic=en-US</code> is valid.</p>
+</blockquote>
+<h2><a href="#resources-and-class-libraries-issues" aria-hidden="true" class="anchor" id="resources-and-class-libraries-issues"></a>Resources and class libraries issues</h2>
+<p>ASP.NET Core by default provides a way to allow the class libraries to find their resource files via ResourceLocationAttribute.</p>
+<p>Common issues with class libraries include:</p>
+<ul>
+<li>
+<p>Missing the ResourceLocationAttribute in a class library prevents ResourceManagerStringLocalizerFactory from discovering the resources.</p>
+</li>
+<li>
+<p>Resource file naming. For more information, see the Resource file naming issues section.</p>
+</li>
+<li>
+<p>Changing the root namespace of the class library. For more information, see the Root namespace issues section.</p>
+</li>
+</ul>
+<h2><a href="#customrequestcultureprovider-doesnt-work-as-expected" aria-hidden="true" class="anchor" id="customrequestcultureprovider-doesnt-work-as-expected"></a><code>CustomRequestCultureProvider</code> doesn't work as expected</h2>
+<p>The RequestLocalizationOptions class has three default providers:</p>
+<ul>
+<li>
+<p>QueryStringRequestCultureProvider</p>
+</li>
+<li>
+<p>CookieRequestCultureProvider</p>
+</li>
+<li>
+<p>AcceptLanguageHeaderRequestCultureProvider</p>
+</li>
+</ul>
+<p>The <code>CustomRequestCultureProvider</code> allows you to customize how the localization culture is provided. The <code>CustomRequestCultureProvider</code> is used when the default providers don't meet your requirements.</p>
+<p>A common reason for a custom provider not working properly is that it isn't the first provider in the RequestCultureProviders list. To resolve this issue:</p>
+<ul>
+<li>Insert the custom provider at position zero in the RequestCultureProviders list:</li>
+</ul>
+<pre><code class="language-csharp">options.AddInitialRequestCultureProvider(
+    new CustomRequestCultureProvider(async context =&gt;
+    {
+        // My custom request culture logic
+        return new ProviderCultureResult(&quot;en&quot;);
+    }));
+</code></pre>
+<ul>
+<li>Use the AddInitialRequestCultureProvider extension method to set the custom provider as the initial provider.</li>
+</ul>
+<h2><a href="#root-namespace-issues" aria-hidden="true" class="anchor" id="root-namespace-issues"></a>Root namespace issues</h2>
+<p>When the root namespace of an assembly is different than the assembly name, localization doesn't work by default. To avoid this issue use the <code>RootNamespace</code> attribute, which is described in Globalization and localization in ASP.NET Core.</p>
+<blockquote>
+<p class='warning'>Warning
+A root namespace issue can occur when a project's name isn't a valid .NET identifier. For instance, <code>my-project-name.csproj</code> uses the root namespace <code>my_project_name</code> and the assembly name <code>my-project-name</code>, which results in this error.</p>
+</blockquote>
+<h2><a href="#resources-and-build-action" aria-hidden="true" class="anchor" id="resources-and-build-action"></a>Resources and build action</h2>
+<p>If you use resource files for localization, it's important that they have an appropriate build action. Use Embedded Resource; otherwise, the <code>ResourceStringLocalizer</code> isn't able to find these resources.</p>
+<h2><a href="#location-override-using-sensors"-pane-in-developer-tools" aria-hidden="true" class="anchor" id="location-override-using-sensors"-pane-in-developer-tools"></a>Location override using &quot;Sensors&quot; pane in developer tools</h2>
+<p>When using the location override using the Sensors pane in Google Chrome or Microsoft Edge developer tools, the fallback language is reset after prerendering.</p>
+<p>For more information, see Blazor Localization does not work with InteractiveServer (dotnet/aspnetcore #53707).</p>
+<h2><a href="#github-issues-with-helpful-problem-solving-tips" aria-hidden="true" class="anchor" id="github-issues-with-helpful-problem-solving-tips"></a>GitHub issues with helpful problem solving tips</h2>
+<ul>
+<li>
+<p>Please add more info about shared files (dotnet/AspNetCore.Docs #28674</p>
+</li>
+<li>
+<p>Blazor Localization does not work with InteractiveServer (dotnet/aspnetcore #53707) (Location override using &quot;Sensors&quot; pane)</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/troubleshoot-aspnet-core-localization?view=aspnetcore-8.0">Troubleshoot ASP.NET Core localization</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

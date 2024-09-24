@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Globalization and localization - Select language/culture | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Globalization and localization - Select language/culture</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#configure-localization-middleware" aria-hidden="true" class="anchor" id="configure-localization-middleware"></a>Configure Localization middleware</h2>
+<pre><code class="language-csharp">builder.Services.Configure&lt;RequestLocalizationOptions&gt;(options =&gt;
+{
+    var supportedCultures = new[] { &quot;en-US&quot;, &quot;fr&quot; };
+    options.SetDefaultCulture(supportedCultures[0])
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures);
+});
+</code></pre>
+<ul>
+<li>
+<p><code>QueryStringRequestCultureProvider</code></p>
+</li>
+<li>
+<p><code>CookieRequestCultureProvider</code></p>
+</li>
+<li>
+<p>AcceptLanguageHeaderRequestCultureProvider</p>
+</li>
+</ul>
+<h2><a href="#querystringrequestcultureprovider" aria-hidden="true" class="anchor" id="querystringrequestcultureprovider"></a><code>QueryStringRequestCultureProvider</code></h2>
+<h2><a href="#cookierequestcultureprovider" aria-hidden="true" class="anchor" id="cookierequestcultureprovider"></a><code>CookieRequestCultureProvider</code></h2>
+<h2><a href="#the-accept-language-http-header" aria-hidden="true" class="anchor" id="the-accept-language-http-header"></a>The Accept-Language HTTP header</h2>
+<h2><a href="#set-the-accept-language-http-header-in-edge" aria-hidden="true" class="anchor" id="set-the-accept-language-http-header-in-edge"></a>Set the Accept-Language HTTP header in Edge</h2>
+<ul>
+<li>
+<p>Search Settings for Preferred languages.</p>
+</li>
+<li>
+<p>The preferred languages are listed in the Preferred languages box.</p>
+</li>
+<li>
+<p>Select Add languages to add to the list.</p>
+</li>
+<li>
+<p>Select More actions … next to a language to change the order of preference.</p>
+</li>
+</ul>
+<h2><a href="#the-content-language-http-header" aria-hidden="true" class="anchor" id="the-content-language-http-header"></a>The <code>Content-Language</code> HTTP header</h2>
+<ul>
+<li>
+<p>Is used to describe the language(s) intended for the audience.</p>
+</li>
+<li>
+<p>Allows a user to differentiate according to the users' own preferred language.</p>
+</li>
+<li>
+<p>Allows the <code>RequestLocalizationMiddleware</code> to set the <code>Content-Language</code> header with the <code>CurrentUICulture</code>.</p>
+</li>
+<li>
+<p>Eliminates the need to set the response header <code>Content-Language</code> explicitly.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    ApplyCurrentCultureToResponseHeaders = true
+});
+</code></pre>
+<h2><a href="#apply-the-routedatarequest-cultureprovider" aria-hidden="true" class="anchor" id="apply-the-routedatarequest-cultureprovider"></a>Apply the RouteDataRequest CultureProvider</h2>
+<ul>
+<li>
+<p>Using the middleware as filters feature of ASP.NET Core.</p>
+</li>
+<li>
+<p>How to use <code>RouteDataRequestCultureProvider</code> to set the <code>culture</code> of an app from the url.</p>
+</li>
+</ul>
+<h2><a href="#use-a-custom-provider" aria-hidden="true" class="anchor" id="use-a-custom-provider"></a>Use a custom provider</h2>
+<pre><code class="language-csharp">private const string enUSCulture = &quot;en-US&quot;;
+
+services.Configure&lt;RequestLocalizationOptions&gt;(options =&gt;
+{
+    var supportedCultures = new[]
+    {
+        new CultureInfo(enUSCulture),
+        new CultureInfo(&quot;fr&quot;)
+    };
+
+    options.DefaultRequestCulture = new RequestCulture(culture: enUSCulture, uiCulture: enUSCulture);
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+
+    options.AddInitialRequestCultureProvider(new CustomRequestCultureProvider(async context =&gt;
+    {
+        // My custom request culture logic
+        return await Task.FromResult(new ProviderCultureResult(&quot;en&quot;));
+    }));
+});
+</code></pre>
+<h2><a href="#change-request-culture-providers-order" aria-hidden="true" class="anchor" id="change-request-culture-providers-order"></a>Change request <code>culture</code> providers order</h2>
+<pre><code class="language-csharp">app.UseRequestLocalization(options =&gt;
+    {
+        var questStringCultureProvider = options.RequestCultureProviders[0];    
+        options.RequestCultureProviders.RemoveAt(0);
+        options.RequestCultureProviders.Insert(1, questStringCultureProvider);
+    });
+</code></pre>
+<h2><a href="#user-override-culture" aria-hidden="true" class="anchor" id="user-override-culture"></a>User override <code>culture</code></h2>
+<pre><code class="language-csharp">app.UseRequestLocalization(options =&gt;
+    {
+        options.CultureInfoUseUserOverride = false;
+    });
+</code></pre>
+<h2><a href="#set-the-culture-programmatically" aria-hidden="true" class="anchor" id="set-the-culture-programmatically"></a>Set the <code>culture</code> programmatically</h2>
+<pre><code class="language-cshtml">@using Microsoft.AspNetCore.Builder
+@using Microsoft.AspNetCore.Http.Features
+@using Microsoft.AspNetCore.Localization
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Microsoft.Extensions.Options
+
+@inject IViewLocalizer Localizer
+@inject IOptions&lt;RequestLocalizationOptions&gt; LocOptions
+
+@{
+    var requestCulture = Context.Features.Get&lt;IRequestCultureFeature&gt;();
+    var cultureItems = LocOptions.Value.SupportedUICultures
+        .Select(c =&gt; new SelectListItem { Value = c.Name, Text = c.DisplayName })
+        .ToList();
+    var returnUrl = string.IsNullOrEmpty(Context.Request.Path) ? &quot;~/&quot; : $&quot;~{Context.Request.Path.Value}&quot;;
+}
+
+&lt;div title=&quot;@Localizer[&quot;Request culture provider:&quot;] @requestCulture?.Provider?.GetType().Name&quot;&gt;
+    &lt;form id=&quot;selectLanguage&quot; asp-controller=&quot;Home&quot; 
+          asp-action=&quot;SetLanguage&quot; asp-route-returnUrl=&quot;@returnUrl&quot; 
+          method=&quot;post&quot; class=&quot;form-horizontal&quot; role=&quot;form&quot;&gt;
+        &lt;label asp-for=&quot;@requestCulture.RequestCulture.UICulture.Name&quot;&gt;@Localizer[&quot;Language:&quot;]&lt;/label&gt; &lt;select name=&quot;culture&quot;
+          onchange=&quot;this.form.submit();&quot;
+          asp-for=&quot;@requestCulture.RequestCulture.UICulture.Name&quot; asp-items=&quot;cultureItems&quot;&gt;
+        &lt;/select&gt;
+    &lt;/form&gt;
+&lt;/div&gt;
+</code></pre>
+<pre><code class="language-cshtml">&lt;div class=&quot;container body-content&quot; style=&quot;margin-top:60px&quot;&gt;
+    @RenderBody()
+    &lt;hr&gt;
+    &lt;footer&gt;
+        &lt;div class=&quot;row&quot;&gt;
+            &lt;div class=&quot;col-md-6&quot;&gt;
+                &lt;p&gt;&amp;copy; @System.DateTime.Now.Year - Localization&lt;/p&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;col-md-6 text-right&quot;&gt;
+                @await Html.PartialAsync(&quot;_SelectLanguagePartial&quot;)
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/footer&gt;
+&lt;/div&gt;
+</code></pre>
+<pre><code class="language-csharp">[HttpPost]
+public IActionResult SetLanguage(string culture, string returnUrl)
+{
+    Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+        new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+    );
+
+    return LocalRedirect(returnUrl);
+}
+</code></pre>
+<h2><a href="#model-binding-route-data-and-query-strings" aria-hidden="true" class="anchor" id="model-binding-route-data-and-query-strings"></a>Model binding route data and query strings</h2>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<ul>
+<li>
+<p>Make the app's content localizable.</p>
+</li>
+<li>
+<p>Provide localized resources for the languages and cultures the app supports</p>
+</li>
+</ul>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Url <code>culture</code> provider using middleware as filters in ASP.NET Core</p>
+</li>
+<li>
+<p>Applying the RouteDataRequest CultureProvider globally with middleware as filters</p>
+</li>
+<li>
+<p>Globalization and localization in ASP.NET Core</p>
+</li>
+<li>
+<p>Make an ASP.NET Core app's content localizable</p>
+</li>
+<li>
+<p>Provide localized resources for languages and cultures in an ASP.NET Core app</p>
+</li>
+<li>
+<p>Troubleshoot ASP.NET Core localization</p>
+</li>
+<li>
+<p>Globalizing and localizing .NET applications</p>
+</li>
+<li>
+<p>Localization.StarterWeb project used in the article.</p>
+</li>
+<li>
+<p>Resources in .resx Files</p>
+</li>
+<li>
+<p>Microsoft Multilingual App Toolkit</p>
+</li>
+<li>
+<p>Localization &amp; Generics</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/localization/select-language-culture?view=aspnetcore-8.0">Implement a strategy to select the language/culture for each request in a localized ASP.NET Core app</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

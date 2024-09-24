@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Globalization and localization - Portable Object localization | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Globalization and localization - Portable Object localization</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#what-is-a-po-file" aria-hidden="true" class="anchor" id="what-is-a-po-file"></a>What is a PO file?</h2>
+<ul>
+<li>
+<p>PO files support pluralization; .resx files don't support pluralization.</p>
+</li>
+<li>
+<p>PO files aren't compiled like .resx files. As such, specialized tooling and build steps aren't required.</p>
+</li>
+<li>
+<p>PO files work well with collaborative online editing tools.</p>
+</li>
+</ul>
+<h3><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h3>
+<pre><code class="language-text">#: Pages/Index.cshtml:13
+msgid &quot;Hello world!&quot;
+msgstr &quot;Bonjour le monde!&quot;
+
+msgid &quot;There is one item.&quot;
+msgid_plural &quot;There are {0} items.&quot;
+msgstr[0] &quot;Il y a un élément.&quot;
+msgstr[1] &quot;Il y a {0} éléments.&quot;
+</code></pre>
+<ul>
+<li>
+<p>#:: A comment indicating the context of the string to be translated. The same string might be translated differently depending on where it's being used.</p>
+</li>
+<li>
+<p><code>msgid</code>: The untranslated string.</p>
+</li>
+<li>
+<p><code>msgstr</code>: The translated string.</p>
+</li>
+<li>
+<p><code>msgid_plural</code>: The untranslated plural string.</p>
+</li>
+<li>
+<p><code>msgstr[0]</code>: The translated string for the case 0.</p>
+</li>
+<li>
+<p><code>msgstr[N]</code>: The translated string for the case N.</p>
+</li>
+</ul>
+<h2><a href="#configuring-po-file-support-in-aspnet-core" aria-hidden="true" class="anchor" id="configuring-po-file-support-in-aspnet-core"></a>Configuring PO file support in ASP.NET Core</h2>
+<h3><a href="#referencing-the-package" aria-hidden="true" class="anchor" id="referencing-the-package"></a>Referencing the package</h3>
+<pre><code class="language-xml">&lt;PackageReference Include=&quot;OrchardCore.Localization.Core&quot; Version=&quot;1.5.0&quot; /&gt;
+</code></pre>
+<h3><a href="#registering-the-service" aria-hidden="true" class="anchor" id="registering-the-service"></a>Registering the service</h3>
+<pre><code class="language-csharp">builder.Services.AddPortableObjectLocalization();
+
+builder.Services
+    .Configure&lt;RequestLocalizationOptions&gt;(options =&gt; options
+        .AddSupportedCultures(&quot;fr&quot;, &quot;cs&quot;)
+        .AddSupportedUICultures(&quot;fr&quot;, &quot;cs&quot;));
+
+builder.Services
+    .AddRazorPages()
+    .AddViewLocalization();
+</code></pre>
+<pre><code class="language-cshtml">@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@inject IViewLocalizer Localizer
+@{
+    ViewData[&quot;Title&quot;] = &quot;Home&quot;;
+}
+
+&lt;div class=&quot;text-center&quot;&gt;
+    &lt;h1 class=&quot;display-4&quot;&gt;Welcome&lt;/h1&gt;
+    &lt;p&gt;Learn about &lt;a href=&quot;https://docs.microsoft.com/aspnet/core&quot;&gt;building Web apps with ASP.NET Core&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;@Localizer[&quot;Hello world!&quot;]&lt;/p&gt;
+</code></pre>
+<h3><a href="#creating-a-po-file" aria-hidden="true" class="anchor" id="creating-a-po-file"></a>Creating a PO file</h3>
+<pre><code class="language-text">msgid &quot;Hello world!&quot;
+msgstr &quot;Bonjour le monde!&quot;
+</code></pre>
+<h3><a href="#testing-the-application" aria-hidden="true" class="anchor" id="testing-the-application"></a>Testing the application</h3>
+<h2><a href="#pluralization" aria-hidden="true" class="anchor" id="pluralization"></a>Pluralization</h2>
+<h3><a href="#creating-pluralization-po-files" aria-hidden="true" class="anchor" id="creating-pluralization-po-files"></a>Creating pluralization PO files</h3>
+<pre><code class="language-text">msgid &quot;There is one item.&quot;
+msgid_plural &quot;There are {0} items.&quot;
+msgstr[0] &quot;Il y a un élément.&quot;
+msgstr[1] &quot;Il y a {0} éléments.&quot;
+</code></pre>
+<h3><a href="#adding-a-language-using-different-pluralization-forms" aria-hidden="true" class="anchor" id="adding-a-language-using-different-pluralization-forms"></a>Adding a language using different pluralization forms</h3>
+<pre><code class="language-text">msgid &quot;Hello world!&quot;
+msgstr &quot;Ahoj světe!!&quot;
+
+msgid &quot;There is one item.&quot;
+msgid_plural &quot;There are {0} items.&quot;
+msgstr[0] &quot;Existuje jedna položka.&quot;
+msgstr[1] &quot;Existují {0} položky.&quot;
+msgstr[2] &quot;Existuje {0} položek.&quot;
+</code></pre>
+<pre><code class="language-csharp">builder.Services
+    .Configure&lt;RequestLocalizationOptions&gt;(options =&gt; options
+        .AddSupportedCultures(&quot;fr&quot;, &quot;cs&quot;)
+        .AddSupportedUICultures(&quot;fr&quot;, &quot;cs&quot;));
+</code></pre>
+<pre><code class="language-cshtml">&lt;p&gt;@Localizer.Plural(1, &quot;There is one item.&quot;, &quot;There are {0} items.&quot;)&lt;/p&gt;
+&lt;p&gt;@Localizer.Plural(2, &quot;There is one item.&quot;, &quot;There are {0} items.&quot;)&lt;/p&gt;
+&lt;p&gt;@Localizer.Plural(5, &quot;There is one item.&quot;, &quot;There are {0} items.&quot;)&lt;/p&gt;
+</code></pre>
+<pre><code class="language-html">There is one item.
+There are 2 items.
+There are 5 items.
+</code></pre>
+<pre><code class="language-html">Il y a un élément.
+Il y a 2 éléments.
+Il y a 5 éléments.
+</code></pre>
+<pre><code class="language-html">Existuje jedna položka.
+Existují 2 položky.
+Existuje 5 položek.
+</code></pre>
+<h2><a href="#advanced-tasks" aria-hidden="true" class="anchor" id="advanced-tasks"></a>Advanced tasks</h2>
+<h3><a href="#using-additional-arguments" aria-hidden="true" class="anchor" id="using-additional-arguments"></a>Using additional arguments</h3>
+<pre><code class="language-cshtml">&lt;p&gt;@Localizer.Plural(count, &quot;There is one item with the color {1}.&quot;, &quot;There are {0} items. The main color is {1}.&quot;, color)&lt;/p&gt;
+</code></pre>
+<h3><a href="#contextualizing-strings" aria-hidden="true" class="anchor" id="contextualizing-strings"></a>Contextualizing strings</h3>
+<pre><code class="language-text">msgctxt &quot;Views.Home.About&quot;
+msgid &quot;Hello world!&quot;
+msgstr &quot;Bonjour le monde!&quot;
+</code></pre>
+<pre><code class="language-text">msgid &quot;Hello world!&quot;
+msgstr &quot;Bonjour le monde!&quot;
+</code></pre>
+<h3><a href="#changing-the-location-of-po-files" aria-hidden="true" class="anchor" id="changing-the-location-of-po-files"></a>Changing the location of PO files</h3>
+<pre><code class="language-csharp">services.AddPortableObjectLocalization(options =&gt; options.ResourcesPath = &quot;Localization&quot;);
+</code></pre>
+<h3><a href="#implementing-a-custom-logic-for-finding-localization-files" aria-hidden="true" class="anchor" id="implementing-a-custom-logic-for-finding-localization-files"></a>Implementing a custom logic for finding localization files</h3>
+<h3><a href="#using-a-different-default-pluralized-language" aria-hidden="true" class="anchor" id="using-a-different-default-pluralized-language"></a>Using a different default pluralized language</h3>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/portable-object-localization?view=aspnetcore-8.0">Configure portable object localization in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
