@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Change tokens | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Change tokens</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#ichangetoken-interface" aria-hidden="true" class="anchor" id="ichangetoken-interface"></a><code>IChangeToken</code> interface</h2>
+<ul>
+<li>
+<p><code>ActiveChangeCallbacks</code> indicate if the token proactively raises callbacks. If <code>ActiveChangedCallbacks</code> is set to <code>false</code>, a callback is never called, and the app must poll <code>HasChanged</code> for changes. It's also possible for a token to never be cancelled if no changes occur or the underlying change listener is disposed or disabled.</p>
+</li>
+<li>
+<p><code>HasChanged</code> receives a value that indicates if a change has occurred.</p>
+</li>
+</ul>
+<h2><a href="#changetoken-class" aria-hidden="true" class="anchor" id="changetoken-class"></a><code>ChangeToken</code> class</h2>
+<ul>
+<li>
+<p><code>Func&lt;IChangeToken&gt;</code> produces the token.</p>
+</li>
+<li>
+<p><code>Action</code> is called when the token changes.</p>
+</li>
+</ul>
+<h2><a href="#example-uses-of-change-tokens-in-aspnet-core" aria-hidden="true" class="anchor" id="example-uses-of-change-tokens-in-aspnet-core"></a>Example uses of change tokens in ASP.NET Core</h2>
+<ul>
+<li>
+<p>For monitoring changes to files, IFileProvider's Watch method creates an <code>IChangeToken</code> for the specified files or folder to watch.</p>
+</li>
+<li>
+<p><code>IChangeToken</code> tokens can be added to cache entries to trigger cache evictions on change.</p>
+</li>
+<li>
+<p>For <code>TOptions</code> changes, the default <code>OptionsMonitor&lt;TOptions&gt;</code> implementation of <code>IOptionsMonitor&lt;TOptions&gt;</code> has an overload that accepts one or more <code>IOptionsChangeTokenSource&lt;TOptions&gt;</code> instances. Each instance returns an <code>IChangeToken</code> to register a change notification callback for tracking options changes.</p>
+</li>
+</ul>
+<h2><a href="#monitor-for-configuration-changes" aria-hidden="true" class="anchor" id="monitor-for-configuration-changes"></a>Monitor for configuration changes</h2>
+<pre><code class="language-csharp">config.AddJsonFile(&quot;appsettings.json&quot;, optional: true, reloadOnChange: true)
+      .AddJsonFile($&quot;appsettings.{env.EnvironmentName}.json&quot;, optional: true, 
+          reloadOnChange: true);
+</code></pre>
+<pre><code class="language-csharp">public static byte[] ComputeHash(string filePath)
+{
+    var runCount = 1;
+
+    while(runCount &lt; 4)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                using (var fs = File.OpenRead(filePath))
+                {
+                    return System.Security.Cryptography.SHA1
+                        .Create().ComputeHash(fs);
+                }
+            }
+            else 
+            {
+                throw new FileNotFoundException();
+            }
+        }
+        catch (IOException ex)
+        {
+            if (runCount == 3)
+            {
+                throw;
+            }
+
+            Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, runCount)));
+            runCount++;
+        }
+    }
+
+    return new byte[20];
+}
+</code></pre>
+<h3><a href="#simple-startup-change-token" aria-hidden="true" class="anchor" id="simple-startup-change-token"></a>Simple startup change token</h3>
+<pre><code class="language-csharp">ChangeToken.OnChange(
+    () =&gt; config.GetReloadToken(),
+    (state) =&gt; InvokeChanged(state),
+    env);
+</code></pre>
+<pre><code class="language-csharp">private void InvokeChanged(IWebHostEnvironment env)
+{
+    byte[] appsettingsHash = ComputeHash(&quot;appSettings.json&quot;);
+    byte[] appsettingsEnvHash = 
+        ComputeHash($&quot;appSettings.{env.EnvironmentName}.json&quot;);
+
+    if (!_appsettingsHash.SequenceEqual(appsettingsHash) || 
+        !_appsettingsEnvHash.SequenceEqual(appsettingsEnvHash))
+    {
+        _appsettingsHash = appsettingsHash;
+        _appsettingsEnvHash = appsettingsEnvHash;
+
+        WriteConsole(&quot;Configuration changed (Simple Startup Change Token)&quot;);
+    }
+}
+</code></pre>
+<h3><a href="#monitor-configuration-changes-as-a-service" aria-hidden="true" class="anchor" id="monitor-configuration-changes-as-a-service"></a>Monitor configuration changes as a service</h3>
+<ul>
+<li>
+<p>Basic startup token monitoring.</p>
+</li>
+<li>
+<p>Monitoring as a service.</p>
+</li>
+<li>
+<p>A mechanism to enable and disable monitoring.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public interface IConfigurationMonitor
+{
+    bool MonitoringEnabled { get; set; }
+    string CurrentState { get; set; }
+}
+</code></pre>
+<pre><code class="language-csharp">public ConfigurationMonitor(IConfiguration config, IWebHostEnvironment env)
+{
+    _env = env;
+
+    ChangeToken.OnChange&lt;IConfigurationMonitor&gt;(
+        () =&gt; config.GetReloadToken(),
+        InvokeChanged,
+        this);
+}
+
+public bool MonitoringEnabled { get; set; } = false;
+public string CurrentState { get; set; } = &quot;Not monitoring&quot;;
+</code></pre>
+<ul>
+<li>
+<p><code>MonitoringEnabled</code>: Indicates if the callback should run its custom code.</p>
+</li>
+<li>
+<p><code>CurrentState</code>: Describes the current monitoring <code>state</code> for use in the UI.</p>
+</li>
+<li>
+<p>Doesn't run its code unless <code>MonitoringEnabled</code> is <code>true</code>.</p>
+</li>
+<li>
+<p>Outputs the current <code>state</code> in its <code>WriteConsole</code> output.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">private void InvokeChanged(IConfigurationMonitor state)
+{
+    if (MonitoringEnabled)
+    {
+        byte[] appsettingsHash = ComputeHash(&quot;appSettings.json&quot;);
+        byte[] appsettingsEnvHash = 
+            ComputeHash($&quot;appSettings.{_env.EnvironmentName}.json&quot;);
+
+        if (!_appsettingsHash.SequenceEqual(appsettingsHash) || 
+            !_appsettingsEnvHash.SequenceEqual(appsettingsEnvHash))
+        {
+            string message = $&quot;State updated at {DateTime.Now}&quot;;
+          
+
+            _appsettingsHash = appsettingsHash;
+            _appsettingsEnvHash = appsettingsEnvHash;
+
+            WriteConsole(&quot;Configuration changed (ConfigurationMonitor Class) &quot; +
+                $&quot;{message}, state:{state.CurrentState}&quot;);
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">services.AddSingleton&lt;IConfigurationMonitor, ConfigurationMonitor&gt;();
+</code></pre>
+<pre><code class="language-csharp">public IndexModel(
+    IConfiguration config, 
+    IConfigurationMonitor monitor, 
+    FileService fileService)
+{
+    _config = config;
+    _monitor = monitor;
+    _fileService = fileService;
+}
+</code></pre>
+<pre><code class="language-csharp">public IActionResult OnPostStartMonitoring()
+{
+    _monitor.MonitoringEnabled = true;
+    _monitor.CurrentState = &quot;Monitoring!&quot;;
+
+    return RedirectToPage();
+}
+
+public IActionResult OnPostStopMonitoring()
+{
+    _monitor.MonitoringEnabled = false;
+    _monitor.CurrentState = &quot;Not monitoring&quot;;
+
+    return RedirectToPage();
+}
+</code></pre>
+<pre><code class="language-cshtml">&lt;button class=&quot;btn btn-success&quot; asp-page-handler=&quot;StartMonitoring&quot;&gt;
+    Start Monitoring
+&lt;/button&gt;
+
+&lt;button class=&quot;btn btn-danger&quot; asp-page-handler=&quot;StopMonitoring&quot;&gt;
+    Stop Monitoring
+&lt;/button&gt;
+</code></pre>
+<h2><a href="#monitor-cached-file-changes" aria-hidden="true" class="anchor" id="monitor-cached-file-changes"></a>Monitor cached file changes</h2>
+<ul>
+<li>
+<p>Return file content.</p>
+</li>
+<li>
+<p>Implement a retry algorithm with exponential back-off to cover cases where a file access problem temporarily delays reading the file's content.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public async static Task&lt;string&gt; GetFileContent(string filePath)
+{
+    var runCount = 1;
+
+    while(runCount &lt; 4)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                using (var fileStreamReader = File.OpenText(filePath))
+                {
+                    return await fileStreamReader.ReadToEndAsync();
+                }
+            }
+            else 
+            {
+                throw new FileNotFoundException();
+            }
+        }
+        catch (IOException ex)
+        {
+            if (runCount == 3)
+            {
+                throw;
+            }
+
+            Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, runCount)));
+            runCount++;
+        }
+    }
+
+    return null;
+}
+</code></pre>
+<ul>
+<li>
+<p>The file content is obtained using <code>GetFileContent</code>.</p>
+</li>
+<li>
+<p>A change token is obtained from the file provider with IFileProviders.Watch. The token's callback is triggered when the file is modified.</p>
+</li>
+<li>
+<p>The file content is cached with a sliding expiration period. The change token is attached with <code>MemoryCacheEntryExtensions.AddExpirationToken</code> to evict the cache entry if the file changes while it's cached.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class FileService
+{
+    private readonly IMemoryCache _cache;
+    private readonly IFileProvider _fileProvider;
+    private List&lt;string&gt; _tokens = new List&lt;string&gt;();
+
+    public FileService(IMemoryCache cache, IWebHostEnvironment env)
+    {
+        _cache = cache;
+        _fileProvider = env.ContentRootFileProvider;
+    }
+
+    public async Task&lt;string&gt; GetFileContents(string fileName)
+    {
+        var filePath = _fileProvider.GetFileInfo(fileName).PhysicalPath;
+        string fileContent;
+
+        // Try to obtain the file contents from the cache.
+        if (_cache.TryGetValue(filePath, out fileContent))
+        {
+            return fileContent;
+        }
+
+        // The cache doesn't have the entry, so obtain the file 
+        // contents from the file itself.
+        fileContent = await GetFileContent(filePath);
+
+        if (fileContent != null)
+        {
+            // Obtain a change token from the file provider whose
+            // callback is triggered when the file is modified.
+            var changeToken = _fileProvider.Watch(fileName);
+
+            // Configure the cache entry options for a five minute
+            // sliding expiration and use the change token to
+            // expire the file in the cache if the file is
+            // modified.
+            var cacheEntryOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+                .AddExpirationToken(changeToken);
+
+            // Put the file contents into the cache.
+            _cache.Set(filePath, fileContent, cacheEntryOptions);
+
+            return fileContent;
+        }
+
+        return string.Empty;
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">services.AddMemoryCache();
+services.AddSingleton&lt;FileService&gt;();
+</code></pre>
+<pre><code class="language-csharp">var fileContent = await _fileService.GetFileContents(&quot;poem.txt&quot;);
+</code></pre>
+<h2><a href="#compositechangetoken-class" aria-hidden="true" class="anchor" id="compositechangetoken-class"></a>CompositeChangeToken class</h2>
+<pre><code class="language-csharp">var firstCancellationTokenSource = new CancellationTokenSource();
+var secondCancellationTokenSource = new CancellationTokenSource();
+
+var firstCancellationToken = firstCancellationTokenSource.Token;
+var secondCancellationToken = secondCancellationTokenSource.Token;
+
+var firstCancellationChangeToken = new CancellationChangeToken(firstCancellationToken);
+var secondCancellationChangeToken = new CancellationChangeToken(secondCancellationToken);
+
+var compositeChangeToken = 
+    new CompositeChangeToken(
+        new List&lt;IChangeToken&gt; 
+        {
+            firstCancellationChangeToken, 
+            secondCancellationChangeToken
+        });
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Cache in-memory in ASP.NET Core</p>
+</li>
+<li>
+<p>Distributed caching in ASP.NET Core</p>
+</li>
+<li>
+<p>Response caching in ASP.NET Core</p>
+</li>
+<li>
+<p>Response Caching Middleware in ASP.NET Core</p>
+</li>
+<li>
+<p>Cache Tag Helper in ASP.NET Core MVC</p>
+</li>
+<li>
+<p>Distributed Cache Tag Helper in ASP.NET Core</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/change-tokens?view=aspnetcore-8.0">Detect changes with change tokens in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

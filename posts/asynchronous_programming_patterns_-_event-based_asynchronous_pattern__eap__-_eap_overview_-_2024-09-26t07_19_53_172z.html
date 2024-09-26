@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - EAP overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Applications that perform many tasks simultaneously, yet remain responsive to user interaction, often require a design that uses multiple threads. The System.Threading namespace provides all the tools necessary to create high-performance multithreaded applications, but using these tools effectively requires significant experience with multithreaded software engineering. For relatively simple multithreaded applications, the BackgroundWorker component provides a straightforward solution. For more sophisticated asynchronous applications, consider implementing a class that adheres to the Event-based Asynchronous Pattern.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - EAP overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This paper presents a system-wide approach to creating high-performance multithreaded applications.</p>
+<p>The AsynchronousPattern class allows you to write multithreaded applications with minimal overhead.</p>
+<ul>
+<li>
+<p>Perform time-consuming tasks, such as downloads and database operations, &quot;in the background,&quot; without interrupting your application.</p>
+</li>
+<li>
+<p>Execute multiple operations simultaneously, receiving notifications when each completes.</p>
+</li>
+<li>
+<p>Wait for resources to become available without stopping (&quot;blocking&quot;) your application.</p>
+</li>
+<li>
+<p>Communicate with pending asynchronous operations using the familiar events-and-delegates model. For more information on using event handlers and delegates, see Events.</p>
+</li>
+</ul>
+<p>A class that supports the Event-based Asynchronous Pattern will have one or more methods named MethodNameAsync. These methods may mirror synchronous versions, which perform the same operation on the current thread. The class may also have a MethodNameCompleted event and it may have a MethodNameAsyncCancel (or simply <code>CancelAsync</code>) method.</p>
+<p>You can download an image synchronously by calling its Load method, but if the image is large, or if the network connection is slow, your application will stop responding until the download operation is completed and the call to Load returns.</p>
+<p>In this example, we are running an application while an image is loading.</p>
+<p>The Event-based Asynchronous Pattern requires that an asynchronous operation can be canceled, and the PictureBox control supports this requirement with its <code>CancelAsync</code> method. Calling <code>CancelAsync</code> submits a request to stop the pending download, and when the task is canceled, the LoadCompleted event is raised.</p>
+<blockquote>
+<p class='caution'>Caution
+It is possible that the download will finish just as the <code>CancelAsync</code> request is made, so Cancelled may not reflect the request to cancel. This is called a race condition and is a common issue in multithreaded programming. For more information on issues in multithreaded programming, see Managed Threading Best Practices.</p>
+</blockquote>
+<h2><a href="#characteristics-of-the-event-based-asynchronous-pattern" aria-hidden="true" class="anchor" id="characteristics-of-the-event-based-asynchronous-pattern"></a>Characteristics of the Event-based Asynchronous Pattern</h2>
+<p>The Event-based Asynchronous Pattern supports asynchronous operations between classes.</p>
+<p>An asynchronous method can be used to call another method asynchronously.</p>
+<h3><a href="#examples-of-the-event-based-asynchronous-pattern" aria-hidden="true" class="anchor" id="examples-of-the-event-based-asynchronous-pattern"></a>Examples of the Event-based Asynchronous Pattern</h3>
+<p>The SoundPlayer, PictureBox, WebClient, and BackgroundWorker components represent simple implementations of the Event-based Asynchronous Pattern.</p>
+<p>Below is an example class declaration that conforms to the pattern:</p>
+<pre><code class="language-csharp">public class AsyncExample  
+{  
+    // Synchronous methods.  
+    public int Method1(string param);  
+    public void Method2(double param);  
+  
+    // Asynchronous methods.  
+    public void Method1Async(string param);  
+    public void Method1Async(string param, object userState);  
+    public event Method1CompletedEventHandler Method1Completed;  
+  
+    public void Method2Async(double param);  
+    public void Method2Async(double param, object userState);  
+    public event Method2CompletedEventHandler Method2Completed;  
+  
+    public void CancelAsync(object userState);  
+  
+    public bool IsBusy { get; }  
+  
+    // Class implementation not shown.  
+}
+</code></pre>
+<p>The fictitious <code>AsyncExample</code> class has two methods, both of which support synchronous and asynchronous invocations. The synchronous overloads behave like any method call and execute the operation on the calling thread; if the operation is time-consuming, there may be a noticeable delay before the call returns. The asynchronous overloads will start the operation on another thread and then return immediately, allowing the calling thread to continue while the operation executes &quot;in the background.&quot;</p>
+<h3><a href="#asynchronous-method-overloads" aria-hidden="true" class="anchor" id="asynchronous-method-overloads"></a>Asynchronous Method Overloads</h3>
+<p>There are potentially two overloads for the asynchronous operations: single-invocation and multiple-invocation. You can distinguish these two forms by their method signatures: the multiple-invocation form has an extra parameter called <code>userState</code>. This form makes it possible for your code to call <code>Method1Async(string param, object userState)</code> multiple times without waiting for any pending asynchronous operations to finish. If, on the other hand, you try to call <code>Method1Async(string param)</code> before a previous invocation has completed, the method raises an InvalidOperationException.</p>
+<p>The <code>userState</code> parameter for the multiple-invocation overloads allows you to distinguish among asynchronous operations. You provide a unique value (for example, a GUID or hash code) for each call to <code>Method1Async(string param, object userState)</code>, and when each operation is completed, your event handler can determine which instance of the operation raised the completion event.</p>
+<h3><a href="#tracking-pending-operations" aria-hidden="true" class="anchor" id="tracking-pending-operations"></a>Tracking Pending Operations</h3>
+<p>If you use the multiple-invocation overloads, your code will need to keep track of the <code>userState</code> objects (task IDs) for pending tasks. For each call to <code>Method1Async(string param, object userState)</code>, you will typically generate a new, unique <code>userState</code> object and add it to a collection. When the task corresponding to this <code>userState</code> object raises the completion event, your completion method implementation will examine <code>AsyncCompletedEventArgs.UserState</code> and remove it from your collection. Used this way, the <code>userState</code> parameter takes the role of a task ID.</p>
+<blockquote>
+<p class='note'>Note
+You must be careful to provide a unique value for <code>userState</code> in your calls to multiple-invocation overloads. Non-unique task IDs will cause the asynchronous class throw an ArgumentException.</p>
+</blockquote>
+<h3><a href="#canceling-pending-operations" aria-hidden="true" class="anchor" id="canceling-pending-operations"></a>Canceling Pending Operations</h3>
+<p>It is important to be able to cancel asynchronous operations at any time before their completion. Classes that implement the Event-based Asynchronous Pattern will have a <code>CancelAsync</code> method (if there is only one asynchronous method) or a MethodNameAsyncCancel method (if there are multiple asynchronous methods).</p>
+<p>Methods that allow multiple invocations take a <code>userState</code> parameter, which can be used to track the lifetime of each task. <code>CancelAsync</code> takes a <code>userState</code> parameter, which allows you to cancel particular pending tasks.</p>
+<p>Methods that support only a single pending operation at a time, like Method1Async(string param), are not cancelable.</p>
+<h3><a href="#receiving-progress-updates-and-incremental-results" aria-hidden="true" class="anchor" id="receiving-progress-updates-and-incremental-results"></a>Receiving Progress Updates and Incremental Results</h3>
+<p>A class that adheres to the Event-based Asynchronous Pattern may optionally provide an event for tracking progress and incremental results. This will typically be named <code>ProgressChanged</code> or MethodNameProgressChanged, and its corresponding event handler will take a ProgressChangedEventArgs parameter.</p>
+<p>The event handler for the <code>ProgressChanged</code> event can examine the ProgressChangedEventArgs.ProgressPercentage property to determine what percentage of an asynchronous task has been completed. This property will range from 0 to 100, and it can be used to update the Value property of a ProgressBar. If multiple asynchronous operations are pending, you can use the ProgressChangedEventArgs.UserState property to distinguish which operation is reporting progress.</p>
+<p>Some classes may report incremental results as asynchronous operations proceed. These results will be stored in a class that derives from ProgressChangedEventArgs and they will appear as properties in the derived class. You can access these results in the event handler for the <code>ProgressChanged</code> event, just as you would access the ProgressPercentage property. If multiple asynchronous operations are pending, you can use the UserState property to distinguish which operation is reporting incremental results.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>ProgressChangedEventArgs</p>
+</li>
+<li>
+<p>BackgroundWorker</p>
+</li>
+<li>
+<p>AsyncCompletedEventArgs</p>
+</li>
+<li>
+<p>How to: Use Components That Support the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>How to: Run an Operation in the Background</p>
+</li>
+<li>
+<p>How to: Implement a Form That Uses a Background Operation</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern (EAP)</p>
+</li>
+<li>
+<p>Best Practices for Implementing the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Deciding When to Implement the Event-based Asynchronous Pattern</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/event-based-asynchronous-pattern-overview">Event-based Asynchronous Pattern Overview</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

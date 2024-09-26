@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Task-based asynchronous pattern (TAP) - Implement the TAP | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='You can implement the Task-based Asynchronous Pattern (TAP) in three ways: by using the C# and Visual Basic compilers in Visual Studio, manually, or through a combination of the compiler and manual methods. The following sections discuss each method in detail. You can use the TAP pattern to implement both compute-bound and I/O-bound asynchronous operations. The Workloads section discusses each type of operation.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Task-based asynchronous pattern (TAP) - Implement the TAP</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>You can implement the Task-based Asynchronous Pattern (TAP) in three ways: by using the C# and Visual Basic compilers in Visual Studio, manually, or through a combination of the compiler and manual methods. The following sections discuss each method in detail. You can use the TAP pattern to implement both compute-bound and I/O-bound asynchronous operations. The Workloads section discusses each type of operation.</p>
+<h2><a href="#generating-tap-methods" aria-hidden="true" class="anchor" id="generating-tap-methods"></a>Generating TAP methods</h2>
+<h3><a href="#using-the-compilers" aria-hidden="true" class="anchor" id="using-the-compilers"></a>Using the compilers</h3>
+<p>Starting with .NET Framework 4.5, any method that is attributed with the <code>async</code> keyword (Async in Visual Basic) is considered an asynchronous method, and the C# and Visual Basic compilers perform the necessary transformations to implement the method asynchronously by using TAP. An asynchronous method should return either a <code>System.Threading.Tasks.Task</code> or a ``System.Threading.Tasks.Task<TResult><code>object. For the latter, the body of the function should return a ```TResult```, and the compiler ensures that this result is made available through the resulting task object. Similarly, any exceptions that go unhandled within the body of the method are marshalled to the output task and cause the resulting task to end in the TaskStatus.Faulted state. The exception to this rule is when an OperationCanceledException (or derived type) goes unhandled, in which case the resulting task ends in the</code>TaskStatus.Canceled` state.</p>
+<h3><a href="#generating-tap-methods-manually" aria-hidden="true" class="anchor" id="generating-tap-methods-manually"></a>Generating TAP methods manually</h3>
+<p>You may implement the TAP pattern manually for better control over implementation. The compiler relies on the public surface area exposed from the <code>System.Threading.Tasks</code> namespace and supporting types in the <code>System.Runtime.CompilerServices</code> namespace. To implement the TAP yourself, you create a <code>TaskCompletionSource&lt;TResult&gt;</code> object, perform the asynchronous operation, and when it completes, call the SetResult, SetException, or SetCanceled method, or the <code>Try</code> version of one of these methods. When you implement a TAP method manually, you must complete the resulting task when the represented asynchronous operation completes. For example:</p>
+<pre><code class="language-csharp">public static Task&lt;int&gt; ReadTask(this Stream stream, byte[] buffer, int offset, int count, object state)
+{
+    var tcs = new TaskCompletionSource&lt;int&gt;();
+    stream.BeginRead(buffer, offset, count, ar =&gt;
+    {
+        try { tcs.SetResult(stream.EndRead(ar)); }
+        catch (Exception exc) { tcs.SetException(exc); }
+    }, state);
+    return tcs.Task;
+}
+</code></pre>
+<h3><a href="#hybrid-approach" aria-hidden="true" class="anchor" id="hybrid-approach"></a>Hybrid approach</h3>
+<p>You may find it useful to implement the TAP pattern manually but to delegate the core logic for the implementation to the compiler. For example, you may want to use the hybrid approach when you want to verify arguments outside a compiler-generated asynchronous method so that exceptions can escape to the method's direct caller rather than being exposed through the <code>System.Threading.Tasks.Task</code> object:</p>
+<pre><code class="language-csharp">public Task&lt;int&gt; MethodAsync(string input)
+{
+    if (input == null) throw new ArgumentNullException(&quot;input&quot;);
+    return MethodAsyncInternal(input);
+}
+
+private async Task&lt;int&gt; MethodAsyncInternal(string input)
+{
+
+   // code that uses await goes here
+
+   return value;
+}
+</code></pre>
+<p>Another case where such delegation is useful is when you're implementing fast-path optimization and want to return a cached task.</p>
+<h2><a href="#workloads" aria-hidden="true" class="anchor" id="workloads"></a>Workloads</h2>
+<p>You may implement both compute-bound and I/O-bound asynchronous operations as TAP methods. However, when TAP methods are exposed publicly from a library, they should be provided only for workloads that involve I/O-bound operations (they may also involve computation, but should not be purely computational). If a method is purely compute-bound, it should be exposed only as a synchronous implementation. The code that consumes it may then choose whether to wrap an invocation of that synchronous method into a task to offload the work to another thread or to achieve parallelism. And if a method is I/O-bound, it should be exposed only as an asynchronous implementation.</p>
+<h3><a href="#compute-bound-tasks" aria-hidden="true" class="anchor" id="compute-bound-tasks"></a>Compute-bound tasks</h3>
+<p>The <code>System.Threading.Tasks.Task</code> class is ideally suited for representing computationally intensive operations. By default, it takes advantage of special support within the ThreadPool class to provide efficient execution, and it also provides significant control over when, where, and how asynchronous computations execute.</p>
+<p>You can generate compute-bound tasks in the following ways:</p>
+<ul>
+<li>
+<p>In .NET Framework 4.5 and later versions (including .NET Core and .NET 5+), use the static <code>Task.Run</code> method as a shortcut to TaskFactory.StartNew. You may use <code>Run</code> to easily launch a compute-bound task that targets the thread pool. This is the preferred mechanism for launching a compute-bound task. Use <code>StartNew</code> directly only when you want more fine-grained control over the task.</p>
+</li>
+<li>
+<p>In .NET Framework 4, use the TaskFactory.StartNew method, which accepts a delegate (typically an <code>Action&lt;T&gt;</code> or a <code>Func&lt;TResult&gt;</code>) to be executed asynchronously. If you provide an <code>Action&lt;T&gt;</code> delegate, the method returns a <code>System.Threading.Tasks.Task</code> object that represents the asynchronous execution of that delegate. If you provide a <code>Func&lt;TResult&gt;</code> delegate, the method returns a <code>System.Threading.Tasks.Task&lt;TResult&gt;</code> object. Overloads of the <code>StartNew</code> method accept a cancellation token (<code>CancellationToken</code>), task creation options (<code>TaskCreationOptions</code>), and a task scheduler (<code>TaskScheduler</code>), all of which provide fine-grained control over the scheduling and execution of the task. A factory instance that targets the current task scheduler is available as a static property (Factory) of the <code>Task</code> class; for example: <code>Task.Factory.StartNew(…)</code>.</p>
+</li>
+<li>
+<p>Use the constructors of the <code>Task</code> type and the <code>Start</code> method if you want to generate and schedule the task separately. Public methods must only return tasks that have already been started.</p>
+</li>
+<li>
+<p>Use the overloads of the <code>Task.ContinueWith</code> method. This method creates a new task that is scheduled when another task completes. Some of the ContinueWith overloads accept a cancellation token, continuation options, and a task scheduler for better control over the scheduling and execution of the continuation task.</p>
+</li>
+<li>
+<p>Use the TaskFactory.ContinueWhenAll and TaskFactory.ContinueWhenAny methods. These methods create a new task that is scheduled when all or any of a supplied set of tasks completes. These methods also provide overloads to control the scheduling and execution of these tasks.</p>
+</li>
+</ul>
+<p>In compute-bound tasks, the system can prevent the execution of a scheduled task if it receives a cancellation request before it starts running the task. As such, if you provide a cancellation token (CancellationToken object), you can pass that token to the asynchronous code that monitors the token. You can also provide the token to one of the previously mentioned methods such as <code>StartNew</code> or <code>Run</code> so that the <code>Task</code> runtime may also monitor the token.</p>
+<p>For example, consider an asynchronous method that renders an image. The body of the task can poll the cancellation token so that the code may exit early if a cancellation request arrives during rendering. In addition, if the cancellation request arrives before rendering starts, you'll want to prevent the rendering operation:</p>
+<pre><code class="language-csharp">internal Task&lt;Bitmap&gt; RenderAsync(
+              ImageData data, CancellationToken cancellationToken)
+{
+    return Task.Run(() =&gt;
+    {
+        var bmp = new Bitmap(data.Width, data.Height);
+        for(int y=0; y&lt;data.Height; y++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            for(int x=0; x&lt;data.Width; x++)
+            {
+                // render pixel [x,y] into bmp
+            }
+        }
+        return bmp;
+    }, cancellationToken);
+}
+</code></pre>
+<p>Compute-bound tasks end in a Canceled state if at least one of the following conditions is true:</p>
+<ul>
+<li>
+<p>A cancellation request arrives through the CancellationToken object, which is provided as an argument to the creation method (for example, <code>StartNew</code> or <code>Run</code>) before the task transitions to the Running state.</p>
+</li>
+<li>
+<p>An OperationCanceledException exception goes unhandled within the body of such a task, that exception contains the same CancellationToken that is passed to the task, and that token shows that cancellation is requested.</p>
+</li>
+</ul>
+<p>If another exception goes unhandled within the body of the task, the task ends in the Faulted state, and any attempts to wait on the task or access its result causes an exception to be thrown.</p>
+<h3><a href="#io-bound-tasks" aria-hidden="true" class="anchor" id="io-bound-tasks"></a>I/O-bound tasks</h3>
+<p>To create a task that should not be directly backed by a thread for the entirety of its execution, use the <code>TaskCompletionSource&lt;TResult&gt;</code> type. This type exposes a <code>Task</code> property that returns an associated <code>Task&lt;TResult&gt;</code> instance. The life cycle of this task is controlled by <code>TaskCompletionSource&lt;TResult&gt;</code> methods such as SetResult, SetException, SetCanceled, and their <code>TrySet</code> variants.</p>
+<p>Let's say that you want to create a task that will complete after a specified period of time. For example, you may want to delay an activity in the user interface. The System.Threading.Timer class already provides the ability to asynchronously invoke a delegate after a specified period of time, and by using <code>TaskCompletionSource&lt;TResult&gt;</code> you can put a <code>Task&lt;TResult&gt;</code> front on the timer, for example:</p>
+<pre><code class="language-csharp">public static Task&lt;DateTimeOffset&gt; Delay(int millisecondsTimeout)
+{
+    TaskCompletionSource&lt;DateTimeOffset&gt; tcs = null;
+    Timer timer = null;
+
+    timer = new Timer(delegate
+    {
+        timer.Dispose();
+        tcs.TrySetResult(DateTimeOffset.UtcNow);
+    }, null, Timeout.Infinite, Timeout.Infinite);
+
+    tcs = new TaskCompletionSource&lt;DateTimeOffset&gt;(timer);
+    timer.Change(millisecondsTimeout, Timeout.Infinite);
+    return tcs.Task;
+}
+</code></pre>
+<p>The <code>Task.Delay</code> method is provided for this purpose, and you can use it inside another asynchronous method, for example, to implement an asynchronous polling loop:</p>
+<pre><code class="language-csharp">public static async Task Poll(Uri url, CancellationToken cancellationToken,
+                              IProgress&lt;bool&gt; progress)
+{
+    while(true)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+        bool success = false;
+        try
+        {
+            await DownloadStringAsync(url);
+            success = true;
+        }
+        catch { /* ignore errors */ }
+        progress.Report(success);
+    }
+}
+</code></pre>
+<p>The <code>TaskCompletionSource&lt;TResult&gt;</code> class doesn't have a non-generic counterpart. However, <code>Task&lt;TResult&gt;</code> derives from <code>Task</code>, so you can use the generic <code>TaskCompletionSource&lt;TResult&gt;</code> object for I/O-bound methods that simply return a task. To do this, you can use a source with a dummy <code>TResult</code> (Boolean is a good default choice, but if you're concerned about the user of the <code>Task</code> downcasting it to a <code>Task&lt;TResult&gt;</code>, you can use a private <code>TResult</code> type instead). For example, the <code>Delay</code> method in the previous example returns the current time along with the resulting offset (<code>Task&lt;DateTimeOffset&gt;</code>). If such a result value is unnecessary, the method could instead be coded as follows (note the change of return type and the change of argument to <code>TrySetResult</code>):</p>
+<pre><code class="language-csharp">public static Task&lt;bool&gt; Delay(int millisecondsTimeout)
+{
+     TaskCompletionSource&lt;bool&gt; tcs = null;
+     Timer timer = null;
+
+     timer = new Timer(delegate
+     {
+         timer.Dispose();
+         tcs.TrySetResult(true);
+     }, null, Timeout.Infinite, Timeout.Infinite);
+
+     tcs = new TaskCompletionSource&lt;bool&gt;(timer);
+     timer.Change(millisecondsTimeout, Timeout.Infinite);
+     return tcs.Task;
+}
+</code></pre>
+<h3><a href="#mixed-compute-bound-and-io-bound-tasks" aria-hidden="true" class="anchor" id="mixed-compute-bound-and-io-bound-tasks"></a>Mixed compute-bound and I/O-bound tasks</h3>
+<p>Asynchronous methods are not limited to just compute-bound or I/O-bound operations but may represent a mixture of the two. In fact, multiple asynchronous operations are often combined into larger mixed operations. For example, the <code>RenderAsync</code> method in a previous example performed a computationally intensive operation to render an image based on some input <code>imageData</code>. This <code>imageData</code> could come from a web service that you asynchronously access:</p>
+<pre><code class="language-csharp">public async Task&lt;Bitmap&gt; DownloadDataAndRenderImageAsync(
+    CancellationToken cancellationToken)
+{
+    var imageData = await DownloadImageDataAsync(cancellationToken);
+    return await RenderAsync(imageData, cancellationToken);
+}
+</code></pre>
+<p>This example also demonstrates how a single cancellation token may be threaded through multiple asynchronous operations. For more information, see the cancellation usage section in Consuming the Task-based Asynchronous Pattern.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Task-based Asynchronous Pattern (TAP)</p>
+</li>
+<li>
+<p>Consuming the Task-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Interop with Other Asynchronous Patterns and Types</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/implementing-the-task-based-asynchronous-pattern">Implementing the Task-based Asynchronous Pattern</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

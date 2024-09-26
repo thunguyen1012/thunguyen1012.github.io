@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Documentation overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='There are a number of ways to expose asynchronous features to client code. The Event-based Asynchronous Pattern prescribes one way for classes to present asynchronous behavior.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Documentation overview</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>There are a number of ways to expose asynchronous features to client code. The Event-based Asynchronous Pattern prescribes one way for classes to present asynchronous behavior.</p>
+<blockquote>
+<p class='note'>Note
+Starting with .NET Framework 4, the Task Parallel Library provides a new model for asynchronous and parallel programming. For more information, see Task Parallel Library (TPL) and Task-based Asynchronous Pattern (TAP).</p>
+</blockquote>
+<h2><a href="#in-this-section" aria-hidden="true" class="anchor" id="in-this-section"></a>In This Section</h2>
+<p>The Event-based Asynchronous Pattern is an event-based pattern language designed for use in multithreaded applications.</p>
+<p>Implementing the Event-based Asynchronous Pattern
+Describes the standardized way to package a class that has asynchronous features.</p>
+<p>Best Practices for Implementing the Event-based Asynchronous Pattern
+Describes the requirements for exposing asynchronous features according to the Event-based Asynchronous Pattern.</p>
+<p>This article explains how to implement the Event-based Asynchronous Pattern instead of the IAsyncResult pattern represented by the Asynchronous Programming Model (APM).</p>
+<p>In this article, you will learn how to implement an Event-based Asynchronous Pattern.</p>
+<p>How to: Implement a Client of the Event-based Asynchronous Pattern
+Describes how to create a client that uses a component that implements the Event-based Asynchronous Pattern.</p>
+<p>How to: Use Components That Support the Event-based Asynchronous Pattern
+Describes how to use a component that supports the Event-based Asynchronous Pattern.</p>
+<h2><a href="#reference" aria-hidden="true" class="anchor" id="reference"></a>Reference</h2>
+<p><code>AsyncOperation</code>
+Describes the AsyncOperation class and has links to all its members.</p>
+<p><code>AsyncOperationManager</code>
+Describes the AsyncOperationManager class and has links to all its members.</p>
+<p><code>BackgroundWorker</code>
+Describes the BackgroundWorker component and has links to all its members.</p>
+<h2><a href="#related-sections" aria-hidden="true" class="anchor" id="related-sections"></a>Related Sections</h2>
+<p>Task Parallel Library (TPL)
+Describes a programming model for asynchronous and parallel operations.</p>
+<p>Threading
+Describes multithreading features in .NET.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Managed Threading Best Practices</p>
+</li>
+<li>
+<p>Events</p>
+</li>
+<li>
+<p>Asynchronous Programming Design Patterns</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/event-based-asynchronous-pattern-eap">Event-based Asynchronous Pattern (EAP)</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

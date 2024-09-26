@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Implement the EAP | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='If you are writing a class with some operations that may incur noticeable delays, consider giving it asynchronous functionality by implementing the Event-based Asynchronous Pattern.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Implement the EAP</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>If you are writing a class with some operations that may incur noticeable delays, consider giving it asynchronous functionality by implementing the Event-based Asynchronous Pattern.</p>
+<p>This tutorial shows how to implement the Event-based Asynchronous Pattern in your ASP.NET application.</p>
+<p>For an example that implements the Event-based Asynchronous Pattern, see How to: Implement a Component That Supports the Event-based Asynchronous Pattern.</p>
+<p>For simple asynchronous operations, you may find the BackgroundWorker component suitable. For more information about BackgroundWorker, see How to: Run an Operation in the Background.</p>
+<p>The following list describes the features of the Event-based Asynchronous Pattern discussed in this topic.</p>
+<ul>
+<li>
+<p>Opportunities for Implementing the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Naming Asynchronous Methods</p>
+</li>
+<li>
+<p>Optionally Support Cancellation</p>
+</li>
+<li>
+<p>Optionally Support the <code>IsBusy</code> Property</p>
+</li>
+<li>
+<p>Optionally Provide Support for Progress Reporting</p>
+</li>
+<li>
+<p>Optionally Provide Support for Returning Incremental Results</p>
+</li>
+<li>
+<p>Handling Out and Ref Parameters in Methods</p>
+</li>
+</ul>
+<h2><a href="#opportunities-for-implementing-the-event-based-asynchronous-pattern" aria-hidden="true" class="anchor" id="opportunities-for-implementing-the-event-based-asynchronous-pattern"></a>Opportunities for Implementing the Event-based Asynchronous Pattern</h2>
+<p>Consider implementing the Event-based Asynchronous Pattern when:</p>
+<ul>
+<li>
+<p>Clients of your class do not need WaitHandle and IAsyncResult objects available for asynchronous operations, meaning that polling and WaitAll or WaitAny will need to be built up by the client.</p>
+</li>
+<li>
+<p>You want asynchronous operations to be managed by the client with the familiar event/delegate model.</p>
+</li>
+</ul>
+<p>An asynchronous operation is one in which a method is called but no further action is required.</p>
+<p>For more information on deciding when to support the Event-based Asynchronous Pattern, see Deciding When to Implement the Event-based Asynchronous Pattern.</p>
+<h2><a href="#naming-asynchronous-methods" aria-hidden="true" class="anchor" id="naming-asynchronous-methods"></a>Naming Asynchronous Methods</h2>
+<p>For each synchronous method MethodName for which you want to provide an asynchronous counterpart:</p>
+<p>Define a MethodNameAsync method that:</p>
+<ul>
+<li>
+<p>Returns <code>void</code>.</p>
+</li>
+<li>
+<p>Takes the same parameters as the MethodName method.</p>
+</li>
+<li>
+<p>Accepts multiple invocations.</p>
+</li>
+</ul>
+<p>Optionally define a MethodNameAsync overload, identical to MethodNameAsync, but with an additional object-valued parameter called <code>userState</code>. Do this if you're prepared to manage multiple concurrent invocations of your method, in which case the <code>userState</code> value will be delivered back to all event handlers to distinguish invocations of the method. You may also choose to do this simply as a place to store user state for later retrieval.</p>
+<p>For each separate MethodNameAsync method signature:</p>
+<ul>
+<li>Define the following event in the same class as the method:</li>
+</ul>
+<pre><code class="language-csharp">public event MethodNameCompletedEventHandler MethodNameCompleted;
+</code></pre>
+<ul>
+<li>Define the following delegate and AsyncCompletedEventArgs. These will likely be defined outside of the class itself, but in the same namespace.</li>
+</ul>
+<pre><code class="language-csharp">public delegate void MethodNameCompletedEventHandler(object sender,
+    MethodNameCompletedEventArgs e);
+
+public class MethodNameCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs
+{
+    public MyReturnType Result { get; }
+}
+</code></pre>
+<ul>
+<li>
+<p>Ensure that the MethodNameCompletedEventArgs class exposes its members as read-only properties, and not fields, as fields prevent data binding.</p>
+</li>
+<li>
+<p>Do not define any AsyncCompletedEventArgs-derived classes for methods that do not produce results. Simply use an instance of AsyncCompletedEventArgs itself.</p>
+</li>
+</ul>
+<p class='note'>Note
+It is perfectly acceptable, when feasible and appropriate, to reuse delegate and AsyncCompletedEventArgs types. In this case, the naming will not be as consistent with the method name, since a given delegate and AsyncCompletedEventArgs won't be tied to a single method.</p>
+<blockquote>
+<p class='note'>Note
+It is perfectly acceptable, when feasible and appropriate, to reuse delegate and AsyncCompletedEventArgs types. In this case, the naming will not be as consistent with the method name, since a given delegate and AsyncCompletedEventArgs won't be tied to a single method.</p>
+</blockquote>
+<h2><a href="#optionally-support-cancellation" aria-hidden="true" class="anchor" id="optionally-support-cancellation"></a>Optionally Support Cancellation</h2>
+<p>If your class will support cancelling asynchronous operations, cancellation should be exposed to the client as described below.</p>
+<ul>
+<li>
+<p>Does your class, including future anticipated additions to it, have only one asynchronous operation that supports cancellation?</p>
+</li>
+<li>
+<p>Can the asynchronous operations that support cancellation support multiple pending operations? That is, does the MethodNameAsync method take a <code>userState</code> parameter, and does it allow multiple invocations before waiting for any to finish?</p>
+</li>
+</ul>
+<p>Use the answers to these two questions in the table below to determine what the signature for your cancellation method should be.</p>
+<h3><a href="#visual-basic" aria-hidden="true" class="anchor" id="visual-basic"></a>Visual Basic</h3>
+<table><thead>
+<tr>
+<th></th>
+<th>Multiple Simultaneous Operations Supported</th>
+<th>Only One Operation at a Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>One Async Operation in entire class</strong></td>
+<td><code>Sub MethodNameAsyncCancel(ByVal userState As Object)</code></td>
+<td><code>Sub MethodNameAsyncCancel()</code></td>
+</tr>
+<tr>
+<td><strong>Multiple Async Operations in class</strong></td>
+<td><code>Sub CancelAsync(ByVal userState As Object)</code></td>
+<td><code>Sub CancelAsync()</code></td>
+</tr>
+</tbody></table>
+<h3><a href="#c" aria-hidden="true" class="anchor" id="c"></a>C#</h3>
+<table><thead>
+<tr>
+<th></th>
+<th>Multiple Simultaneous Operations Supported</th>
+<th>Only One Operation at a Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>One Async Operation in entire class</strong></td>
+<td><code>void MethodNameAsyncCancel(object userState);</code></td>
+<td><code>void MethodNameAsyncCancel();</code></td>
+</tr>
+<tr>
+<td><strong>Multiple Async Operations in class</strong></td>
+<td><code>void CancelAsync(object userState);</code></td>
+<td><code>void CancelAsync();</code></td>
+</tr>
+</tbody></table>
+<p>If you define the <code>CancelAsync(object userState)</code> method, clients must be careful when choosing their state values to make them capable of distinguishing among all asynchronous methods invoked on the object, and not just between all invocations of a single asynchronous method.</p>
+<p>The decision to name the single-async-operation version MethodNameAsyncCancel is based on being able to more easily discover the method in a design environment like Visual Studio's IntelliSense. This groups the related members and distinguishes them from other members that have nothing to do with asynchronous functionality. If you expect that there may be additional asynchronous operations added in subsequent versions, it is better to define <code>CancelAsync</code>.</p>
+<p>Do not define multiple methods from the table above in the same class. That will not make sense, or it will clutter the class interface with a proliferation of methods.</p>
+<p>These methods typically will return immediately, and the operation may or may not actually cancel. In the event handler for the MethodNameCompleted event, the MethodNameCompletedEventArgs object contains a <code>Cancelled</code> field, which clients can use to determine whether the cancellation occurred.</p>
+<p>Abide by the cancellation semantics described in Best Practices for Implementing the Event-based Asynchronous Pattern.</p>
+<h2><a href="#optionally-support-the-isbusy-property" aria-hidden="true" class="anchor" id="optionally-support-the-isbusy-property"></a>Optionally Support the <code>IsBusy</code> Property</h2>
+<p>If your class does not support multiple concurrent invocations, consider exposing an <code>IsBusy</code> property. This allows developers to determine whether a MethodNameAsync method is running without catching an exception from the MethodNameAsync method.</p>
+<p>Abide by the <code>IsBusy</code> semantics described in Best Practices for Implementing the Event-based Asynchronous Pattern.</p>
+<h2><a href="#optionally-provide-support-for-progress-reporting" aria-hidden="true" class="anchor" id="optionally-provide-support-for-progress-reporting"></a>Optionally Provide Support for Progress Reporting</h2>
+<p>It is frequently desirable for an asynchronous operation to report progress during its operation. The Event-based Asynchronous Pattern provides a guideline for doing so.</p>
+<ul>
+<li>
+<p>Optionally define an event to be raised by the asynchronous operation and invoked on the appropriate thread. The ProgressChangedEventArgs object carries an integer-valued progress indicator that is expected to be between 0 and 100.</p>
+</li>
+<li>
+<p>Name this event as follows:</p>
+</li>
+</ul>
+<p>This naming choice parallels that made for the cancellation method, as described in the Optionally Support Cancellation section.</p>
+<ul>
+<li>
+<p><code>ProgressChanged</code> if the class has multiple asynchronous operations (or is expected to grow to include multiple asynchronous operations in future versions);</p>
+</li>
+<li>
+<p>MethodNameProgressChanged if the class has a single asynchronous operation.</p>
+</li>
+</ul>
+<p>This event should use the ProgressChangedEventHandler delegate signature and the ProgressChangedEventArgs class. Alternatively, if a more domain-specific progress indicator can be provided (for instance, bytes read and total bytes for a download operation), then you should define a derived class of ProgressChangedEventArgs.</p>
+<p class='note'>Note that there is only one <code>ProgressChanged</code> or MethodNameProgressChanged event for the class, regardless of the number of asynchronous methods it supports. Clients are expected to use the <code>userState</code> object that is passed to the MethodNameAsync methods to distinguish among progress updates on multiple concurrent operations.</p>
+<p>There may be situations in which multiple operations support progress and each returns a different indicator for progress. In this case, a single <code>ProgressChanged</code> event is not appropriate, and you may consider supporting multiple <code>ProgressChanged</code> events. In this case use a naming pattern of MethodNameProgressChanged for each MethodNameAsync method.</p>
+<p>Abide by the progress-reporting semantics described Best Practices for Implementing the Event-based Asynchronous Pattern.</p>
+<h2><a href="#optionally-provide-support-for-returning-incremental-results" aria-hidden="true" class="anchor" id="optionally-provide-support-for-returning-incremental-results"></a>Optionally Provide Support for Returning Incremental Results</h2>
+<p>Sometimes an asynchronous operation can return incremental results prior to completion. There are a number of options that can be used to support this scenario. Some examples follow.</p>
+<h3><a href="#single-operation-class" aria-hidden="true" class="anchor" id="single-operation-class"></a>Single-operation Class</h3>
+<p>If your class only supports a single asynchronous operation, and that operation is able to return incremental results, then:</p>
+<ul>
+<li>
+<p>Extend the ProgressChangedEventArgs type to carry the incremental result data, and define a MethodNameProgressChanged event with this extended data.</p>
+</li>
+<li>
+<p>Raise this MethodNameProgressChanged event when there is an incremental result to report.</p>
+</li>
+</ul>
+<p>This solution applies specifically to a single-async-operation class because there is no problem with the same event occurring to return incremental results on &quot;all operations&quot;, as the MethodNameProgressChanged event does.</p>
+<h3><a href="#multiple-operation-class-with-homogeneous-incremental-results" aria-hidden="true" class="anchor" id="multiple-operation-class-with-homogeneous-incremental-results"></a>Multiple-operation Class with Homogeneous Incremental Results</h3>
+<p>In this case, your class supports multiple asynchronous methods, each capable of returning incremental results, and these incremental results all have the same type of data.</p>
+<p>Follow the model described above for single-operation classes, as the same EventArgs structure will work for all incremental results. Define a <code>ProgressChanged</code> event instead of a MethodNameProgressChanged event, since it applies to multiple asynchronous methods.</p>
+<h3><a href="#multiple-operation-class-with-heterogeneous-incremental-results" aria-hidden="true" class="anchor" id="multiple-operation-class-with-heterogeneous-incremental-results"></a>Multiple-operation Class with Heterogeneous Incremental Results</h3>
+<p>If your class supports multiple asynchronous methods, each returning a different type of data, you should:</p>
+<ul>
+<li>
+<p>Separate your incremental result reporting from your progress reporting.</p>
+</li>
+<li>
+<p>Define a separate MethodNameProgressChanged event with appropriate EventArgs for each asynchronous method to handle that method's incremental result data.</p>
+</li>
+</ul>
+<p>Invoke that event handler on the appropriate thread as described in Best Practices for Implementing the Event-based Asynchronous Pattern.</p>
+<h2><a href="#handling-out-and-ref-parameters-in-methods" aria-hidden="true" class="anchor" id="handling-out-and-ref-parameters-in-methods"></a>Handling Out and Ref Parameters in Methods</h2>
+<p>Although the use of <code>out</code> and <code>ref</code> is, in general, discouraged in .NET, here are the rules to follow when they are present:</p>
+<p>Given a synchronous method MethodName:</p>
+<ul>
+<li>
+<p><code>out</code> parameters to MethodName should not be part of MethodNameAsync. Instead, they should be part of MethodNameCompletedEventArgs with the same name as its parameter equivalent in MethodName (unless there is a more appropriate name).</p>
+</li>
+<li>
+<p><code>ref</code> parameters to MethodName should appear as part of MethodNameAsync, and as part of MethodNameCompletedEventArgs with the same name as its parameter equivalent in MethodName (unless there is a more appropriate name).</p>
+</li>
+</ul>
+<p>For example, given:</p>
+<pre><code class="language-csharp">public int MethodName(string arg1, ref string arg2, out string arg3);
+</code></pre>
+<p>Your asynchronous method and its AsyncCompletedEventArgs class would look like this:</p>
+<pre><code class="language-csharp">public void MethodNameAsync(string arg1, string arg2);
+
+public class MethodNameCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs
+{
+    public int Result { get; };
+    public string Arg2 { get; };
+    public string Arg3 { get; };
+}
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>ProgressChangedEventArgs</p>
+</li>
+<li>
+<p>AsyncCompletedEventArgs</p>
+</li>
+<li>
+<p>How to: Implement a Component That Supports the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>How to: Run an Operation in the Background</p>
+</li>
+<li>
+<p>How to: Implement a Form That Uses a Background Operation</p>
+</li>
+<li>
+<p>Deciding When to Implement the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Best Practices for Implementing the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern (EAP)</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/implementing-the-event-based-asynchronous-pattern">Implementing the Event-based Asynchronous Pattern</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

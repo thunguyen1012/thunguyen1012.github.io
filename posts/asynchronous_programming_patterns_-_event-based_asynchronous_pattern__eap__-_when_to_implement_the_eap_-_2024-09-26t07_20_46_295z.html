@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - When to implement the EAP | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The Event-based Asynchronous Pattern provides a pattern for exposing the asynchronous behavior of a class. With the introduction of this pattern, .NET defines two patterns for exposing asynchronous behavior: the Asynchronous Pattern based on the System.IAsyncResult interface, and the event-based pattern. This article describes when it's appropriate for you to implement both patterns.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - When to implement the EAP</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article describes when it is appropriate to implement both the Event-based Asynchronous Pattern and the Asynchronous Pattern based on the System.IAsyncResult interface.</p>
+<p>For more information about asynchronous programming with the IAsyncResult interface, see Asynchronous Programming Model (APM).</p>
+<h2><a href="#general-principles" aria-hidden="true" class="anchor" id="general-principles"></a>General Principles</h2>
+<p>In this section, you will learn how to expose asynchronous features using the Event-based Asynchronous Pattern.</p>
+<blockquote>
+<p class='note'>Note
+It is rare for the IAsyncResult pattern to be implemented without the event-based pattern also being implemented.</p>
+</blockquote>
+<h2><a href="#guidelines" aria-hidden="true" class="anchor" id="guidelines"></a>Guidelines</h2>
+<p>The following list describes the guidelines for when you should implement Event-based Asynchronous Pattern:</p>
+<ul>
+<li>
+<p>Use the event-based pattern as the default API to expose asynchronous behavior for your class.</p>
+</li>
+<li>
+<p>Do not expose the IAsyncResult pattern when your class is primarily used in a client application, for example Windows Forms.</p>
+</li>
+<li>
+<p>Only expose the IAsyncResult pattern when it is necessary for meeting your requirements. For example, compatibility with an existing API may require you to expose the IAsyncResult pattern.</p>
+</li>
+<li>
+<p>Do not expose the IAsyncResult pattern without also exposing the event-based pattern.</p>
+</li>
+<li>
+<p>If you must expose the IAsyncResult pattern, do so as an advanced option. For example, if you generate a proxy object, generate the event-based pattern by default, with an option to generate the IAsyncResult pattern.</p>
+</li>
+<li>
+<p>Build your event-based pattern implementation on your IAsyncResult pattern implementation.</p>
+</li>
+<li>
+<p>Avoid exposing both the event-based pattern and the IAsyncResult pattern on the same class. Expose the event-based pattern on &quot;higher level&quot; classes and the IAsyncResult pattern on &quot;lower level&quot; classes. For example, compare the event-based pattern on the WebClient component with the IAsyncResult pattern on the HttpRequest class.</p>
+<ul>
+<li>
+<p>Expose the event-based pattern and the IAsyncResult pattern on the same class when compatibility requires it. For example, if you have already released an API that uses the IAsyncResult pattern, you would need to retain the IAsyncResult pattern for backward compatibility.</p>
+</li>
+<li>
+<p>Expose the event-based pattern and the IAsyncResult pattern on the same class if the resulting object model complexity outweighs the benefit of separating the implementations. It is better to expose both patterns on a single class than to avoid exposing the event-based pattern.</p>
+</li>
+<li>
+<p>If you must expose both the event-based pattern and IAsyncResult pattern on a single class, use EditorBrowsableAttribute set to Advanced to mark the IAsyncResult pattern implementation as an advanced feature. This indicates to design environments, such as Visual Studio IntelliSense, not to display the IAsyncResult properties and methods. These properties and methods are still fully usable, but the developer working through IntelliSense has a clearer view of the API.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#criteria-for-exposing-the-iasyncresult-pattern-in-addition-to-the-event-based-pattern" aria-hidden="true" class="anchor" id="criteria-for-exposing-the-iasyncresult-pattern-in-addition-to-the-event-based-pattern"></a>Criteria for Exposing the IAsyncResult Pattern in Addition to the Event-based Pattern</h2>
+<p>The Event-based Asynchronous Pattern has many benefits under the previously mentioned scenarios, and it does have some drawbacks, which you should be aware of if performance is your most important requirement.</p>
+<p>There are three scenarios that the event-based pattern does not address as well as the IAsyncResult pattern:</p>
+<ul>
+<li>
+<p>Blocking wait on one IAsyncResult</p>
+</li>
+<li>
+<p>Blocking wait on many IAsyncResult objects</p>
+</li>
+<li>
+<p>Polling for completion on the IAsyncResult</p>
+</li>
+</ul>
+<p>You can address these scenarios by using the event-based pattern, but doing so is more cumbersome than using the IAsyncResult pattern.</p>
+<p>The IAsyncResult pattern can be used in a variety of ways.</p>
+<p>Additionally, the event-based pattern is less efficient than the IAsyncResult pattern because it creates more objects, especially EventArgs, and because it synchronizes across threads.</p>
+<p>The following list shows some recommendations to follow if you decide to use the IAsyncResult pattern:</p>
+<ul>
+<li>
+<p>Only expose the IAsyncResult pattern when you specifically require support for WaitHandle or IAsyncResult objects.</p>
+</li>
+<li>
+<p>Only expose the IAsyncResult pattern when you have an existing API that uses the IAsyncResult pattern.</p>
+</li>
+<li>
+<p>If you have an existing API based on the IAsyncResult pattern, consider also exposing the event-based pattern in your next release.</p>
+</li>
+<li>
+<p>Only expose IAsyncResult pattern if you have high performance requirements which you have verified cannot be met by the event-based pattern but can be met by the IAsyncResult pattern.</p>
+</li>
+</ul>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>How to: Implement a Component That Supports the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern (EAP)</p>
+</li>
+<li>
+<p>Implementing the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Best Practices for Implementing the Event-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern Overview</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/deciding-when-to-implement-the-event-based-asynchronous-pattern">Deciding When to Implement the Event-based Asynchronous Pattern</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

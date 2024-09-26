@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Hosting startup assemblies | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Hosting startup assemblies</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#hostingstartup-attribute" aria-hidden="true" class="anchor" id="hostingstartup-attribute"></a><code>HostingStartup</code> attribute</h2>
+<pre><code class="language-csharp">[assembly: HostingStartup(typeof(StartupEnhancement.StartupEnhancementHostingStartup))]
+</code></pre>
+<h2><a href="#discover-loaded-hosting-startup-assemblies" aria-hidden="true" class="anchor" id="discover-loaded-hosting-startup-assemblies"></a>Discover loaded hosting startup assemblies</h2>
+<h2><a href="#disable-automatic-loading-of-hosting-startup-assemblies" aria-hidden="true" class="anchor" id="disable-automatic-loading-of-hosting-startup-assemblies"></a>Disable automatic loading of hosting startup assemblies</h2>
+<ul>
+<li>
+<p>To prevent all hosting startup assemblies from loading, set one of the following to <code>true</code> or <code>1</code>:</p>
+<ul>
+<li>Prevent Hosting <code>Startup</code> host configuration setting:</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">public static IHostBuilder CreateHostBuilder(string[] args) =&gt;
+    Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =&gt;
+        {
+            webBuilder.UseSetting(
+                    WebHostDefaults.PreventHostingStartupKey, &quot;true&quot;)
+                .UseStartup&lt;Startup&gt;();
+        });
+</code></pre>
+<ul>
+<li>
+<p><code>ASPNETCORE_PREVENTHOSTINGSTARTUP</code> environment variable.</p>
+</li>
+<li>
+<p>To prevent specific hosting startup assemblies from loading, set one of the following to a semicolon-delimited string of hosting startup assemblies to exclude at startup:</p>
+<ul>
+<li>Hosting <code>Startup</code> Exclude Assemblies host configuration setting:</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-csharp">public static IHostBuilder CreateHostBuilder(string[] args) =&gt;
+    Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =&gt;
+        {
+            webBuilder.UseSetting(
+                    WebHostDefaults.HostingStartupExcludeAssembliesKey, 
+                    &quot;{ASSEMBLY1;ASSEMBLY2; ...}&quot;)
+                .UseStartup&lt;Startup&gt;();
+        });
+</code></pre>
+<p>The {ASSEMBLY1;ASSEMBLY2; ...} placeholder represents the semicolon-separated list of assemblies.</p>
+<ul>
+<li><code>ASPNETCORE_HOSTINGSTARTUPEXCLUDEASSEMBLIES</code> environment variable.</li>
+</ul>
+<h2><a href="#project" aria-hidden="true" class="anchor" id="project"></a>Project</h2>
+<ul>
+<li>
+<p>Class library</p>
+</li>
+<li>
+<p>Console app without an entry point</p>
+</li>
+</ul>
+<h3><a href="#class-library" aria-hidden="true" class="anchor" id="class-library"></a>Class library</h3>
+<ul>
+<li>
+<p>Contains a hosting startup class, <code>ServiceKeyInjection</code>, which implements <code>IHostingStartup</code>. <code>ServiceKeyInjection</code> adds a pair of service strings to the app's configuration using the in-memory configuration provider (AddInMemoryCollection).</p>
+</li>
+<li>
+<p>Includes a <code>HostingStartup</code> attribute that identifies the hosting startup's namespace and class.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[assembly: HostingStartup(typeof(HostingStartupLibrary.ServiceKeyInjection))]
+
+namespace HostingStartupLibrary
+{
+    public class ServiceKeyInjection : IHostingStartup
+    {
+        public void Configure(IWebHostBuilder builder)
+        {
+            builder.ConfigureAppConfiguration(config =&gt;
+            {
+                var dict = new Dictionary&lt;string, string&gt;
+                {
+                    {&quot;DevAccount_FromLibrary&quot;, &quot;DEV_1111111-1111&quot;},
+                    {&quot;ProdAccount_FromLibrary&quot;, &quot;PROD_2222222-2222&quot;}
+                };
+
+                config.AddInMemoryCollection(dict);
+            });
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    public IndexModel(IConfiguration config)
+    {
+        ServiceKey_Development_Library = config[&quot;DevAccount_FromLibrary&quot;];
+        ServiceKey_Production_Library = config[&quot;ProdAccount_FromLibrary&quot;];
+        ServiceKey_Development_Package = config[&quot;DevAccount_FromPackage&quot;];
+        ServiceKey_Production_Package = config[&quot;ProdAccount_FromPackage&quot;];
+    }
+
+    public string ServiceKey_Development_Library { get; private set; }
+    public string ServiceKey_Production_Library { get; private set; }
+    public string ServiceKey_Development_Package { get; private set; }
+    public string ServiceKey_Production_Package { get; private set; }
+
+    public void OnGet()
+    {
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Contains a hosting startup class, <code>ServiceKeyInjection</code>, which implements <code>IHostingStartup</code>. <code>ServiceKeyInjection</code> adds a pair of service strings to the app's configuration.</p>
+</li>
+<li>
+<p>Includes a <code>HostingStartup</code> attribute.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">[assembly: HostingStartup(typeof(HostingStartupPackage.ServiceKeyInjection))]
+
+namespace HostingStartupPackage
+{
+    public class ServiceKeyInjection : IHostingStartup
+    {
+        public void Configure(IWebHostBuilder builder)
+        {
+            builder.ConfigureAppConfiguration(config =&gt;
+            {
+                var dict = new Dictionary&lt;string, string&gt;
+                {
+                    {&quot;DevAccount_FromPackage&quot;, &quot;DEV_3333333-3333&quot;},
+                    {&quot;ProdAccount_FromPackage&quot;, &quot;PROD_4444444-4444&quot;}
+                };
+
+                config.AddInMemoryCollection(dict);
+            });
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    public IndexModel(IConfiguration config)
+    {
+        ServiceKey_Development_Library = config[&quot;DevAccount_FromLibrary&quot;];
+        ServiceKey_Production_Library = config[&quot;ProdAccount_FromLibrary&quot;];
+        ServiceKey_Development_Package = config[&quot;DevAccount_FromPackage&quot;];
+        ServiceKey_Production_Package = config[&quot;ProdAccount_FromPackage&quot;];
+    }
+
+    public string ServiceKey_Development_Library { get; private set; }
+    public string ServiceKey_Production_Library { get; private set; }
+    public string ServiceKey_Development_Package { get; private set; }
+    public string ServiceKey_Production_Package { get; private set; }
+
+    public void OnGet()
+    {
+    }
+}
+</code></pre>
+<h3><a href="#console-app-without-an-entry-point" aria-hidden="true" class="anchor" id="console-app-without-an-entry-point"></a>Console app without an entry point</h3>
+<ul>
+<li>
+<p>A dependencies file is required to consume the hosting startup in the hosting startup assembly. A dependencies file is a runnable app asset that's produced by publishing an app, not a library.</p>
+</li>
+<li>
+<p>A library can't be added directly to the <code>runtime</code> package store, which requires a runnable project that <code>targets</code> the shared <code>runtime</code>.</p>
+</li>
+<li>
+<p>A hosting startup assembly is created from the console app without an entry point that:</p>
+<ul>
+<li>
+<p>Includes a class that contains the <code>IHostingStartup</code> implementation.</p>
+</li>
+<li>
+<p>Includes a <code>HostingStartup</code> attribute to identify the <code>IHostingStartup</code> implementation class.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>The console app is published to obtain the hosting startup's dependencies. A consequence of publishing the console app is that unused dependencies are trimmed from the dependencies file.</p>
+</li>
+<li>
+<p>The dependencies file is modified to set the <code>runtime</code> location of the hosting startup assembly.</p>
+</li>
+<li>
+<p>The hosting startup assembly and its dependencies file is placed into the <code>runtime</code> package store. To discover the hosting startup assembly and its dependencies file, they're listed in a pair of environment variables.</p>
+</li>
+</ul>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netcoreapp3.0&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.Hosting.Abstractions&quot; 
+                      Version=&quot;3.0.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<pre><code class="language-csharp">[assembly: HostingStartup(typeof(StartupEnhancement.StartupEnhancementHostingStartup))]
+</code></pre>
+<pre><code class="language-csharp">namespace StartupEnhancement
+{
+    public class StartupEnhancementHostingStartup : IHostingStartup
+    {
+        public void Configure(IWebHostBuilder builder)
+        {
+            // Use the IWebHostBuilder to add app enhancements.
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-json">&quot;targets&quot;: {
+  &quot;.NETCoreApp,Version=v3.0&quot;: {
+    &quot;StartupEnhancement/1.0.0&quot;: {
+      &quot;dependencies&quot;: {
+        &quot;Microsoft.AspNetCore.Hosting.Abstractions&quot;: &quot;3.0.0&quot;
+      },
+      &quot;runtime&quot;: {
+        &quot;StartupEnhancement.dll&quot;: {}
+      }
+    }
+  }
+}
+</code></pre>
+<h2><a href="#configuration-provided-by-the-hosting-startup" aria-hidden="true" class="anchor" id="configuration-provided-by-the-hosting-startup"></a>Configuration provided by the hosting startup</h2>
+<ul>
+<li>
+<p>Provide configuration to the app using ConfigureAppConfiguration to load the configuration after the app's ConfigureAppConfiguration delegates execute. Hosting startup configuration takes priority over the app's configuration using this approach.</p>
+</li>
+<li>
+<p>Provide configuration to the app using UseConfiguration to load the configuration before the app's ConfigureAppConfiguration delegates execute. The app's configuration values take priority over those provided by the hosting startup using this approach.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class ConfigurationInjection : IHostingStartup
+{
+    public void Configure(IWebHostBuilder builder)
+    {
+        Dictionary&lt;string, string&gt; dict;
+
+        builder.ConfigureAppConfiguration(config =&gt;
+        {
+            dict = new Dictionary&lt;string, string&gt;
+            {
+                {&quot;ConfigurationKey1&quot;, 
+                    &quot;From IHostingStartup: Higher priority &quot; +
+                    &quot;than the app's configuration.&quot;},
+            };
+
+            config.AddInMemoryCollection(dict);
+        });
+
+        dict = new Dictionary&lt;string, string&gt;
+        {
+            {&quot;ConfigurationKey2&quot;, 
+                &quot;From IHostingStartup: Lower priority &quot; +
+                &quot;than the app's configuration.&quot;},
+        };
+
+        var builtConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(dict)
+            .Build();
+
+        builder.UseConfiguration(builtConfig);
+    }
+}
+</code></pre>
+<h2><a href="#specify-the-hosting-startup-assembly" aria-hidden="true" class="anchor" id="specify-the-hosting-startup-assembly"></a>Specify the hosting startup assembly</h2>
+<pre><code class="language-csharp">public static IHostBuilder CreateHostBuilder(string[] args) =&gt;
+    Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =&gt;
+        {
+            webBuilder.UseSetting(
+                    WebHostDefaults.HostingStartupAssembliesKey, 
+                    &quot;{ASSEMBLY1;ASSEMBLY2; ...}&quot;)
+                .UseStartup&lt;Startup&gt;();
+        });
+</code></pre>
+<h2><a href="#activation" aria-hidden="true" class="anchor" id="activation"></a>Activation</h2>
+<ul>
+<li>
+<p>Runtime store: Activation doesn't require a compile-time reference for activation. The sample app places the hosting startup assembly and dependencies files into a folder, deployment, to facilitate deployment of the hosting startup in a multimachine environment. The deployment folder also includes a PowerShell script that creates or modifies environment variables on the deployment system to enable the hosting startup.</p>
+</li>
+<li>
+<p>Compile-time reference required for activation</p>
+<ul>
+<li>
+<p>NuGet package</p>
+</li>
+<li>
+<p>Project bin folder</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#runtime-store" aria-hidden="true" class="anchor" id="runtime-store"></a>Runtime store</h3>
+<pre><code class="language-dotnetcli">dotnet store --manifest {MANIFEST FILE} --runtime {RUNTIME IDENTIFIER} --output {OUTPUT LOCATION} --skip-optimization
+</code></pre>
+<pre><code class="language-dotnetcli">dotnet store --manifest store.manifest.csproj --runtime win7-x64 --output ./deployment/store --skip-optimization
+</code></pre>
+<ul>
+<li>
+<p>Extend the app's library graph by providing a set of additional <code>.deps.json</code> files to merge with the app's own <code>.deps.json</code> file on startup.</p>
+</li>
+<li>
+<p>Make the hosting startup assembly discoverable and loadable.</p>
+</li>
+<li>
+<p>Execute <code>dotnet publish</code> on the <code>runtime</code> store manifest file referenced in the previous section.</p>
+</li>
+<li>
+<p>Remove the manifest reference from <code>libraries</code> and the <code>runtime</code> section of the resulting <code>.deps.json</code> file.</p>
+</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;runtimeTarget&quot;: {
+    &quot;name&quot;: &quot;.NETCoreApp,Version=v3.0&quot;,
+    &quot;signature&quot;: &quot;&quot;
+  },
+  &quot;compilationOptions&quot;: {},
+  &quot;targets&quot;: {
+    &quot;.NETCoreApp,Version=v3.0&quot;: {
+      &quot;store.manifest/1.0.0&quot;: {
+        &quot;dependencies&quot;: {
+          &quot;StartupDiagnostics&quot;: &quot;1.0.0&quot;
+        },
+        &quot;runtime&quot;: {
+          &quot;store.manifest.dll&quot;: {}
+        }
+      },
+      &quot;StartupDiagnostics/1.0.0&quot;: {
+        &quot;runtime&quot;: {
+          &quot;lib/netcoreapp3.0/StartupDiagnostics.dll&quot;: {
+            &quot;assemblyVersion&quot;: &quot;1.0.0.0&quot;,
+            &quot;fileVersion&quot;: &quot;1.0.0.0&quot;
+          }
+        }
+      }
+    }
+  },
+  &quot;libraries&quot;: {
+    &quot;store.manifest/1.0.0&quot;: {
+      &quot;type&quot;: &quot;project&quot;,
+      &quot;serviceable&quot;: false,
+      &quot;sha512&quot;: &quot;&quot;
+    },
+    &quot;StartupDiagnostics/1.0.0&quot;: {
+      &quot;type&quot;: &quot;package&quot;,
+      &quot;serviceable&quot;: true,
+      &quot;sha512&quot;: &quot;sha512-xrhzuNSyM5/f4ZswhooJ9dmIYLP64wMnqUJSyTKVDKDVj5T+qtzypl8JmM/aFJLLpYrf0FYpVWvGujd7/FfMEw==&quot;,
+      &quot;path&quot;: &quot;startupdiagnostics/1.0.0&quot;,
+      &quot;hashPath&quot;: &quot;startupdiagnostics.1.0.0.nupkg.sha512&quot;
+    }
+  }
+}
+</code></pre>
+<ul>
+<li>
+<p>{ADDITIONAL DEPENDENCIES PATH}: Location added to the <code>DOTNET_ADDITIONAL_DEPS</code> environment variable.</p>
+</li>
+<li>
+<p>{SHARED FRAMEWORK NAME}: Shared framework required for this additional dependencies file.</p>
+</li>
+<li>
+<p>{SHARED FRAMEWORK VERSION}: Minimum shared framework version.</p>
+</li>
+<li>
+<p>{ENHANCEMENT ASSEMBLY NAME}: The enhancement's assembly name.</p>
+</li>
+<li>
+<p>The hosting startup <code>runtime</code> store.</p>
+</li>
+<li>
+<p>The hosting startup dependencies file.</p>
+</li>
+<li>
+<p>A PowerShell script that creates or modifies the <code>ASPNETCORE_HOSTINGSTARTUPASSEMBLIES</code>, <code>DOTNET_SHARED_STORE</code>, and <code>DOTNET_ADDITIONAL_DEPS</code> to support the activation of the hosting startup. Run the script from an administrative PowerShell command prompt on the deployment system.</p>
+</li>
+</ul>
+<h3><a href="#nuget-package" aria-hidden="true" class="anchor" id="nuget-package"></a>NuGet package</h3>
+<ul>
+<li>
+<p>The enhanced app's project file makes a package reference for the hosting startup in the app's project file (a compile-time reference). With the compile-time reference in place, the hosting startup assembly and all of its dependencies are incorporated into the app's dependency file (.deps.json). This approach applies to a hosting startup assembly package published to nuget.org.</p>
+</li>
+<li>
+<p>The hosting startup's dependencies file is made available to the enhanced app as described in the Runtime store section (without a compile-time reference).</p>
+</li>
+<li>
+<p>How to Create a NuGet Package with Cross Platform Tools</p>
+</li>
+<li>
+<p>Publishing packages</p>
+</li>
+<li>
+<p>Runtime package store</p>
+</li>
+</ul>
+<h3><a href="#project-bin-folder" aria-hidden="true" class="anchor" id="project-bin-folder"></a>Project bin folder</h3>
+<ul>
+<li>
+<p>The enhanced app's project file makes an assembly reference to the hosting startup (a compile-time reference). With the compile-time reference in place, the hosting startup assembly and all of its dependencies are incorporated into the app's dependency file (.deps.json). This approach applies when the deployment scenario calls for making a compile-time reference to the hosting startup's assembly (.dll file) and moving the assembly to either:</p>
+<ul>
+<li>
+<p>The consuming project.</p>
+</li>
+<li>
+<p>A location accessible by the consuming project.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>The hosting startup's dependencies file is made available to the enhanced app as described in the Runtime store section (without a compile-time reference).</p>
+</li>
+<li>
+<p>When targeting the .NET Framework, the assembly is loadable in the default load context, which on .NET Framework means that the assembly is located at either of the following locations:</p>
+<ul>
+<li>
+<p>Application base path: The bin folder where the app's executable (.exe) is located.</p>
+</li>
+<li>
+<p>Global Assembly Cache (GAC): The GAC stores assemblies that several .NET Framework apps share. For more information, see How to: Install an assembly into the global assembly cache in the .NET Framework documentation.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#sample-code" aria-hidden="true" class="anchor" id="sample-code"></a>Sample code</h2>
+<ul>
+<li>
+<p>Two hosting startup assemblies (class <code>libraries</code>) set a pair of in-memory configuration key-value pairs each:</p>
+<ul>
+<li>
+<p>NuGet package (HostingStartupPackage)</p>
+</li>
+<li>
+<p>Class library (HostingStartupLibrary)</p>
+</li>
+</ul>
+</li>
+<li>
+<p>A hosting startup is activated from a <code>runtime</code> store-deployed assembly (StartupDiagnostics). The assembly adds two middlewares to the app at startup that provide diagnostic information on:</p>
+<ul>
+<li>
+<p>Registered services</p>
+</li>
+<li>
+<p>Address (scheme, host, path base, path, query string)</p>
+</li>
+<li>
+<p>Connection (remote IP, remote port, local IP, local port, client certificate)</p>
+</li>
+<li>
+<p>Request headers</p>
+</li>
+<li>
+<p>Environment variables</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Compile the HostingStartupPackage package with the dotnet pack command.</p>
+</li>
+<li>
+<p>Add the package's assembly name of the HostingStartupPackage to the <code>ASPNETCORE_HOSTINGSTARTUPASSEMBLIES</code> environment variable.</p>
+</li>
+<li>
+<p>Compile and run the app. A package reference is present in the enhanced app (a compile-time reference). A <PropertyGroup> in the app's project file specifies the package project's output (../HostingStartupPackage/bin/Debug) as a package source. This allows the app to use the package without uploading the package to nuget.org. For more information, see the notes in the HostingStartupApp's project file.</p>
+</li>
+</ul>
+<pre><code class="language-xml">&lt;PropertyGroup&gt;
+  &lt;RestoreSources&gt;$(RestoreSources);https://api.nuget.org/v3/index.json;../HostingStartupPackage/bin/Debug&lt;/RestoreSources&gt;
+&lt;/PropertyGroup&gt;
+</code></pre>
+<ul>
+<li>Observe that the service configuration key values rendered by the Index page match the values set by the package's <code>ServiceKeyInjection.Configure</code> method.</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet nuget locals all --clear
+</code></pre>
+<ul>
+<li>
+<p>Compile the HostingStartupLibrary class library with the dotnet build command.</p>
+</li>
+<li>
+<p>Add the class library's assembly name of HostingStartupLibrary to the <code>ASPNETCORE_HOSTINGSTARTUPASSEMBLIES</code> environment variable.</p>
+</li>
+<li>
+<p>bin-deploy the class library's assembly to the app by copying the HostingStartupLibrary.dll file from the class library's compiled output to the app's bin/Debug folder.</p>
+</li>
+<li>
+<p>Compile and run the app. An <ItemGroup> in the app's project file references the class library's assembly (.\bin\Debug\netcoreapp3.0\HostingStartupLibrary.dll) (a compile-time reference). For more information, see the notes in the HostingStartupApp's project file.</p>
+</li>
+</ul>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;Reference Include=&quot;.\\bin\\Debug\\netcoreapp3.0\\HostingStartupLibrary.dll&quot;&gt;
+    &lt;HintPath&gt;.\bin\Debug\netcoreapp3.0\HostingStartupLibrary.dll&lt;/HintPath&gt;
+    &lt;SpecificVersion&gt;False&lt;/SpecificVersion&gt; 
+  &lt;/Reference&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<ul>
+<li>
+<p>Observe that the service configuration key values rendered by the Index page match the values set by the class library's <code>ServiceKeyInjection.Configure</code> method.</p>
+</li>
+<li>
+<p>The <code>StartupDiagnostics</code> project uses PowerShell to modify its <code>StartupDiagnostics.deps.json</code> file. PowerShell is installed by default on Windows starting with Windows 7 SP1 and Windows Server 2008 R2 SP1. To obtain PowerShell on other platforms, see Installing various versions of PowerShell.</p>
+</li>
+<li>
+<p>Execute the build.ps1 script in the RuntimeStore folder. The script:</p>
+<ul>
+<li>
+<p>Generates the <code>StartupDiagnostics</code> package in the obj\packages folder.</p>
+</li>
+<li>
+<p>Generates the <code>runtime</code> store for <code>StartupDiagnostics</code> in the store folder. The <code>dotnet store</code> command in the script uses the <code>win7-x64</code> <code>runtime</code> identifier (RID) for a hosting startup deployed to Windows. When providing the hosting startup for a different <code>runtime</code>, substitute the correct RID on line 37 of the script. The <code>runtime</code> store for <code>StartupDiagnostics</code> would later be moved to the user's or system's <code>runtime</code> store on the machine where the assembly will be consumed. The user <code>runtime</code> store install location for the <code>StartupDiagnostics</code> assembly is .dotnet/store/x64/netcoreapp3.0/startupdiagnostics/1.0.0/lib/netcoreapp3.0/StartupDiagnostics.dll.</p>
+</li>
+<li>
+<p>Generates the <code>additionalDeps</code> for <code>StartupDiagnostics</code> in the <code>additionalDeps</code> folder. The additional dependencies would later be moved to the user's or system's additional dependencies. The user <code>StartupDiagnostics</code> additional dependencies install location is <code>.dotnet/x64/additionalDeps/StartupDiagnostics/shared/Microsoft.NETCore.App/3.0.0/StartupDiagnostics.deps.json</code>.</p>
+</li>
+<li>
+<p>Places the deploy.ps1 file in the deployment folder.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Run the deploy.ps1 script in the deployment folder. The script appends:</p>
+<ul>
+<li>
+<p><code>StartupDiagnostics</code> to the <code>ASPNETCORE_HOSTINGSTARTUPASSEMBLIES</code> environment variable.</p>
+</li>
+<li>
+<p>The hosting startup dependencies path (in the RuntimeStore project's deployment folder) to the <code>DOTNET_ADDITIONAL_DEPS</code> environment variable.</p>
+</li>
+<li>
+<p>The <code>runtime</code> store path (in the RuntimeStore project's deployment folder) to the <code>DOTNET_SHARED_STORE</code> environment variable.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Run the sample app.</p>
+</li>
+<li>
+<p>Request the <code>/services</code> endpoint to see the app's registered services. Request the <code>/diag</code> endpoint to see the diagnostic information.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/platform-specific-configuration?view=aspnetcore-8.0">Use hosting startup assemblies in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

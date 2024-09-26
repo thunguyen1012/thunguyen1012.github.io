@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Task-based asynchronous pattern (TAP) - Interop with other asynchronous patterns and types | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A brief history of asynchronous patterns in .NET:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Task-based asynchronous pattern (TAP) - Interop with other asynchronous patterns and types</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A brief history of asynchronous patterns in .NET:</p>
+<ul>
+<li>
+<p>.NET Framework 1.0 introduced the IAsyncResult pattern, otherwise known as the Asynchronous Programming Model (APM), or the <code>Begin/End</code> pattern.</p>
+</li>
+<li>
+<p>.NET Framework 2.0 added the Event-based Asynchronous Pattern (EAP).</p>
+</li>
+<li>
+<p>.NET Framework 4 introduced the Task-based Asynchronous Pattern (TAP), which supersedes both APM and EAP and provides the ability to easily build migration routines from the earlier patterns.</p>
+</li>
+</ul>
+<h2><a href="#tasks-and-the-asynchronous-programming-model-apm)" aria-hidden="true" class="anchor" id="tasks-and-the-asynchronous-programming-model-apm)"></a>Tasks and the Asynchronous Programming Model (APM)</h2>
+<h3><a href="#from-apm-to-tap" aria-hidden="true" class="anchor" id="from-apm-to-tap"></a>From APM to TAP</h3>
+<p>In this paper, we show how to implement the Asynchronous Programming Model (APM) as a TAP implementation in .NET Framework 4.</p>
+<p>Consider the Stream class and its BeginRead and EndRead methods, which represent the APM counterpart to the synchronous Read method:</p>
+<pre><code class="language-csharp">public int Read(byte[] buffer, int offset, int count)
+</code></pre>
+<pre><code class="language-csharp">public IAsyncResult BeginRead(byte[] buffer, int offset,
+                              int count, AsyncCallback callback,
+                              object state)
+</code></pre>
+<pre><code class="language-csharp">public int EndRead(IAsyncResult asyncResult)
+</code></pre>
+<p>You can use the <code>TaskFactory&lt;TResult&gt;.FromAsync</code> method to implement a TAP wrapper for this operation as follows:</p>
+<pre><code class="language-csharp">public static Task&lt;int&gt; ReadAsync(this Stream stream,
+                                  byte[] buffer, int offset,
+                                  int count)
+{
+    if (stream == null)
+       throw new ArgumentNullException(&quot;stream&quot;);
+
+    return Task&lt;int&gt;.Factory.FromAsync(stream.BeginRead,
+                                       stream.EndRead, buffer,
+                                       offset, count, null);
+}
+</code></pre>
+<p>This implementation is similar to the following:</p>
+<pre><code class="language-csharp">public static Task&lt;int&gt; ReadAsync(this Stream stream,
+                                   byte [] buffer, int offset,
+                                   int count)
+ {
+    if (stream == null)
+        throw new ArgumentNullException(&quot;stream&quot;);
+
+    var tcs = new TaskCompletionSource&lt;int&gt;();
+    stream.BeginRead(buffer, offset, count, iar =&gt;
+                     {
+                        try {
+                           tcs.TrySetResult(stream.EndRead(iar));
+                        }
+                        catch(OperationCanceledException) {
+                           tcs.TrySetCanceled();
+                        }
+                        catch(Exception exc) {
+                           tcs.TrySetException(exc);
+                        }
+                     }, null);
+    return tcs.Task;
+}
+</code></pre>
+<h3><a href="#from-tap-to-apm" aria-hidden="true" class="anchor" id="from-tap-to-apm"></a>From TAP to APM</h3>
+<p>In this article, I'll show you how to take the APM pattern and use it to compose tasks.</p>
+<pre><code class="language-csharp">public static IAsyncResult AsApm&lt;T&gt;(this Task&lt;T&gt; task,
+                                    AsyncCallback callback,
+                                    object state)
+{
+    if (task == null)
+        throw new ArgumentNullException(&quot;task&quot;);
+
+    var tcs = new TaskCompletionSource&lt;T&gt;(state);
+    task.ContinueWith(t =&gt;
+                      {
+                         if (t.IsFaulted)
+                            tcs.TrySetException(t.Exception.InnerExceptions);
+                         else if (t.IsCanceled)
+                            tcs.TrySetCanceled();
+                         else
+                            tcs.TrySetResult(t.Result);
+
+                         if (callback != null)
+                            callback(tcs.Task);
+                      }, TaskScheduler.Default);
+    return tcs.Task;
+}
+</code></pre>
+<p>Now, consider a case where you have the following TAP implementation:</p>
+<pre><code class="language-csharp">public static Task&lt;String&gt; DownloadStringAsync(Uri url)
+</code></pre>
+<p>and you want to provide this APM implementation:</p>
+<pre><code class="language-csharp">public IAsyncResult BeginDownloadString(Uri url,
+                                        AsyncCallback callback,
+                                        object state)
+</code></pre>
+<pre><code class="language-csharp">public string EndDownloadString(IAsyncResult asyncResult)
+</code></pre>
+<p>The following example demonstrates one migration to APM:</p>
+<pre><code class="language-csharp">public IAsyncResult BeginDownloadString(Uri url,
+                                        AsyncCallback callback,
+                                        object state)
+{
+   return DownloadStringAsync(url).AsApm(callback, state);
+}
+
+public string EndDownloadString(IAsyncResult asyncResult)
+{
+   return ((Task&lt;string&gt;)asyncResult).Result;
+}
+</code></pre>
+<h2><a href="#tasks-and-the-event-based-asynchronous-pattern-eap)" aria-hidden="true" class="anchor" id="tasks-and-the-event-based-asynchronous-pattern-eap)"></a>Tasks and the Event-based Asynchronous Pattern (EAP)</h2>
+<p>Wrapping an Event-based Asynchronous Pattern (EAP) implementation is more involved than wrapping an APM pattern, because the EAP pattern has more variation and less structure than the APM pattern.  To demonstrate, the following code wraps the <code>DownloadStringAsync</code> method.  <code>DownloadStringAsync</code> accepts a URI, raises the <code>DownloadProgressChanged</code> event while downloading in order to report multiple statistics on progress, and raises the <code>DownloadStringCompleted</code> event when it's done.  The final result is a string that contains the contents of the page at the specified URI.</p>
+<pre><code class="language-csharp">public static Task&lt;string&gt; DownloadStringAsync(Uri url)
+ {
+     var tcs = new TaskCompletionSource&lt;string&gt;();
+     var wc = new WebClient();
+     wc.DownloadStringCompleted += (s,e) =&gt;
+         {
+             if (e.Error != null)
+                tcs.TrySetException(e.Error);
+             else if (e.Cancelled)
+                tcs.TrySetCanceled();
+             else
+                tcs.TrySetResult(e.Result);
+         };
+     wc.DownloadStringAsync(url);
+     return tcs.Task;
+}
+</code></pre>
+<h2><a href="#tasks-and-wait-handles" aria-hidden="true" class="anchor" id="tasks-and-wait-handles"></a>Tasks and Wait Handles</h2>
+<h3><a href="#from-wait-handles-to-tap" aria-hidden="true" class="anchor" id="from-wait-handles-to-tap"></a>From Wait Handles to TAP</h3>
+<p>asynchronous notifications on a wait handle can be achieved using the <code>WaitPool</code> class and the <code>ThreadHandle.RegisterWaitForSingleObject</code> method.</p>
+<pre><code class="language-csharp">public static Task WaitOneAsync(this WaitHandle waitHandle)
+{
+    if (waitHandle == null)
+        throw new ArgumentNullException(&quot;waitHandle&quot;);
+
+    var tcs = new TaskCompletionSource&lt;bool&gt;();
+    var rwh = ThreadPool.RegisterWaitForSingleObject(waitHandle,
+        delegate { tcs.TrySetResult(true); }, null, -1, true);
+    var t = tcs.Task;
+    t.ContinueWith( (antecedent) =&gt; rwh.Unregister(null));
+    return t;
+}
+</code></pre>
+<p>In this article, I'm going to show you how to use the WaitHandle method in an asynchronous manner.</p>
+<pre><code class="language-csharp">static int N = 3;
+
+static SemaphoreSlim m_throttle = new SemaphoreSlim(N, N);
+
+static async Task DoOperation()
+{
+    await m_throttle.WaitAsync();
+    // do work
+    m_throttle.Release();
+}
+</code></pre>
+<p>In this tutorial, you will learn how to build an asynchronous semaphore that does not rely on wait handles.</p>
+<h3><a href="#from-tap-to-wait-handles" aria-hidden="true" class="anchor" id="from-tap-to-wait-handles"></a>From TAP to Wait Handles</h3>
+<p>In our previous post on the IAsyncResult method, we looked at how to get a wait handle for a task.</p>
+<pre><code class="language-csharp">WaitHandle wh = ((IAsyncResult)task).AsyncWaitHandle;
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Task-based Asynchronous Pattern (TAP)</p>
+</li>
+<li>
+<p>Implementing the Task-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Consuming the Task-based Asynchronous Pattern</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/interop-with-other-asynchronous-patterns-and-types">Interop with Other Asynchronous Patterns and Types</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

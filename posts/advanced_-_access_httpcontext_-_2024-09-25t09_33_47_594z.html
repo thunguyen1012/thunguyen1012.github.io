@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Access HttpContext | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Access HttpContext</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<h2><a href="#access-httpcontext-from-razor-pages" aria-hidden="true" class="anchor" id="access-httpcontext-from-razor-pages"></a>Access <code>HttpContext</code> from Razor Pages</h2>
+<pre><code class="language-csharp">public class IndexModel : PageModel
+{
+    public void OnGet()
+    {
+        var message = HttpContext.Request.PathBase;
+
+        // ...
+    }
+}
+</code></pre>
+<pre><code class="language-cshtml">@page
+@model IndexModel
+
+@{
+    var message = HttpContext.Request.PathBase;
+
+    // ...
+}
+</code></pre>
+<h2><a href="#access-httpcontext-from-a-razor-view-in-mvc" aria-hidden="true" class="anchor" id="access-httpcontext-from-a-razor-view-in-mvc"></a>Access <code>HttpContext</code> from a Razor view in MVC</h2>
+<pre><code class="language-cshtml">@{
+    var username = Context.User.Identity.Name;
+
+    // ...
+}
+</code></pre>
+<h2><a href="#access-httpcontext-from-a-controller" aria-hidden="true" class="anchor" id="access-httpcontext-from-a-controller"></a>Access <code>HttpContext</code> from a controller</h2>
+<pre><code class="language-csharp">public class HomeController : Controller
+{
+    public IActionResult About()
+    {
+        var pathBase = HttpContext.Request.PathBase;
+
+        // ...
+
+        return View();
+    }
+}
+</code></pre>
+<h2><a href="#access-httpcontext-from-minimal-apis" aria-hidden="true" class="anchor" id="access-httpcontext-from-minimal-apis"></a>Access <code>HttpContext</code> from minimal APIs</h2>
+<pre><code class="language-csharp">app.MapGet(&quot;/&quot;, (HttpContext context) =&gt; context.Response.WriteAsync(&quot;Hello World&quot;));
+</code></pre>
+<h2><a href="#access-httpcontext-from-middleware" aria-hidden="true" class="anchor" id="access-httpcontext-from-middleware"></a>Access <code>HttpContext</code> from middleware</h2>
+<pre><code class="language-csharp">public class MyCustomMiddleware
+{
+    // ...
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        // ...
+    }
+}
+</code></pre>
+<h2><a href="#access-httpcontext-from-signalr" aria-hidden="true" class="anchor" id="access-httpcontext-from-signalr"></a>Access <code>HttpContext</code> from SignalR</h2>
+<pre><code class="language-csharp">public class MyHub : Hub
+{
+    public async Task SendMessage()
+    {
+        var httpContext = Context.GetHttpContext();
+
+        // ...
+    }
+}
+</code></pre>
+<h2><a href="#access-httpcontext-from-grpc-methods" aria-hidden="true" class="anchor" id="access-httpcontext-from-grpc-methods"></a>Access <code>HttpContext</code> from gRPC methods</h2>
+<h2><a href="#access-httpcontext-from-custom-components" aria-hidden="true" class="anchor" id="access-httpcontext-from-custom-components"></a>Access <code>HttpContext</code> from custom components</h2>
+<pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient&lt;IUserRepository, UserRepository&gt;();
+</code></pre>
+<ul>
+<li>
+<p><code>UserRepository</code> declares its dependency on <code>IHttpContextAccessor</code>.</p>
+</li>
+<li>
+<p>The dependency is supplied when DI resolves the dependency chain and creates an instance of <code>UserRepository</code>.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class UserRepository : IUserRepository
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public UserRepository(IHttpContextAccessor httpContextAccessor) =&gt;
+        _httpContextAccessor = httpContextAccessor;
+
+    public void LogCurrentUser()
+    {
+        var username = _httpContextAccessor.HttpContext.User.Identity.Name;
+
+        // ...
+    }
+}
+</code></pre>
+<h2><a href="#httpcontext-access-from-a-background-thread" aria-hidden="true" class="anchor" id="httpcontext-access-from-a-background-thread"></a><code>HttpContext</code> access from a background thread</h2>
+<blockquote>
+<p class='note'>Note
+If your app generates sporadic <code>NullReferenceException</code> errors, review parts of the code that start background processing or that continue processing after a request completes. Look for mistakes, such as defining a controller method as <code>async void</code>.</p>
+</blockquote>
+<ul>
+<li>
+<p>Copy the required data during request processing.</p>
+</li>
+<li>
+<p>Pass the copied data to a background task.</p>
+</li>
+<li>
+<p>Do not reference <code>HttpContext</code> data in parallel tasks. Extract the data needed from the context before starting the parallel tasks.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public class EmailController : Controller
+{
+    public IActionResult SendEmail(string email)
+    {
+        var correlationId = HttpContext.Request.Headers[&quot;X-Correlation-Id&quot;].ToString();
+
+        _ = SendEmailCoreAsync(correlationId);
+
+        return View();
+    }
+
+    private async Task SendEmailCoreAsync(string correlationId)
+    {
+        // ...
+    }
+}
+</code></pre>
+<h2><a href="#ihttpcontextaccessorhttpcontext-in-razor-components-(blazor)" aria-hidden="true" class="anchor" id="ihttpcontextaccessorhttpcontext-in-razor-components-(blazor)"></a><code>IHttpContextAccessor</code>/HttpContext in Razor components (Blazor)</h2>
+<pre><code class="language-csharp">[CascadingParameter]
+public HttpContext? HttpContext { get; set; }
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-context?view=aspnetcore-8.0">Access <code>HttpContext</code> in ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

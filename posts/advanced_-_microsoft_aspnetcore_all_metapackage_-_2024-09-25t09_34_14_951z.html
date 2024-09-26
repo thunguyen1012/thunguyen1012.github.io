@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Microsoft.AspNetCore.All metapackage | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This feature requires ASP.NET Core 2.x targeting .NET Core 2.x.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Microsoft.AspNetCore.All metapackage</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<blockquote>
+<p class='note'>Note
+The <code>Microsoft.AspNetCore.All</code> metapackage isn't used in ASP.NET Core 3.0 and later. For more information, see this GitHub issue.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+We recommend applications targeting ASP.NET Core 2.1 and later use the <code>Microsoft.AspNetCore.App</code> metapackage rather than this package. See Migrating from <code>Microsoft.AspNetCore.All</code> to <code>Microsoft.AspNetCore.App</code> in this article.</p>
+</blockquote>
+<p>This feature requires ASP.NET Core 2.x targeting .NET Core 2.x.</p>
+<p><code>Microsoft.AspNetCore.All</code> is a metapackage that refers to a shared framework. A shared framework is a set of assemblies (.dll files) that are not in the app's folders. The shared framework must be installed on the machine to run the app. For more information, see The shared framework.</p>
+<p>The shared framework that <code>Microsoft.AspNetCore.All</code> refers to includes:</p>
+<ul>
+<li>
+<p>All supported packages by the ASP.NET Core team.</p>
+</li>
+<li>
+<p>All supported packages by the Entity Framework Core.</p>
+</li>
+<li>
+<p>Internal and 3rd-party dependencies used by ASP.NET Core and Entity Framework Core.</p>
+</li>
+</ul>
+<p>All the features of ASP.NET Core 2.x and Entity Framework Core 2.x are included in the <code>Microsoft.AspNetCore.All</code> package. The default project templates targeting ASP.NET Core 2.0 use this package.</p>
+<p>The version number of the <code>Microsoft.AspNetCore.All</code> metapackage represents the minimum ASP.NET Core version and Entity Framework Core version.</p>
+<p>The following <code>.csproj</code> file references the <code>Microsoft.AspNetCore.All</code> metapackage for ASP.NET Core:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk.Web&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netcoreapp2.0&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.All&quot; Version=&quot;2.0.9&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<h2><a href="#implicit-versioning" aria-hidden="true" class="anchor" id="implicit-versioning"></a>Implicit versioning</h2>
+<h2><a href="#migrating-from-microsoftaspnetcore.all-to-microsoft.aspnetcore.app" aria-hidden="true" class="anchor" id="migrating-from-microsoftaspnetcore.all-to-microsoft.aspnetcore.app"></a>Migrating from <code>Microsoft.AspNetCore.All</code> to <code>Microsoft.AspNetCore.App</code></h2>
+<p>The following packages are included in <code>Microsoft.AspNetCore.All</code> but not the <code>Microsoft.AspNetCore.App</code> package.</p>
+<ul>
+<li>
+<p><code>Microsoft.AspNetCore.ApplicationInsights.HostingStartup</code></p>
+</li>
+<li>
+<p><code>Microsoft.AspNetCore.AzureAppServices.HostingStartup</code></p>
+</li>
+<li>
+<p><code>Microsoft.AspNetCore.AzureAppServicesIntegration</code></p>
+</li>
+<li>
+<p><code>Microsoft.AspNetCore.DataProtection.AzureKeyVault</code></p>
+</li>
+<li>
+<p><code>Microsoft.AspNetCore.DataProtection.AzureStorage</code></p>
+</li>
+<li>
+<p><code>Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv</code></p>
+</li>
+<li>
+<p><code>Microsoft.AspNetCore.SignalR.Redis</code></p>
+</li>
+<li>
+<p><code>Microsoft.Data.Sqlite</code></p>
+</li>
+<li>
+<p><code>Microsoft.Data.Sqlite.Core</code></p>
+</li>
+<li>
+<p><code>Microsoft.EntityFrameworkCore.Sqlite</code></p>
+</li>
+<li>
+<p><code>Microsoft.EntityFrameworkCore.Sqlite.Core</code></p>
+</li>
+<li>
+<p><code>Microsoft.Extensions.Caching.Redis</code></p>
+</li>
+<li>
+<p><code>Microsoft.Extensions.Configuration.AzureKeyVault</code></p>
+</li>
+<li>
+<p><code>Microsoft.Extensions.Logging.AzureAppServices</code></p>
+</li>
+<li>
+<p><code>Microsoft.VisualStudio.Web.BrowserLink</code></p>
+</li>
+</ul>
+<p>To move from <code>Microsoft.AspNetCore.All</code> to <code>Microsoft.AspNetCore.App</code>, if your app uses any APIs from the above packages, or packages brought in by those packages, add references to those packages in your project.</p>
+<p>Any dependencies of the preceding packages that otherwise aren't dependencies of <code>Microsoft.AspNetCore.App</code> are not included implicitly. For example:</p>
+<ul>
+<li>
+<p><code>StackExchange.Redis</code> as a dependency of <code>Microsoft.Extensions.Caching.Redis</code></p>
+</li>
+<li>
+<p><code>Microsoft.ApplicationInsights</code> as a dependency of <code>Microsoft.AspNetCore.ApplicationInsights.HostingStartup</code></p>
+</li>
+</ul>
+<h2><a href="#update-aspnet-core-2.1" aria-hidden="true" class="anchor" id="update-aspnet-core-2.1"></a>Update ASP.NET Core 2.1</h2>
+<p>We recommend migrating to the <code>Microsoft.AspNetCore.App</code> metapackage for 2.1 and later. To keep using the <code>Microsoft.AspNetCore.All</code> metapackage and ensure the latest patch version is deployed:</p>
+<ul>
+<li>
+<p>On development machines and build servers: Install the latest .NET Core SDK.</p>
+</li>
+<li>
+<p>On deployment servers: Install the latest .NET Core runtime.
+Your app will roll forward to the latest installed version on an application restart.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/metapackage?view=aspnetcore-8.0">Microsoft.AspNetCore.All metapackage for ASP.NET Core 2.0</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

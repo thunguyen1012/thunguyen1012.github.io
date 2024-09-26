@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced .NET programming | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced .NET programming</h1>
+        <h2><a href="#asynchronous-programming" aria-hidden="true" class="anchor" id="asynchronous-programming"></a>Asynchronous programming</h2>
+<h3><a href="#overview" aria-hidden="true" class="anchor" id="overview"></a>Overview</h3>
+<pre><code>- Pattern overview
+
+- TAP overview
+
+- EAP overview
+
+- APM overview
+</code></pre>
+<h2><a href="#threading" aria-hidden="true" class="anchor" id="threading"></a>Threading</h2>
+<h3><a href="#overview-1" aria-hidden="true" class="anchor" id="overview-1"></a>Overview</h3>
+<pre><code>- Overview
+</code></pre>
+<h3><a href="#concept" aria-hidden="true" class="anchor" id="concept"></a>Concept</h3>
+<pre><code>- Managed thread pool
+</code></pre>
+<h2><a href="#parallel-programming" aria-hidden="true" class="anchor" id="parallel-programming"></a>Parallel programming</h2>
+<h3><a href="#overview-2" aria-hidden="true" class="anchor" id="overview-2"></a>Overview</h3>
+<pre><code>- Parallel Programming in .NET
+</code></pre>
+<h3><a href="#concept-1" aria-hidden="true" class="anchor" id="concept-1"></a>Concept</h3>
+<pre><code>- Task Parallel Library (TPL)
+
+- Task-based asynchronous programming
+
+- Task cancellation
+</code></pre>
+<h3><a href="#how-to-guide" aria-hidden="true" class="anchor" id="how-to-guide"></a>How-To Guide</h3>
+<pre><code>- Write a simple parallel program using Parallel.ForEach
+
+- Return a value from a task
+</code></pre>
+<h2><a href="#native-interoperability" aria-hidden="true" class="anchor" id="native-interoperability"></a>Native interoperability</h2>
+<h3><a href="#overview-3" aria-hidden="true" class="anchor" id="overview-3"></a>Overview</h3>
+<pre><code>- Overview
+
+- P/Invoke
+
+- Type marshalling
+</code></pre>
+<h2><a href="#memory-management" aria-hidden="true" class="anchor" id="memory-management"></a>Memory management</h2>
+<h3><a href="#overview-4" aria-hidden="true" class="anchor" id="overview-4"></a>Overview</h3>
+<pre><code>- Managed code
+
+- Garbage collection
+
+- Unmanaged resources
+</code></pre>
+<h3><a href="#concept-2" aria-hidden="true" class="anchor" id="concept-2"></a>Concept</h3>
+<pre><code>- Implement a Dispose method
+
+- Implement a DisposeAsync method
+</code></pre>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/navigate/advanced-programming/">Advanced .NET programming documentation</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

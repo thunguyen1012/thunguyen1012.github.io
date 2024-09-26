@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Open Web Interface for .NET (OWIN) | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Open Web Interface for .NET (OWIN)</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>ASP.NET Core:</p>
+<ul>
+<li>
+<p>Supports the Open Web Interface for .NET (OWIN).</p>
+</li>
+<li>
+<p>Has .NET Core compatible replacements for the Microsoft.Owin.* (Katana) libraries.</p>
+</li>
+</ul>
+<p>OWIN allows web apps to be decoupled from web servers. It defines a standard way for middleware to be used in a pipeline to handle requests and associated responses. ASP.NET Core applications and middleware can interoperate with OWIN-based applications, servers, and middleware.</p>
+<p>OWIN provides a decoupling layer that allows two frameworks with disparate object models to be used together. The <code>Microsoft.AspNetCore.Owin</code> package provides two adapter implementations:</p>
+<ul>
+<li>
+<p>ASP.NET Core to OWIN</p>
+</li>
+<li>
+<p>OWIN to ASP.NET Core</p>
+</li>
+</ul>
+<p>This allows ASP.NET Core to be hosted on top of an OWIN compatible server/host or for other OWIN compatible components to be run on top of ASP.NET Core.</p>
+<blockquote>
+<p class='note'>Note
+Using these adapters comes with a performance cost. Apps using only ASP.NET Core components shouldn't use the <code>Microsoft.AspNetCore.Owin</code> package or adapters.</p>
+</blockquote>
+<p>View or download sample code (how to download)</p>
+<h2><a href="#running-owin-middleware-in-the-aspnet-core-pipeline" aria-hidden="true" class="anchor" id="running-owin-middleware-in-the-aspnet-core-pipeline"></a>Running OWIN middleware in the ASP.NET Core pipeline</h2>
+<p>ASP.NET Core's OWIN support is deployed as part of the <code>Microsoft.AspNetCore.Owin</code> package. You can import OWIN support into your project by installing this package.</p>
+<p>OWIN middleware conforms to the OWIN specification, which requires a <code>Func&lt;IDictionary&lt;string, object&gt;, Task&gt;</code> interface, and specific keys be set (such as <code>owin.ResponseBody</code>). The following simple OWIN middleware displays &quot;Hello World&quot;:</p>
+<pre><code class="language-csharp">public Task OwinHello(IDictionary&lt;string, object&gt; environment)
+{
+    string responseText = &quot;Hello World via OWIN&quot;;
+    byte[] responseBytes = Encoding.UTF8.GetBytes(responseText);
+
+    // OWIN Environment Keys: https://owin.org/spec/spec/owin-1.0.0.html
+    var responseStream = (Stream)environment[&quot;owin.ResponseBody&quot;];
+    var responseHeaders = (IDictionary&lt;string, string[]&gt;)environment[&quot;owin.ResponseHeaders&quot;];
+
+    responseHeaders[&quot;Content-Length&quot;] = new string[] { responseBytes.Length.ToString(CultureInfo.InvariantCulture) };
+    responseHeaders[&quot;Content-Type&quot;] = new string[] { &quot;text/plain&quot; };
+
+    return responseStream.WriteAsync(responseBytes, 0, responseBytes.Length);
+}
+</code></pre>
+<p>The sample signature returns a <code>Task</code> and accepts an <code>IDictionary&lt;string, object&gt;</code> as required by OWIN.</p>
+<p>The following code shows how to add the <code>OwinHello</code> middleware (shown above) to the ASP.NET Core pipeline with the <code>UseOwin</code> extension method.</p>
+<pre><code class="language-csharp">public void Configure(IApplicationBuilder app)
+{
+    app.UseOwin(pipeline =&gt;
+    {
+        pipeline(next =&gt; OwinHello);
+    });
+}
+</code></pre>
+<p>You can configure other actions to take place within the OWIN pipeline.</p>
+<blockquote>
+<p class='note'>Note
+Response headers should only be modified prior to the first write to the response stream.</p>
+</blockquote>
+<blockquote>
+<p class='note'>Note
+Multiple calls to <code>UseOwin</code> is discouraged for performance reasons. OWIN components will operate best if grouped together.</p>
+</blockquote>
+<pre><code class="language-csharp">app.UseOwin(pipeline =&gt;
+{
+    pipeline(next =&gt;
+    {
+        return async environment =&gt;
+        {
+            // Do something before.
+            await next(environment);
+            // Do something after.
+        };
+    });
+});
+</code></pre>
+<h2><a href="#run-aspnet-core-on-an-owin-based-server-and-use-its-websockets-support" aria-hidden="true" class="anchor" id="run-aspnet-core-on-an-owin-based-server-and-use-its-websockets-support"></a>Run ASP.NET Core on an OWIN-based server and use its WebSockets support</h2>
+<p>The .NET OWIN web server used in the previous example has support for Webs built in, which can be leveraged by an ASP.NET Core application.</p>
+<pre><code class="language-csharp">public class Startup
+{
+    public void Configure(IApplicationBuilder app)
+    {
+        app.Use(async (context, next) =&gt;
+        {
+            if (context.WebSockets.IsWebSocketRequest)
+            {
+                WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                await EchoWebSocket(webSocket);
+            }
+            else
+            {
+                await next();
+            }
+        });
+
+        app.Run(context =&gt;
+        {
+            return context.Response.WriteAsync(&quot;Hello World&quot;);
+        });
+    }
+
+    private async Task EchoWebSocket(WebSocket webSocket)
+    {
+        byte[] buffer = new byte[1024];
+        WebSocketReceiveResult received = await webSocket.ReceiveAsync(
+            new ArraySegment&lt;byte&gt;(buffer), CancellationToken.None);
+
+        while (!webSocket.CloseStatus.HasValue)
+        {
+            // Echo anything we receive
+            await webSocket.SendAsync(new ArraySegment&lt;byte&gt;(buffer, 0, received.Count), 
+                received.MessageType, received.EndOfMessage, CancellationToken.None);
+
+            received = await webSocket.ReceiveAsync(new ArraySegment&lt;byte&gt;(buffer), 
+                CancellationToken.None);
+        }
+
+        await webSocket.CloseAsync(webSocket.CloseStatus.Value, 
+            webSocket.CloseStatusDescription, CancellationToken.None);
+    }
+}
+</code></pre>
+<h2><a href="#owin-environment" aria-hidden="true" class="anchor" id="owin-environment"></a>OWIN environment</h2>
+<p>You can construct an OWIN environment using the <code>HttpContext</code>.</p>
+<pre><code class="language-csharp">var environment = new OwinEnvironment(HttpContext);
+   var features = new OwinFeatureCollection(environment);
+</code></pre>
+<h2><a href="#owin-keys" aria-hidden="true" class="anchor" id="owin-keys"></a>OWIN keys</h2>
+<p>OWIN depends on an <code>IDictionary&lt;string,object&gt;</code> object to communicate information throughout an HTTP Request/Response exchange. ASP.NET Core implements the keys listed below. See the primary specification, extensions, and OWIN Key Guidelines and Common Keys.</p>
+<h3><a href="#request-data-owin-v1.0.0)" aria-hidden="true" class="anchor" id="request-data-owin-v1.0.0)"></a>Request data (OWIN v1.0.0)</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>owin.RequestScheme</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.RequestMethod</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.RequestPathBase</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.RequestPath</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.RequestQueryString</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.RequestProtocol</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.RequestHeaders</td>
+<td><code>IDictionary&lt;string,string[]&gt;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.RequestBody</td>
+<td><code>Stream</code></td>
+<td></td>
+</tr>
+</tbody></table>
+<h3><a href="#request-data-owin-v1.1.0)" aria-hidden="true" class="anchor" id="request-data-owin-v1.1.0)"></a>Request data (OWIN v1.1.0)</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>owin.RequestId</td>
+<td><code>String</code></td>
+<td>Optional</td>
+</tr>
+</tbody></table>
+<h3><a href="#response-data-owin-v1.0.0)" aria-hidden="true" class="anchor" id="response-data-owin-v1.0.0)"></a>Response data (OWIN v1.0.0)</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>owin.ResponseStatusCode</td>
+<td><code>int</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>owin.ResponseReasonPhrase</td>
+<td><code>String</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>owin.ResponseHeaders</td>
+<td><code>IDictionary&lt;string,string[]&gt;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.ResponseBody</td>
+<td><code>Stream</code></td>
+<td></td>
+</tr>
+</tbody></table>
+<h3><a href="#other-data-owin-v1.0.0)" aria-hidden="true" class="anchor" id="other-data-owin-v1.0.0)"></a>Other data (OWIN v1.0.0)</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>owin.CallCancelled</td>
+<td><code>CancellationToken</code></td>
+<td></td>
+</tr>
+<tr>
+<td>owin.Version</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+</tbody></table>
+<h3><a href="#common-keys" aria-hidden="true" class="anchor" id="common-keys"></a>Common keys</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ssl.ClientCertificate</td>
+<td><code>X509Certificate</code></td>
+<td></td>
+</tr>
+<tr>
+<td>ssl.LoadClientCertAsync</td>
+<td><code>Func&lt;Task&gt;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>server.RemoteIpAddress</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>server.RemotePort</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>server.LocalIpAddress</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>server.LocalPort</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>server.OnSendingHeaders</td>
+<td><code>Action&lt;Action&lt;object&gt;,object&gt;</code></td>
+<td></td>
+</tr>
+</tbody></table>
+<h3><a href="#sendfiles-v03.0" aria-hidden="true" class="anchor" id="sendfiles-v03.0"></a>SendFiles v0.3.0</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sendfile.SendAsync</td>
+<td>See <a href="https://owin.org/spec/extensions/owin-SendFile-Extension-v0.3.0.htm" data-linktype="external">delegate signature</a></td>
+<td>Per Request</td>
+</tr>
+</tbody></table>
+<h3><a href="#opaque-v03.0" aria-hidden="true" class="anchor" id="opaque-v03.0"></a>Opaque v0.3.0</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>opaque.Version</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>opaque.Upgrade</td>
+<td><code>OpaqueUpgrade</code></td>
+<td>See <a href="https://owin.org/spec/extensions/owin-SendFile-Extension-v0.3.0.htm" data-linktype="external">delegate signature</a></td>
+</tr>
+<tr>
+<td>opaque.Stream</td>
+<td><code>Stream</code></td>
+<td></td>
+</tr>
+<tr>
+<td>opaque.CallCancelled</td>
+<td><code>CancellationToken</code></td>
+<td></td>
+</tr>
+</tbody></table>
+<h3><a href="#websocket-v03.0" aria-hidden="true" class="anchor" id="websocket-v03.0"></a>WebSocket v0.3.0</h3>
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Value (type)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>websocket.Version</td>
+<td><code>String</code></td>
+<td></td>
+</tr>
+<tr>
+<td>websocket.Accept</td>
+<td><code>WebSocketAccept</code></td>
+<td>See <a href="https://owin.org/spec/extensions/owin-SendFile-Extension-v0.3.0.htm" data-linktype="external">delegate signature</a></td>
+</tr>
+<tr>
+<td>websocket.AcceptAlt</td>
+<td></td>
+<td>Non-spec</td>
+</tr>
+<tr>
+<td>websocket.SubProtocol</td>
+<td><code>String</code></td>
+<td>See <a href="https://tools.ietf.org/html/rfc6455#section-4.2.2" data-linktype="external">RFC6455 Section 4.2.2</a> Step 5.5</td>
+</tr>
+<tr>
+<td>websocket.SendAsync</td>
+<td><code>WebSocketSendAsync</code></td>
+<td>See <a href="https://owin.org/spec/extensions/owin-SendFile-Extension-v0.3.0.htm" data-linktype="external">delegate signature</a></td>
+</tr>
+<tr>
+<td>websocket.ReceiveAsync</td>
+<td><code>WebSocketReceiveAsync</code></td>
+<td>See <a href="https://owin.org/spec/extensions/owin-SendFile-Extension-v0.3.0.htm" data-linktype="external">delegate signature</a></td>
+</tr>
+<tr>
+<td>websocket.CloseAsync</td>
+<td><code>WebSocketCloseAsync</code></td>
+<td>See <a href="https://owin.org/spec/extensions/owin-SendFile-Extension-v0.3.0.htm" data-linktype="external">delegate signature</a></td>
+</tr>
+<tr>
+<td>websocket.CallCancelled</td>
+<td><code>CancellationToken</code></td>
+<td></td>
+</tr>
+<tr>
+<td>websocket.ClientCloseStatus</td>
+<td><code>int</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>websocket.ClientCloseDescription</td>
+<td><code>String</code></td>
+<td>Optional</td>
+</tr>
+</tbody></table>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>See the source on GitHub for OWIN keys supported in the translation layer.</p>
+</li>
+<li>
+<p>Middleware</p>
+</li>
+<li>
+<p>Servers</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/owin?view=aspnetcore-8.0">Open Web Interface for .NET (OWIN) with ASP.NET Core</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

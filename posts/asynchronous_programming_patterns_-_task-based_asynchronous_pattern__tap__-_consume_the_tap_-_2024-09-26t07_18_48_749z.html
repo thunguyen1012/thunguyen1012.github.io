@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Task-based asynchronous pattern (TAP) - Consume the TAP | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='When you use the Task-based Asynchronous Pattern (TAP) to work with asynchronous operations, you can use callbacks to achieve waiting without blocking. For tasks, this is achieved through methods such as Task.ContinueWith. Language-based asynchronous support hides callbacks by allowing asynchronous operations to be awaited within normal control flow, and compiler-generated code provides this same API-level support.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Task-based asynchronous pattern (TAP) - Consume the TAP</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>When you use the <code>Task</code>-based Asynchronous Pattern (TAP) to work with asynchronous operations, you can use callbacks to achieve waiting without blocking. For tasks, this is achieved through methods such as <code>Task.ContinueWith</code>. Language-based asynchronous support hides callbacks by allowing asynchronous operations to be awaited within normal control flow, and compiler-generated code provides this same API-level support.</p>
+<h2><a href="#suspending-execution-with-await" aria-hidden="true" class="anchor" id="suspending-execution-with-await"></a>Suspending Execution with Await</h2>
+<p>You can use the <code>await</code> keyword in C# and the Await Operator in Visual Basic to asynchronously <code>await Task</code> and <code>Task&lt;TResult&gt;</code> objects. When you're awaiting a <code>Task</code>, the <code>await</code> expression is of type <code>void</code>. When you're awaiting a <code>Task&lt;TResult&gt;</code>, the <code>await</code> expression is of type <code>TResult</code>. An <code>await</code> expression must occur inside the body of an asynchronous method. (These language features were introduced in .NET Framework 4.5.)</p>
+<p>Under the covers, the <code>await</code> functionality installs a callback on the task by using a continuation.  This callback resumes the asynchronous method at the point of suspension. When the asynchronous method is resumed, if the awaited operation completed successfully and was a <code>Task&lt;TResult&gt;</code>, its <code>TResult</code> is returned.  If the <code>Task</code> or <code>Task&lt;TResult&gt;</code> that was awaited ended in the Canceled state, an <code>OperationCanceledException</code> exception is thrown.  If the <code>Task</code> or <code>Task&lt;TResult&gt;</code> that was awaited ended in the Faulted state, the exception that caused it to fault is thrown. A <code>Task</code> can fault as a result of multiple exceptions, but only one of these exceptions is propagated. However, the <code>Task</code>.Exception property returns an AggregateException exception that contains all the errors.</p>
+<p>If a synchronization context (SynchronizationContext object) is associated with the thread that was executing the asynchronous method at the time of suspension (for example, if the <code>SynchronizationContext.Current</code> property is not <code>null</code>), the asynchronous method resumes on that same synchronization context by using the context's Post method. Otherwise, it relies on the task scheduler (<code>TaskScheduler</code> object) that was current at the time of suspension. Typically, this is the default task scheduler (<code>TaskScheduler.Default</code>), which targets the thread pool. This task scheduler determines whether the awaited asynchronous operation should resume where it completed or whether the resumption should be scheduled. The default scheduler typically allows the continuation to run on the thread that the awaited operation completed.</p>
+<p>When an asynchronous method is called, it synchronously executes the body of the function up until the first <code>await</code> expression on an awaitable instance that has not yet completed, at which point the invocation returns to the caller. If the asynchronous method does not return <code>void</code>, a <code>Task</code> or <code>Task&lt;TResult&gt;</code> object is returned to represent the ongoing computation. In a non-void asynchronous method, if a return statement is encountered or the end of the method body is reached, the task is completed in the <code>RanToCompletion</code> final state. If an unhandled exception causes control to leave the body of the asynchronous method, the task ends in the Faulted state. If that exception is an <code>OperationCanceledException</code>, the task instead ends in the Canceled state. In this manner, the result or exception is eventually published.</p>
+<p>There are several important variations of this behavior.  For performance reasons, if a task has already completed by the time the task is awaited, control is not yielded, and the function continues to execute.  Additionally, returning to the original context isn't always the desired behavior and can be changed; this is described in more detail in the next section.</p>
+<h3><a href="#configuring-suspension-and-resumption-with-yield-and-configureawait" aria-hidden="true" class="anchor" id="configuring-suspension-and-resumption-with-yield-and-configureawait"></a>Configuring Suspension and Resumption with Yield and ConfigureAwait</h3>
+<p>Several methods provide more control over an asynchronous method's execution. For example, you can use the <code>Task</code>.Yield method to introduce a yield point into the asynchronous method:</p>
+<pre><code class="language-csharp">public class Task : …
+{
+    public static YieldAwaitable Yield();
+    …
+}
+</code></pre>
+<p>This is equivalent to asynchronously posting or scheduling back to the current context.</p>
+<pre><code class="language-csharp">Task.Run(async delegate
+{
+    for(int i=0; i&lt;1000000; i++)
+    {
+        await Task.Yield(); // fork the continuation into a separate work item
+        ...
+    }
+});
+</code></pre>
+<p>You can also use the <code>Task.ConfigureAwait</code> method for better control over suspension and resumption in an asynchronous method.  As mentioned previously, by default, the current context is captured at the time an asynchronous  method is suspended, and that captured context is used to invoke the asynchronous  method's continuation upon resumption.  In many cases, this is the exact behavior you want.  In other cases, you may not care about the continuation context, and you can achieve better performance by avoiding such posts back to the original context.  To enable this, use the <code>Task.ConfigureAwait</code> method to inform the <code>await</code> operation not to capture and resume on the context, but to continue execution wherever the asynchronous operation that was being awaited completed:</p>
+<pre><code class="language-csharp">await someTask.ConfigureAwait(continueOnCapturedContext:false);
+</code></pre>
+<h2><a href="#canceling-an-asynchronous-operation" aria-hidden="true" class="anchor" id="canceling-an-asynchronous-operation"></a>Canceling an Asynchronous Operation</h2>
+<p>Starting with .NET Framework 4, TAP methods that support cancellation provide at least one overload that accepts a cancellation token (<code>CancellationToken</code> object).</p>
+<p>A cancellation token is a property of a TAP method that can be used to cancel an operation.</p>
+<pre><code class="language-csharp">var cts = new CancellationTokenSource();
+string result = await DownloadStringTaskAsync(url, cts.Token);
+… // at some point later, potentially on another thread
+cts.Cancel();
+</code></pre>
+<p>To cancel multiple asynchronous invocations, you can pass the same token to all invocations:</p>
+<pre><code class="language-csharp">var cts = new CancellationTokenSource();
+    IList&lt;string&gt; results = await Task.WhenAll(from url in urls select DownloadStringTaskAsync(url, cts.Token));
+    // at some point later, potentially on another thread
+    …
+    cts.Cancel();
+</code></pre>
+<p>Or, you can pass the same token to a selective subset of operations:</p>
+<pre><code class="language-csharp">var cts = new CancellationTokenSource();
+    byte [] data = await DownloadDataAsync(url, cts.Token);
+    await SaveToDiskAsync(outputPath, data, CancellationToken.None);
+    … // at some point later, potentially on another thread
+    cts.Cancel();
+</code></pre>
+<blockquote>
+<p class='important'>Important
+Cancellation requests may be initiated from any thread.</p>
+</blockquote>
+<p>You can pass the CancellationToken.None value to any method that accepts a cancellation token to indicate that cancellation will never be requested.  This causes the CancellationToken.CanBeCanceled property to return <code>false</code>, and the called method can optimize accordingly.  For testing purposes, you can also pass in a pre-canceled cancellation token that is instantiated by using the constructor that accepts a Boolean value to indicate whether the token should start in an already-canceled or not-cancelable state.</p>
+<p>This approach to cancellation has several advantages:</p>
+<ul>
+<li>
+<p>You can pass the same cancellation token to any number of asynchronous and synchronous operations.</p>
+</li>
+<li>
+<p>The same cancellation request may be proliferated to any number of listeners.</p>
+</li>
+<li>
+<p>The developer of the asynchronous API is in complete control of whether cancellation may be requested and when it may take effect.</p>
+</li>
+<li>
+<p>The code that consumes the API may selectively determine the asynchronous invocations that cancellation requests will be propagated to.</p>
+</li>
+</ul>
+<h2><a href="#monitoring-progress" aria-hidden="true" class="anchor" id="monitoring-progress"></a>Monitoring Progress</h2>
+<p>In our series of articles on asynchronous programming, we look at some of the ways in which asynchronous methods can be used.</p>
+<pre><code class="language-csharp">private async void btnDownload_Click(object sender, RoutedEventArgs e)
+{
+    btnDownload.IsEnabled = false;
+    try
+    {
+        txtResult.Text = await DownloadStringTaskAsync(txtUrl.Text,
+            new Progress&lt;int&gt;(p =&gt; pbDownloadProgress.Value = p));
+    }
+    finally { btnDownload.IsEnabled = true; }
+}
+</code></pre>
+<h2><a href="#using-the-built-in-task-based-combinators" aria-hidden="true" class="anchor" id="using-the-built-in-task-based-combinators"></a>Using the Built-in Task-based Combinators</h2>
+<p>The <code>System.Threading.Tasks</code> namespace includes several methods for composing and working with tasks.</p>
+<h3><a href="#taskrun" aria-hidden="true" class="anchor" id="taskrun"></a><code>Task.Run</code></h3>
+<p>The <code>Task</code> class includes several Run methods that let you easily offload work as a <code>Task</code> or <code>Task&lt;TResult&gt;</code> to the thread pool, for example:</p>
+<pre><code class="language-csharp">public async void button1_Click(object sender, EventArgs e)
+{
+    textBox1.Text = await Task.Run(() =&gt;
+    {
+        // … do compute-bound work here
+        return answer;
+    });
+}
+</code></pre>
+<p>Some of these Run methods, such as the <code>Task.Run(Func&lt;Task&gt;)</code> overload, exist as shorthand for the <code>TaskFactory.StartNew</code> method. This overload enable you to use <code>await</code> within the offloaded work, for example:</p>
+<pre><code class="language-csharp">public async void button1_Click(object sender, EventArgs e)
+{
+    pictureBox1.Image = await Task.Run(async() =&gt;
+    {
+        using(Bitmap bmp1 = await DownloadFirstImageAsync())
+        using(Bitmap bmp2 = await DownloadSecondImageAsync())
+        return Mashup(bmp1, bmp2);
+    });
+}
+</code></pre>
+<p>Such overloads are logically equivalent to using the TaskFactory.StartNew method in conjunction with the Unwrap extension method in the <code>Task</code> Parallel Library.</p>
+<h3><a href="#taskfromresult" aria-hidden="true" class="anchor" id="taskfromresult"></a><code>Task</code>.FromResult</h3>
+<p>Use the FromResult method in scenarios where data may already be available and just needs to be returned from a task-returning method lifted into a <code>Task&lt;TResult&gt;</code>:</p>
+<pre><code class="language-csharp">public Task&lt;int&gt; GetValueAsync(string key)
+{
+    int cachedValue;
+    return TryGetCachedValue(out cachedValue) ?
+        Task.FromResult(cachedValue) :
+        GetValueAsyncInternal();
+}
+
+private async Task&lt;int&gt; GetValueAsyncInternal(string key)
+{
+    …
+}
+</code></pre>
+<h3><a href="#taskwhenall" aria-hidden="true" class="anchor" id="taskwhenall"></a><code>Task.WhenAll</code></h3>
+<p>Use the WhenAll method to asynchronously wait on multiple asynchronous operations that are represented as tasks.  The method has multiple overloads that support a set of non-generic tasks or a non-uniform set of generic tasks (for example, asynchronously waiting for multiple void-returning operations, or asynchronously waiting for multiple value-returning methods where each value may have a different type) and to support a uniform set of generic tasks (such as asynchronously waiting for multiple TResult-returning methods).</p>
+<p>In this article we're going to look at how you can overlap sending operations.</p>
+<pre><code class="language-csharp">IEnumerable&lt;Task&gt; asyncOps = from addr in addrs select SendMailAsync(addr);
+await Task.WhenAll(asyncOps);
+</code></pre>
+<p>This code doesn't explicitly handle exceptions that may occur, but lets exceptions propagate out of the <code>await</code> on the resulting task from WhenAll.  To handle the exceptions, you can use code such as the following:</p>
+<pre><code class="language-csharp">IEnumerable&lt;Task&gt; asyncOps = from addr in addrs select SendMailAsync(addr);
+try
+{
+    await Task.WhenAll(asyncOps);
+}
+catch(Exception exc)
+{
+    ...
+}
+</code></pre>
+<p>In this case, if any asynchronous operation fails, all the exceptions will be consolidated in an AggregateException exception, which is stored in the <code>Task</code> that is returned from the WhenAll method.  However, only one of those exceptions is propagated by the <code>await</code> keyword.  If you want to examine all the exceptions, you can rewrite the previous code as follows:</p>
+<pre><code class="language-csharp">Task [] asyncOps = (from addr in addrs select SendMailAsync(addr)).ToArray();
+try
+{
+    await Task.WhenAll(asyncOps);
+}
+catch(Exception exc)
+{
+    foreach(Task faulted in asyncOps.Where(t =&gt; t.IsFaulted))
+    {
+        … // work with faulted and faulted.Exception
+    }
+}
+</code></pre>
+<p>Let's consider an example of downloading multiple files from the web asynchronously.  In this case, all the asynchronous operations have homogeneous result types, and it's easy to access the results:</p>
+<pre><code class="language-csharp">string [] pages = await Task.WhenAll(
+    from url in urls select DownloadStringTaskAsync(url));
+</code></pre>
+<p>You can use the same exception-handling techniques we discussed in the previous void-returning scenario:</p>
+<pre><code class="language-csharp">Task&lt;string&gt; [] asyncOps =
+    (from url in urls select DownloadStringTaskAsync(url)).ToArray();
+try
+{
+    string [] pages = await Task.WhenAll(asyncOps);
+    ...
+}
+catch(Exception exc)
+{
+    foreach(Task&lt;string&gt; faulted in asyncOps.Where(t =&gt; t.IsFaulted))
+    {
+        … // work with faulted and faulted.Exception
+    }
+}
+</code></pre>
+<h3><a href="#taskwhenany" aria-hidden="true" class="anchor" id="taskwhenany"></a><code>Task.WhenAny</code></h3>
+<p>You can use the WhenAny method to asynchronously wait for just one of multiple asynchronous operations represented as tasks to complete.  This method serves four primary use cases:</p>
+<ul>
+<li>
+<p>Redundancy:  Performing an operation multiple times and selecting the one that completes first (for example, contacting multiple stock quote web services that will produce a single result and selecting the one that completes the fastest).</p>
+</li>
+<li>
+<p>Interleaving:  Launching multiple operations and waiting for all of them to complete, but processing them as they complete.</p>
+</li>
+<li>
+<p>Throttling:  Allowing additional operations to begin as others complete.  This is an extension of the interleaving scenario.</p>
+</li>
+<li>
+<p>Early bailout:  For example, an operation represented by task t1 can be grouped in a WhenAny task with another task t2, and you can wait on the WhenAny task. Task t2 could represent a time-out, or cancellation, or some other signal that causes the WhenAny task to complete before t1 completes.</p>
+</li>
+</ul>
+<h4><a href="#redundancy" aria-hidden="true" class="anchor" id="redundancy"></a>Redundancy</h4>
+<p>WhenAny is a new way for you to stay up-to-date with the latest stock recommendation web services.</p>
+<pre><code class="language-csharp">var recommendations = new List&lt;Task&lt;bool&gt;&gt;()
+{
+    GetBuyRecommendation1Async(symbol),
+    GetBuyRecommendation2Async(symbol),
+    GetBuyRecommendation3Async(symbol)
+};
+Task&lt;bool&gt; recommendation = await Task.WhenAny(recommendations);
+if (await recommendation) BuyStock(symbol);
+</code></pre>
+<p>Unlike WhenAll, which returns the unwrapped results of all tasks that completed successfully, WhenAny returns the task that completed. If a task fails, it's important to know that it failed, and if a task succeeds, it's important to know which task the return value is associated with.  Therefore, you need to access the result of the returned task, or further <code>await</code> it, as  this example shows.</p>
+<p>As with WhenAll, you have to be able to accommodate exceptions.  Because you receive the completed task back, you can <code>await</code> the returned task to have errors propagated, and <code>try/catch</code> them appropriately; for example:</p>
+<pre><code class="language-csharp">Task&lt;bool&gt; [] recommendations = …;
+while(recommendations.Count &gt; 0)
+{
+    Task&lt;bool&gt; recommendation = await Task.WhenAny(recommendations);
+    try
+    {
+        if (await recommendation) BuyStock(symbol);
+        break;
+    }
+    catch(WebException exc)
+    {
+        recommendations.Remove(recommendation);
+    }
+}
+</code></pre>
+<p>The asynchronous nature of tasks means that they may fail at any time.</p>
+<pre><code class="language-csharp">foreach(Task recommendation in recommendations)
+{
+    var ignored = recommendation.ContinueWith(
+        t =&gt; { if (t.IsFaulted) Log(t.Exception); });
+}
+</code></pre>
+<p>or:</p>
+<pre><code class="language-csharp">foreach(Task recommendation in recommendations)
+{
+    var ignored = recommendation.ContinueWith(
+        t =&gt; Log(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+}
+</code></pre>
+<p>or even:</p>
+<pre><code class="language-csharp">private static async void LogCompletionIfFailed(IEnumerable&lt;Task&gt; tasks)
+{
+    foreach(var task in tasks)
+    {
+        try { await task; }
+        catch(Exception exc) { Log(exc); }
+    }
+}
+…
+LogCompletionIfFailed(recommendations);
+</code></pre>
+<p>Finally, you may want to cancel all the remaining operations:</p>
+<pre><code class="language-csharp">var cts = new CancellationTokenSource();
+var recommendations = new List&lt;Task&lt;bool&gt;&gt;()
+{
+    GetBuyRecommendation1Async(symbol, cts.Token),
+    GetBuyRecommendation2Async(symbol, cts.Token),
+    GetBuyRecommendation3Async(symbol, cts.Token)
+};
+
+Task&lt;bool&gt; recommendation = await Task.WhenAny(recommendations);
+cts.Cancel();
+if (await recommendation) BuyStock(symbol);
+</code></pre>
+<h4><a href="#interleaving" aria-hidden="true" class="anchor" id="interleaving"></a>Interleaving</h4>
+<p>Is there a way to download and process images at the same time?</p>
+<pre><code class="language-csharp">List&lt;Task&lt;Bitmap&gt;&gt; imageTasks =
+    (from imageUrl in urls select GetBitmapAsync(imageUrl)).ToList();
+while(imageTasks.Count &gt; 0)
+{
+    try
+    {
+        Task&lt;Bitmap&gt; imageTask = await Task.WhenAny(imageTasks);
+        imageTasks.Remove(imageTask);
+
+        Bitmap image = await imageTask;
+        panel.AddImage(image);
+    }
+    catch{}
+}
+</code></pre>
+<p>You can also apply interleaving to a scenario that involves computationally intensive processing on the ThreadPool of the downloaded images; for example:</p>
+<pre><code class="language-csharp">List&lt;Task&lt;Bitmap&gt;&gt; imageTasks =
+    (from imageUrl in urls select GetBitmapAsync(imageUrl)
+         .ContinueWith(t =&gt; ConvertImage(t.Result)).ToList();
+while(imageTasks.Count &gt; 0)
+{
+    try
+    {
+        Task&lt;Bitmap&gt; imageTask = await Task.WhenAny(imageTasks);
+        imageTasks.Remove(imageTask);
+
+        Bitmap image = await imageTask;
+        panel.AddImage(image);
+    }
+    catch{}
+}
+</code></pre>
+<h4><a href="#throttling" aria-hidden="true" class="anchor" id="throttling"></a>Throttling</h4>
+<p>In this article, I'm going to show you how to asynchronously start and stop operations.</p>
+<pre><code class="language-csharp">const int CONCURRENCY_LEVEL = 15;
+Uri [] urls = …;
+int nextIndex = 0;
+var imageTasks = new List&lt;Task&lt;Bitmap&gt;&gt;();
+while(nextIndex &lt; CONCURRENCY_LEVEL &amp;&amp; nextIndex &lt; urls.Length)
+{
+    imageTasks.Add(GetBitmapAsync(urls[nextIndex]));
+    nextIndex++;
+}
+
+while(imageTasks.Count &gt; 0)
+{
+    try
+    {
+        Task&lt;Bitmap&gt; imageTask = await Task.WhenAny(imageTasks);
+        imageTasks.Remove(imageTask);
+
+        Bitmap image = await imageTask;
+        panel.AddImage(image);
+    }
+    catch(Exception exc) { Log(exc); }
+
+    if (nextIndex &lt; urls.Length)
+    {
+        imageTasks.Add(GetBitmapAsync(urls[nextIndex]));
+        nextIndex++;
+    }
+}
+</code></pre>
+<h4><a href="#early-bailout" aria-hidden="true" class="anchor" id="early-bailout"></a>Early Bailout</h4>
+<p>The following code demonstrates how to asynchronously complete an operation while simultaneously responding to a user's cancellation request (for example, the user clicked a cancel button).</p>
+<pre><code class="language-csharp">private CancellationTokenSource m_cts;
+
+public void btnCancel_Click(object sender, EventArgs e)
+{
+    if (m_cts != null) m_cts.Cancel();
+}
+
+public async void btnRun_Click(object sender, EventArgs e)
+{
+    m_cts = new CancellationTokenSource();
+    btnRun.Enabled = false;
+    try
+    {
+        Task&lt;Bitmap&gt; imageDownload = GetBitmapAsync(txtUrl.Text);
+        await UntilCompletionOrCancellation(imageDownload, m_cts.Token);
+        if (imageDownload.IsCompleted)
+        {
+            Bitmap image = await imageDownload;
+            panel.AddImage(image);
+        }
+        else imageDownload.ContinueWith(t =&gt; Log(t));
+    }
+    finally { btnRun.Enabled = true; }
+}
+
+private static async Task UntilCompletionOrCancellation(
+    Task asyncOp, CancellationToken ct)
+{
+    var tcs = new TaskCompletionSource&lt;bool&gt;();
+    using(ct.Register(() =&gt; tcs.TrySetResult(true)))
+        await Task.WhenAny(asyncOp, tcs.Task);
+    return asyncOp;
+}
+</code></pre>
+<p>This example shows how to re-enable the user interface when you decide to &quot;bail out&quot; of a game.</p>
+<pre><code class="language-csharp">private CancellationTokenSource m_cts;
+
+public async void btnRun_Click(object sender, EventArgs e)
+{
+    m_cts = new CancellationTokenSource();
+
+    btnRun.Enabled = false;
+    try
+    {
+        Task&lt;Bitmap&gt; imageDownload = GetBitmapAsync(txtUrl.Text, m_cts.Token);
+        await UntilCompletionOrCancellation(imageDownload, m_cts.Token);
+        Bitmap image = await imageDownload;
+        panel.AddImage(image);
+    }
+    catch(OperationCanceledException) {}
+    finally { btnRun.Enabled = true; }
+}
+</code></pre>
+<p>Another example of early bailout involves using the WhenAny method in conjunction with the Delay method, as discussed in the next section.</p>
+<h3><a href="#taskdelay" aria-hidden="true" class="anchor" id="taskdelay"></a><code>Task.Delay</code></h3>
+<p>You can use the <code>Task.Delay</code> method to introduce pauses into an asynchronous method's execution.  This is useful for many kinds of functionality, including building polling loops and delaying the handling of user input for a predetermined period of time.  The <code>Task.Delay</code> method can also be useful in combination with <code>Task.WhenAny</code> for implementing time-outs on awaits.</p>
+<p>If a task that's part of a larger asynchronous operation (for example, an ASP.NET web service) takes too long to complete, the overall operation could suffer, especially if it fails to ever complete.  For this reason, it's important to be able to time out when waiting on an asynchronous operation.  The synchronous <code>Task.Wait</code>, <code>Task.WaitAll</code>, and <code>Task.WaitAny</code> methods accept time-out values, but the corresponding <code>TaskFactory.ContinueWhenAll/TaskFactory.ContinueWhenAny</code> and the previously mentioned <code>Task.WhenAll/Task.WhenAny</code> methods do not.  Instead, you can use <code>Task.Delay</code> and <code>Task.WhenAny</code> in combination to implement a time-out.</p>
+<p>In this article, I'm going to show you how to re-enable or discard an application if it takes too long to download an image.</p>
+<pre><code class="language-csharp">public async void btnDownload_Click(object sender, EventArgs e)
+{
+    btnDownload.Enabled = false;
+    try
+    {
+        Task&lt;Bitmap&gt; download = GetBitmapAsync(url);
+        if (download == await Task.WhenAny(download, Task.Delay(3000)))
+        {
+            Bitmap bmp = await download;
+            pictureBox.Image = bmp;
+            status.Text = &quot;Downloaded&quot;;
+        }
+        else
+        {
+            pictureBox.Image = null;
+            status.Text = &quot;Timed out&quot;;
+            var ignored = download.ContinueWith(
+                t =&gt; Trace(&quot;Task finally completed&quot;));
+        }
+    }
+    finally { btnDownload.Enabled = true; }
+}
+</code></pre>
+<p>The same applies to multiple downloads, because WhenAll returns a task:</p>
+<pre><code class="language-csharp">public async void btnDownload_Click(object sender, RoutedEventArgs e)
+{
+    btnDownload.Enabled = false;
+    try
+    {
+        Task&lt;Bitmap[]&gt; downloads =
+            Task.WhenAll(from url in urls select GetBitmapAsync(url));
+        if (downloads == await Task.WhenAny(downloads, Task.Delay(3000)))
+        {
+            foreach(var bmp in downloads.Result) panel.AddImage(bmp);
+            status.Text = &quot;Downloaded&quot;;
+        }
+        else
+        {
+            status.Text = &quot;Timed out&quot;;
+            downloads.ContinueWith(t =&gt; Log(t));
+        }
+    }
+    finally { btnDownload.Enabled = true; }
+}
+</code></pre>
+<h2><a href="#building-task-based-combinators" aria-hidden="true" class="anchor" id="building-task-based-combinators"></a>Building Task-based Combinators</h2>
+<p>In the previous section of this series, we discussed the use of tasks in .NET.</p>
+<h3><a href="#retryonfault" aria-hidden="true" class="anchor" id="retryonfault"></a><code>RetryOnFault</code></h3>
+<p>In many situations, you may want to retry an operation if a previous attempt fails.  For synchronous code, you might build a helper method such as <code>RetryOnFault</code> in the following example to accomplish this:</p>
+<pre><code class="language-csharp">public static T RetryOnFault&lt;T&gt;(
+    Func&lt;T&gt; function, int maxTries)
+{
+    for(int i=0; i&lt;maxTries; i++)
+    {
+        try { return function(); }
+        catch { if (i == maxTries-1) throw; }
+    }
+    return default(T);
+}
+</code></pre>
+<p>You can build an almost identical helper method for asynchronous operations that are implemented with TAP and thus return tasks:</p>
+<pre><code class="language-csharp">public static async Task&lt;T&gt; RetryOnFault&lt;T&gt;(
+    Func&lt;Task&lt;T&gt;&gt; function, int maxTries)
+{
+    for(int i=0; i&lt;maxTries; i++)
+    {
+        try { return await function().ConfigureAwait(false); }
+        catch { if (i == maxTries-1) throw; }
+    }
+    return default(T);
+}
+</code></pre>
+<p>You can then use this combinator to encode retries into the application's logic; for example:</p>
+<pre><code class="language-csharp">// Download the URL, trying up to three times in case of failure
+string pageContents = await RetryOnFault(
+    () =&gt; DownloadStringTaskAsync(url), 3);
+</code></pre>
+<p>You could extend the <code>RetryOnFault</code> function further. For example, the function could accept another <code>Func&lt;Task&gt;</code> that will be invoked between retries to determine when to try the operation again; for example:</p>
+<pre><code class="language-csharp">public static async Task&lt;T&gt; RetryOnFault&lt;T&gt;(
+    Func&lt;Task&lt;T&gt;&gt; function, int maxTries, Func&lt;Task&gt; retryWhen)
+{
+    for(int i=0; i&lt;maxTries; i++)
+    {
+        try { return await function().ConfigureAwait(false); }
+        catch { if (i == maxTries-1) throw; }
+        await retryWhen().ConfigureAwait(false);
+    }
+    return default(T);
+}
+</code></pre>
+<p>You could then use the function as follows to wait for a second before retrying the operation:</p>
+<pre><code class="language-csharp">// Download the URL, trying up to three times in case of failure,
+// and delaying for a second between retries
+string pageContents = await RetryOnFault(
+    () =&gt; DownloadStringTaskAsync(url), 3, () =&gt; Task.Delay(1000));
+</code></pre>
+<h3><a href="#needonlyone" aria-hidden="true" class="anchor" id="needonlyone"></a><code>NeedOnlyOne</code></h3>
+<p>Sometimes, you can take advantage of redundancy to improve an operation's latency and chances for success.  Consider multiple web services that provide stock quotes, but at various times of the day, each service may provide different levels of quality and response times.  To deal with these fluctuations, you may issue requests to all the web services, and as soon as you get a response from one, cancel the remaining requests.  You can implement a helper function to make it easier to implement this common pattern of launching multiple operations, waiting for any, and then canceling the rest. The <code>NeedOnlyOne</code> function in the following example illustrates this scenario:</p>
+<pre><code class="language-csharp">public static async Task&lt;T&gt; NeedOnlyOne(
+    params Func&lt;CancellationToken,Task&lt;T&gt;&gt; [] functions)
+{
+    var cts = new CancellationTokenSource();
+    var tasks = (from function in functions
+                 select function(cts.Token)).ToArray();
+    var completed = await Task.WhenAny(tasks).ConfigureAwait(false);
+    cts.Cancel();
+    foreach(var task in tasks)
+    {
+        var ignored = task.ContinueWith(
+            t =&gt; Log(t), TaskContinuationOptions.OnlyOnFaulted);
+    }
+    return completed;
+}
+</code></pre>
+<p>You can then use this function as follows:</p>
+<pre><code class="language-csharp">double currentPrice = await NeedOnlyOne(
+    ct =&gt; GetCurrentPriceFromServer1Async(&quot;msft&quot;, ct),
+    ct =&gt; GetCurrentPriceFromServer2Async(&quot;msft&quot;, ct),
+    ct =&gt; GetCurrentPriceFromServer3Async(&quot;msft&quot;, ct));
+</code></pre>
+<h3><a href="#interleaved-operations" aria-hidden="true" class="anchor" id="interleaved-operations"></a><code>Interleaved</code> Operations</h3>
+<p>There is a potential performance problem with using the WhenAny method to support an interleaving scenario when you're working with large sets of tasks. Every call to WhenAny results in a continuation being registered with each task. For N number of tasks, this results in O(N2) continuations created over the lifetime of the interleaving operation. If you're working with a large set of tasks, you can use a combinator (Interleaved in the following example) to address the performance issue:</p>
+<pre><code class="language-csharp">static IEnumerable&lt;Task&lt;T&gt;&gt; Interleaved&lt;T&gt;(IEnumerable&lt;Task&lt;T&gt;&gt; tasks)
+{
+    var inputTasks = tasks.ToList();
+    var sources = (from _ in Enumerable.Range(0, inputTasks.Count)
+                   select new TaskCompletionSource&lt;T&gt;()).ToList();
+    int nextTaskIndex = -1;
+    foreach (var inputTask in inputTasks)
+    {
+        inputTask.ContinueWith(completed =&gt;
+        {
+            var source = sources[Interlocked.Increment(ref nextTaskIndex)];
+            if (completed.IsFaulted)
+                source.TrySetException(completed.Exception.InnerExceptions);
+            else if (completed.IsCanceled)
+                source.TrySetCanceled();
+            else
+                source.TrySetResult(completed.Result);
+        }, CancellationToken.None,
+           TaskContinuationOptions.ExecuteSynchronously,
+           TaskScheduler.Default);
+    }
+    return from source in sources
+           select source.Task;
+}
+</code></pre>
+<p>You can then use the combinator to process the results of tasks as they complete; for example:</p>
+<pre><code class="language-csharp">IEnumerable&lt;Task&lt;int&gt;&gt; tasks = ...;
+foreach(var task in Interleaved(tasks))
+{
+    int result = await task;
+    …
+}
+</code></pre>
+<h3><a href="#whenallorfirstexception" aria-hidden="true" class="anchor" id="whenallorfirstexception"></a><code>WhenAllOrFirstException</code></h3>
+<p>In certain scatter/gather scenarios, you might want to wait for all tasks in a set, unless one of them faults, in which case you want to stop waiting as soon as the exception occurs.  You can accomplish that with a combinator method such as <code>WhenAllOrFirstException</code> in the following example:</p>
+<pre><code class="language-csharp">public static Task&lt;T[]&gt; WhenAllOrFirstException&lt;T&gt;(IEnumerable&lt;Task&lt;T&gt;&gt; tasks)
+{
+    var inputs = tasks.ToList();
+    var ce = new CountdownEvent(inputs.Count);
+    var tcs = new TaskCompletionSource&lt;T[]&gt;();
+
+    Action&lt;Task&gt; onCompleted = (Task completed) =&gt;
+    {
+        if (completed.IsFaulted)
+            tcs.TrySetException(completed.Exception.InnerExceptions);
+        if (ce.Signal() &amp;&amp; !tcs.Task.IsCompleted)
+            tcs.TrySetResult(inputs.Select(t =&gt; t.Result).ToArray());
+    };
+
+    foreach (var t in inputs) t.ContinueWith(onCompleted);
+    return tcs.Task;
+}
+</code></pre>
+<h2><a href="#building-task-based-data-structures" aria-hidden="true" class="anchor" id="building-task-based-data-structures"></a>Building Task-based Data Structures</h2>
+<p>In addition to the ability to build custom task-based combinators, having a data structure in <code>Task</code> and <code>Task&lt;TResult&gt;</code> that represents both the results of an asynchronous operation and the necessary synchronization to join with it makes it a powerful type on which to build custom data structures to be used in asynchronous scenarios.</p>
+<h3><a href="#asynccache" aria-hidden="true" class="anchor" id="asynccache"></a><code>AsyncCache</code></h3>
+<p>One important aspect of a task is that it may be handed out to multiple consumers, all of whom may <code>await</code> it, register continuations with it, get its result or exceptions (in the case of <code>Task&lt;TResult&gt;</code>), and so on.  This makes <code>Task</code> and <code>Task&lt;TResult&gt;</code> perfectly suited to be used in an asynchronous caching infrastructure.  Here's an example of a small but powerful asynchronous cache built on top of <code>Task&lt;TResult&gt;</code>:</p>
+<pre><code class="language-csharp">public class AsyncCache&lt;TKey, TValue&gt;
+{
+    private readonly Func&lt;TKey, Task&lt;TValue&gt;&gt; _valueFactory;
+    private readonly ConcurrentDictionary&lt;TKey, Lazy&lt;Task&lt;TValue&gt;&gt;&gt; _map;
+
+    public AsyncCache(Func&lt;TKey, Task&lt;TValue&gt;&gt; valueFactory)
+    {
+        if (valueFactory == null) throw new ArgumentNullException(&quot;valueFactory&quot;);
+        _valueFactory = valueFactory;
+        _map = new ConcurrentDictionary&lt;TKey, Lazy&lt;Task&lt;TValue&gt;&gt;&gt;();
+    }
+
+    public Task&lt;TValue&gt; this[TKey key]
+    {
+        get
+        {
+            if (key == null) throw new ArgumentNullException(&quot;key&quot;);
+            return _map.GetOrAdd(key, toAdd =&gt;
+                new Lazy&lt;Task&lt;TValue&gt;&gt;(() =&gt; _valueFactory(toAdd))).Value;
+        }
+    }
+}
+</code></pre>
+<p>The <code>AsyncCache&lt;TKey,TValue&gt;</code> class accepts as a delegate to its constructor a function that takes a <code>TKey</code> and returns a <code>Task&lt;TResult&gt;</code>.  Any previously accessed values from the cache are stored in the internal dictionary, and the <code>AsyncCache</code> ensures that only one task is generated per key, even if the cache is accessed concurrently.</p>
+<p>For example, you can build a cache for downloaded web pages:</p>
+<pre><code class="language-csharp">private AsyncCache&lt;string,string&gt; m_webPages =
+    new AsyncCache&lt;string,string&gt;(DownloadStringTaskAsync);
+</code></pre>
+<p>You can then use this cache in asynchronous methods whenever you need the contents of a web page. The <code>AsyncCache</code> class ensures that you're downloading as few pages as possible, and caches the results.</p>
+<pre><code class="language-csharp">private async void btnDownload_Click(object sender, RoutedEventArgs e)
+{
+    btnDownload.IsEnabled = false;
+    try
+    {
+        txtContents.Text = await m_webPages[&quot;https://www.microsoft.com&quot;];
+    }
+    finally { btnDownload.IsEnabled = true; }
+}
+</code></pre>
+<h3><a href="#asyncproducerconsumercollection" aria-hidden="true" class="anchor" id="asyncproducerconsumercollection"></a>AsyncProducerConsumerCollection</h3>
+<p>You can use tasks to build data structures for running parallel activities.</p>
+<p>Here's a simple data structure, built on top of tasks, that enables asynchronous methods to be used as producers and consumers:</p>
+<pre><code class="language-csharp">public class AsyncProducerConsumerCollection&lt;T&gt;
+{
+    private readonly Queue&lt;T&gt; m_collection = new Queue&lt;T&gt;();
+    private readonly Queue&lt;TaskCompletionSource&lt;T&gt;&gt; m_waiting =
+        new Queue&lt;TaskCompletionSource&lt;T&gt;&gt;();
+
+    public void Add(T item)
+    {
+        TaskCompletionSource&lt;T&gt; tcs = null;
+        lock (m_collection)
+        {
+            if (m_waiting.Count &gt; 0) tcs = m_waiting.Dequeue();
+            else m_collection.Enqueue(item);
+        }
+        if (tcs != null) tcs.TrySetResult(item);
+    }
+
+    public Task&lt;T&gt; Take()
+    {
+        lock (m_collection)
+        {
+            if (m_collection.Count &gt; 0)
+            {
+                return Task.FromResult(m_collection.Dequeue());
+            }
+            else
+            {
+                var tcs = new TaskCompletionSource&lt;T&gt;();
+                m_waiting.Enqueue(tcs);
+                return tcs.Task;
+            }
+        }
+    }
+}
+</code></pre>
+<p>With that data structure in place, you can write code such as the following:</p>
+<pre><code class="language-csharp">private static AsyncProducerConsumerCollection&lt;int&gt; m_data = …;
+…
+private static async Task ConsumerAsync()
+{
+    while(true)
+    {
+        int nextItem = await m_data.Take();
+        ProcessNextItem(nextItem);
+    }
+}
+…
+private static void Produce(int data)
+{
+    m_data.Add(data);
+}
+</code></pre>
+<p>The <code>System.Threading.Tasks.Dataflow</code> namespace includes the BufferBlock<T> type, which you can use in a similar manner, but without having to build a custom collection type:</p>
+<pre><code class="language-csharp">private static BufferBlock&lt;int&gt; m_data = …;
+…
+private static async Task ConsumerAsync()
+{
+    while(true)
+    {
+        int nextItem = await m_data.ReceiveAsync();
+        ProcessNextItem(nextItem);
+    }
+}
+…
+private static void Produce(int data)
+{
+    m_data.Post(data);
+}
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The <code>System.Threading.Tasks.Dataflow</code> namespace is available as a NuGet package. To install the assembly that contains the <code>System.Threading.Tasks.Dataflow</code> namespace, open your project in Visual Studio, choose Manage NuGet Packages from the Project menu, and search online for the <code>System.Threading.Tasks.Dataflow</code> package.</p>
+</blockquote>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Task-based Asynchronous Pattern (TAP)</p>
+</li>
+<li>
+<p>Implementing the Task-based Asynchronous Pattern</p>
+</li>
+<li>
+<p>Interop with Other Asynchronous Patterns and Types</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/consuming-the-task-based-asynchronous-pattern">Consuming the <code>Task</code>-based Asynchronous Pattern</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - ASP.NET Core in class libraries | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - ASP.NET Core in class libraries</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This document provides guidance for using ASP.NET Core APIs in a class library. For all other library guidance, see Open-source library guidance.</p>
+<h2><a href="#determine-which-aspnet-core-versions-to-support" aria-hidden="true" class="anchor" id="determine-which-aspnet-core-versions-to-support"></a>Determine which ASP.NET Core versions to support</h2>
+<p>ASP.NET Core adheres to the .NET Core support policy. Consult the support policy when determining which ASP.NET Core versions to support in a library. A library should:</p>
+<ul>
+<li>
+<p>Make an effort to support all ASP.NET Core versions classified as Long-Term Support (LTS).</p>
+</li>
+<li>
+<p>Not feel obligated to support ASP.NET Core versions classified as End of Life (EOL).</p>
+</li>
+</ul>
+<p>The ASP.NET Core framework is being developed by Microsoft.</p>
+<h2><a href="#use-the-aspnet-core-shared-framework" aria-hidden="true" class="anchor" id="use-the-aspnet-core-shared-framework"></a>Use the ASP.NET Core shared framework</h2>
+<p>With the release of .NET Core 3.0, many ASP.NET Core assemblies are no longer published to NuGet as packages. Instead, the assemblies are included in the <code>Microsoft.AspNetCore.App</code> shared framework, which is installed with the .NET Core SDK and runtime installers. For a list of packages no longer being published, see Remove obsolete package references.</p>
+<p>As of .NET Core 3.0, projects using the <code>Microsoft.NET.Sdk.Web</code> MSBuild SDK implicitly reference the shared framework. Projects using the <code>Microsoft.NET.Sdk</code> or <code>Microsoft.NET.Sdk.Razor</code> SDK must reference ASP.NET Core to use ASP.NET Core APIs in the shared framework.</p>
+<p>To reference ASP.NET Core, add the following <code>&lt;FrameworkReference&gt;</code> element to your project file:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netcoreapp3.1&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<h2><a href="#include-blazor-extensibility" aria-hidden="true" class="anchor" id="include-blazor-extensibility"></a>Include Blazor extensibility</h2>
+<p>Blazor supports creating Razor components class libraries for server-side and client-side apps. To support Razor components in a class library, the class library must use the <code>Microsoft.NET.Sdk.Razor</code> SDK.</p>
+<h3><a href="#support-server-side-and-client-side-apps" aria-hidden="true" class="anchor" id="support-server-side-and-client-side-apps"></a>Support server-side and client-side apps</h3>
+<p>To support Razor component consumption by server-side and client-side apps from a single library, use the following instructions for your editor.</p>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code / .NET CLI</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+Do not select the Support pages and views checkbox. Selecting the checkbox results in a class library that only supports server-side apps.</p>
+</blockquote>
+<pre><code class="language-dotnetcli">dotnet new razorclasslib
+</code></pre>
+<blockquote>
+<p class='note'>Note
+Do not add the <code>-s|--support-pages-and-views</code> option to the <code>dotnet new</code> command. Applying the option results in a class library that only supports server-side apps.</p>
+</blockquote>
+<p>The library generated from the project template:</p>
+<ul>
+<li>
+<p>Targets the current .NET framework based on the installed SDK.</p>
+</li>
+<li>
+<p>Enables <code>browser</code> compatibility checks for platform dependencies by including <code>browser</code> as a supported platform with the <code>SupportedPlatform</code> MSBuild item.</p>
+</li>
+<li>
+<p>Adds a NuGet package reference for Microsoft.AspNetCore.Components.Web.</p>
+</li>
+</ul>
+<p><code>RazorClassLibrary-CSharp.csproj</code> (reference source)</p>
+<blockquote>
+<p class='note'>Note
+Documentation links to .NET reference source usually load the repository's default branch, which represents the current development for the next release of .NET. To select a tag for a specific release, use the Switch branches or tags dropdown list. For more information, see How to select a version tag of ASP.NET Core source code (dotnet/AspNetCore.Docs #26205).</p>
+</blockquote>
+<h3><a href="#support-multiple-framework-versions" aria-hidden="true" class="anchor" id="support-multiple-framework-versions"></a>Support multiple framework versions</h3>
+<p>If the library must support features added to Blazor in the current release while also supporting one or more earlier releases, multi-target the library. Provide a semicolon-separated list of Target Framework Monikers (TFMs) in the <code>TargetFrameworks</code> MSBuild property:</p>
+<pre><code class="language-xml">&lt;TargetFrameworks&gt;{TARGET FRAMEWORKS}&lt;/TargetFrameworks&gt;
+</code></pre>
+<p>In the preceding example, the {TARGET FRAMEWORKS} placeholder represents the semicolon-separated TFMs list. For example, <code>netcoreapp3.1;net5.0</code>.</p>
+<h3><a href="#only-support-server-side-consumption" aria-hidden="true" class="anchor" id="only-support-server-side-consumption"></a>Only support server-side consumption</h3>
+<p>In this article, I'm going to show you how to build a server-side app using an ASP.NET class library.</p>
+<ul>
+<li>Specify that the library supports pages and views when the library is created with the Support pages and views checkbox (Visual Studio) or the <code>-s|--support-pages-and-views</code> option with the <code>dotnet new</code> command:
+dotnet new razorclasslib -s</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new razorclasslib -s
+</code></pre>
+<ul>
+<li>Only provide a framework reference to ASP.NET Core in the library's project file in addition to any other required MSBuild properties:</li>
+</ul>
+<ItemGroup>
+  <FrameworkReference Include="Microsoft.AspNetCore.App" />
+</ItemGroup>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<p>For more information on libraries containing Razor components, see Consume ASP.NET Core Razor components from a Razor class library (RCL).</p>
+<h2><a href="#include-mvc-extensibility" aria-hidden="true" class="anchor" id="include-mvc-extensibility"></a>Include MVC extensibility</h2>
+<p>This section outlines recommendations for libraries that include:</p>
+<ul>
+<li>
+<p>Razor views or Razor Pages</p>
+</li>
+<li>
+<p>Tag Helpers</p>
+</li>
+<li>
+<p>View components</p>
+</li>
+</ul>
+<p>This section doesn't discuss multi-targeting to support multiple versions of MVC. For guidance on supporting multiple ASP.NET Core versions, see Support multiple ASP.NET Core versions.</p>
+<h3><a href="#razor-views-or-razor-pages" aria-hidden="true" class="anchor" id="razor-views-or-razor-pages"></a>Razor views or Razor Pages</h3>
+<p>A project that includes Razor views or Razor Pages must use the <code>Microsoft.NET.Sdk.Razor</code> SDK.</p>
+<p>If the project targets .NET Core 3.x, it requires:</p>
+<ul>
+<li>
+<p>An <code>AddRazorSupportForMvc</code> MSBuild property set to <code>true</code>.</p>
+</li>
+<li>
+<p>A <FrameworkReference> element for the shared framework.</p>
+</li>
+</ul>
+<p>The Razor Class Library project template satisfies the preceding requirements for projects targeting .NET Core. Use the following instructions for your editor.</p>
+<ul>
+<li>
+<p>Visual Studio</p>
+</li>
+<li>
+<p>Visual Studio Code / .NET CLI</p>
+</li>
+</ul>
+<pre><code class="language-dotnetcli">dotnet new razorclasslib -s
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk.Razor&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netcoreapp3.1&lt;/TargetFramework&gt;
+    &lt;AddRazorSupportForMvc&gt;true&lt;/AddRazorSupportForMvc&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<p>If the project targets .NET Standard instead, a <code>Microsoft.AspNetCore.Mvc</code> package reference is required. The <code>Microsoft.AspNetCore.Mvc</code> package moved into the shared framework in ASP.NET Core 3.0 and is therefore no longer published. For example:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk.Razor&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netstandard2.0&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.Mvc&quot; Version=&quot;2.2.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<h3><a href="#tag-helpers" aria-hidden="true" class="anchor" id="tag-helpers"></a>Tag Helpers</h3>
+<p>A project that includes Tag Helpers should use the <code>Microsoft.NET.Sdk</code> SDK. If targeting .NET Core 3.x, add a <code>&lt;FrameworkReference&gt;</code> element for the shared framework. For example:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netcoreapp3.1&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<p>If targeting .NET Standard (to support versions earlier than ASP.NET Core 3.x), add a package reference to <code>Microsoft.AspNetCore.Mvc.Razor</code>. The <code>Microsoft.AspNetCore.Mvc.Razor</code> package moved into the shared framework and is therefore no longer published. For example:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netstandard2.0&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.Mvc&quot; Version=&quot;2.2.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<h3><a href="#view-components" aria-hidden="true" class="anchor" id="view-components"></a>View components</h3>
+<p>A project that includes View components should use the <code>Microsoft.NET.Sdk</code> SDK. If targeting .NET Core 3.x, add a <code>&lt;FrameworkReference&gt;</code> element for the shared framework. For example:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netcoreapp3.1&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<p>If targeting .NET Standard (to support versions earlier than ASP.NET Core 3.x), add a package reference to <code>Microsoft.AspNetCore.Mvc.ViewFeatures</code>. The <code>Microsoft.AspNetCore.Mvc.ViewFeatures</code> package moved into the shared framework and is therefore no longer published. For example:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;netstandard2.0&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.Mvc.ViewFeatures&quot; Version=&quot;2.2.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<h2><a href="#support-multiple-aspnet-core-versions" aria-hidden="true" class="anchor" id="support-multiple-aspnet-core-versions"></a>Support multiple ASP.NET Core versions</h2>
+<p>Multi-targeting is required to author a library that supports multiple variants of ASP.NET Core. Consider a scenario in which a Tag Helpers library must support the following ASP.NET Core variants:</p>
+<ul>
+<li>
+<p>ASP.NET Core 2.1 targeting .NET Framework 4.6.1</p>
+</li>
+<li>
+<p>ASP.NET Core 2.x targeting .NET Core 2.x</p>
+</li>
+<li>
+<p>ASP.NET Core 3.x targeting .NET Core 3.x</p>
+</li>
+</ul>
+<p>The following project file supports these variants via the <code>TargetFrameworks</code> property:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+  
+  &lt;PropertyGroup&gt;
+    &lt;TargetFrameworks&gt;netcoreapp2.1;netcoreapp3.1;net461&lt;/TargetFrameworks&gt;
+  &lt;/PropertyGroup&gt;
+  
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Markdig&quot; Version=&quot;0.16.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  
+  &lt;ItemGroup Condition=&quot;'$(TargetFramework)' != 'netcoreapp3.1'&quot;&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.Mvc.Razor&quot; Version=&quot;2.1.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup Condition=&quot;'$(TargetFramework)' == 'netcoreapp3.1'&quot;&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;
+</code></pre>
+<p>With the preceding project file:</p>
+<ul>
+<li>
+<p>The <code>Markdig</code> package is added for all consumers.</p>
+</li>
+<li>
+<p>A reference to <code>Microsoft.AspNetCore.Mvc.Razor</code> is added for consumers targeting .NET Framework 4.6.1 or later or .NET Core 2.x. Version 2.1.0 of the package works with ASP.NET Core 2.2 because of backwards compatibility.</p>
+</li>
+<li>
+<p>The shared framework is referenced for consumers targeting .NET Core 3.x. The <code>Microsoft.AspNetCore.Mvc.Razor</code> package is included in the shared framework.</p>
+</li>
+</ul>
+<p>Alternatively, .NET Standard 2.0 could be targeted instead of targeting both .NET Core 2.1 and .NET Framework 4.6.1:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+  
+  &lt;PropertyGroup&gt;
+    &lt;TargetFrameworks&gt;netstandard2.0;netcoreapp3.1&lt;/TargetFrameworks&gt;
+  &lt;/PropertyGroup&gt;
+  
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Markdig&quot; Version=&quot;0.16.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  
+  &lt;ItemGroup Condition=&quot;'$(TargetFramework)' != 'netcoreapp3.1'&quot;&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.Mvc.Razor&quot; Version=&quot;2.1.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup Condition=&quot;'$(TargetFramework)' == 'netcoreapp3.1'&quot;&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;
+</code></pre>
+<p>With the preceding project file, the following caveats exist:</p>
+<ul>
+<li>
+<p>Since the library only contains Tag Helpers, it's more straightforward to target the specific platforms on which ASP.NET Core runs: .NET Core and .NET Framework. Tag Helpers can't be used by other .NET Standard 2.0-compliant target frameworks such as Unity, UWP, and Xamarin.</p>
+</li>
+<li>
+<p>Using .NET Standard 2.0 from .NET Framework has some issues that were addressed in .NET Framework 4.7.2. You can improve the experience for consumers using .NET Framework 4.6.1 through 4.7.1 by targeting .NET Framework 4.6.1.</p>
+</li>
+</ul>
+<p>If your library needs to call platform-specific APIs, target specific .NET implementations instead of .NET Standard. For more information, see Multi-targeting.</p>
+<h2><a href="#use-an-api-that-hasnt-changed" aria-hidden="true" class="anchor" id="use-an-api-that-hasnt-changed"></a>Use an API that hasn't changed</h2>
+<p>In this article, I'm going to show you how to continue using the ASP.NET Core APIs in .NET Core 3.1.</p>
+<ul>
+<li>
+<p>Follow the standard library guidance.</p>
+</li>
+<li>
+<p>Add a package reference for each API's NuGet package if the corresponding assembly doesn't exist in the shared framework.</p>
+</li>
+</ul>
+<h2><a href="#use-an-api-that-changed" aria-hidden="true" class="anchor" id="use-an-api-that-changed"></a>Use an API that changed</h2>
+<p>If you're upgrading to .NET Core 3.1 or later, it's a good idea to consider whether you can rewrite the library to not use the broken API in all versions.</p>
+<p>If you can rewrite the library, do so and continue to target an earlier target framework (for example, .NET Standard 2.0 or .NET Framework 4.6.1) with package references.</p>
+<p>If you can't rewrite the library, take the following steps:</p>
+<ul>
+<li>
+<p>Add a target for .NET Core 3.1.</p>
+</li>
+<li>
+<p>Add a <FrameworkReference> element for the shared framework.</p>
+</li>
+<li>
+<p>Use the #if preprocessor directive with the appropriate target framework symbol to conditionally compile code.</p>
+</li>
+</ul>
+<p>In this article, you will learn how to enable synchronous features in your ASP.NET code.</p>
+<pre><code class="language-csharp">public async Task Invoke(HttpContext httpContext)
+{
+    if (httpContext.Request.Path.StartsWithSegments(_path, StringComparison.Ordinal))
+    {
+        httpContext.Response.StatusCode = (int) HttpStatusCode.OK;
+        httpContext.Response.ContentType = &quot;application/json&quot;;
+        httpContext.Response.ContentLength = _bufferSize;
+
+#if !NETCOREAPP3_1 &amp;&amp; !NETCOREAPP5_0
+        var syncIOFeature = httpContext.Features.Get&lt;IHttpBodyControlFeature&gt;();
+        if (syncIOFeature != null)
+        {
+            syncIOFeature.AllowSynchronousIO = true;
+        }
+
+        using (var sw = new StreamWriter(
+            httpContext.Response.Body, _encoding, bufferSize: _bufferSize))
+        {
+            _json.Serialize(sw, new JsonMessage { message = &quot;Hello, World!&quot; });
+        }
+#else
+        await JsonSerializer.SerializeAsync&lt;JsonMessage&gt;(
+            httpContext.Response.Body, new JsonMessage { message = &quot;Hello, World!&quot; });
+#endif
+        return;
+    }
+
+    await _next(httpContext);
+}
+</code></pre>
+<h2><a href="#use-an-api-introduced-in-31" aria-hidden="true" class="anchor" id="use-an-api-introduced-in-31"></a>Use an API introduced in 3.1</h2>
+<p>Imagine that you want to use an ASP.NET Core API that was introduced in ASP.NET Core 3.1. Consider the following questions:</p>
+<ul>
+<li>
+<p>Does the library functionally require the new API?</p>
+</li>
+<li>
+<p>Can the library implement this feature in a different way?</p>
+</li>
+</ul>
+<p>If the library functionally requires the API and there's no way to implement it down-level:</p>
+<ul>
+<li>
+<p>Target .NET Core 3.x only.</p>
+</li>
+<li>
+<p>Add a <code>&lt;FrameworkReference&gt;</code> element for the shared framework.</p>
+</li>
+</ul>
+<p>If the library can implement the feature in a different way:</p>
+<ul>
+<li>
+<p>Add .NET Core 3.x as a target framework.</p>
+</li>
+<li>
+<p>Add a <code>&lt;FrameworkReference&gt;</code> element for the shared framework.</p>
+</li>
+<li>
+<p>Use the #if preprocessor directive with the appropriate target framework symbol to conditionally compile code.</p>
+</li>
+</ul>
+<p>For example, the following Tag Helper uses the <code>IWebHostEnvironment</code> interface introduced in ASP.NET Core 3.1. Consumers targeting .NET Core 3.1 execute the code path defined by the <code>NETCOREAPP3_1</code> target framework symbol. The Tag Helper's constructor parameter type changes to <code>IHostingEnvironment</code> for .NET Core 2.1 and .NET Framework 4.6.1 consumers. This change was necessary because ASP.NET Core 3.1 marked <code>IHostingEnvironment</code> as obsolete and recommended <code>IWebHostEnvironment</code> as the replacement.</p>
+<pre><code class="language-csharp">[HtmlTargetElement(&quot;script&quot;, Attributes = &quot;asp-inline&quot;)]
+public class ScriptInliningTagHelper : TagHelper
+{
+    private readonly IFileProvider _wwwroot;
+
+#if NETCOREAPP3_1
+    public ScriptInliningTagHelper(IWebHostEnvironment env)
+#else
+    public ScriptInliningTagHelper(IHostingEnvironment env)
+#endif
+    {
+        _wwwroot = env.WebRootFileProvider;
+    }
+
+    // code omitted for brevity
+}
+</code></pre>
+<p>The following multi-targeted project file supports this Tag Helper scenario:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+  
+  &lt;PropertyGroup&gt;
+    &lt;TargetFrameworks&gt;netcoreapp2.1;netcoreapp3.1;net461&lt;/TargetFrameworks&gt;
+  &lt;/PropertyGroup&gt;
+  
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Markdig&quot; Version=&quot;0.16.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  
+  &lt;ItemGroup Condition=&quot;'$(TargetFramework)' != 'netcoreapp3.1'&quot;&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNetCore.Mvc.Razor&quot; Version=&quot;2.1.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup Condition=&quot;'$(TargetFramework)' == 'netcoreapp3.1'&quot;&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;
+</code></pre>
+<h2><a href="#use-an-api-removed-from-the-shared-framework" aria-hidden="true" class="anchor" id="use-an-api-removed-from-the-shared-framework"></a>Use an API removed from the shared framework</h2>
+<p>To use an ASP.NET Core assembly that was removed from the shared framework, add the appropriate package reference.</p>
+<p>For example, to add the web API client:</p>
+<pre><code class="language-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net6.0&lt;/TargetFramework&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;FrameworkReference Include=&quot;Microsoft.AspNetCore.App&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;Microsoft.AspNet.WebApi.Client&quot; Version=&quot;5.2.7&quot; /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<h2><a href="#additional-resources" aria-hidden="true" class="anchor" id="additional-resources"></a>Additional resources</h2>
+<ul>
+<li>
+<p>Reusable Razor UI in class libraries with ASP.NET Core</p>
+</li>
+<li>
+<p>Consume ASP.NET Core Razor components from a Razor class library (RCL)</p>
+</li>
+<li>
+<p>.NET implementation support</p>
+</li>
+<li>
+<p>.NET support policies</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/target-aspnetcore?view=aspnetcore-8.0">Use ASP.NET Core APIs in a class library</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Advanced - Use a file watcher | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content=''>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Advanced - Use a file watcher</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p><code>dotnet watch</code> is a tool that runs a .NET CLI command when source files change. For example, a file change can trigger compilation, test execution, or deployment.</p>
+<p>This tutorial uses an existing web API with two endpoints: one that returns a sum and one that returns a product. The product method has a bug, which is fixed in this tutorial.</p>
+<p>Download the sample app. It consists of two projects: WebApp (an ASP.NET Core web API) and WebAppTests (unit tests for the web API).</p>
+<p>In a command shell, navigate to the WebApp folder. Run the following command:</p>
+<pre><code class="language-dotnetcli">dotnet run
+</code></pre>
+<blockquote>
+<p class='note'>Note
+You can use dotnet run --project <PROJECT> to specify a project to run. For example, running <code>dotnet run --project WebApp</code> from the root of the sample app will also run the WebApp project.</p>
+</blockquote>
+<p>The console output shows messages similar to the following (indicating that the app is running and awaiting requests):</p>
+<pre><code class="language-console">$ dotnet run
+Hosting environment: Development
+Content root path: C:/Docs/aspnetcore/tutorials/dotnet-watch/sample/WebApp
+Now listening on: http://localhost:5000
+Application started. Press Ctrl+C to shut down.
+</code></pre>
+<p>In a web browser, navigate to <code>http://localhost:&lt;port number&gt;/api/math/sum?a=4&amp;b=5</code>. You should see the result of <code>9</code>.</p>
+<p>Navigate to the product API (<code>http://localhost:&lt;port number&gt;/api/math/product?a=4&amp;b=5</code>). It returns <code>9</code>, not <code>20</code> as you'd expect. That problem is fixed later in the tutorial.</p>
+<h2><a href="#run-net-cli-commands-using-dotnet-watch" aria-hidden="true" class="anchor" id="run-net-cli-commands-using-dotnet-watch"></a>Run .NET CLI commands using <code>dotnet watch</code></h2>
+<p>Any .NET CLI command can be run with <code>dotnet watch</code>. For example:</p>
+<table><thead>
+<tr>
+<th>Command</th>
+<th>Command with ```watch```</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dotnet run</td>
+<td>dotnet ```watch``` run</td>
+</tr>
+<tr>
+<td>dotnet run -f netcoreapp3.1</td>
+<td>dotnet ```watch``` run -f netcoreapp3.1</td>
+</tr>
+<tr>
+<td>dotnet run -f netcoreapp3.1 -- --arg1</td>
+<td>dotnet ```watch``` run -f netcoreapp3.1 -- --arg1</td>
+</tr>
+<tr>
+<td>dotnet test</td>
+<td>dotnet ```watch``` test</td>
+</tr>
+</tbody></table>
+<p>Run <code>dotnet watch run</code> in the WebApp folder. The console output indicates <code>watch</code> has started.</p>
+<ul>
+<li>
+<p>Only watches files that impact builds by default.</p>
+</li>
+<li>
+<p>Any additionally watched files (via configuration) still results in a build taking place.</p>
+</li>
+</ul>
+<blockquote>
+<p class='note'>Note
+You can use <code>dotnet watch --project &lt;PROJECT&gt;</code> to specify a project to <code>watch</code>. For example, running <code>dotnet watch --project WebApp run</code> from the root of the sample app will also run and <code>watch</code> the WebApp project.</p>
+</blockquote>
+<h2><a href="#make-changes-with-dotnet-watch" aria-hidden="true" class="anchor" id="make-changes-with-dotnet-watch"></a>Make changes with <code>dotnet watch</code></h2>
+<p>Make sure <code>dotnet watch</code> is running.</p>
+<p>Fix the bug in the <code>Product</code> method of <code>MathController.cs</code> so it returns the product and not the sum:</p>
+<pre><code class="language-csharp">public static int Product(int a, int b)
+{
+    return a * b;
+}
+</code></pre>
+<p>Save the file. The console output indicates that <code>dotnet watch</code> detected a file change and restarted the app.</p>
+<p>Verify <code>http://localhost:&lt;port number&gt;/api/math/product?a=4&amp;b=5</code> returns the correct result.</p>
+<h2><a href="#run-tests-using-dotnet-watch" aria-hidden="true" class="anchor" id="run-tests-using-dotnet-watch"></a>Run tests using <code>dotnet watch</code></h2>
+<ul>
+<li>
+<p>Change the <code>Product</code> method of <code>MathController.cs</code> back to returning the sum. Save the file.</p>
+</li>
+<li>
+<p>In a command shell, navigate to the WebAppTests folder.</p>
+</li>
+<li>
+<p>Run dotnet restore.</p>
+</li>
+<li>
+<p>Run <code>dotnet watch test</code>. Its output indicates that a test failed and that the watcher is awaiting file changes:
+Total tests: 2. Passed: 1. Failed: 1. Skipped: 0.
+Test Run Failed.</p>
+</li>
+</ul>
+<pre><code class="language-console">Total tests: 2. Passed: 1. Failed: 1. Skipped: 0.
+Test Run Failed.
+</code></pre>
+<ul>
+<li>Fix the <code>Product</code> method code so it returns the product. Save the file.</li>
+</ul>
+<p><code>dotnet</code>watch``` detects the file change and reruns the tests. The console output indicates the tests passed.</p>
+<h2><a href="#customize-files-list-to-watch" aria-hidden="true" class="anchor" id="customize-files-list-to-watch"></a>Customize files list to <code>watch</code></h2>
+<p>By default, <code>dotnet-watch</code> tracks all files matching the following glob patterns:</p>
+<ul>
+<li>
+<p><code>**/*.cs</code></p>
+</li>
+<li>
+<p><code>*.csproj</code></p>
+</li>
+<li>
+<p><code>**/*.resx</code></p>
+</li>
+<li>
+<p>Content files: <code>wwwroot/**</code>, <code>**/*.config</code>, <code>**/*.json</code></p>
+</li>
+</ul>
+<p>More items can be added to the <code>watch</code> list by editing the <code>.csproj</code> file. Items can be specified individually or by using glob patterns.</p>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+    &lt;!-- extends watching group to include *.js files --&gt;
+    &lt;Watch Include=&quot;**\*.js&quot; Exclude=&quot;node_modules\**\*;**\*.js.map;obj\**\*;bin\**\*&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<h2><a href="#opt-out-of-files-to-be-watched" aria-hidden="true" class="anchor" id="opt-out-of-files-to-be-watched"></a>Opt-out of files to be watched</h2>
+<p><code>dotnet-watch</code> can be configured to ignore its default settings. To ignore specific files, add the Watch=&quot;false&quot; attribute to an item's definition in the <code>.csproj</code> file:</p>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+    &lt;!-- exclude Generated.cs from dotnet-watch --&gt;
+    &lt;Compile Include=&quot;Generated.cs&quot; Watch=&quot;false&quot; /&gt;
+
+    &lt;!-- exclude Strings.resx from dotnet-watch --&gt;
+    &lt;EmbeddedResource Include=&quot;Strings.resx&quot; Watch=&quot;false&quot; /&gt;
+
+    &lt;!-- exclude changes in this referenced project --&gt;
+    &lt;ProjectReference Include=&quot;..\ClassLibrary1\ClassLibrary1.csproj&quot; Watch=&quot;false&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+     &lt;!-- Exclude all Content items from being watched. --&gt;
+    &lt;Content Update=&quot;@(Content)&quot; Watch=&quot;false&quot; /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+<h2><a href="#custom-watch-projects" aria-hidden="true" class="anchor" id="custom-watch-projects"></a>Custom <code>watch</code> projects</h2>
+<p><code>dotnet-watch</code> isn't restricted to C# projects. Custom <code>watch</code> projects can be created to handle different scenarios. Consider the following project layout:</p>
+<ul>
+<li>
+<p>test/</p>
+<ul>
+<li>
+<p><code>UnitTests/UnitTests.csproj</code></p>
+</li>
+<li>
+<p><code>IntegrationTests/IntegrationTests.csproj</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<p>If the goal is to <code>watch</code> both projects, create a custom project file configured to <code>watch</code> both projects:</p>
+<pre><code class="language-xml">&lt;Project&gt;
+    &lt;ItemGroup&gt;
+        &lt;TestProjects Include=&quot;**\*.csproj&quot; /&gt;
+        &lt;Watch Include=&quot;**\*.cs&quot; /&gt;
+    &lt;/ItemGroup&gt;
+
+    &lt;Target Name=&quot;Test&quot;&gt;
+        &lt;MSBuild Targets=&quot;VSTest&quot; Projects=&quot;@(TestProjects)&quot; /&gt;
+    &lt;/Target&gt;
+
+    &lt;Import Project=&quot;$(MSBuildExtensionsPath)\Microsoft.Common.targets&quot; /&gt;
+&lt;/Project&gt;
+</code></pre>
+<p>To start file watching on both projects, change to the test folder. Execute the following command:</p>
+<pre><code class="language-dotnetcli">dotnet watch msbuild /t:Test
+</code></pre>
+<p>VSTest executes when any file changes in either test project.</p>
+<h2><a href="#dotnet-watch-configuration" aria-hidden="true" class="anchor" id="dotnet-watch-configuration"></a><code>dotnet-watch</code> configuration</h2>
+<p>Some configuration options can be passed to <code>dotnet watch</code> through environment variables. The available variables are:</p>
+<table><thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DOTNET_USE_POLLING_FILE_WATCHER</code></td>
+<td>If set to "1" or "true", <code>dotnet watch</code> uses a polling file watcher instead of CoreFx's <code>FileSystemWatcher</code>. Used when watching files on network shares or Docker mounted volumes.</td>
+</tr>
+<tr>
+<td><code>DOTNET_WATCH_SUPPRESS_MSBUILD_INCREMENTALISM</code></td>
+<td>By default, <code>dotnet watch</code> optimizes the build by avoiding certain operations such as running restore or re-evaluating the set of watched files on every file change. If set to "1" or "true",  these optimizations are disabled.</td>
+</tr>
+<tr>
+<td><code>DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER</code></td>
+<td><code>dotnet watch run</code> attempts to launch browsers for web apps with <code>launchBrowser</code> configured in <code>launchSettings.json</code>. If set to "1" or "true", this behavior is suppressed.</td>
+</tr>
+<tr>
+<td><code>DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH</code></td>
+<td><code>dotnet watch run</code> attempts to refresh browsers when it detects file changes. If set to "1" or "true", this behavior is suppressed. This behavior is also suppressed if <code>DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER</code> is set.</td>
+</tr>
+</tbody></table>
+<h2><a href="#browser-refresh" aria-hidden="true" class="anchor" id="browser-refresh"></a>Browser refresh</h2>
+<p><code>dotnet watch</code> injects a script into the app that allows it to refresh the browser when the content changes. In some scenarios, such as when the app enables response compression, <code>dotnet watch</code> might not be able to inject the script. For such cases in development, manually inject the script into the app. For example, to configure the  web app to manually inject the script, update the layout file to include <code>_framework/aspnet-browser-refresh.js</code>:</p>
+<pre><code class="language-razor">@* _Layout.cshtml *@
+&lt;environment names=&quot;Development&quot;&gt;
+    &lt;script src=&quot;/_framework/aspnetcore-browser-refresh.js&quot;&gt;&lt;/script&gt;
+&lt;/environment&gt;
+</code></pre>
+<h2><a href="#non-ascii-characters" aria-hidden="true" class="anchor" id="non-ascii-characters"></a>Non-ASCII characters</h2>
+<p>Visual Studio 17.2 and later includes the .NET SDK 6.0.300 and later. With the .NET SDK and 6.0.300 later, <code>dotnet-watch</code> emits non-ASCII characters to the console during a hot reload session. On certain console hosts, such as the Windows conhost, these characters may appear garbled. To avoid garbled characters, consider one of the following approaches:</p>
+<ul>
+<li>
+<p>Configure the <code>DOTNET_WATCH_SUPPRESS_EMOJIS=1</code> environment variable to suppress emitting these values.</p>
+</li>
+<li>
+<p>Switch to a different terminal, such as <a href="https://github.com/microsoft/terminal">https://github.com/microsoft/terminal</a>, that  supports rendering non-ASCII characters.</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/aspnet/core/tutorials/dotnet-watch?view=aspnetcore-8.0">Develop ASP.NET Core apps using a file watcher</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/AspNetCore.html'>AspNetCore</a></div>
+      </div>
+    </div>
+  </body>
+</html>
