@@ -6,11 +6,6 @@ tags: Summary, .Net, AdvancedProgramming
 description: Many personal computers and workstations have multiple CPU cores that enable multiple threads to be executed simultaneously. To take advantage of the hardware, you can parallelize your code to distribute work across multiple processors.
 image:
 ---
-- Article
-
-  - 03/11/2022
-
-  - 14 contributors
 
 ## In this article
 

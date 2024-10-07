@@ -86,20 +86,7 @@
     <div class="container">
       <div class="main">
         <h1>Asynchronous programming patterns - Asynchronous programming model (APM) - Asynchronous programming using delegates - Overview</h1>
-        <ul>
-<li>
-<p>Article</p>
-<ul>
-<li>
-<p>09/15/2021</p>
-</li>
-<li>
-<p>11 contributors</p>
-</li>
-</ul>
-</li>
-</ul>
-<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>Delegates enable you to call a synchronous method in an asynchronous manner. When you call a delegate synchronously, the <code>Invoke</code> method calls the target method directly on the current thread. If the <code>BeginInvoke</code> method is called, the common language runtime (CLR) queues the request and returns immediately to the caller. The target method is called asynchronously on a thread from the thread pool. The original thread, which submitted the request, is free to continue executing in parallel with the target method. If a callback method has been specified in the call to the <code>BeginInvoke</code> method, the callback method is called when the target method ends. In the callback method, the <code>EndInvoke</code> method obtains the return value and any input/output or output-only parameters. If no callback method is specified when calling <code>BeginInvoke</code>, <code>EndInvoke</code> can be called from the thread that called <code>BeginInvoke</code>.</p>
 <blockquote>
 <p class='important'>Important

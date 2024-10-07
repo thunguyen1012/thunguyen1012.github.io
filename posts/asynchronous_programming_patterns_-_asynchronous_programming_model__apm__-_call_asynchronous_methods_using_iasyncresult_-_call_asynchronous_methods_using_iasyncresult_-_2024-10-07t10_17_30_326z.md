@@ -6,11 +6,6 @@ tags: Summary, .Net, AdvancedProgramming
 description: Types in the .NET libraries and third-party class libraries can provide methods that allow an application to continue executing while performing asynchronous operations in threads other than the main application thread. The following sections describe and provide code examples that demonstrate the different ways you can call asynchronous methods that use the IAsyncResult design pattern.
 image:
 ---
-- Article
-
-  - 09/15/2021
-
-  - 12 contributors
 
 ## In this article
 
