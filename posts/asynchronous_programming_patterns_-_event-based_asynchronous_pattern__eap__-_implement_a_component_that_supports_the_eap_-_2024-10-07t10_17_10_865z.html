@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Implement a component that supports the EAP | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='If you are writing a class with some operations that may incur noticeable delays, consider giving it asynchronous functionality by implementing the Event-based Asynchronous Pattern.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Implement a component that supports the EAP</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>If you are writing a class with some operations that may incur noticeable delays, consider giving it asynchronous functionality by implementing the Event-based Asynchronous Pattern.</p>
+<p>How to create a component that implements the Event-based Asynchronous Pattern.</p>
+<p>If you want to test whether a large number is prime, you will need to complete the form below.</p>
+<p>Tasks illustrated in this walkthrough include:</p>
+<ul>
+<li>
+<p>Creating the Component</p>
+</li>
+<li>
+<p>Defining Public Asynchronous Events and Delegates</p>
+</li>
+<li>
+<p>Defining Private Delegates</p>
+</li>
+<li>
+<p>Implementing Public Events</p>
+</li>
+<li>
+<p>Implementing the Completion Method</p>
+</li>
+<li>
+<p>Implementing the Worker Methods</p>
+</li>
+<li>
+<p>Implementing Start and Cancel Methods</p>
+</li>
+</ul>
+<p>To copy the code in this topic as a single listing, see How to: Implement a Client of the Event-based Asynchronous Pattern.</p>
+<h2><a href="#creating-the-component" aria-hidden="true" class="anchor" id="creating-the-component"></a>Creating the Component</h2>
+<p>The first step is to create the component that will implement the Event-based Asynchronous Pattern.</p>
+<h3><a href="#to-create-the-component" aria-hidden="true" class="anchor" id="to-create-the-component"></a>To create the component</h3>
+<ul>
+<li>Create a class called <code>PrimeNumberCalculator</code> that inherits from Component.</li>
+</ul>
+<h2><a href="#defining-public-asynchronous-events-and-delegates" aria-hidden="true" class="anchor" id="defining-public-asynchronous-events-and-delegates"></a>Defining Public Asynchronous Events and Delegates</h2>
+<p>Your component communicates to clients using events. The MethodNameCompleted event alerts clients to the completion of an asynchronous task, and the MethodNameProgressChanged event informs clients of the progress of an asynchronous task.</p>
+<h3><a href="#to-define-asynchronous-events-for-clients-of-your-component" aria-hidden="true" class="anchor" id="to-define-asynchronous-events-for-clients-of-your-component"></a>To define asynchronous events for clients of your component:</h3>
+<ul>
+<li>Import the System.Threading and System.Collections.Specialized namespaces at the top of your file.</li>
+</ul>
+<pre><code class="language-csharp">using System;
+using System.Collections;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Globalization;
+using System.Threading;
+using System.Windows.Forms;
+</code></pre>
+<ul>
+<li>Before the <code>PrimeNumberCalculator</code> class definition, declare delegates for progress and completion events.</li>
+</ul>
+<pre><code class="language-csharp">public delegate void ProgressChangedEventHandler(
+    ProgressChangedEventArgs e);
+
+public delegate void CalculatePrimeCompletedEventHandler(
+    object sender,
+    CalculatePrimeCompletedEventArgs e);
+</code></pre>
+<ul>
+<li>In the <code>PrimeNumberCalculator</code> class definition, declare events for reporting progress and completion to clients.</li>
+</ul>
+<pre><code class="language-csharp">public event ProgressChangedEventHandler ProgressChanged;
+public event CalculatePrimeCompletedEventHandler CalculatePrimeCompleted;
+</code></pre>
+<ul>
+<li>After the <code>PrimeNumberCalculator</code> class definition, derive the <code>CalculatePrimeCompletedEventArgs</code> class for reporting the outcome of each calculation to the client's event handler for the <code>CalculatePrimeCompleted</code>.event. In addition to the <code>AsyncCompletedEventArgs</code> properties, this class enables the client to determine what number was tested, whether it is prime, and what the first divisor is if it is not prime.</li>
+</ul>
+<pre><code class="language-csharp">public class CalculatePrimeCompletedEventArgs :
+    AsyncCompletedEventArgs
+{
+    private int numberToTestValue = 0;
+    private int firstDivisorValue = 1;
+    private bool isPrimeValue;
+
+    public CalculatePrimeCompletedEventArgs(
+        int numberToTest,
+        int firstDivisor,
+        bool isPrime,
+        Exception e,
+        bool canceled,
+        object state) : base(e, canceled, state)
+    {
+        this.numberToTestValue = numberToTest;
+        this.firstDivisorValue = firstDivisor;
+        this.isPrimeValue = isPrime;
+    }
+
+    public int NumberToTest
+    {
+        get
+        {
+            // Raise an exception if the operation failed or
+            // was canceled.
+            RaiseExceptionIfNecessary();
+
+            // If the operation was successful, return the
+            // property value.
+            return numberToTestValue;
+        }
+    }
+
+    public int FirstDivisor
+    {
+        get
+        {
+            // Raise an exception if the operation failed or
+            // was canceled.
+            RaiseExceptionIfNecessary();
+
+            // If the operation was successful, return the
+            // property value.
+            return firstDivisorValue;
+        }
+    }
+
+    public bool IsPrime
+    {
+        get
+        {
+            // Raise an exception if the operation failed or
+            // was canceled.
+            RaiseExceptionIfNecessary();
+
+            // If the operation was successful, return the
+            // property value.
+            return isPrimeValue;
+        }
+    }
+}
+</code></pre>
+<h2><a href="#checkpoint-1" aria-hidden="true" class="anchor" id="checkpoint-1"></a>Checkpoint 1</h2>
+<p>At this point, you can build the component.</p>
+<h3><a href="#to-test-your-component" aria-hidden="true" class="anchor" id="to-test-your-component"></a>To test your component</h3>
+<ul>
+<li>Compile the component.
+You will receive two compiler warnings:</li>
+</ul>
+<pre><code class="language-console">warning CS0067: The event 'AsynchronousPatternExample.PrimeNumberCalculator.ProgressChanged' is never used  
+warning CS0067: The event 'AsynchronousPatternExample.PrimeNumberCalculator.CalculatePrimeCompleted' is never used
+</code></pre>
+<p>These warnings will be cleared in the next section.</p>
+<h2><a href="#defining-private-delegates" aria-hidden="true" class="anchor" id="defining-private-delegates"></a>Defining Private Delegates</h2>
+<p>The asynchronous aspects of the <code>PrimeNumberCalculator</code> component are implemented internally with a special delegate known as a SendOrPostCallback. A SendOrPostCallback represents a callback method that executes on a ThreadPool thread. The callback method must have a signature that takes a single parameter of type Object, which means you will need to pass state among delegates in a wrapper class. For more information, see SendOrPostCallback.</p>
+<h3><a href="#to-implement-your-components-internal-asynchronous-behavior:" aria-hidden="true" class="anchor" id="to-implement-your-components-internal-asynchronous-behavior:"></a>To implement your component's internal asynchronous behavior:</h3>
+<ul>
+<li>Declare and create the SendOrPostCallback delegates in the <code>PrimeNumberCalculator</code> class. Create the SendOrPostCallback objects in a utility method called <code>InitializeDelegates</code>.
+You will need two delegates: one for reporting progress to the client, and one for reporting completion to the client.</li>
+</ul>
+<pre><code class="language-csharp">private SendOrPostCallback onProgressReportDelegate;
+private SendOrPostCallback onCompletedDelegate;
+</code></pre>
+<pre><code class="language-csharp">protected virtual void InitializeDelegates()
+{
+    onProgressReportDelegate =
+        new SendOrPostCallback(ReportProgress);
+    onCompletedDelegate =
+        new SendOrPostCallback(CalculateCompleted);
+}
+</code></pre>
+<ul>
+<li>Call the <code>InitializeDelegates</code> method in your component's constructor.</li>
+</ul>
+<pre><code class="language-csharp">public PrimeNumberCalculator()
+{
+    InitializeComponent();
+
+    InitializeDelegates();
+}
+</code></pre>
+<ul>
+<li>Declare a delegate in the <code>PrimeNumberCalculator</code> class that handles the actual work to be done asynchronously. This delegate wraps the worker method that tests whether a number is prime. The delegate takes an AsyncOperation parameter, which will be used to track the lifetime of the asynchronous operation.</li>
+</ul>
+<pre><code class="language-csharp">private delegate void WorkerEventHandler(
+    int numberToCheck,
+    AsyncOperation asyncOp);
+</code></pre>
+<ul>
+<li>Create a collection for managing lifetimes of pending asynchronous operations. The client needs a way to track operations as they are executed and completed, and this tracking is done by requiring the client to pass a unique token, or task ID, when the client makes the call to the asynchronous method. The <code>PrimeNumberCalculator</code> component must keep track of each call by associating the task ID with its corresponding invocation. If the client passes a task ID that is not unique, the <code>PrimeNumberCalculator</code> component must raise an exception.
+The <code>PrimeNumberCalculator</code> component keeps track of task ID by using a special collection class called a HybridDictionary. In the class definition, create a HybridDictionary called <code>userStateToLifetime</code>.</li>
+</ul>
+<pre><code class="language-csharp">private HybridDictionary userStateToLifetime =
+    new HybridDictionary();
+</code></pre>
+<h2><a href="#implementing-public-events" aria-hidden="true" class="anchor" id="implementing-public-events"></a>Implementing Public Events</h2>
+<p>Components that implement the Event-based Asynchronous Pattern communicate to clients using events. These events are invoked on the proper thread with the help of the AsyncOperation class.</p>
+<h3><a href="#to-raise-events-to-your-components-clients:" aria-hidden="true" class="anchor" id="to-raise-events-to-your-components-clients:"></a>To raise events to your component's clients:</h3>
+<ul>
+<li>Implement public events for reporting to clients. You will need an event for reporting progress and one for reporting completion.</li>
+</ul>
+<pre><code class="language-csharp">// This method is invoked via the AsyncOperation object,
+// so it is guaranteed to be executed on the correct thread.
+private void CalculateCompleted(object operationState)
+{
+    CalculatePrimeCompletedEventArgs e =
+        operationState as CalculatePrimeCompletedEventArgs;
+
+    OnCalculatePrimeCompleted(e);
+}
+
+// This method is invoked via the AsyncOperation object,
+// so it is guaranteed to be executed on the correct thread.
+private void ReportProgress(object state)
+{
+    ProgressChangedEventArgs e =
+        state as ProgressChangedEventArgs;
+
+    OnProgressChanged(e);
+}
+
+protected void OnCalculatePrimeCompleted(
+    CalculatePrimeCompletedEventArgs e)
+{
+    if (CalculatePrimeCompleted != null)
+    {
+        CalculatePrimeCompleted(this, e);
+    }
+}
+
+protected void OnProgressChanged(ProgressChangedEventArgs e)
+{
+    if (ProgressChanged != null)
+    {
+        ProgressChanged(e);
+    }
+}
+</code></pre>
+<h2><a href="#implementing-the-completion-method" aria-hidden="true" class="anchor" id="implementing-the-completion-method"></a>Implementing the Completion Method</h2>
+<p>The completion delegate is the method that the underlying, free-threaded asynchronous behavior will invoke when the asynchronous operation ends by successful completion, error, or cancellation.</p>
+<p>This method ends the lifetime of an asynchronous operation by calling the PostOperationCompleted method on the corresponding AsyncOperation.</p>
+<p>The <code>CompletionMethod</code> signature must hold all state necessary to describe the outcome of the asynchronous operation. It holds state for the number that was tested by this particular asynchronous operation, whether the number is prime, and the value of its first divisor if it is not a prime number. It also holds state describing any exception that occurred, and the AsyncOperation corresponding to this particular task.</p>
+<h3><a href="#to-complete-an-asynchronous-operation" aria-hidden="true" class="anchor" id="to-complete-an-asynchronous-operation"></a>To complete an asynchronous operation:</h3>
+<ul>
+<li>Implement the completion method. It takes six parameters, which it uses to populate a <code>CalculatePrimeCompletedEventArgs</code> that is returned to the client through the client's <code>CalculatePrimeCompletedEventHandler</code>. It removes the client's task ID token from the internal collection, and it ends the asynchronous operation's lifetime with a call to PostOperationCompleted. The AsyncOperation marshals the call to the thread or context that is appropriate for the application model.</li>
+</ul>
+<pre><code class="language-csharp">// This is the method that the underlying, free-threaded
+// asynchronous behavior will invoke.  This will happen on
+// an arbitrary thread.
+private void CompletionMethod(
+    int numberToTest,
+    int firstDivisor,
+    bool isPrime,
+    Exception exception,
+    bool canceled,
+    AsyncOperation asyncOp )
+
+{
+    // If the task was not previously canceled,
+    // remove the task from the lifetime collection.
+    if (!canceled)
+    {
+        lock (userStateToLifetime.SyncRoot)
+        {
+            userStateToLifetime.Remove(asyncOp.UserSuppliedState);
+        }
+    }
+
+    // Package the results of the operation in a
+    // CalculatePrimeCompletedEventArgs.
+    CalculatePrimeCompletedEventArgs e =
+        new CalculatePrimeCompletedEventArgs(
+        numberToTest,
+        firstDivisor,
+        isPrime,
+        exception,
+        canceled,
+        asyncOp.UserSuppliedState);
+
+    // End the task. The asyncOp object is responsible
+    // for marshaling the call.
+    asyncOp.PostOperationCompleted(onCompletedDelegate, e);
+
+    // Note that after the call to OperationCompleted,
+    // asyncOp is no longer usable, and any attempt to use it
+    // will cause an exception to be thrown.
+}
+</code></pre>
+<h2><a href="#checkpoint-2" aria-hidden="true" class="anchor" id="checkpoint-2"></a>Checkpoint 2</h2>
+<p>At this point, you can build the component.</p>
+<h3><a href="#to-test-your-component-1" aria-hidden="true" class="anchor" id="to-test-your-component-1"></a>To test your component</h3>
+<ul>
+<li>Compile the component.
+You will receive one compiler warning:</li>
+</ul>
+<pre><code class="language-console">warning CS0169: The private field 'AsynchronousPatternExample.PrimeNumberCalculator.workerDelegate' is never used
+</code></pre>
+<p>This warning will be resolved in the next section.</p>
+<h2><a href="#implementing-the-worker-methods" aria-hidden="true" class="anchor" id="implementing-the-worker-methods"></a>Implementing the Worker Methods</h2>
+<p>So far, you have implemented the supporting asynchronous code for the <code>PrimeNumberCalculator</code> component. Now you can implement the code that does the actual work. You will implement three methods: <code>CalculateWorker</code>, <code>BuildPrimeNumberList</code>, and <code>IsPrime</code>. Together, <code>BuildPrimeNumberList</code> and <code>IsPrime</code> comprise a well-known algorithm called the Sieve of Eratosthenes, which determines if a number is prime by finding all the prime numbers up to the square root of the test number. If no divisors are found by that point, the test number is prime.</p>
+<p>This example shows how to write a component that remembers all the prime numbers discovered by invocations for different test numbers.</p>
+<p>The <code>CalculateWorker</code> method is wrapped in a delegate and is invoked asynchronously with a call to <code>BeginInvoke</code>.</p>
+<blockquote>
+<p class='note'>Note
+Progress reporting is implemented in the <code>BuildPrimeNumberList</code> method. On fast computers, <code>ProgressChanged</code> events can be raised in rapid succession. The client thread, on which these events are raised, must be able to handle this situation. User interface code may be flooded with messages and unable to keep up, resulting in unresponsiveness. For an example user interface that handles this situation, see How to: Implement a Client of the Event-based Asynchronous Pattern.</p>
+</blockquote>
+<h3><a href="#to-execute-the-prime-number-calculation-asynchronously" aria-hidden="true" class="anchor" id="to-execute-the-prime-number-calculation-asynchronously"></a>To execute the prime number calculation asynchronously:</h3>
+<ul>
+<li>Implement the <code>TaskCanceled</code> utility method. This checks the task lifetime collection for the given task ID, and returns <code>true</code> if the task ID is not found.</li>
+</ul>
+<pre><code class="language-csharp">// Utility method for determining if a
+// task has been canceled.
+private bool TaskCanceled(object taskId)
+{
+    return( userStateToLifetime[taskId] == null );
+}
+</code></pre>
+<ul>
+<li>Implement the <code>CalculateWorker</code> method. It takes two parameters: a number to test, and an AsyncOperation.</li>
+</ul>
+<pre><code class="language-csharp">// This method performs the actual prime number computation.
+// It is executed on the worker thread.
+private void CalculateWorker(
+    int numberToTest,
+    AsyncOperation asyncOp)
+{
+    bool isPrime = false;
+    int firstDivisor = 1;
+    Exception e = null;
+
+    // Check that the task is still active.
+    // The operation may have been canceled before
+    // the thread was scheduled.
+    if (!TaskCanceled(asyncOp.UserSuppliedState))
+    {
+        try
+        {
+            // Find all the prime numbers up to
+            // the square root of numberToTest.
+            ArrayList primes = BuildPrimeNumberList(
+                numberToTest,
+                asyncOp);
+
+            // Now we have a list of primes less than
+            // numberToTest.
+            isPrime = IsPrime(
+                primes,
+                numberToTest,
+                out firstDivisor);
+        }
+        catch (Exception ex)
+        {
+            e = ex;
+        }
+    }
+
+    //CalculatePrimeState calcState = new CalculatePrimeState(
+    //        numberToTest,
+    //        firstDivisor,
+    //        isPrime,
+    //        e,
+    //        TaskCanceled(asyncOp.UserSuppliedState),
+    //        asyncOp);
+
+    //this.CompletionMethod(calcState);
+
+    this.CompletionMethod(
+        numberToTest,
+        firstDivisor,
+        isPrime,
+        e,
+        TaskCanceled(asyncOp.UserSuppliedState),
+        asyncOp);
+
+    //completionMethodDelegate(calcState);
+}
+</code></pre>
+<ul>
+<li>Implement <code>BuildPrimeNumberList</code>. It takes two parameters: the number to test, and an AsyncOperation. It uses the AsyncOperation to report progress and incremental results. This assures that the client's event handlers are called on the proper thread or context for the application model. When <code>BuildPrimeNumberList</code> finds a prime number, it reports this as an incremental result to the client's event handler for the <code>ProgressChanged</code> event. This requires a class derived from ProgressChangedEventArgs, called <code>CalculatePrimeProgressChangedEventArgs</code>, which has one added property called <code>LatestPrimeNumber</code>.
+The <code>BuildPrimeNumberList</code> method also periodically calls the <code>TaskCanceled</code> method and exits if the method returns <code>true</code>.</li>
+</ul>
+<pre><code class="language-csharp">// This method computes the list of prime numbers used by the
+// IsPrime method.
+private ArrayList BuildPrimeNumberList(
+    int numberToTest,
+    AsyncOperation asyncOp)
+{
+    ProgressChangedEventArgs e = null;
+    ArrayList primes = new ArrayList();
+    int firstDivisor;
+    int n = 5;
+
+    // Add the first prime numbers.
+    primes.Add(2);
+    primes.Add(3);
+
+    // Do the work.
+    while (n &lt; numberToTest &amp;&amp;
+           !TaskCanceled( asyncOp.UserSuppliedState ) )
+    {
+        if (IsPrime(primes, n, out firstDivisor))
+        {
+            // Report to the client that a prime was found.
+            e = new CalculatePrimeProgressChangedEventArgs(
+                n,
+                (int)((float)n / (float)numberToTest * 100),
+                asyncOp.UserSuppliedState);
+
+            asyncOp.Post(this.onProgressReportDelegate, e);
+
+            primes.Add(n);
+
+            // Yield the rest of this time slice.
+            Thread.Sleep(0);
+        }
+
+        // Skip even numbers.
+        n += 2;
+    }
+
+    return primes;
+}
+</code></pre>
+<ul>
+<li>Implement <code>IsPrime</code>. It takes three parameters: a list of known prime numbers, the number to test, and an output parameter for the first divisor found. Given the list of prime numbers, it determines if the test number is prime.</li>
+</ul>
+<pre><code class="language-csharp">// This method tests n for primality against the list of
+// prime numbers contained in the primes parameter.
+private bool IsPrime(
+    ArrayList primes,
+    int n,
+    out int firstDivisor)
+{
+    bool foundDivisor = false;
+    bool exceedsSquareRoot = false;
+
+    int i = 0;
+    int divisor = 0;
+    firstDivisor = 1;
+
+    // Stop the search if:
+    // there are no more primes in the list,
+    // there is a divisor of n in the list, or
+    // there is a prime that is larger than
+    // the square root of n.
+    while (
+        (i &lt; primes.Count) &amp;&amp;
+        !foundDivisor &amp;&amp;
+        !exceedsSquareRoot)
+    {
+        // The divisor variable will be the smallest
+        // prime number not yet tried.
+        divisor = (int)primes[i++];
+
+        // Determine whether the divisor is greater
+        // than the square root of n.
+        if (divisor * divisor &gt; n)
+        {
+            exceedsSquareRoot = true;
+        }
+        // Determine whether the divisor is a factor of n.
+        else if (n % divisor == 0)
+        {
+            firstDivisor = divisor;
+            foundDivisor = true;
+        }
+    }
+
+    return !foundDivisor;
+}
+</code></pre>
+<ul>
+<li>Derive <code>CalculatePrimeProgressChangedEventArgs</code> from ProgressChangedEventArgs. This class is necessary for reporting incremental results to the client's event handler for the <code>ProgressChanged</code> event. It has one added property called <code>LatestPrimeNumber</code>.</li>
+</ul>
+<pre><code class="language-csharp">public class CalculatePrimeProgressChangedEventArgs :
+        ProgressChangedEventArgs
+{
+    private int latestPrimeNumberValue = 1;
+
+    public CalculatePrimeProgressChangedEventArgs(
+        int latestPrime,
+        int progressPercentage,
+        object userToken) : base( progressPercentage, userToken )
+    {
+        this.latestPrimeNumberValue = latestPrime;
+    }
+
+    public int LatestPrimeNumber
+    {
+        get
+        {
+            return latestPrimeNumberValue;
+        }
+    }
+}
+</code></pre>
+<h2><a href="#checkpoint-3" aria-hidden="true" class="anchor" id="checkpoint-3"></a>Checkpoint 3</h2>
+<p>At this point, you can build the component.</p>
+<h3><a href="#to-test-your-component-2" aria-hidden="true" class="anchor" id="to-test-your-component-2"></a>To test your component</h3>
+<ul>
+<li>Compile the component.
+All that remains to be written are the methods to start and cancel asynchronous operations, <code>CalculatePrimeAsync</code> and <code>CancelAsync</code>.</li>
+</ul>
+<h2><a href="#implementing-the-start-and-cancel-methods" aria-hidden="true" class="anchor" id="implementing-the-start-and-cancel-methods"></a>Implementing the Start and Cancel Methods</h2>
+<p>You start the worker method on its own thread by calling <code>BeginInvoke</code> on the delegate that wraps it. To manage the lifetime of a particular asynchronous operation, you call the CreateOperation method on the AsyncOperationManager helper class. This returns an AsyncOperation, which marshals calls on the client's event handlers to the proper thread or context.</p>
+<p>You can cancel a pending operation by calling PostCompleted on its corresponding AsyncOperation.</p>
+<h3><a href="#to-implement-start-and-cancel-functionality" aria-hidden="true" class="anchor" id="to-implement-start-and-cancel-functionality"></a>To implement Start and Cancel functionality:</h3>
+<ul>
+<li>Implement the <code>CalculatePrimeAsync</code> method. Make sure the client-supplied token (task ID) is unique with respect to all the tokens representing currently pending tasks. If the client passes in a non-unique token, <code>CalculatePrimeAsync</code> raises an exception. Otherwise, the token is added to the task ID collection.</li>
+</ul>
+<pre><code class="language-csharp">// This method starts an asynchronous calculation.
+// First, it checks the supplied task ID for uniqueness.
+// If taskId is unique, it creates a new WorkerEventHandler
+// and calls its BeginInvoke method to start the calculation.
+public virtual void CalculatePrimeAsync(
+    int numberToTest,
+    object taskId)
+{
+    // Create an AsyncOperation for taskId.
+    AsyncOperation asyncOp =
+        AsyncOperationManager.CreateOperation(taskId);
+
+    // Multiple threads will access the task dictionary,
+    // so it must be locked to serialize access.
+    lock (userStateToLifetime.SyncRoot)
+    {
+        if (userStateToLifetime.Contains(taskId))
+        {
+            throw new ArgumentException(
+                &quot;Task ID parameter must be unique&quot;,
+                &quot;taskId&quot;);
+        }
+
+        userStateToLifetime[taskId] = asyncOp;
+    }
+
+    // Start the asynchronous operation.
+    WorkerEventHandler workerDelegate = new WorkerEventHandler(CalculateWorker);
+    workerDelegate.BeginInvoke(
+        numberToTest,
+        asyncOp,
+        null,
+        null);
+}
+</code></pre>
+<ul>
+<li>Implement the <code>CancelAsync</code> method. If the <code>taskId</code> parameter exists in the token collection, it is removed. This prevents canceled tasks that have not started from running. If the task is running, the <code>BuildPrimeNumberList</code> method exits when it detects that the task ID has been removed from the lifetime collection.</li>
+</ul>
+<pre><code class="language-csharp">// This method cancels a pending asynchronous operation.
+public void CancelAsync(object taskId)
+{
+    AsyncOperation asyncOp = userStateToLifetime[taskId] as AsyncOperation;
+    if (asyncOp != null)
+    {
+        lock (userStateToLifetime.SyncRoot)
+        {
+            userStateToLifetime.Remove(taskId);
+        }
+    }
+}
+</code></pre>
+<h2><a href="#checkpoint-4" aria-hidden="true" class="anchor" id="checkpoint-4"></a>Checkpoint 4</h2>
+<p>At this point, you can build the component.</p>
+<h3><a href="#to-test-your-component-3" aria-hidden="true" class="anchor" id="to-test-your-component-3"></a>To test your component</h3>
+<ul>
+<li>Compile the component.</li>
+</ul>
+<p>The <code>PrimeNumberCalculator</code> component is now complete and ready to use.</p>
+<p>For an example client that uses the <code>PrimeNumberCalculator</code> component, see How to: Implement a Client of the Event-based Asynchronous Pattern.</p>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next Steps</h2>
+<p>You can fill out this example by writing <code>CalculatePrime</code>, the synchronous equivalent of <code>CalculatePrimeAsync</code> method. This will make the <code>PrimeNumberCalculator</code> component fully compliant with the Event-based Asynchronous Pattern.</p>
+<p>You can improve this example by retaining the list of all the prime numbers discovered by various invocations for different test numbers. Using this approach, each task will benefit from the work done by previous tasks. Be careful to protect this list with <code>lock</code> regions, so access to the list by different threads is serialized.</p>
+<p>You can also improve this example by testing for trivial divisors, like 2, 3, and 5.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>How to: Run an Operation in the Background</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern Overview</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern (EAP)</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/component-that-supports-the-event-based-asynchronous-pattern">How to: Implement a Component That Supports the Event-based Asynchronous Pattern</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

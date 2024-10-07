@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Asynchronous programming model (APM) - Call asynchronous methods using IAsyncResult - Block execution using an AsyncWaitHandle | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Applications that cannot continue to do other work while waiting for the results of an asynchronous operation must block until the operation completes. Use one of the following options to block your application's main thread while waiting for an asynchronous operation to complete:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Asynchronous programming model (APM) - Call asynchronous methods using IAsyncResult - Block execution using an AsyncWaitHandle</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>An application cannot continue to do other work while waiting for the results of an asynchronous operation.</p>
+<ul>
+<li>
+<p>Use the <code>AsyncWaitHandle</code> property of the <code>IAsyncResult</code> returned by the asynchronous operation's <code>BeginOperationName</code> method. This approach is demonstrated in this topic.</p>
+</li>
+<li>
+<p>Call the asynchronous operation's <code>EndOperationName</code> method. For an example that demonstrates this approach, see Blocking Application Execution by Ending an Async Operation.</p>
+</li>
+</ul>
+<p>An application can block on a single operation by calling one of the WaitHandle methods using the <code>AsyncWaitHandle</code>.</p>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>The following code example demonstrates using asynchronous methods in the DNS class to retrieve Domain Name System information for a user-specified computer. The example demonstrates blocking using the WaitHandle associated with the asynchronous operation. Note that <code>null</code> (Nothing in Visual Basic) is passed for the <code>BeginGetHostByNamerequestCallback</code> and <code>stateObject</code> parameters because these are not required when using this approach.</p>
+<pre><code class="language-csharp">/*
+The following example demonstrates using asynchronous methods to
+get Domain Name System information for the specified host computer.
+
+*/
+
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+
+namespace Examples.AdvancedProgramming.AsynchronousOperations
+{
+    public class WaitUntilOperationCompletes
+    {
+        public static void Main(string[] args)
+        {
+            // Make sure the caller supplied a host name.
+            if (args.Length == 0 || args[0].Length == 0)
+            {
+                // Print a message and exit.
+                Console.WriteLine(&quot;You must specify the name of a host computer.&quot;);
+                return;
+            }
+            // Start the asynchronous request for DNS information.
+            IAsyncResult result = Dns.BeginGetHostEntry(args[0], null, null);
+            Console.WriteLine(&quot;Processing request for information...&quot;);
+            // Wait until the operation completes.
+            result.AsyncWaitHandle.WaitOne();
+            // The operation completed. Process the results.
+            try
+            {
+                // Get the results.
+                IPHostEntry host = Dns.EndGetHostEntry(result);
+                string[] aliases = host.Aliases;
+                IPAddress[] addresses = host.AddressList;
+                if (aliases.Length &gt; 0)
+                {
+                    Console.WriteLine(&quot;Aliases&quot;);
+                    for (int i = 0; i &lt; aliases.Length; i++)
+                    {
+                        Console.WriteLine(&quot;{0}&quot;, aliases[i]);
+                    }
+                }
+                if (addresses.Length &gt; 0)
+                {
+                    Console.WriteLine(&quot;Addresses&quot;);
+                    for (int i = 0; i &lt; addresses.Length; i++)
+                    {
+                        Console.WriteLine(&quot;{0}&quot;,addresses[i].ToString());
+                    }
+                }
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine(&quot;Exception occurred while processing the request: {0}&quot;,
+                    e.Message);
+            }
+        }
+    }
+}
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Event-based Asynchronous Pattern (EAP)</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern Overview</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/blocking-application-execution-using-an-asyncwaithandle">Blocking Application Execution Using an AsyncWaitHandle</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

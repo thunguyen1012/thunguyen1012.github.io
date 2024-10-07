@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Asynchronous programming model (APM) - Call asynchronous methods using IAsyncResult - Poll for the status of an async operation | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Applications that can do other work while waiting for the results of an asynchronous operation should not block waiting until the operation completes. Use one of the following options to continue executing instructions while waiting for an asynchronous operation to complete:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Asynchronous programming model (APM) - Call asynchronous methods using IAsyncResult - Poll for the status of an async operation</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>An asynchronous operation is a method that waits for the results of another operation to complete.</p>
+<ul>
+<li>
+<p>Use the <code>IsCompleted</code> property of the <code>IAsyncResult</code> returned by the asynchronous operation's <code>BeginOperationName</code> method to determine whether the operation has completed. This approach is known as polling and is demonstrated in this topic.</p>
+</li>
+<li>
+<p>Use an <code>AsyncCallback</code> delegate to process the results of the asynchronous operation in a separate thread. For an example that demonstrates this approach, see Using an <code>AsyncCallback</code> Delegate to End an <code>Asynchronous</code> Operation.</p>
+</li>
+</ul>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>asynchronous methods in the Dns class can be used to retrieve Domain Name System information for a user-specified computer.</p>
+<pre><code class="language-csharp">/*
+The following example demonstrates using asynchronous methods to
+get Domain Name System information for the specified host computer.
+This example polls to detect the end of the asynchronous operation.
+*/
+
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+
+namespace Examples.AdvancedProgramming.AsynchronousOperations
+{
+    public class PollUntilOperationCompletes
+    {
+        static void UpdateUserInterface()
+        {
+            // Print a period to indicate that the application
+            // is still working on the request.
+            Console.Write(&quot;.&quot;);
+        }
+        public static void Main(string[] args)
+        {
+            // Make sure the caller supplied a host name.
+            if (args.Length == 0 || args[0].Length == 0)
+            {
+                // Print a message and exit.
+                Console.WriteLine(&quot;You must specify the name of a host computer.&quot;);
+                return;
+            }
+            // Start the asynchronous request for DNS information.
+            IAsyncResult result = Dns.BeginGetHostEntry(args[0], null, null);
+            Console.WriteLine(&quot;Processing request for information...&quot;);
+
+            // Poll for completion information.
+            // Print periods (&quot;.&quot;) until the operation completes.
+            while (result.IsCompleted != true)
+            {
+                UpdateUserInterface();
+            }
+            // The operation is complete. Process the results.
+            // Print a new line.
+            Console.WriteLine();
+            try
+            {
+                IPHostEntry host = Dns.EndGetHostEntry(result);
+                string[] aliases = host.Aliases;
+                IPAddress[] addresses = host.AddressList;
+                if (aliases.Length &gt; 0)
+                {
+                    Console.WriteLine(&quot;Aliases&quot;);
+                    for (int i = 0; i &lt; aliases.Length; i++)
+                    {
+                        Console.WriteLine(&quot;{0}&quot;, aliases[i]);
+                    }
+                }
+                if (addresses.Length &gt; 0)
+                {
+                    Console.WriteLine(&quot;Addresses&quot;);
+                    for (int i = 0; i &lt; addresses.Length; i++)
+                    {
+                        Console.WriteLine(&quot;{0}&quot;,addresses[i].ToString());
+                    }
+                }
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine(&quot;An exception occurred while processing the request: {0}&quot;, e.Message);
+            }
+        }
+    }
+}
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Event-based Asynchronous Pattern (EAP)</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern Overview</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/polling-for-the-status-of-an-asynchronous-operation">Polling for the Status of an Asynchronous Operation</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

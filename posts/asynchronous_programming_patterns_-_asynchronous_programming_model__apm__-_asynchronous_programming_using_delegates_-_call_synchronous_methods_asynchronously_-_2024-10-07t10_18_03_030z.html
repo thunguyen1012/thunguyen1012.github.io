@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Asynchronous programming model (APM) - Asynchronous programming using delegates - Call synchronous methods asynchronously | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='.NET enables you to call any method asynchronously. To do this, you define a delegate with the same signature as the method you want to call. The common language runtime automatically defines BeginInvoke and EndInvoke methods for this delegate, with the appropriate signatures.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Asynchronous programming model (APM) - Asynchronous programming using delegates - Call synchronous methods asynchronously</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>.NET enables you to call any method asynchronously. To do this, you define a delegate with the same signature as the method you want to call. The common language runtime automatically defines <code>BeginInvoke</code> and <code>EndInvoke</code> methods for this delegate, with the appropriate signatures.</p>
+<blockquote>
+<p class='note'>Note
+Asynchronous delegate calls, specifically the <code>BeginInvoke</code> and <code>EndInvoke</code> methods, are not supported in the .NET Compact Framework.</p>
+</blockquote>
+<p>The <code>BeginInvoke</code> method initiates the asynchronous call. It has the same parameters as the method that you want to execute asynchronously, plus two additional optional parameters. The first parameter is an AsyncCallback delegate that references a method to be called when the asynchronous call completes. The second parameter is a user-defined object that passes information into the callback method. <code>BeginInvoke</code> returns immediately and does not wait for the asynchronous call to complete. <code>BeginInvoke</code> returns an IAsyncResult, which can be used to monitor the progress of the asynchronous call.</p>
+<p>The <code>EndInvoke</code> method retrieves the results of the asynchronous call. It can be called any time after <code>BeginInvoke</code>. If the asynchronous call has not completed, <code>EndInvoke</code> blocks the calling thread until it completes. The parameters of <code>EndInvoke</code> include the <code>out</code> and <code>ref</code> parameters (<code>&lt;Out&gt; ByRef</code> and <code>ByRef</code> in Visual Basic) of the method that you want to execute asynchronously, plus the IAsyncResult returned by <code>BeginInvoke</code>.</p>
+<blockquote>
+<p class='note'>Note
+The IntelliSense feature in Visual Studio displays the parameters of <code>BeginInvoke</code> and <code>EndInvoke</code>. If you're not using Visual Studio or a similar tool, or if you're using C# with Visual Studio, see Asynchronous Programming Model (APM) for a description of the parameters defined for these methods.</p>
+</blockquote>
+<p>The code examples in this topic demonstrate four common ways to use <code>BeginInvoke</code> and <code>EndInvoke</code> to make asynchronous calls. After calling <code>BeginInvoke</code> you can do the following:</p>
+<ul>
+<li>
+<p>Do some work and then call <code>EndInvoke</code> to block until the call completes.</p>
+</li>
+<li>
+<p>Obtain a WaitHandle using the IAsyncResult.AsyncWaitHandle property, use its WaitOne method to block execution until the WaitHandle is signaled, and then call <code>EndInvoke</code>.</p>
+</li>
+<li>
+<p>Poll the IAsyncResult returned by <code>BeginInvoke</code> to determine when the asynchronous call has completed, and then call <code>EndInvoke</code>.</p>
+</li>
+<li>
+<p>Pass a delegate for a callback method to <code>BeginInvoke</code>. The method is executed on a ThreadPool thread when the asynchronous call completes. The callback method calls <code>EndInvoke</code>.</p>
+</li>
+</ul>
+<blockquote>
+<p class='important'>Important
+No matter which technique you use, always call <code>EndInvoke</code> to complete your asynchronous call.</p>
+</blockquote>
+<h2><a href="#defining-the-test-method-and-asynchronous-delegate" aria-hidden="true" class="anchor" id="defining-the-test-method-and-asynchronous-delegate"></a>Defining the Test Method and Asynchronous Delegate</h2>
+<p>The code examples that follow demonstrate various ways of calling the same long-running method, <code>TestMethod</code>, asynchronously. The <code>TestMethod</code> method displays a console message to show that it has begun processing, sleeps for a few seconds, and then ends. <code>TestMethod</code> has an <code>out</code> parameter to demonstrate the way such parameters are added to the signatures of <code>BeginInvoke</code> and <code>EndInvoke</code>. You can handle <code>ref</code> parameters similarly.</p>
+<p>The following code example shows the definition of <code>TestMethod</code> and the delegate named <code>AsyncMethodCaller</code> that can be used to call <code>TestMethod</code> asynchronously. To compile the code examples, you must include the definitions for <code>TestMethod</code> and the <code>AsyncMethodCaller</code> delegate.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+
+namespace Examples.AdvancedProgramming.AsynchronousOperations
+{
+    public class AsyncDemo
+    {
+        // The method to be executed asynchronously.
+        public string TestMethod(int callDuration, out int threadId)
+        {
+            Console.WriteLine(&quot;Test method begins.&quot;);
+            Thread.Sleep(callDuration);
+            threadId = Thread.CurrentThread.ManagedThreadId;
+            return String.Format(&quot;My call time was {0}.&quot;, callDuration.ToString());
+        }
+    }
+    // The delegate must have the same signature as the method
+    // it will call asynchronously.
+    public delegate string AsyncMethodCaller(int callDuration, out int threadId);
+}
+</code></pre>
+<h2><a href="#waiting-for-an-asynchronous-call-with-endinvoke" aria-hidden="true" class="anchor" id="waiting-for-an-asynchronous-call-with-endinvoke"></a>Waiting for an Asynchronous Call with <code>EndInvoke</code></h2>
+<p>The simplest way to execute a method asynchronously is to start executing the method by calling the delegate's <code>BeginInvoke</code> method, do some work on the main thread, and then call the delegate's <code>EndInvoke</code> method. <code>EndInvoke</code> might block the calling thread because it does not return until the asynchronous call completes. This is a good technique to use with file or network operations.</p>
+<blockquote>
+<p class='important'>Important
+Because <code>EndInvoke</code> might block, you should never call it from threads that service the user interface.</p>
+</blockquote>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+
+namespace Examples.AdvancedProgramming.AsynchronousOperations
+{
+    public class AsyncMain
+    {
+        public static void Main()
+        {
+            // The asynchronous method puts the thread id here.
+            int threadId;
+
+            // Create an instance of the test class.
+            AsyncDemo ad = new AsyncDemo();
+
+            // Create the delegate.
+            AsyncMethodCaller caller = new AsyncMethodCaller(ad.TestMethod);
+
+            // Initiate the asynchronous call.
+            IAsyncResult result = caller.BeginInvoke(3000,
+                out threadId, null, null);
+
+            Thread.Sleep(0);
+            Console.WriteLine(&quot;Main thread {0} does some work.&quot;,
+                Thread.CurrentThread.ManagedThreadId);
+
+            // Call EndInvoke to wait for the asynchronous call to complete,
+            // and to retrieve the results.
+            string returnValue = caller.EndInvoke(out threadId, result);
+
+            Console.WriteLine(&quot;The call executed on thread {0}, with return value \&quot;{1}\&quot;.&quot;,
+                threadId, returnValue);
+        }
+    }
+}
+
+/* This example produces output similar to the following:
+
+Main thread 1 does some work.
+Test method begins.
+The call executed on thread 3, with return value &quot;My call time was 3000.&quot;.
+ */
+</code></pre>
+<h2><a href="#waiting-for-an-asynchronous-call-with-waithandle" aria-hidden="true" class="anchor" id="waiting-for-an-asynchronous-call-with-waithandle"></a>Waiting for an Asynchronous Call with WaitHandle</h2>
+<p>You can obtain a WaitHandle by using the AsyncWaitHandle property of the IAsyncResult returned by <code>BeginInvoke</code>. The WaitHandle is signaled when the asynchronous call completes, and you can wait for it by calling the WaitOne method.</p>
+<p>If you use a WaitHandle, you can perform additional processing before or after the asynchronous call completes, but before calling <code>EndInvoke</code> to retrieve the results.</p>
+<blockquote>
+<p class='note'>Note
+The wait handle is not closed automatically when you call <code>EndInvoke</code>. If you release all references to the wait handle, system resources are freed when garbage collection reclaims the wait handle. To free the system resources as soon as you are finished using the wait handle, dispose of it by calling the WaitHandle.Close method. Garbage collection works more efficiently when disposable objects are explicitly disposed.</p>
+</blockquote>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+
+namespace Examples.AdvancedProgramming.AsynchronousOperations
+{
+    public class AsyncMain
+    {
+        static void Main()
+        {
+            // The asynchronous method puts the thread id here.
+            int threadId;
+
+            // Create an instance of the test class.
+            AsyncDemo ad = new AsyncDemo();
+
+            // Create the delegate.
+            AsyncMethodCaller caller = new AsyncMethodCaller(ad.TestMethod);
+
+            // Initiate the asynchronous call.
+            IAsyncResult result = caller.BeginInvoke(3000,
+                out threadId, null, null);
+
+            Thread.Sleep(0);
+            Console.WriteLine(&quot;Main thread {0} does some work.&quot;,
+                Thread.CurrentThread.ManagedThreadId);
+
+            // Wait for the WaitHandle to become signaled.
+            result.AsyncWaitHandle.WaitOne();
+
+            // Perform additional processing here.
+            // Call EndInvoke to retrieve the results.
+            string returnValue = caller.EndInvoke(out threadId, result);
+
+            // Close the wait handle.
+            result.AsyncWaitHandle.Close();
+
+            Console.WriteLine(&quot;The call executed on thread {0}, with return value \&quot;{1}\&quot;.&quot;,
+                threadId, returnValue);
+        }
+    }
+}
+
+/* This example produces output similar to the following:
+
+Main thread 1 does some work.
+Test method begins.
+The call executed on thread 3, with return value &quot;My call time was 3000.&quot;.
+ */
+</code></pre>
+<h2><a href="#polling-for-asynchronous-call-completion" aria-hidden="true" class="anchor" id="polling-for-asynchronous-call-completion"></a>Polling for Asynchronous Call Completion</h2>
+<p>You can use the IsCompleted property of the IAsyncResult returned by <code>BeginInvoke</code> to discover when the asynchronous call completes. You might do this when making the asynchronous call from a thread that services the user interface. Polling for completion allows the calling thread to continue executing while the asynchronous call executes on a ThreadPool thread.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+
+namespace Examples.AdvancedProgramming.AsynchronousOperations
+{
+    public class AsyncMain
+    {
+        static void Main() {
+            // The asynchronous method puts the thread id here.
+            int threadId;
+
+            // Create an instance of the test class.
+            AsyncDemo ad = new AsyncDemo();
+
+            // Create the delegate.
+            AsyncMethodCaller caller = new AsyncMethodCaller(ad.TestMethod);
+
+            // Initiate the asynchronous call.
+            IAsyncResult result = caller.BeginInvoke(3000,
+                out threadId, null, null);
+
+            // Poll while simulating work.
+            while(result.IsCompleted == false) {
+                Thread.Sleep(250);
+                Console.Write(&quot;.&quot;);
+            }
+
+            // Call EndInvoke to retrieve the results.
+            string returnValue = caller.EndInvoke(out threadId, result);
+
+            Console.WriteLine(&quot;\nThe call executed on thread {0}, with return value \&quot;{1}\&quot;.&quot;,
+                threadId, returnValue);
+        }
+    }
+}
+
+/* This example produces output similar to the following:
+
+Test method begins.
+.............
+The call executed on thread 3, with return value &quot;My call time was 3000.&quot;.
+ */
+</code></pre>
+<h2><a href="#executing-a-callback-method-when-an-asynchronous-call-completes" aria-hidden="true" class="anchor" id="executing-a-callback-method-when-an-asynchronous-call-completes"></a>Executing a Callback Method When an Asynchronous Call Completes</h2>
+<p>asynchronous calls are executed on the thread that initiates the call.</p>
+<p>To use a callback method, you must pass <code>BeginInvoke</code> an AsyncCallback delegate that represents the callback method. You can also pass an object that contains information to be used by the callback method. In the callback method, you can cast the IAsyncResult, which is the only parameter of the callback method, to an AsyncResult object. You can then use the AsyncResult.AsyncDelegate property to get the delegate that was used to initiate the call so that you can call <code>EndInvoke</code>.</p>
+<p class='note'>Notes on the example:</p>
+<ul>
+<li>
+<p>The <code>threadId</code> parameter of <code>TestMethod</code> is an <code>out</code> parameter (<code>[&lt;Out&gt; ByRef</code> in Visual Basic), so its input value is never used by <code>TestMethod</code>. A dummy variable is passed to the <code>BeginInvoke</code> call. If the <code>threadId</code> parameter were a <code>ref</code> parameter (ByRef in Visual Basic), the variable would have to be a class-level field so that it could be passed to both <code>BeginInvoke</code> and <code>EndInvoke</code>.</p>
+</li>
+<li>
+<p>The state information that is passed to <code>BeginInvoke</code> is a format string, which the callback method uses to format an output message. Because it is passed as type Object, the state information must be cast to its proper type before it can be used.</p>
+</li>
+<li>
+<p>The callback is made on a ThreadPool thread. ThreadPool threads are background threads, which do not keep the application running if the main thread ends, so the main thread of the example has to sleep long enough for the callback to finish.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Runtime.Remoting.Messaging;
+
+namespace Examples.AdvancedProgramming.AsynchronousOperations
+{
+    public class AsyncMain
+    {
+        static void Main()
+        {
+            // Create an instance of the test class.
+            AsyncDemo ad = new AsyncDemo();
+
+            // Create the delegate.
+            AsyncMethodCaller caller = new AsyncMethodCaller(ad.TestMethod);
+
+            // The threadId parameter of TestMethod is an out parameter, so
+            // its input value is never used by TestMethod. Therefore, a dummy
+            // variable can be passed to the BeginInvoke call. If the threadId
+            // parameter were a ref parameter, it would have to be a class-
+            // level field so that it could be passed to both BeginInvoke and
+            // EndInvoke.
+            int dummy = 0;
+
+            // Initiate the asynchronous call, passing three seconds (3000 ms)
+            // for the callDuration parameter of TestMethod; a dummy variable
+            // for the out parameter (threadId); the callback delegate; and
+            // state information that can be retrieved by the callback method.
+            // In this case, the state information is a string that can be used
+            // to format a console message.
+            IAsyncResult result = caller.BeginInvoke(3000,
+                out dummy,
+                new AsyncCallback(CallbackMethod),
+                &quot;The call executed on thread {0}, with return value \&quot;{1}\&quot;.&quot;);
+
+            Console.WriteLine(&quot;The main thread {0} continues to execute...&quot;,
+                Thread.CurrentThread.ManagedThreadId);
+
+            // The callback is made on a ThreadPool thread. ThreadPool threads
+            // are background threads, which do not keep the application running
+            // if the main thread ends. Comment out the next line to demonstrate
+            // this.
+            Thread.Sleep(4000);
+
+            Console.WriteLine(&quot;The main thread ends.&quot;);
+        }
+
+        // The callback method must have the same signature as the
+        // AsyncCallback delegate.
+        static void CallbackMethod(IAsyncResult ar)
+        {
+            // Retrieve the delegate.
+            AsyncResult result = (AsyncResult) ar;
+            AsyncMethodCaller caller = (AsyncMethodCaller) result.AsyncDelegate;
+
+            // Retrieve the format string that was passed as state
+            // information.
+            string formatString = (string) ar.AsyncState;
+
+            // Define a variable to receive the value of the out parameter.
+            // If the parameter were ref rather than out then it would have to
+            // be a class-level field so it could also be passed to BeginInvoke.
+            int threadId = 0;
+
+            // Call EndInvoke to retrieve the results.
+            string returnValue = caller.EndInvoke(out threadId, ar);
+
+            // Use the format string to format the output message.
+            Console.WriteLine(formatString, threadId, returnValue);
+        }
+    }
+}
+
+/* This example produces output similar to the following:
+
+The main thread 1 continues to execute...
+Test method begins.
+The call executed on thread 3, with return value &quot;My call time was 3000.&quot;.
+The main thread ends.
+ */
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Delegate</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern (EAP)</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/calling-synchronous-methods-asynchronously">Calling Synchronous Methods Asynchronously</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

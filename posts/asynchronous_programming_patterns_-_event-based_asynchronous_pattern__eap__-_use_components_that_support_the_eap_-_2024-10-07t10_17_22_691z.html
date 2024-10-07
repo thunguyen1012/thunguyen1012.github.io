@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Use components that support the EAP | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Many components provide you with the option of performing their work asynchronously. The SoundPlayer and PictureBox components, for example, enable you to load sounds and images "in the background" while your main thread continues running without interruption.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Event-based asynchronous pattern (EAP) - Use components that support the EAP</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In this section, you'll find out more about the components that make up the BBC iPlayer app.</p>
+<p>Asynchronous methods on a class that supports the Event-based Asynchronous Pattern Overview can be as simple as attaching an event handler to the component's MethodName event, just as you would for any other event.</p>
+<p>For more information about using event handlers, see Event Handlers Overview.</p>
+<p>The following procedure shows how to use the asynchronous image-loading capability of a PictureBox control.</p>
+<h3><a href="#to-enable-a-picturebox-control-to-asynchronously-load-an-image" aria-hidden="true" class="anchor" id="to-enable-a-picturebox-control-to-asynchronously-load-an-image"></a>To enable a PictureBox control to asynchronously load an image</h3>
+<ul>
+<li>
+<p>Create an instance of the PictureBox component in your form.</p>
+</li>
+<li>
+<p>Assign an event handler to the LoadCompleted event.
+Check for any errors that may have occurred during the asynchronous download here. This is also where you check for cancellation.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">public Form1()
+{
+    InitializeComponent();
+
+    this.pictureBox1.LoadCompleted +=
+        new System.ComponentModel.AsyncCompletedEventHandler(this.pictureBox1_LoadCompleted);
+}
+</code></pre>
+<pre><code class="language-csharp">private void pictureBox1_LoadCompleted(object sender, AsyncCompletedEventArgs e)
+{
+    if (e.Error != null)
+    {
+        MessageBox.Show(e.Error.Message, &quot;Load Error&quot;);
+    }
+    else if (e.Cancelled)
+    {
+        MessageBox.Show(&quot;Load canceled&quot;, &quot;Canceled&quot;);
+    }
+    else
+    {
+        MessageBox.Show(&quot;Load completed&quot;, &quot;Completed&quot;);
+    }
+}
+</code></pre>
+<ul>
+<li>Add two buttons, called <code>loadButton</code> and <code>cancelLoadButton</code>, to your form. Add Click event handlers to start and cancel the download.</li>
+</ul>
+<pre><code class="language-csharp">private void loadButton_Click(object sender, EventArgs e)
+{
+    // Replace with a real url.
+    pictureBox1.LoadAsync(&quot;https://unsplash.com/photos/qhixfmpqN8s/download?force=true&amp;w=1920&quot;);
+}
+</code></pre>
+<pre><code class="language-csharp">private void cancelLoadButton_Click(object sender, EventArgs e)
+{
+    pictureBox1.CancelAsync();
+}
+</code></pre>
+<ul>
+<li>Run your application.
+As the image download proceeds, you can move the form freely, minimize it, and maximize it.</li>
+</ul>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>How to: Run an Operation in the Background</p>
+</li>
+<li>
+<p>Event-based Asynchronous Pattern Overview</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/how-to-use-components-that-support-the-event-based-asynchronous-pattern">How to: Use Components That Support the Event-based Asynchronous Pattern</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

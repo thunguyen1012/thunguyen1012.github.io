@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Asynchronous programming patterns - Asynchronous programming model (APM) - Asynchronous programming using delegates - Overview | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Delegates enable you to call a synchronous method in an asynchronous manner. When you call a delegate synchronously, the Invoke method calls the target method directly on the current thread. If the BeginInvoke method is called, the common language runtime (CLR) queues the request and returns immediately to the caller. The target method is called asynchronously on a thread from the thread pool. The original thread, which submitted the request, is free to continue executing in parallel with the target method. If a callback method has been specified in the call to the BeginInvoke method, the callback method is called when the target method ends. In the callback method, the EndInvoke method obtains the return value and any input/output or output-only parameters. If no callback method is specified when calling BeginInvoke, EndInvoke can be called from the thread that called BeginInvoke.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Asynchronous programming patterns - Asynchronous programming model (APM) - Asynchronous programming using delegates - Overview</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>09/15/2021</p>
+</li>
+<li>
+<p>11 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>Delegates enable you to call a synchronous method in an asynchronous manner. When you call a delegate synchronously, the <code>Invoke</code> method calls the target method directly on the current thread. If the <code>BeginInvoke</code> method is called, the common language runtime (CLR) queues the request and returns immediately to the caller. The target method is called asynchronously on a thread from the thread pool. The original thread, which submitted the request, is free to continue executing in parallel with the target method. If a callback method has been specified in the call to the <code>BeginInvoke</code> method, the callback method is called when the target method ends. In the callback method, the <code>EndInvoke</code> method obtains the return value and any input/output or output-only parameters. If no callback method is specified when calling <code>BeginInvoke</code>, <code>EndInvoke</code> can be called from the thread that called <code>BeginInvoke</code>.</p>
+<blockquote>
+<p class='important'>Important
+Compilers should emit delegate classes with <code>Invoke</code>, <code>BeginInvoke</code>, and <code>EndInvoke</code> methods using the delegate signature specified by the user. The <code>BeginInvoke</code> and <code>EndInvoke</code> methods should be decorated as native. Because these methods are marked as native, the CLR automatically provides the implementation at class load time. The loader ensures that they are not overridden.</p>
+</blockquote>
+<h2><a href="#in-this-section" aria-hidden="true" class="anchor" id="in-this-section"></a>In This Section</h2>
+<p>In this course, you will learn how to make asynchronous calls to ordinary methods, and how to wait for an asynchronous call to return.</p>
+<h2><a href="#related-sections" aria-hidden="true" class="anchor" id="related-sections"></a>Related Sections</h2>
+<p>Event-based Asynchronous Pattern (EAP)
+Describes asynchronous programming in .NET.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>Delegate</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/asynchronous-programming-using-delegates">Asynchronous Programming Using Delegates</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>
