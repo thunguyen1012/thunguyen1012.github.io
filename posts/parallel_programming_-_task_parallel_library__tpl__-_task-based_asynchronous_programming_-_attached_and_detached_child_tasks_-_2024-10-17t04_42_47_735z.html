@@ -86,20 +86,7 @@
     <div class="container">
       <div class="main">
         <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Attached and detached child tasks</h1>
-        <ul>
-<li>
-<p>Article</p>
-<ul>
-<li>
-<p>09/15/2021</p>
-</li>
-<li>
-<p>12 contributors</p>
-</li>
-</ul>
-</li>
-</ul>
-<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>A child task is a task that is created in the user delegate of another task.</p>
 <p>The following table lists the basic differences between the two kinds of child tasks.</p>
 <table><thead>
@@ -157,29 +144,6 @@ public class Example
 //        Outer has completed.
 //        Nested task completing.
 </code></pre>
-<pre><code class="language-vb">Imports System.Threading
-Imports System.Threading.Tasks
-
-Module Example
-    Public Sub Main()
-        Dim parent = Task.Factory.StartNew(Sub()
-                                               Console.WriteLine(&quot;Outer task executing.&quot;)
-                                               Dim child = Task.Factory.StartNew(Sub()
-                                                                                     Console.WriteLine(&quot;Nested task starting.&quot;)
-                                                                                     Thread.SpinWait(500000)
-                                                                                     Console.WriteLine(&quot;Nested task completing.&quot;)
-                                                                                 End Sub)
-                                           End Sub)
-        parent.Wait()
-        Console.WriteLine(&quot;Outer task has completed.&quot;)
-    End Sub
-End Module
-' The example produces output like the following:
-'   Outer task executing.
-'   Nested task starting.
-'   Outer task has completed.
-'   Nested task completing.
-</code></pre>
 <p>A child task can be a parent task or a detached child task.</p>
 <pre><code class="language-csharp">using System;
 using System.Threading;
@@ -212,32 +176,6 @@ class Example
 //       Nested task completing.
 //       Outer has returned 42.
 </code></pre>
-<pre><code class="language-vb">Imports System.Threading
-Imports System.Threading.Tasks
-
-Module Example
-    Public Sub Main()
-        Dim parent = Task(Of Integer).Factory.StartNew(Function()
-                                                           Console.WriteLine(&quot;Outer task executing.&quot;)
-                                                           Dim child = Task(Of Integer).Factory.StartNew(Function()
-                                                                                                             Console.WriteLine(&quot;Nested task starting.&quot;)
-                                                                                                             Thread.SpinWait(5000000)
-                                                                                                             Console.WriteLine(&quot;Nested task completing.&quot;)
-                                                                                                             Return 42
-                                                                                                         End Function)
-                                                           Return child.Result
-
-
-                                                       End Function)
-        Console.WriteLine(&quot;Outer has returned {0}&quot;, parent.Result)
-    End Sub
-End Module
-' The example displays the following output:
-'       Outer task executing.
-'       Nested task starting.
-'       Detached task completing.
-'       Outer has returned 42
-</code></pre>
 <h2><a href="#attached-child-tasks" aria-hidden="true" class="anchor" id="attached-child-tasks"></a>Attached child tasks</h2>
 <p>This example shows how to create an attached child task.</p>
 <pre><code class="language-csharp">using System;
@@ -266,29 +204,6 @@ public class Example
 //       Attached child completing.
 //       Parent has completed.
 </code></pre>
-<pre><code class="language-vb">Imports System.Threading
-Imports System.Threading.Tasks
-
-Module Example
-    Public Sub Main()
-        Dim parent = Task.Factory.StartNew(Sub()
-                                               Console.WriteLine(&quot;Parent task executing&quot;)
-                                               Dim child = Task.Factory.StartNew(Sub()
-                                                                                     Console.WriteLine(&quot;Attached child starting.&quot;)
-                                                                                     Thread.SpinWait(5000000)
-                                                                                     Console.WriteLine(&quot;Attached child completing.&quot;)
-                                                                                 End Sub, TaskCreationOptions.AttachedToParent)
-                                           End Sub)
-        parent.Wait()
-        Console.WriteLine(&quot;Parent has completed.&quot;)
-    End Sub
-End Module
-' The example displays the following output:
-'       Parent task executing.
-'       Attached child starting.
-'       Attached child completing.
-'       Parent has completed.
-</code></pre>
 <p>You can use attached child tasks to create tightly synchronized graphs of asynchronous operations.</p>
 <p>A child task can attach to its parent task by calling the Task.Run method.</p>
 <pre><code class="language-csharp">using System;
@@ -316,28 +231,6 @@ public class Example
 //       Parent has completed.
 //       Attached child starting.
 </code></pre>
-<pre><code class="language-vb">Imports System.Threading
-Imports System.Threading.Tasks
-
-Module Example
-    Public Sub Main()
-        Dim parent = Task.Run(Sub()
-                                  Console.WriteLine(&quot;Parent task executing.&quot;)
-                                  Dim child = Task.Factory.StartNew(Sub()
-                                                                        Console.WriteLine(&quot;Attached child starting.&quot;)
-                                                                        Thread.SpinWait(5000000)
-                                                                        Console.WriteLine(&quot;Attached child completing.&quot;)
-                                                                    End Sub, TaskCreationOptions.AttachedToParent)
-                              End Sub)
-        parent.Wait()
-        Console.WriteLine(&quot;Parent has completed.&quot;)
-    End Sub
-End Module
-' The example displays output like the following:
-'       Parent task executing.
-'       Parent has completed.
-'       Attached child starting.
-</code></pre>
 <h2><a href="#exceptions-in-child-tasks" aria-hidden="true" class="anchor" id="exceptions-in-child-tasks"></a>Exceptions in child tasks</h2>
 <p>The attached child task method allows you to attach a child task to a parent task.</p>
 <h2><a href="#cancellation-and-child-tasks" aria-hidden="true" class="anchor" id="cancellation-and-child-tasks"></a>Cancellation and child tasks</h2>
@@ -351,7 +244,7 @@ End Module
 <p>For more information, see Exception Handling.</p>
 <h2><a href="#preventing-a-child-task-from-attaching-to-its-parent" aria-hidden="true" class="anchor" id="preventing-a-child-task-from-attaching-to-its-parent"></a>Preventing a child task from attaching to its parent</h2>
 <p>The child taskPropagation method propagates exceptions from a child task to a parent task.</p>
-<p>When a task tries to attach to its parent task, the child task will not be able to do so and will execute just as if the TaskCreationOptions.AttachedToParent option was not specified.</p>
+<p>When a task tries to attach to its parent task, the child task will not be able to do so and will execute just as if the <code>TaskCreationOptions.AttachedToParent</code> option was not specified.</p>
 <p>You might want to prevent a child task from attaching to its parent when the child task does not finish in a timely manner.</p>
 <h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
 <ul>

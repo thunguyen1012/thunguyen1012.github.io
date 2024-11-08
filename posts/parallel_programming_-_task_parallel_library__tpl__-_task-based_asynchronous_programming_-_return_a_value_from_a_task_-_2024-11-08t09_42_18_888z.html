@@ -86,20 +86,7 @@
     <div class="container">
       <div class="main">
         <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Return a value from a task</h1>
-        <ul>
-<li>
-<p>Article</p>
-<ul>
-<li>
-<p>08/12/2022</p>
-</li>
-<li>
-<p>13 contributors</p>
-</li>
-</ul>
-</li>
-</ul>
-<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>The C:UsersPublicPicturesSample Pictures directory exists and it contains files.</p>
 <h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
 <pre><code class="language-csharp">using System;
@@ -147,60 +134,8 @@ class Program
     }
 }
 </code></pre>
-<pre><code class="language-vb">Imports System.Threading.Tasks
-
-Module Module1
-
-    Sub Main()
-        ReturnAValue()
-
-        Console.WriteLine(&quot;Press any key to exit.&quot;)
-        Console.ReadKey()
-
-    End Sub
-
-    Sub ReturnAValue()
-
-        ' Return a value type with a lambda expression
-        Dim task1 = Task(Of Integer).Factory.StartNew(Function() 1)
-        Dim i As Integer = task1.Result
-
-        ' Return a named reference type with a multi-line statement lambda.
-        Dim task2 As Task(Of Test) = Task.Factory.StartNew(Function()
-                                                               Dim s As String = &quot;.NET&quot;
-                                                               Dim d As Integer = 4
-                                                               Return New Test With {.Name = s, .Number = d}
-                                                           End Function)
-
-        Dim myTest As Test = task2.Result
-        Console.WriteLine(myTest.Name &amp; &quot;: &quot; &amp; myTest.Number)
-
-        ' Return an array produced by a PLINQ query.
-        Dim task3 As Task(Of String()) = Task(Of String()).Factory.StartNew(Function()
-
-                                                                                Dim path = &quot;C:\Users\Public\Pictures\Sample Pictures\&quot;
-                                                                                Dim files = System.IO.Directory.GetFiles(path)
-
-                                                                                Dim result = (From file In files.AsParallel()
-                                                                                              Let info = New System.IO.FileInfo(file)
-                                                                                              Where info.Extension = &quot;.jpg&quot;
-                                                                                              Select file).ToArray()
-                                                                                Return result
-                                                                            End Function)
-
-        For Each name As String In task3.Result
-            Console.WriteLine(name)
-        Next
-    End Sub
-
-    Class Test
-        Public Name As String
-        Public Number As Double
-    End Class
-End Module
-</code></pre>
 <p>The Result property blocks the calling thread until the task finishes.</p>
-<p>To see how to pass the result of a System.Threading.Tasks.Task<TResult> class to a continuation task, see Chaining Tasks by Using Continuation Tasks.</p>
+<p>To see how to pass the result of a <code>System.Threading.Tasks.Task&lt;TResult&gt;</code> class to a continuation task, see Chaining Tasks by Using Continuation Tasks.</p>
 <h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
 <ul>
 <li>

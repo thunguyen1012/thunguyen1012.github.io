@@ -86,23 +86,10 @@
     <div class="container">
       <div class="main">
         <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Create pre-computed tasks</h1>
-        <ul>
-<li>
-<p>Article</p>
-<ul>
-<li>
-<p>09/15/2021</p>
-</li>
-<li>
-<p>14 contributors</p>
-</li>
-</ul>
-</li>
-</ul>
-<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
 <p>In this article, you'll learn how to use the Task.FromResult method to retrieve the results of asynchronous download operations that are held in a cache.</p>
 <h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
-<p>The following example downloads strings from the web. It defines the <code>DownloadStringAsync</code> method. This method downloads strings from the web asynchronously. This example also uses a ConcurrentDictionary&lt;TKey,TValue&gt; object to cache the results of previous operations. If the input address is held in this cache, <code>DownloadStringAsync</code> uses the FromResult method to produce a Task<TResult> object that holds the content at that address. Otherwise, <code>DownloadStringAsync</code> downloads the file from the web and adds the result to the cache.</p>
+<p>The following example downloads strings from the web. It defines the <code>DownloadStringAsync</code> method. This method downloads strings from the web asynchronously. This example also uses a <code>ConcurrentDictionary&lt;TKey,TValue&gt;</code> object to cache the results of previous operations. If the input address is held in this cache, <code>DownloadStringAsync</code> uses the FromResult method to produce a <code>Task&lt;TResult&gt;</code> object that holds the content at that address. Otherwise, <code>DownloadStringAsync</code> downloads the file from the web and adds the result to the cache.</p>
 <pre><code class="language-csharp">using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -187,87 +174,7 @@ public static class DownloadCache
     //     Elapsed retrieval time: 1 milliseconds.
 }
 </code></pre>
-<pre><code class="language-vb">Imports System.Collections.Concurrent
-Imports System.Net.Http
-
-Module Snippets
-    Class DownloadCache
-        Private Shared ReadOnly s_cachedDownloads As ConcurrentDictionary(Of String, String) =
-            New ConcurrentDictionary(Of String, String)()
-        Private Shared ReadOnly s_httpClient As HttpClient = New HttpClient()
-
-        Public Function DownloadStringAsync(address As String) As Task(Of String)
-            Dim content As String = Nothing
-
-            If s_cachedDownloads.TryGetValue(address, content) Then
-                Return Task.FromResult(Of String)(content)
-            End If
-
-            Return Task.Run(
-                Async Function()
-                    content = Await s_httpClient.GetStringAsync(address)
-                    s_cachedDownloads.TryAdd(address, content)
-                    Return content
-                End Function)
-        End Function
-    End Class
-
-    Public Sub StopAndLogElapsedTime(
-            attemptNumber As Integer,
-            stopwatch As Stopwatch,
-            downloadTasks As Task(Of String()))
-
-        stopwatch.Stop()
-
-        Dim charCount As Integer = downloadTasks.Result.Sum(Function(result) result.Length)
-        Dim elapsedMs As Long = stopwatch.ElapsedMilliseconds
-
-        Console.WriteLine(
-            $&quot;Attempt number: {attemptNumber}{vbCrLf}&quot; &amp;
-            $&quot;Retrieved characters: {charCount:#,0}{vbCrLf}&quot; &amp;
-            $&quot;Elapsed retrieval time: {elapsedMs:#,0} milliseconds.{vbCrLf}&quot;)
-    End Sub
-
-    Sub Main()
-        Dim cache As DownloadCache = New DownloadCache()
-        Dim urls As String() = {
-                &quot;https://learn.microsoft.com/aspnet/core&quot;,
-                &quot;https://learn.microsoft.com/dotnet&quot;,
-                &quot;https://learn.microsoft.com/dotnet/architecture/dapr-for-net-developers&quot;,
-                &quot;https://learn.microsoft.com/dotnet/azure&quot;,
-                &quot;https://learn.microsoft.com/dotnet/desktop/wpf&quot;,
-                &quot;https://learn.microsoft.com/dotnet/devops/create-dotnet-github-action&quot;,
-                &quot;https://learn.microsoft.com/dotnet/machine-learning&quot;,
-                &quot;https://learn.microsoft.com/xamarin&quot;,
-                &quot;https://dotnet.microsoft.com/&quot;,
-                &quot;https://www.microsoft.com&quot;
-            }
-        Dim stopwatch As Stopwatch = Stopwatch.StartNew()
-        Dim downloads As IEnumerable(Of Task(Of String)) =
-                urls.Select(AddressOf cache.DownloadStringAsync)
-        Task.WhenAll(downloads).ContinueWith(
-                Sub(downloadTasks)
-                    StopAndLogElapsedTime(1, stopwatch, downloadTasks)
-                End Sub).Wait()
-
-        stopwatch.Restart()
-        downloads = urls.Select(AddressOf cache.DownloadStringAsync)
-        Task.WhenAll(downloads).ContinueWith(
-                Sub(downloadTasks)
-                    StopAndLogElapsedTime(2, stopwatch, downloadTasks)
-                End Sub).Wait()
-    End Sub
-    ' Sample output:
-    '     Attempt number 1
-    '     Retrieved characters: 754,585
-    '     Elapsed retrieval time: 2,857 milliseconds.
-    '
-    '     Attempt number 2
-    '     Retrieved characters: 754,585
-    '     Elapsed retrieval time: 1 milliseconds.
-End Module
-</code></pre>
-<p>In the preceding example, the first time each url is downloaded, its value is stored in the cache. The FromResult method enables the <code>DownloadStringAsync</code> method to create Task<TResult> objects that hold these pre-computed results. Subsequent calls to download the string return the cached values, and is much faster.</p>
+<p>In the preceding example, the first time each url is downloaded, its value is stored in the cache. The FromResult method enables the <code>DownloadStringAsync</code> method to create <code>Task&lt;TResult&gt;</code> objects that hold these pre-computed results. Subsequent calls to download the string return the cached values, and is much faster.</p>
 <h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
 <ul>
 <li>Task-based asynchronous programming</li>
