@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Cancel a task and its children | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This example shows how to perform the following tasks:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Cancel a task and its children</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This example shows how to perform the following tasks:</p>
+<ul>
+<li>
+<p>Create and start a cancelable task.</p>
+</li>
+<li>
+<p>Pass a cancellation token to your user delegate and optionally to the task instance.</p>
+</li>
+<li>
+<p>Notice and respond to the cancellation request in your user delegate.</p>
+</li>
+<li>
+<p>Optionally notice on the calling thread that the task was canceled.</p>
+</li>
+</ul>
+<p>A calling thread requests the cancellation of a task.</p>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>This example shows how to terminate a Task and its children in response to a cancellation request. It also shows that when a user delegate terminates by throwing a TaskCanceledException, the calling thread can optionally use the Wait method or WaitAll method to wait for the tasks to finish. In this case, you must use a <code>try/catch</code> block to handle the exceptions on the calling thread.</p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Example
+{
+    public static async Task Main()
+    {
+        // Cancellation token source for cancellation. Make sure to dispose after use (which is done here through the using expression).
+        using var tokenSource = new CancellationTokenSource();
+
+        // The cancellation token will be used to communicate cancellation to tasks
+        var token = tokenSource.Token;
+
+        Console.WriteLine(&quot;Main: Press any key to begin tasks...&quot;);
+        Console.ReadKey(true);
+        Console.WriteLine(&quot;Main: To terminate the example, press 'c' to cancel and exit...&quot;);
+        Console.WriteLine();
+
+        // Store references to the tasks so that we can wait on them and
+        // observe their status after cancellation.
+        var tasks = new ConcurrentBag&lt;Task&gt;();
+
+        // Pass the token to the user delegate so it can cancel during execution,
+        // and also to the task so it can cancel before execution starts.
+        var cancellableTask = Task.Run(() =&gt; {
+            DoSomeWork(token);
+            Console.WriteLine(&quot;Cancellable: Task {0} ran to completion&quot;, Task.CurrentId);
+        }, token);
+        Console.WriteLine(&quot;Main: Cancellable Task {0} created&quot;, cancellableTask.Id);
+        tasks.Add(cancellableTask);
+
+        var parentTask = Task.Run(() =&gt;
+        {
+            for (int i = 0; i &lt;= 7; i++)
+            {
+                // If cancellation was requested we don't need to start any more
+                // child tasks (that would immediately cancel) =&gt; break out of loop
+                if (token.IsCancellationRequested) break;
+
+                // For each child task, pass the same token
+                // to each user delegate and to Task.Run.
+                var childTask = Task.Run(() =&gt; {
+                    DoSomeWork(token);
+                    Console.WriteLine(&quot;Child: Task {0} ran to completion&quot;, Task.CurrentId);
+                }, token);
+                Console.WriteLine(&quot;Parent: Task {0} created&quot;, childTask.Id);
+                tasks.Add(childTask);
+
+                DoSomeWork(token, maxIterations: 1);
+            }
+
+            Console.WriteLine(&quot;Parent: Task {0} ran to completion&quot;, Task.CurrentId);
+        }, token);
+        Console.WriteLine(&quot;Main: Parent Task {0} created&quot;, parentTask.Id);
+        tasks.Add(parentTask);
+
+        // Request cancellation from the UI thread.
+        char ch = Console.ReadKey().KeyChar;
+        if (ch == 'c' || ch == 'C')
+        {
+            tokenSource.Cancel();
+            Console.WriteLine(&quot;\nMain: Task cancellation requested.&quot;);
+
+            // Optional: Observe the change in the Status property on the task.
+            // It is not necessary to wait on tasks that have canceled. However,
+            // if you do wait, you must enclose the call in a try-catch block to
+            // catch the OperationCanceledExceptions that are thrown. If you do
+            // not wait, no exception is thrown if the token that was passed to the
+            // Task.Run method is the same token that requested the cancellation.
+        }
+
+        try
+        {
+            // Wait for all tasks before disposing the cancellation token source
+            await Task.WhenAll(tasks);
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine($&quot;\nMain: {nameof(OperationCanceledException)} thrown\n&quot;);
+        }
+
+        // Display status of all tasks.
+        foreach (var task in tasks)
+        {
+            Console.WriteLine(&quot;Main: Task {0} status is now {1}&quot;, task.Id, task.Status);
+        }
+    }
+
+    static void DoSomeWork(CancellationToken ct, int maxIterations = 10)
+    {
+        // Was cancellation already requested?
+        if (ct.IsCancellationRequested)
+        {
+            Console.WriteLine(&quot;Task {0} was cancelled before it got started.&quot;, Task.CurrentId);
+            ct.ThrowIfCancellationRequested();
+        }
+
+        // NOTE!!! A &quot;TaskCanceledException was unhandled
+        // by user code&quot; error will be raised here if &quot;Just My Code&quot;
+        // is enabled on your computer. On Express editions JMC is
+        // enabled and cannot be disabled. The exception is benign.
+        // Just press F5 to continue executing your code.
+        for (int i = 0; i &lt;= maxIterations; i++)
+        {
+            // Do a bit of work. Not too much.
+            var sw = new SpinWait();
+            for (int j = 0; j &lt;= 100; j++)
+                sw.SpinOnce();
+
+            if (ct.IsCancellationRequested)
+            {
+                Console.WriteLine(&quot;Task {0} work cancelled&quot;, Task.CurrentId);
+                ct.ThrowIfCancellationRequested();
+            }
+        }
+    }
+}
+// The example displays output like the following:
+//    Main: Press any key to begin tasks...
+//    Main: To terminate the example, press 'c' to cancel and exit...
+//
+//    Main: Cancellable Task 13 created
+//    Main: Parent Task 14 created
+//    Parent: Task 15 created
+//    Parent: Task 16 created
+//    Parent: Task 17 created
+//    Parent: Task 18 created
+//    Parent: Task 19 created
+//    Parent: Task 20 created
+//    Cancellable: Task 13 ran to completion
+//    Child: Task 15 ran to completion
+//    Parent: Task 21 created
+//    Child: Task 16 ran to completion
+//    Parent: Task 22 created
+//    Child: Task 17 ran to completion
+//    c
+//    Main: Task cancellation requested.
+//    Task 20 work cancelled
+//    Task 21 work cancelled
+//    Task 22 work cancelled
+//    Task 18 work cancelled
+//    Task 14 work cancelled
+//    Task 19 work cancelled
+//
+//    Main: OperationCanceledException thrown
+//
+//    Main: Task 22 status is now Canceled
+//    Main: Task 21 status is now Canceled
+//    Main: Task 20 status is now Canceled
+//    Main: Task 19 status is now Canceled
+//    Main: Task 18 status is now Canceled
+//    Main: Task 17 status is now RanToCompletion
+//    Main: Task 16 status is now RanToCompletion
+//    Main: Task 15 status is now RanToCompletion
+//    Main: Task 14 status is now Canceled
+//    Main: Task 13 status is now RanToCompletion
+</code></pre>
+<p>The <code>System.Threading.Tasks.Task</code> class is used to cancel a task.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p><code>System.Threading.CancellationTokenSource</code></p>
+</li>
+<li>
+<p><code>System.Threading.CancellationToken</code></p>
+</li>
+<li>
+<p><code>System.Threading.Tasks.Task</code></p>
+</li>
+<li>
+<p><code>System.Threading.Tasks.Task&lt;TResult&gt;</code></p>
+</li>
+<li>
+<p>Task-based Asynchronous Programming</p>
+</li>
+<li>
+<p>Attached and Detached Child Tasks</p>
+</li>
+<li>
+<p>Lambda Expressions in PLINQ and TPL</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-cancel-a-task-and-its-children">How to: Cancel a Task and Its Children</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

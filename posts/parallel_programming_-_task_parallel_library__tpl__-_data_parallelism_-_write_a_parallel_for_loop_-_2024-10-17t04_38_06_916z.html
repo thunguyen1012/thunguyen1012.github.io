@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Write a Parallel.For loop | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This topic contains two examples that illustrate the Parallel.For method. The first uses the Parallel.For(Int64, Int64, Action<Int64>) method overload, and the second uses the Parallel.For(Int32, Int32, Action<Int32>) overload, the two simplest overloads of the Parallel.For method. You can use these two overloads of the Parallel.For method when you do not need to cancel the loop, break out of the loop iterations, or maintain any thread-local state.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Write a Parallel.For loop</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This topic contains two examples that illustrate the <code>Parallel.For</code> method. The first uses the <code>Parallel.For(Int64, Int64, Action&lt;Int64&gt;)</code> method overload, and the second uses the <code>Parallel.For(Int32, Int32, Action&lt;Int32&gt;)</code> overload, the two simplest overloads of the <code>Parallel.For</code> method. You can use these two overloads of the <code>Parallel.For</code> method when you do not need to cancel the loop, break out of the loop iterations, or maintain any thread-local state.</p>
+<blockquote>
+<p class='note'>Note
+This documentation uses lambda expressions to define delegates in TPL. If you are not familiar with lambda expressions in C# or Visual Basic, see Lambda Expressions in PLINQ and TPL.</p>
+</blockquote>
+<p>The first example calculates the size of files in a single directory. The second computes the product of two matrices.</p>
+<h2><a href="#directory-size-example" aria-hidden="true" class="anchor" id="directory-size-example"></a>Directory size example</h2>
+<p>This example is a simple command-line utility that calculates the total size of files in a directory. It expects a single directory path as an argument, and reports the number and total size of the files in that directory. After verifying that the directory exists, it uses the <code>Parallel.For</code> method to enumerate the files in the directory and determine their file sizes. Each file size is then added to the <code>totalSize</code> variable. Note that the addition is performed by calling the Interlocked.Add so that the addition is performed as an atomic operation. Otherwise, multiple tasks could try to update the <code>totalSize</code> variable simultaneously.</p>
+<pre><code class="language-csharp">using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Example
+{
+   public static void Main(string[] args)
+   {
+      long totalSize = 0;
+      
+      if (args.Length == 0) {
+         Console.WriteLine(&quot;There are no command line arguments.&quot;);
+         return;
+      }
+      if (! Directory.Exists(args[0])) {
+         Console.WriteLine(&quot;The directory does not exist.&quot;);
+         return;
+      }
+
+      String[] files = Directory.GetFiles(args[0]);
+      Parallel.For(0, files.Length,
+                   index =&gt; { FileInfo fi = new FileInfo(files[index]);
+                              long size = fi.Length;
+                              Interlocked.Add(ref totalSize, size);
+                   } );
+      Console.WriteLine(&quot;Directory '{0}':&quot;, args[0]);
+      Console.WriteLine(&quot;{0:N0} files, {1:N0} bytes&quot;, files.Length, totalSize);
+   }
+}
+// The example displaysoutput like the following:
+//       Directory 'c:\windows\':
+//       32 files, 6,587,222 bytes
+</code></pre>
+<h2><a href="#matrix-and-stopwatch-example" aria-hidden="true" class="anchor" id="matrix-and-stopwatch-example"></a>Matrix and stopwatch example</h2>
+<p>This example shows how to use the <code>System.Diagnostics.Stopwatch</code> class to compare the performance of a parallel loop with a non-parallel loop.</p>
+<pre><code class="language-csharp">using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+
+class MultiplyMatrices
+{
+    #region Sequential_Loop
+    static void MultiplyMatricesSequential(double[,] matA, double[,] matB,
+                                            double[,] result)
+    {
+        int matACols = matA.GetLength(1);
+        int matBCols = matB.GetLength(1);
+        int matARows = matA.GetLength(0);
+
+        for (int i = 0; i &lt; matARows; i++)
+        {
+            for (int j = 0; j &lt; matBCols; j++)
+            {
+                double temp = 0;
+                for (int k = 0; k &lt; matACols; k++)
+                {
+                    temp += matA[i, k] * matB[k, j];
+                }
+                result[i, j] += temp;
+            }
+        }
+    }
+    #endregion
+
+    #region Parallel_Loop
+    static void MultiplyMatricesParallel(double[,] matA, double[,] matB, double[,] result)
+    {
+        int matACols = matA.GetLength(1);
+        int matBCols = matB.GetLength(1);
+        int matARows = matA.GetLength(0);
+
+        // A basic matrix multiplication.
+        // Parallelize the outer loop to partition the source array by rows.
+        Parallel.For(0, matARows, i =&gt;
+        {
+            for (int j = 0; j &lt; matBCols; j++)
+            {
+                double temp = 0;
+                for (int k = 0; k &lt; matACols; k++)
+                {
+                    temp += matA[i, k] * matB[k, j];
+                }
+                result[i, j] = temp;
+            }
+        }); // Parallel.For
+    }
+    #endregion
+
+    #region Main
+    static void Main(string[] args)
+    {
+        // Set up matrices. Use small values to better view
+        // result matrix. Increase the counts to see greater
+        // speedup in the parallel loop vs. the sequential loop.
+        int colCount = 180;
+        int rowCount = 2000;
+        int colCount2 = 270;
+        double[,] m1 = InitializeMatrix(rowCount, colCount);
+        double[,] m2 = InitializeMatrix(colCount, colCount2);
+        double[,] result = new double[rowCount, colCount2];
+
+        // First do the sequential version.
+        Console.Error.WriteLine(&quot;Executing sequential loop...&quot;);
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        MultiplyMatricesSequential(m1, m2, result);
+        stopwatch.Stop();
+        Console.Error.WriteLine(&quot;Sequential loop time in milliseconds: {0}&quot;,
+                                stopwatch.ElapsedMilliseconds);
+
+        // For the skeptics.
+        OfferToPrint(rowCount, colCount2, result);
+
+        // Reset timer and results matrix.
+        stopwatch.Reset();
+        result = new double[rowCount, colCount2];
+
+        // Do the parallel loop.
+        Console.Error.WriteLine(&quot;Executing parallel loop...&quot;);
+        stopwatch.Start();
+        MultiplyMatricesParallel(m1, m2, result);
+        stopwatch.Stop();
+        Console.Error.WriteLine(&quot;Parallel loop time in milliseconds: {0}&quot;,
+                                stopwatch.ElapsedMilliseconds);
+        OfferToPrint(rowCount, colCount2, result);
+
+        // Keep the console window open in debug mode.
+        Console.Error.WriteLine(&quot;Press any key to exit.&quot;);
+        Console.ReadKey();
+    }
+    #endregion
+
+    #region Helper_Methods
+    static double[,] InitializeMatrix(int rows, int cols)
+    {
+        double[,] matrix = new double[rows, cols];
+
+        Random r = new Random();
+        for (int i = 0; i &lt; rows; i++)
+        {
+            for (int j = 0; j &lt; cols; j++)
+            {
+                matrix[i, j] = r.Next(100);
+            }
+        }
+        return matrix;
+    }
+
+    private static void OfferToPrint(int rowCount, int colCount, double[,] matrix)
+    {
+        Console.Error.Write(&quot;Computation complete. Print results (y/n)? &quot;);
+        char c = Console.ReadKey(true).KeyChar;
+        Console.Error.WriteLine(c);
+        if (Char.ToUpperInvariant(c) == 'Y')
+        {
+            if (!Console.IsOutputRedirected &amp;&amp;
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Console.WindowWidth = 180;
+            }
+
+            Console.WriteLine();
+            for (int x = 0; x &lt; rowCount; x++)
+            {
+                Console.WriteLine(&quot;ROW {0}: &quot;, x);
+                for (int y = 0; y &lt; colCount; y++)
+                {
+                    Console.Write(&quot;{0:#.##} &quot;, matrix[x, y]);
+                }
+                Console.WriteLine();
+            }
+        }
+    }
+    #endregion
+}
+</code></pre>
+<p>In this paper, we compare the performance benefits of parallelizing the outer loop with the performance benefits of parallelizing the inner loop.</p>
+<h2><a href="#the-delegate" aria-hidden="true" class="anchor" id="the-delegate"></a>The Delegate</h2>
+<p>The third parameter of this overload of For is a delegate of type <code>Action&lt;int&gt;</code> in C#. An Action delegate, whether it has zero, one or sixteen type parameters, always returns void. The example uses a lambda expression to create the delegate, but you can create the delegate in other ways as well. For more information, see Lambda Expressions in PLINQ and TPL.</p>
+<h2><a href="#the-iteration-value" aria-hidden="true" class="anchor" id="the-iteration-value"></a>The Iteration Value</h2>
+<p>The delegate is used to specify the source that is being processed on the current thread.</p>
+<p>If you require more control over the concurrency level, use one of the overloads that takes a System.Threading.Tasks.ParallelOptions input parameter, such as: <code>Parallel.For(Int32, Int32</code>, <code>ParallelOptions</code>, <code>Action&lt;Int32,ParallelLoopState&gt;)</code>.</p>
+<h2><a href="#return-value-and-exception-handling" aria-hidden="true" class="anchor" id="return-value-and-exception-handling"></a>Return Value and Exception Handling</h2>
+<p>Returns the last iteration of a loop that ran to completion.</p>
+<p>In the code in this example, the return value of For is not used.</p>
+<h2><a href="#analysis-and-performance" aria-hidden="true" class="anchor" id="analysis-and-performance"></a>Analysis and Performance</h2>
+<p>As an experiment, increase the number of columns and rows in the matrices.</p>
+<p>Try to avoid calls to shared resources, like the Console or the File System.</p>
+<h2><a href="#compile-the-code" aria-hidden="true" class="anchor" id="compile-the-code"></a>Compile the Code</h2>
+<p>Copy and paste this code into a Visual Studio project.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>For</p>
+</li>
+<li>
+<p>ForEach</p>
+</li>
+<li>
+<p>Data Parallelism</p>
+</li>
+<li>
+<p>Parallel Programming</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-write-a-simple-parallel-for-loop">How to: Write a Simple Parallel.For Loop</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

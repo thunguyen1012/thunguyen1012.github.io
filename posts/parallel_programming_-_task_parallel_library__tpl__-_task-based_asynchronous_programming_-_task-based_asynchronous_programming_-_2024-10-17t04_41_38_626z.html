@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Task-based asynchronous programming | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The Task Parallel Library (TPL) is based on the concept of a task, which represents an asynchronous operation. In some ways, a task resembles a thread or ThreadPool work item but at a higher level of abstraction. The term task parallelism refers to one or more independent tasks running concurrently. Tasks provide two primary benefits:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Task-based asynchronous programming</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The goal of the Task Parallel Library (TPL) is to make it easier for software developers to create and maintain high-level tasks.</p>
+<ul>
+<li>
+<p>More efficient and more scalable use of system resources.
+Behind the scenes, tasks are queued to the ThreadPool, which has been enhanced with algorithms that determine and adjust to the number of threads. These algorithms provide load balancing to maximize throughput. This process makes tasks relatively lightweight, and you can create many of them to enable fine-grained parallelism.</p>
+</li>
+<li>
+<p>More programmatic control than is possible with a thread or work item.
+Tasks and the framework built around them provide a rich set of APIs that support waiting, cancellation, continuations, robust exception handling, detailed status, custom scheduling, and more.</p>
+</li>
+</ul>
+<p>For both reasons, TPL is the preferred API for writing multi-threaded, asynchronous, and parallel code in .NET.</p>
+<h2><a href="#creating-and-running-tasks-implicitly" aria-hidden="true" class="anchor" id="creating-and-running-tasks-implicitly"></a>Creating and running tasks implicitly</h2>
+<p>The Parallel.Invoke method provides a convenient way to run any number of arbitrary statements concurrently. Just pass in an Action delegate for each item of work. The easiest way to create these delegates is to use lambda expressions. The lambda expression can either call a named method or provide the code inline. The following example shows a basic Invoke call that creates and starts two tasks that run concurrently. The first task is represented by a lambda expression that calls a method named <code>DoSomeWork</code>, and the second task is represented by a lambda expression that calls a method named <code>DoSomeOtherWork</code>.</p>
+<blockquote>
+<p class='note'>Note
+This documentation uses lambda expressions to define delegates in TPL. If you aren't familiar with lambda expressions in C# or Visual Basic, see Lambda Expressions in PLINQ and TPL.</p>
+</blockquote>
+<pre><code class="language-csharp">Parallel.Invoke(() =&gt; DoSomeWork(), () =&gt; DoSomeOtherWork());
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The number of Task instances that are created behind the scenes by Invoke isn't necessarily equal to the number of delegates that are provided. The TPL might employ various optimizations, especially with large numbers of delegates.</p>
+</blockquote>
+<p>For more information, see How to: Use Parallel.Invoke to Execute Parallel Operations.</p>
+<p>For greater control over task execution or to return a value from the task, you must work with Task objects more explicitly.</p>
+<h2><a href="#creating-and-running-tasks-explicitly" aria-hidden="true" class="anchor" id="creating-and-running-tasks-explicitly"></a>Creating and running tasks explicitly</h2>
+<p>The System.Tasks.Tasks</p>
+<p>In this article, you will learn how to create a task and how to express the code that will execute it.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Lambda
+{
+   public static void Main()
+   {
+      Thread.CurrentThread.Name = &quot;Main&quot;;
+
+      // Create a task and supply a user delegate by using a lambda expression.
+      Task taskA = new Task( () =&gt; Console.WriteLine(&quot;Hello from taskA.&quot;));
+      // Start the task.
+      taskA.Start();
+
+      // Output a message from the calling thread.
+      Console.WriteLine(&quot;Hello from thread '{0}'.&quot;,
+                        Thread.CurrentThread.Name);
+      taskA.Wait();
+   }
+}
+// The example displays output as follows:
+//       Hello from thread 'Main'.
+//       Hello from taskA.
+// or
+//       Hello from taskA.
+//       Hello from thread 'Main'.
+</code></pre>
+<p>You can use the <code>Task.Create</code> methods to create and start a task in one operation.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Run;
+
+public class Example
+{
+   public static void Main()
+   {
+      Thread.CurrentThread.Name = &quot;Main&quot;;
+
+      // Define and run the task.
+      Task taskA = Task.Run( () =&gt; Console.WriteLine(&quot;Hello from taskA.&quot;));
+
+      // Output a message from the calling thread.
+      Console.WriteLine(&quot;Hello from thread '{0}'.&quot;,
+                          Thread.CurrentThread.Name);
+      taskA.Wait();
+   }
+}
+// The example displays output as follows:
+//       Hello from thread 'Main'.
+//       Hello from taskA.
+// or
+//       Hello from taskA.
+//       Hello from thread 'Main'.
+</code></pre>
+<p>You can also use the <code>TaskFactory.StartNew</code> method to create and start a task in one operation. As shown in the following example, you can use this method when:</p>
+<ul>
+<li>
+<p>Creation and scheduling don't have to be separated and you require additional task creation options or the use of a specific scheduler.</p>
+</li>
+<li>
+<p>You need to pass additional state into the task that you can retrieve through its <code>Task.AsyncState</code> property.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace TaskIntro;
+
+class CustomData
+{
+    public long CreationTime;
+    public int Name;
+    public int ThreadNum;
+}
+
+public class AsyncState
+{
+    public static void Main()
+    {
+        Task[] taskArray = new Task[10];
+        for (int i = 0; i &lt; taskArray.Length; i++)
+        {
+            taskArray[i] = Task.Factory.StartNew((Object obj) =&gt;
+            {
+                CustomData data = obj as CustomData;
+                if (data == null) return;
+
+                data.ThreadNum = Thread.CurrentThread.ManagedThreadId;
+            },
+            new CustomData() { Name = i, CreationTime = DateTime.Now.Ticks });
+        }
+        Task.WaitAll(taskArray);
+        foreach (var task in taskArray)
+        {
+            var data = task.AsyncState as CustomData;
+            if (data != null)
+                Console.WriteLine(&quot;Task #{0} created at {1}, ran on thread #{2}.&quot;,
+                                  data.Name, data.CreationTime, data.ThreadNum);
+        }
+    }
+}
+// The example displays output like the following:
+//     Task #0 created at 635116412924597583, ran on thread #3.
+//     Task #1 created at 635116412924607584, ran on thread #4.
+//     Task #2 created at 635116412924607584, ran on thread #4.
+//     Task #3 created at 635116412924607584, ran on thread #4.
+//     Task #4 created at 635116412924607584, ran on thread #3.
+//     Task #5 created at 635116412924607584, ran on thread #3.
+//     Task #6 created at 635116412924607584, ran on thread #4.
+//     Task #7 created at 635116412924607584, ran on thread #4.
+//     Task #8 created at 635116412924607584, ran on thread #3.
+//     Task #9 created at 635116412924607584, ran on thread #4.
+</code></pre>
+<p><code>Task</code> and <code>Task&lt;TResult&gt;</code> each expose a static Factory property that returns a default instance of TaskFactory, so that you can call the method as <code>Task.Factory.StartNew()</code>. Also, in the following example, because the tasks are of type <code>System.Threading.Tasks.Task&lt;TResult&gt;</code>, they each have a public <code>Task&lt;TResult&gt;.Result</code> property that contains the result of the computation. The tasks run asynchronously and might complete in any order. If the Result property is accessed before the computation finishes, the property blocks the calling thread until the value is available.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading.Tasks;
+
+public class Result
+{
+   public static void Main()
+   {
+        Task&lt;Double&gt;[] taskArray = { Task&lt;Double&gt;.Factory.StartNew(() =&gt; DoComputation(1.0)),
+                                     Task&lt;Double&gt;.Factory.StartNew(() =&gt; DoComputation(100.0)),
+                                     Task&lt;Double&gt;.Factory.StartNew(() =&gt; DoComputation(1000.0)) };
+
+        var results = new Double[taskArray.Length];
+        Double sum = 0;
+
+        for (int i = 0; i &lt; taskArray.Length; i++) {
+            results[i] = taskArray[i].Result;
+            Console.Write(&quot;{0:N1} {1}&quot;, results[i],
+                              i == taskArray.Length - 1 ? &quot;= &quot; : &quot;+ &quot;);
+            sum += results[i];
+        }
+        Console.WriteLine(&quot;{0:N1}&quot;, sum);
+   }
+
+   private static Double DoComputation(Double start)
+   {
+      Double sum = 0;
+      for (var value = start; value &lt;= start + 10; value += .1)
+         sum += value;
+
+      return sum;
+   }
+}
+// The example displays the following output:
+//        606.0 + 10,605.0 + 100,495.0 = 111,706.0
+</code></pre>
+<p>For more information, see How to: Return a Value from a Task.</p>
+<p>When you use a lambda expression to create a delegate, you have access to all the variables that are visible at that point in your source code. However, in some cases, most notably within loops, a lambda doesn't capture the variable as expected. It only captures the reference of the variable, not the value, as it mutates after each iteration. The following example illustrates the problem. It passes a loop counter to a lambda expression that instantiates a <code>CustomData</code> object and uses the loop counter as the object's identifier. As the output from the example shows, each <code>CustomData</code> object has an identical identifier.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Example.Iterations;
+
+class CustomData
+{
+   public long CreationTime;
+   public int Name;
+   public int ThreadNum;
+}
+
+public class IterationTwo
+{
+   public static void Main()
+   {
+      // Create the task object by using an Action(Of Object) to pass in the loop
+      // counter. This produces an unexpected result.
+      Task[] taskArray = new Task[10];
+      for (int i = 0; i &lt; taskArray.Length; i++) {
+         taskArray[i] = Task.Factory.StartNew( (Object obj) =&gt; {
+                                                 var data = new CustomData() {Name = i, CreationTime = DateTime.Now.Ticks};
+                                                 data.ThreadNum = Thread.CurrentThread.ManagedThreadId;
+                                                 Console.WriteLine(&quot;Task #{0} created at {1} on thread #{2}.&quot;,
+                                                                   data.Name, data.CreationTime, data.ThreadNum);
+                                               },
+                                              i );
+      }
+      Task.WaitAll(taskArray);
+   }
+}
+// The example displays output like the following:
+//       Task #10 created at 635116418427727841 on thread #4.
+//       Task #10 created at 635116418427737842 on thread #4.
+//       Task #10 created at 635116418427737842 on thread #4.
+//       Task #10 created at 635116418427737842 on thread #4.
+//       Task #10 created at 635116418427737842 on thread #4.
+//       Task #10 created at 635116418427737842 on thread #4.
+//       Task #10 created at 635116418427727841 on thread #3.
+//       Task #10 created at 635116418427747843 on thread #3.
+//       Task #10 created at 635116418427747843 on thread #3.
+//       Task #10 created at 635116418427737842 on thread #4.
+</code></pre>
+<p>You can access the value on each iteration by providing a state object to a task through its constructor. The following example modifies the previous example by using the loop counter when creating the <code>CustomData</code> object, which, in turn, is passed to the lambda expression. As the output from the example shows, each <code>CustomData</code> object now has a unique identifier based on the value of the loop counter at the time the object was instantiated.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+class CustomData
+{
+   public long CreationTime;
+   public int Name;
+   public int ThreadNum;
+}
+
+public class IterationOne
+{
+   public static void Main()
+   {
+      // Create the task object by using an Action(Of Object) to pass in custom data
+      // to the Task constructor. This is useful when you need to capture outer variables
+      // from within a loop.
+      Task[] taskArray = new Task[10];
+      for (int i = 0; i &lt; taskArray.Length; i++) {
+         taskArray[i] = Task.Factory.StartNew( (Object obj ) =&gt; {
+                                                  CustomData data = obj as CustomData;
+                                                  if (data == null)
+                                                     return;
+
+                                                  data.ThreadNum = Thread.CurrentThread.ManagedThreadId;
+                                                  Console.WriteLine(&quot;Task #{0} created at {1} on thread #{2}.&quot;,
+                                                                   data.Name, data.CreationTime, data.ThreadNum);
+                                               },
+                                               new CustomData() {Name = i, CreationTime = DateTime.Now.Ticks} );
+      }
+      Task.WaitAll(taskArray);
+   }
+}
+// The example displays output like the following:
+//       Task #0 created at 635116412924597583 on thread #3.
+//       Task #1 created at 635116412924607584 on thread #4.
+//       Task #3 created at 635116412924607584 on thread #4.
+//       Task #4 created at 635116412924607584 on thread #4.
+//       Task #2 created at 635116412924607584 on thread #3.
+//       Task #6 created at 635116412924607584 on thread #3.
+//       Task #5 created at 635116412924607584 on thread #4.
+//       Task #8 created at 635116412924607584 on thread #4.
+//       Task #7 created at 635116412924607584 on thread #3.
+//       Task #9 created at 635116412924607584 on thread #4.
+</code></pre>
+<p>This state is passed as an argument to the task delegate, and it can be accessed from the task object by using the Task.AsyncState property. The following example is a variation on the previous example. It uses the AsyncState property to display information about the <code>CustomData</code> objects passed to the lambda expression.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace TaskIntro;
+
+class CustomData
+{
+    public long CreationTime;
+    public int Name;
+    public int ThreadNum;
+}
+
+public class AsyncState
+{
+    public static void Main()
+    {
+        Task[] taskArray = new Task[10];
+        for (int i = 0; i &lt; taskArray.Length; i++)
+        {
+            taskArray[i] = Task.Factory.StartNew((Object obj) =&gt;
+            {
+                CustomData data = obj as CustomData;
+                if (data == null) return;
+
+                data.ThreadNum = Thread.CurrentThread.ManagedThreadId;
+            },
+            new CustomData() { Name = i, CreationTime = DateTime.Now.Ticks });
+        }
+        Task.WaitAll(taskArray);
+        foreach (var task in taskArray)
+        {
+            var data = task.AsyncState as CustomData;
+            if (data != null)
+                Console.WriteLine(&quot;Task #{0} created at {1}, ran on thread #{2}.&quot;,
+                                  data.Name, data.CreationTime, data.ThreadNum);
+        }
+    }
+}
+// The example displays output like the following:
+//     Task #0 created at 635116412924597583, ran on thread #3.
+//     Task #1 created at 635116412924607584, ran on thread #4.
+//     Task #2 created at 635116412924607584, ran on thread #4.
+//     Task #3 created at 635116412924607584, ran on thread #4.
+//     Task #4 created at 635116412924607584, ran on thread #3.
+//     Task #5 created at 635116412924607584, ran on thread #3.
+//     Task #6 created at 635116412924607584, ran on thread #4.
+//     Task #7 created at 635116412924607584, ran on thread #4.
+//     Task #8 created at 635116412924607584, ran on thread #3.
+//     Task #9 created at 635116412924607584, ran on thread #4.
+</code></pre>
+<h2><a href="#task-id" aria-hidden="true" class="anchor" id="task-id"></a>Task ID</h2>
+<p>In this article, you'll learn how to view task IDs in the Visual Studio Parallel Stacks window.</p>
+<h2><a href="#task-creation-options" aria-hidden="true" class="anchor" id="task-creation-options"></a>Task creation options</h2>
+<p>This article describes how to schedule a task on a thread pool.</p>
+<p>The following example shows a task that has the LongRunning and PreferFairness options:</p>
+<pre><code class="language-csharp">var task3 = new Task(() =&gt; MyLongRunningMethod(),
+                    TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness);
+task3.Start();
+</code></pre>
+<h2><a href="#tasks-threads,-and-culture" aria-hidden="true" class="anchor" id="tasks-threads,-and-culture"></a>Tasks, threads, and culture</h2>
+<p>The thread's culture and UI culture are defined by the <code>Thread.CurrentCulture</code> and <code>Thread.CurrentUICulture</code> properties, respectively.</p>
+<p>You can specify a system culture and UI culture for all threads in an application domain by using the <code>CultureInfo.DefaultCurrentCulture</code> and <code>CultureInfo.DefaultUICulture</code> properties.</p>
+<p>The following example provides a simple illustration. It changes the app's current culture to French (France). If French (France) is already the current culture, it changes to English (United States). It then invokes a delegate named <code>formatDelegate</code> that returns some numbers formatted as currency values in the new culture. Whether the delegate is invoked by a task either synchronously or asynchronously, the task uses the culture of the calling thread.</p>
+<pre><code class="language-csharp">using System;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Example
+{
+   public static void Main()
+   {
+       decimal[] values = { 163025412.32m, 18905365.59m };
+       string formatString = &quot;C2&quot;;
+       Func&lt;String&gt; formatDelegate = () =&gt; { string output = String.Format(&quot;Formatting using the {0} culture on thread {1}.\n&quot;,
+                                                                           CultureInfo.CurrentCulture.Name,
+                                                                           Thread.CurrentThread.ManagedThreadId);
+                                             foreach (var value in values)
+                                                output += String.Format(&quot;{0}   &quot;, value.ToString(formatString));
+
+                                             output += Environment.NewLine;
+                                             return output;
+                                           };
+
+       Console.WriteLine(&quot;The example is running on thread {0}&quot;,
+                         Thread.CurrentThread.ManagedThreadId);
+       // Make the current culture different from the system culture.
+       Console.WriteLine(&quot;The current culture is {0}&quot;,
+                         CultureInfo.CurrentCulture.Name);
+       if (CultureInfo.CurrentCulture.Name == &quot;fr-FR&quot;)
+          Thread.CurrentThread.CurrentCulture = new CultureInfo(&quot;en-US&quot;);
+       else
+          Thread.CurrentThread.CurrentCulture = new CultureInfo(&quot;fr-FR&quot;);
+
+       Console.WriteLine(&quot;Changed the current culture to {0}.\n&quot;,
+                         CultureInfo.CurrentCulture.Name);
+
+       // Execute the delegate synchronously.
+       Console.WriteLine(&quot;Executing the delegate synchronously:&quot;);
+       Console.WriteLine(formatDelegate());
+
+       // Call an async delegate to format the values using one format string.
+       Console.WriteLine(&quot;Executing a task asynchronously:&quot;);
+       var t1 = Task.Run(formatDelegate);
+       Console.WriteLine(t1.Result);
+
+       Console.WriteLine(&quot;Executing a task synchronously:&quot;);
+       var t2 = new Task&lt;String&gt;(formatDelegate);
+       t2.RunSynchronously();
+       Console.WriteLine(t2.Result);
+   }
+}
+// The example displays the following output:
+//         The example is running on thread 1
+//         The current culture is en-US
+//         Changed the current culture to fr-FR.
+//
+//         Executing the delegate synchronously:
+//         Formatting using the fr-FR culture on thread 1.
+//         163 025 412,32 €   18 905 365,59 €
+//
+//         Executing a task asynchronously:
+//         Formatting using the fr-FR culture on thread 3.
+//         163 025 412,32 €   18 905 365,59 €
+//
+//         Executing a task synchronously:
+//         Formatting using the fr-FR culture on thread 1.
+//         163 025 412,32 €   18 905 365,59 €
+</code></pre>
+<blockquote>
+<p class='note'>Note
+In versions of .NET Framework earlier than .NET Framework 4.6, a task's culture is determined by the culture of the thread on which it runs, not the culture of the calling thread. For asynchronous tasks, the culture used by the task could be different from the calling thread's culture.</p>
+</blockquote>
+<p>For more information on asynchronous tasks and culture, see the &quot;Culture and asynchronous task-based operations&quot; section in the CultureInfo article.</p>
+<h2><a href="#creating-task-continuations" aria-hidden="true" class="anchor" id="creating-task-continuations"></a>Creating task continuations</h2>
+<p>In this article we are going to look at two methods that can be used to continue an antecedent task.</p>
+<p>In the following example, the <code>getData</code> task is started by a call to the <code>TaskFactory.StartNew&lt;TResult&gt;(Func&lt;TResult&gt;)</code> method. The <code>processData</code> task is started automatically when <code>getData</code> finishes, and <code>displayData</code> is started when <code>processData</code> finishes. <code>getData</code> produces an integer array, which is accessible to the <code>processData</code> task through the <code>getData</code> task's <code>Task&lt;TResult&gt;.Result</code> property. The <code>processData</code> task processes that array and returns a result whose type is inferred from the return type of the lambda expression passed to the <code>Task&lt;TResult&gt;.ContinueWith&lt;TNewResult&gt;(Func&lt;Task&lt;TResult&gt;,TNewResult&gt;)</code> method. The <code>displayData</code> task executes automatically when <code>processData</code> finishes, and the <code>Tuple&lt;T1,T2,T3&gt;</code> object returned by the <code>processData</code> lambda expression is accessible to the <code>displayData</code> task through the <code>processData</code> task's <code>Task&lt;TResult&gt;.Result</code> property. The <code>displayData</code> task takes the result of the <code>processData</code> task. It produces a result whose type is inferred in a similar manner, and which is made available to the program in the Result property.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading.Tasks;
+
+public class ContinuationOne
+{
+   public static void Main()
+   {
+      var getData = Task.Factory.StartNew(() =&gt; {
+                                             Random rnd = new Random();
+                                             int[] values = new int[100];
+                                             for (int ctr = 0; ctr &lt;= values.GetUpperBound(0); ctr++)
+                                                values[ctr] = rnd.Next();
+
+                                             return values;
+                                          } );
+      var processData = getData.ContinueWith((x) =&gt; {
+                                                int n = x.Result.Length;
+                                                long sum = 0;
+                                                double mean;
+
+                                                for (int ctr = 0; ctr &lt;= x.Result.GetUpperBound(0); ctr++)
+                                                   sum += x.Result[ctr];
+
+                                                mean = sum / (double) n;
+                                                return Tuple.Create(n, sum, mean);
+                                             } );
+      var displayData = processData.ContinueWith((x) =&gt; {
+                                                    return String.Format(&quot;N={0:N0}, Total = {1:N0}, Mean = {2:N2}&quot;,
+                                                                         x.Result.Item1, x.Result.Item2,
+                                                                         x.Result.Item3);
+                                                 } );
+      Console.WriteLine(displayData.Result);
+   }
+}
+// The example displays output similar to the following:
+//    N=100, Total = 110,081,653,682, Mean = 1,100,816,536.82
+</code></pre>
+<p>The <code>Task.ContinueWith</code> method is an instance method of the <code>Task.ContinueWith</code> method.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading.Tasks;
+
+public class ContinuationTwo
+{
+   public static void Main()
+   {
+      var displayData = Task.Factory.StartNew(() =&gt; {
+                                                 Random rnd = new Random();
+                                                 int[] values = new int[100];
+                                                 for (int ctr = 0; ctr &lt;= values.GetUpperBound(0); ctr++)
+                                                    values[ctr] = rnd.Next();
+
+                                                 return values;
+                                              } ).
+                        ContinueWith((x) =&gt; {
+                                        int n = x.Result.Length;
+                                        long sum = 0;
+                                        double mean;
+
+                                        for (int ctr = 0; ctr &lt;= x.Result.GetUpperBound(0); ctr++)
+                                           sum += x.Result[ctr];
+
+                                        mean = sum / (double) n;
+                                        return Tuple.Create(n, sum, mean);
+                                     } ).
+                        ContinueWith((x) =&gt; {
+                                        return String.Format(&quot;N={0:N0}, Total = {1:N0}, Mean = {2:N2}&quot;,
+                                                             x.Result.Item1, x.Result.Item2,
+                                                             x.Result.Item3);
+                                     } );
+      Console.WriteLine(displayData.Result);
+   }
+}
+// The example displays output similar to the following:
+//    N=100, Total = 110,081,653,682, Mean = 1,100,816,536.82
+</code></pre>
+<p>The <code>ContinueWhenAll</code> and <code>ContinueWhenAny</code> methods enable you to continue from multiple tasks.</p>
+<p>For more information, see Chaining Tasks by Using Continuation Tasks.</p>
+<h2><a href="#creating-detached-child-tasks" aria-hidden="true" class="anchor" id="creating-detached-child-tasks"></a>Creating detached child tasks</h2>
+<p>In this article, I'm going to show you how to create a task that doesn't need to be synchronized with a parent task.</p>
+<pre><code class="language-csharp">var outer = Task.Factory.StartNew(() =&gt;
+{
+    Console.WriteLine(&quot;Outer task beginning.&quot;);
+
+    var child = Task.Factory.StartNew(() =&gt;
+    {
+        Thread.SpinWait(5000000);
+        Console.WriteLine(&quot;Detached task completed.&quot;);
+    });
+});
+
+outer.Wait();
+Console.WriteLine(&quot;Outer task completed.&quot;);
+// The example displays the following output:
+//    Outer task beginning.
+//    Outer task completed.
+//    Detached task completed.
+</code></pre>
+<blockquote>
+<p class='note'>Note
+The parent task doesn't wait for the detached child task to finish.</p>
+</blockquote>
+<h2><a href="#creating-child-tasks" aria-hidden="true" class="anchor" id="creating-child-tasks"></a>Creating child tasks</h2>
+<p>You can use the <code>AttachedToParent</code> option to express structured task parallelism.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Child
+{
+   public static void Main()
+   {
+      var parent = Task.Factory.StartNew(() =&gt; {
+                      Console.WriteLine(&quot;Parent task beginning.&quot;);
+                      for (int ctr = 0; ctr &lt; 10; ctr++) {
+                         int taskNo = ctr;
+                         Task.Factory.StartNew((x) =&gt; {
+                                                  Thread.SpinWait(5000000);
+                                                  Console.WriteLine(&quot;Attached child #{0} completed.&quot;,
+                                                                    x);
+                                               },
+                                               taskNo, TaskCreationOptions.AttachedToParent);
+                      }
+                   });
+
+      parent.Wait();
+      Console.WriteLine(&quot;Parent task completed.&quot;);
+   }
+}
+// The example displays output like the following:
+//       Parent task beginning.
+//       Attached child #9 completed.
+//       Attached child #0 completed.
+//       Attached child #8 completed.
+//       Attached child #1 completed.
+//       Attached child #7 completed.
+//       Attached child #2 completed.
+//       Attached child #6 completed.
+//       Attached child #3 completed.
+//       Attached child #5 completed.
+//       Attached child #4 completed.
+//       Parent task completed.
+</code></pre>
+<p>A parent task can use the <code>TaskCreationOptions.DenyChildAttach</code> option to prevent other tasks from attaching to the parent task. For more information, see Attached and Detached Child Tasks.</p>
+<h2><a href="#waiting-for-tasks-to-finish" aria-hidden="true" class="anchor" id="waiting-for-tasks-to-finish"></a>Waiting for tasks to finish</h2>
+<p>The Task.Wait method lets you wait for a task to finish.</p>
+<p>Typically, you would wait for a task for one of these reasons:</p>
+<ul>
+<li>
+<p>The main thread depends on the final result computed by a task.</p>
+</li>
+<li>
+<p>You have to handle exceptions that might be thrown from the task.</p>
+</li>
+<li>
+<p>The application might terminate before all tasks have completed execution. For example, console applications will terminate after all synchronous code in <code>Main</code> (the application entry point) has executed.</p>
+</li>
+</ul>
+<p>The following example shows the basic pattern that doesn't involve exception handling:</p>
+<pre><code class="language-csharp">Task[] tasks = new Task[3]
+{
+    Task.Factory.StartNew(() =&gt; MethodA()),
+    Task.Factory.StartNew(() =&gt; MethodB()),
+    Task.Factory.StartNew(() =&gt; MethodC())
+};
+
+//Block until all tasks complete.
+Task.WaitAll(tasks);
+
+// Continue on this thread...
+</code></pre>
+<p>For an example that shows exception handling, see Exception Handling.</p>
+<p>Time-out and cancellationTokens let you specify how long you want to wait before responding to a request.</p>
+<p>The Task.Wait method waits for a task to complete.</p>
+<h2><a href="#composing-tasks" aria-hidden="true" class="anchor" id="composing-tasks"></a>Composing tasks</h2>
+<p>This section describes the methods of the Task and TaskTResult&gt; classes.</p>
+<h3><a href="#taskwhenall" aria-hidden="true" class="anchor" id="taskwhenall"></a>Task.WhenAll</h3>
+<p>The Task.WhenAll method asynchronously waits for multiple Task or TaskTResult&gt; objects to finish.</p>
+<h3><a href="#taskwhenany" aria-hidden="true" class="anchor" id="taskwhenany"></a>Task.WhenAny</h3>
+<p>The Task.WhenAny method asynchronously waits for one of multiple Task or TaskTResult&gt; objects to finish.</p>
+<ul>
+<li>
+<p>Redundant operations: Consider an algorithm or operation that can be performed in many ways. You can use the WhenAny method to select the operation that finishes first and then cancel the remaining operations.</p>
+</li>
+<li>
+<p>Interleaved operations: You can start multiple operations that must finish and use the WhenAny method to process results as each operation finishes. After one operation finishes, you can start one or more tasks.</p>
+</li>
+<li>
+<p>Throttled operations: You can use the WhenAny method to extend the previous scenario by limiting the number of concurrent operations.</p>
+</li>
+<li>
+<p>Expired operations: You can use the WhenAny method to select between one or more tasks and a task that finishes after a specific time, such as a task that's returned by the Delay method. The Delay method is described in the following section.</p>
+</li>
+</ul>
+<h3><a href="#taskdelay" aria-hidden="true" class="anchor" id="taskdelay"></a>Task.Delay</h3>
+<p>The Task.Delay method produces a Task object that finishes after the specified time.</p>
+<h3><a href="#taskt).fromresult" aria-hidden="true" class="anchor" id="taskt).fromresult"></a>Task(T).FromResult</h3>
+<p>You can use the FromResult method to retrieve the results of asynchronous operations that are held in a cache.</p>
+<h2><a href="#handling-exceptions-in-tasks" aria-hidden="true" class="anchor" id="handling-exceptions-in-tasks"></a>Handling exceptions in tasks</h2>
+<p>When a task throws one or more exceptions, the exceptions are wrapped in an AggregateException exception. That exception is propagated back to the thread that joins with the task. Typically, it's the thread waiting for the task to finish or the thread accessing the Result property. This behavior enforces the .NET Framework policy that all unhandled exceptions by default should terminate the process. The calling code can handle the exceptions by using any of the following in a <code>try/catch</code> block:</p>
+<ul>
+<li>
+<p>The Wait method</p>
+</li>
+<li>
+<p>The WaitAll method</p>
+</li>
+<li>
+<p>The WaitAny method</p>
+</li>
+<li>
+<p>The Result property</p>
+</li>
+</ul>
+<p>The joining thread can handle exceptions by accessing the Exception property before the task is garbage-collected.</p>
+<p>For more information about exceptions and tasks, see Exception Handling.</p>
+<h2><a href="#canceling-tasks" aria-hidden="true" class="anchor" id="canceling-tasks"></a>Canceling tasks</h2>
+<p>The CancellationTokenTask class is one of many CancellationToken classes in the .NET Framework 4.</p>
+<p>A cancellation request is a request for a token to be used to cancel an event.</p>
+<p>For more information, see Task Cancellation and How to: Cancel a Task and Its Children.</p>
+<h2><a href="#the-taskfactory-class" aria-hidden="true" class="anchor" id="the-taskfactory-class"></a>The TaskFactory class</h2>
+<p>The TaskFactory class provides static methods that encapsulate common patterns for creating and starting tasks and continuation tasks.</p>
+<ul>
+<li>
+<p>The most common pattern is StartNew, which creates and starts a task in one statement.</p>
+</li>
+<li>
+<p>When you create continuation tasks from multiple antecedents, use the ContinueWhenAll method or ContinueWhenAny method or their equivalents in the <code>Task&lt;TResult&gt;</code> class. For more information, see Chaining Tasks by Using Continuation Tasks.</p>
+</li>
+<li>
+<p>To encapsulate Asynchronous Programming Model <code>BeginX</code> and <code>EndX</code> methods in a Task or <code>Task&lt;TResult&gt;</code> instance, use the FromAsync methods. For more information, see TPL and Traditional .NET Framework Asynchronous Programming.</p>
+</li>
+</ul>
+<p>A taskFactory is a property of the Task class or TaskTResult&gt; class.</p>
+<h2><a href="#tasks-without-delegates" aria-hidden="true" class="anchor" id="tasks-without-delegates"></a>Tasks without delegates</h2>
+<p>You can use a Task to encapsulate some asynchronous operations.</p>
+<h2><a href="#custom-schedulers" aria-hidden="true" class="anchor" id="custom-schedulers"></a>Custom schedulers</h2>
+<p>The Task PoolListener (TPL) lets you control which tasks are scheduled to run on the System.</p>
+<h2><a href="#related-data-structures" aria-hidden="true" class="anchor" id="related-data-structures"></a>Related data structures</h2>
+<p>Microsoft has released the .NET Framework 4 with a new Parallel Programming Language (TPL).</p>
+<h2><a href="#custom-task-types" aria-hidden="true" class="anchor" id="custom-task-types"></a>Custom task types</h2>
+<p>The Task and TaskTResult&gt; classes can be subclassed.</p>
+<p>You can't use Run or the <code>System.Completioning.Tasks.TaskFactory</code> to create instances of your custom task type.</p>
+<h2><a href="#related-sections" aria-hidden="true" class="anchor" id="related-sections"></a>Related sections</h2>
+<table><thead>
+<tr>
+<th>Title</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="chaining-tasks-by-using-continuation-tasks" data-linktype="relative-path">Chaining Tasks by Using Continuation Tasks</a></td>
+<td>Describes how continuations work.</td>
+</tr>
+<tr>
+<td><a href="attached-and-detached-child-tasks" data-linktype="relative-path">Attached and Detached Child Tasks</a></td>
+<td>Describes the difference between attached and detached child tasks.</td>
+</tr>
+<tr>
+<td><a href="task-cancellation" data-linktype="relative-path">Task Cancellation</a></td>
+<td>Describes the cancellation support that's built into the <a href="/en-us/dotnet/api/system.threading.tasks.task" class="no-loc" data-linktype="absolute-path">Task</a> object.</td>
+</tr>
+<tr>
+<td><a href="exception-handling-task-parallel-library" data-linktype="relative-path">Exception Handling</a></td>
+<td>Describes how exceptions on concurrent threads are handled.</td>
+</tr>
+<tr>
+<td><a href="how-to-use-parallel-invoke-to-execute-parallel-operations" data-linktype="relative-path">How to: Use Parallel.Invoke to Execute Parallel Operations</a></td>
+<td>Describes how to use <a href="/en-us/dotnet/api/system.threading.tasks.parallel.invoke" class="no-loc" data-linktype="absolute-path">Invoke</a>.</td>
+</tr>
+<tr>
+<td><a href="how-to-return-a-value-from-a-task" data-linktype="relative-path">How to: Return a Value from a Task</a></td>
+<td>Describes how to return values from tasks.</td>
+</tr>
+<tr>
+<td><a href="how-to-cancel-a-task-and-its-children" data-linktype="relative-path">How to: Cancel a Task and Its Children</a></td>
+<td>Describes how to cancel tasks.</td>
+</tr>
+<tr>
+<td><a href="how-to-create-pre-computed-tasks" data-linktype="relative-path">How to: Create Pre-Computed Tasks</a></td>
+<td>Describes how to use the <a href="/en-us/dotnet/api/system.threading.tasks.task.fromresult" class="no-loc" data-linktype="absolute-path">Task.FromResult</a> method to retrieve the results of asynchronous download operations that are held in a cache.</td>
+</tr>
+<tr>
+<td><a href="how-to-traverse-a-binary-tree-with-parallel-tasks" data-linktype="relative-path">How to: Traverse a Binary Tree with Parallel Tasks</a></td>
+<td>Describes how to use tasks to traverse a binary tree.</td>
+</tr>
+<tr>
+<td><a href="how-to-unwrap-a-nested-task" data-linktype="relative-path">How to: Unwrap a Nested Task</a></td>
+<td>Demonstrates how to use the <a href="/en-us/dotnet/api/system.threading.tasks.taskextensions.unwrap" class="no-loc" data-linktype="absolute-path">Unwrap</a> extension method.</td>
+</tr>
+<tr>
+<td><a href="data-parallelism-task-parallel-library" data-linktype="relative-path">Data Parallelism</a></td>
+<td>Describes how to use <a href="/en-us/dotnet/api/system.threading.tasks.parallel.for" class="no-loc" data-linktype="absolute-path">For</a> and <a href="/en-us/dotnet/api/system.threading.tasks.parallel.foreach" class="no-loc" data-linktype="absolute-path">ForEach</a> to create parallel loops over data.</td>
+</tr>
+<tr>
+<td><a href="./" data-linktype="relative-path">Parallel Programming</a></td>
+<td>Top-level node for .NET Framework parallel programming.</td>
+</tr>
+</tbody></table>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Parallel Programming</p>
+</li>
+<li>
+<p>Samples for Parallel Programming with the .NET Core &amp; .NET Standard</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/task-based-asynchronous-programming">Task-based asynchronous programming</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

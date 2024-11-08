@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Traverse a binary tree with parallel tasks | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The following example shows two ways in which parallel tasks can be used to traverse a tree data structure. The creation of the tree itself is left as an exercise.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Traverse a binary tree with parallel tasks</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The following example shows two ways in which parallel tasks can be used to traverse a tree data structure. The creation of the tree itself is left as an exercise.</p>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<pre><code class="language-csharp">public class TreeWalk
+{
+    static void Main()
+    {
+        Tree&lt;MyClass&gt; tree = new Tree&lt;MyClass&gt;();
+
+        // ...populate tree (left as an exercise)
+
+        // Define the Action to perform on each node.
+        Action&lt;MyClass&gt; myAction = x =&gt; Console.WriteLine(&quot;{0} : {1}&quot;, x.Name, x.Number);
+
+        // Traverse the tree with parallel tasks.
+        DoTree(tree, myAction);
+    }
+
+    public class MyClass
+    {
+        public string Name { get; set; }
+        public int Number { get; set; }
+    }
+    public class Tree&lt;T&gt;
+    {
+        public Tree&lt;T&gt; Left;
+        public Tree&lt;T&gt; Right;
+        public T Data;
+    }
+
+    // By using tasks explicitly.
+    public static void DoTree&lt;T&gt;(Tree&lt;T&gt; tree, Action&lt;T&gt; action)
+    {
+        if (tree == null) return;
+        var left = Task.Factory.StartNew(() =&gt; DoTree(tree.Left, action));
+        var right = Task.Factory.StartNew(() =&gt; DoTree(tree.Right, action));
+        action(tree.Data);
+
+        try
+        {
+            Task.WaitAll(left, right);
+        }
+        catch (AggregateException )
+        {
+            //handle exceptions here
+        }
+    }
+
+    // By using Parallel.Invoke
+    public static void DoTree2&lt;T&gt;(Tree&lt;T&gt; tree, Action&lt;T&gt; action)
+    {
+        if (tree == null) return;
+        Parallel.Invoke(
+            () =&gt; DoTree2(tree.Left, action),
+            () =&gt; DoTree2(tree.Right, action),
+            () =&gt; action(tree.Data)
+        );
+    }
+}
+</code></pre>
+<p>In this tutorial, we will be looking at how to create and run tasks.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>Task Parallel Library (TPL)</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-traverse-a-binary-tree-with-parallel-tasks">How to: Traverse a Binary Tree with Parallel Tasks</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

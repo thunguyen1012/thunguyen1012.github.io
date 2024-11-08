@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Cancel a parallel loop | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The Parallel.For and Parallel.ForEach methods support cancellation through the use of cancellation tokens. For more information about cancellation in general, see Cancellation. In a parallel loop, you supply the CancellationToken to the method in the ParallelOptions parameter and then enclose the parallel call in a try-catch block.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Cancel a parallel loop</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The <code>Parallel.For</code> and <code>Parallel.ForEach</code> methods support cancellation through the use of cancellation tokens.</p>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>The following example shows how to cancel a call to <code>Parallel.ForEach</code>. You can apply the same approach to a Parallel.For call.</p>
+<pre><code class="language-csharp">namespace CancelParallelLoops
+{
+    using System;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    class Program
+    {
+        static void Main()
+        {
+            int[] nums = Enumerable.Range(0, 10_000_000).ToArray();
+            CancellationTokenSource cts = new();
+
+            // Use ParallelOptions instance to store the CancellationToken
+            ParallelOptions options = new()
+            {
+                CancellationToken = cts.Token,
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
+            Console.WriteLine(&quot;Press any key to start. Press 'c' to cancel.&quot;);
+            Console.ReadKey();
+
+            // Run a task so that we can cancel from another thread.
+            Task.Factory.StartNew(() =&gt;
+            {
+                if (Console.ReadKey().KeyChar is 'c')
+                    cts.Cancel();
+                Console.WriteLine(&quot;press any key to exit&quot;);
+            });
+
+            try
+            {
+                Parallel.ForEach(nums, options, (num) =&gt;
+                {
+                    double d = Math.Sqrt(num);
+                    Console.WriteLine(&quot;{0} on {1}&quot;, d, Environment.CurrentManagedThreadId);
+                });
+            }
+            catch (OperationCanceledException e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                cts.Dispose();
+            }
+
+            Console.ReadKey();
+        }
+    }
+}
+</code></pre>
+<p>If the token that signals the cancellation is the same token that is specified in the <code>ParallelOptions</code> instance, then the parallel loop will throw a single <code>OperationCanceledException</code> on cancellation. This immediately stops all iterations from executing as the exception is thrown. If some other token causes cancellation, the loop will throw an <code>AggregateException</code> with an <code>OperationCanceledException</code> as an <code>InnerException</code>.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Data parallelism</p>
+</li>
+<li>
+<p>Lambda expressions in PLINQ and TPL</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-cancel-a-parallel-for-or-foreach-loop">How to: Cancel a Parallel.For or ForEach Loop</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

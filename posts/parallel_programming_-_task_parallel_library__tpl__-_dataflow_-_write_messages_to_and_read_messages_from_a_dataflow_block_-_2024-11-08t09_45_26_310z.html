@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Dataflow - Write messages to and read messages from a dataflow block | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article describes how to use the Task Parallel Library (TPL) Dataflow Library to write messages to and read messages from a dataflow block. The TPL Dataflow Library provides both synchronous and asynchronous methods for writing messages to and reading messages from a dataflow block. This article shows how to uses the System.Threading.Tasks.Dataflow.BufferBlock<T> class. The BufferBlock<T> class buffers messages and behaves as both a message source and a message target.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Dataflow - Write messages to and read messages from a dataflow block</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article describes how to use the Task Parallel Library (TPL) Dataflow Library to write messages to and read messages from a dataflow block. The TPL Dataflow Library provides both synchronous and asynchronous methods for writing messages to and reading messages from a dataflow block. This article shows how to uses the <code>System.Threading.Tasks.Dataflow.BufferBlock&lt;T&gt;</code> class. The <code>BufferBlock&lt;T&gt;</code> class buffers messages and behaves as both a message source and a message target.</p>
+<blockquote>
+<p class='note'>Note
+The TPL Dataflow Library (the <code>System.Threading.Tasks.Dataflow</code> namespace) is not distributed with .NET. To install the <code>System.Threading.Tasks.Dataflow</code> namespace in Visual Studio, open your project, choose Manage NuGet Packages from the Project menu, and search online for the <code>System.Threading.Tasks.Dataflow</code> package. Alternatively, to install it using the .NET Core CLI, run <code>dotnet add package System.Threading.Tasks.Dataflow</code>.</p>
+</blockquote>
+<h2><a href="#writing-and-reading-synchronously" aria-hidden="true" class="anchor" id="writing-and-reading-synchronously"></a>Writing and reading synchronously</h2>
+<p>The following example uses the Post method to write to a <code>BufferBlock&lt;T&gt;</code> dataflow block and the Receive method to read from the same object.</p>
+<pre><code class="language-csharp">var bufferBlock = new BufferBlock&lt;int&gt;();
+
+// Post several messages to the block.
+for (int i = 0; i &lt; 3; i++)
+{
+    bufferBlock.Post(i);
+}
+
+// Receive the messages back from the block.
+for (int i = 0; i &lt; 3; i++)
+{
+    Console.WriteLine(bufferBlock.Receive());
+}
+
+// Output:
+//   0
+//   1
+//   2
+</code></pre>
+<p>You can read data from a dataflow block, as shown in the following example.</p>
+<pre><code class="language-csharp">// Post more messages to the block.
+for (int i = 0; i &lt; 3; i++)
+{
+    bufferBlock.Post(i);
+}
+
+// Receive the messages back from the block.
+while (bufferBlock.TryReceive(out int value))
+{
+    Console.WriteLine(value);
+}
+
+// Output:
+//   0
+//   1
+//   2
+</code></pre>
+<p>The following examples show how to use the Post method to asynchronously read and write to a message block.</p>
+<pre><code class="language-csharp">// Write to and read from the message block concurrently.
+var post01 = Task.Run(() =&gt;
+{
+    bufferBlock.Post(0);
+    bufferBlock.Post(1);
+});
+var receive = Task.Run(() =&gt;
+{
+    for (int i = 0; i &lt; 3; i++)
+    {
+        Console.WriteLine(bufferBlock.Receive());
+    }
+});
+var post2 = Task.Run(() =&gt;
+{
+    bufferBlock.Post(2);
+});
+
+await Task.WhenAll(post01, receive, post2);
+
+// Output:
+//   0
+//   1
+//   2
+</code></pre>
+<h2><a href="#writing-and-reading-asynchronously" aria-hidden="true" class="anchor" id="writing-and-reading-asynchronously"></a>Writing and reading asynchronously</h2>
+<p>asynchronously read and write data to and from a dataflow block.</p>
+<pre><code class="language-csharp">// Post more messages to the block asynchronously.
+for (int i = 0; i &lt; 3; i++)
+{
+    await bufferBlock.SendAsync(i);
+}
+
+// Asynchronously receive the messages back from the block.
+for (int i = 0; i &lt; 3; i++)
+{
+    Console.WriteLine(await bufferBlock.ReceiveAsync());
+}
+
+// Output:
+//   0
+//   1
+//   2
+</code></pre>
+<h2><a href="#a-complete-example" aria-hidden="true" class="anchor" id="a-complete-example"></a>A complete example</h2>
+<p>The following example shows all of the code for this article.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
+
+// Demonstrates a how to write to and read from a dataflow block.
+class DataflowReadWrite
+{
+    // Demonstrates asynchronous dataflow operations.
+    static async Task AsyncSendReceive(BufferBlock&lt;int&gt; bufferBlock)
+    {
+        // Post more messages to the block asynchronously.
+        for (int i = 0; i &lt; 3; i++)
+        {
+            await bufferBlock.SendAsync(i);
+        }
+
+        // Asynchronously receive the messages back from the block.
+        for (int i = 0; i &lt; 3; i++)
+        {
+            Console.WriteLine(await bufferBlock.ReceiveAsync());
+        }
+
+        // Output:
+        //   0
+        //   1
+        //   2
+    }
+
+    static async Task Main()
+    {
+        var bufferBlock = new BufferBlock&lt;int&gt;();
+
+        // Post several messages to the block.
+        for (int i = 0; i &lt; 3; i++)
+        {
+            bufferBlock.Post(i);
+        }
+
+        // Receive the messages back from the block.
+        for (int i = 0; i &lt; 3; i++)
+        {
+            Console.WriteLine(bufferBlock.Receive());
+        }
+
+        // Output:
+        //   0
+        //   1
+        //   2
+
+        // Post more messages to the block.
+        for (int i = 0; i &lt; 3; i++)
+        {
+            bufferBlock.Post(i);
+        }
+
+        // Receive the messages back from the block.
+        while (bufferBlock.TryReceive(out int value))
+        {
+            Console.WriteLine(value);
+        }
+
+        // Output:
+        //   0
+        //   1
+        //   2
+
+        // Write to and read from the message block concurrently.
+        var post01 = Task.Run(() =&gt;
+        {
+            bufferBlock.Post(0);
+            bufferBlock.Post(1);
+        });
+        var receive = Task.Run(() =&gt;
+        {
+            for (int i = 0; i &lt; 3; i++)
+            {
+                Console.WriteLine(bufferBlock.Receive());
+            }
+        });
+        var post2 = Task.Run(() =&gt;
+        {
+            bufferBlock.Post(2);
+        });
+
+        await Task.WhenAll(post01, receive, post2);
+
+        // Output:
+        //   0
+        //   1
+        //   2
+
+        // Demonstrate asynchronous dataflow operations.
+        await AsyncSendReceive(bufferBlock);
+    }
+}
+</code></pre>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next steps</h2>
+<p>You can connect dataflow blocks to form graphs of dataflow blocks, or networks, which are graphs of dataflow blocks.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>Dataflow (Task Parallel Library)</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-write-messages-to-and-read-messages-from-a-dataflow-block">How to: Write and read messages from a Dataflow block</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

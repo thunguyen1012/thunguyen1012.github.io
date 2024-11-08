@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Iterate file directories with the Parallel class | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='In many cases, file iteration is an operation that can be easily parallelized. The topic How to: Iterate File Directories with PLINQ shows the easiest way to perform this task for many scenarios. However, complications can arise when your code has to deal with the many types of exceptions that can arise when accessing the file system. The following example shows one approach to the problem. It uses a stack-based iteration to traverse all files and folders under a specified directory, and it enables your code to catch and handle various exceptions. Of course, the way that you handle the exceptions is up to you.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Iterate file directories with the Parallel class</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>In our series of articles on PLINQ, we look at how to iterate over a file system.</p>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>In this article, I will show you how to iterate over a large number of files.</p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Security;
+using System.Threading;
+using System.Threading.Tasks;
+
+class Program
+{
+    static void Main()
+    {
+        try
+        {
+            TraverseTreeParallelForEach(@&quot;C:\Program Files&quot;, (f) =&gt;
+            {
+                // Exceptions are no-ops.
+                try
+                {
+                    // Do nothing with the data except read it.
+                    byte[] data = File.ReadAllBytes(f);
+                }
+                catch (FileNotFoundException) { }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                catch (SecurityException) { }
+                // Display the filename.
+                Console.WriteLine(f);
+            });
+        }
+        catch (ArgumentException)
+        {
+            Console.WriteLine(@&quot;The directory 'C:\Program Files' does not exist.&quot;);
+        }
+
+        // Keep the console window open.
+        Console.ReadKey();
+    }
+
+    public static void TraverseTreeParallelForEach(string root, Action&lt;string&gt; action)
+    {
+        //Count of files traversed and timer for diagnostic output
+        int fileCount = 0;
+        var sw = Stopwatch.StartNew();
+
+        // Determine whether to parallelize file processing on each folder based on processor count.
+        int procCount = Environment.ProcessorCount;
+
+        // Data structure to hold names of subfolders to be examined for files.
+        Stack&lt;string&gt; dirs = new Stack&lt;string&gt;();
+
+        if (!Directory.Exists(root))
+        {
+            throw new ArgumentException(
+                &quot;The given root directory doesn't exist.&quot;, nameof(root));
+        }
+        dirs.Push(root);
+
+        while (dirs.Count &gt; 0)
+        {
+            string currentDir = dirs.Pop();
+            string[] subDirs = { };
+            string[] files = { };
+
+            try
+            {
+                subDirs = Directory.GetDirectories(currentDir);
+            }
+            // Thrown if we do not have discovery permission on the directory.
+            catch (UnauthorizedAccessException e)
+            {
+                Console.WriteLine(e.Message);
+                continue;
+            }
+            // Thrown if another process has deleted the directory after we retrieved its name.
+            catch (DirectoryNotFoundException e)
+            {
+                Console.WriteLine(e.Message);
+                continue;
+            }
+
+            try
+            {
+                files = Directory.GetFiles(currentDir);
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                Console.WriteLine(e.Message);
+                continue;
+            }
+            catch (DirectoryNotFoundException e)
+            {
+                Console.WriteLine(e.Message);
+                continue;
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine(e.Message);
+                continue;
+            }
+
+            // Execute in parallel if there are enough files in the directory.
+            // Otherwise, execute sequentially.Files are opened and processed
+            // synchronously but this could be modified to perform async I/O.
+            try
+            {
+                if (files.Length &lt; procCount)
+                {
+                    foreach (var file in files)
+                    {
+                        action(file);
+                        fileCount++;
+                    }
+                }
+                else
+                {
+                    Parallel.ForEach(files, () =&gt; 0,
+                        (file, loopState, localCount) =&gt;
+                        {
+                            action(file);
+                            return (int)++localCount;
+                        },
+                        (c) =&gt;
+                        {
+                            Interlocked.Add(ref fileCount, c);
+                        });
+                }
+            }
+            catch (AggregateException ae)
+            {
+                ae.Handle((ex) =&gt;
+                {
+                    if (ex is UnauthorizedAccessException)
+                    {
+                        // Here we just output a message and go on.
+                        Console.WriteLine(ex.Message);
+                        return true;
+                    }
+                    // Handle other exceptions here if necessary...
+
+                    return false;
+                });
+            }
+
+            // Push the subdirectories onto the stack for traversal.
+            // This could also be done before handing the files.
+            foreach (string str in subDirs)
+                dirs.Push(str);
+        }
+
+        // For diagnostic purposes.
+        Console.WriteLine(&quot;Processed {0} files in {1} milliseconds&quot;, fileCount, sw.ElapsedMilliseconds);
+    }
+}
+</code></pre>
+<p>Asynchronous I/O is a technique for accessing data asynchronously.</p>
+<p>The example uses the local <code>fileCount</code> variable to maintain a count of the total number of files processed. Because the variable might be accessed concurrently by multiple tasks, access to it is synchronized by calling the <code>Interlocked.Add</code> method.</p>
+<p>This example shows how to stop or break a parallel loop.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>Data Parallelism</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-iterate-file-directories-with-the-parallel-class">How to: Iterate File Directories with the Parallel Class</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

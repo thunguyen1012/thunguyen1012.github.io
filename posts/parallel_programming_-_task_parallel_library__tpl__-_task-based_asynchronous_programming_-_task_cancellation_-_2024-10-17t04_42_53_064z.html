@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Task cancellation | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The System.Threading.Tasks.Task and System.Threading.Tasks.Task<TResult> classes support cancellation by using cancellation tokens. For more information, see Cancellation in Managed Threads. In the Task classes, cancellation involves cooperation between the user delegate, which represents a cancelable operation, and the code that requested the cancellation. A successful cancellation involves the requesting code calling the CancellationTokenSource.Cancel method and the user delegate terminating the operation in a timely manner. You can terminate the operation by using one of these options:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Task cancellation</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>You can cancel operations in the <code>System.Tasks.Tasks</code> class.</p>
+<ul>
+<li>
+<p>By returning from the delegate. In many scenarios, this option is sufficient. However, a task instance that's canceled in this way transitions to the <code>TaskStatus.RanToCompletion</code> state, not to the <code>TaskStatus.Canceled</code> state.</p>
+</li>
+<li>
+<p>By throwing an <code>OperationCanceledException</code> and passing it the token on which cancellation was requested. The preferred way to perform is to use the <code>ThrowIfCancellationRequested</code> method. A task that's canceled in this way transitions to the Canceled state, which the calling code can use to verify that the task responded to its cancellation request.</p>
+</li>
+</ul>
+<p>The following example shows the basic pattern for task cancellation that throws the exception:</p>
+<blockquote>
+<p class='note'>Note
+The token is passed to the user delegate and the task instance.</p>
+</blockquote>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        var tokenSource2 = new CancellationTokenSource();
+        CancellationToken ct = tokenSource2.Token;
+
+        var task = Task.Run(() =&gt;
+        {
+            // Were we already canceled?
+            ct.ThrowIfCancellationRequested();
+
+            bool moreToDo = true;
+            while (moreToDo)
+            {
+                // Poll on this property if you have to do
+                // other cleanup before throwing.
+                if (ct.IsCancellationRequested)
+                {
+                    // Clean up here, then...
+                    ct.ThrowIfCancellationRequested();
+                }
+            }
+        }, tokenSource2.Token); // Pass same token to Task.Run.
+
+        tokenSource2.Cancel();
+
+        // Just continue on this thread, or await with try-catch:
+        try
+        {
+            await task;
+        }
+        catch (OperationCanceledException e)
+        {
+            Console.WriteLine($&quot;{nameof(OperationCanceledException)} thrown with message: {e.Message}&quot;);
+        }
+        finally
+        {
+            tokenSource2.Dispose();
+        }
+
+        Console.ReadKey();
+    }
+}
+</code></pre>
+<p>For a complete example, see How to: Cancel a Task and Its Children.</p>
+<p>When a task instance observes an <code>OperationCanceledException</code> thrown by the user code, it compares the exception's token to its associated token (the one that was passed to the API that created the Task). If the tokens are same and the token's <code>IsCancellationRequested</code> property returns <code>true</code>, the task interprets this as acknowledging cancellation and transitions to the Canceled state. If you don't use a Wait or WaitAll method to wait for the task, then the task just sets its status to Canceled.</p>
+<p>If you're waiting on a Task that transitions to the Canceled state, a <code>System.Threading.Tasks.TaskCanceledException</code> exception (wrapped in an AggregateException exception) is thrown. This exception indicates successful cancellation instead of a faulty situation. Therefore, the task's Exception property returns <code>null</code>.</p>
+<p>If the token's <code>IsCancellationRequested</code> property returns <code>false</code> or if the exception's token doesn't match the Task's token, the <code>OperationCanceledException</code> is treated like a normal exception, causing the Task to transition to the Faulted state. The presence of other exceptions will also cause the Task to transition to the Faulted state. You can get the status of the completed task in the Status property.</p>
+<p>It's possible that a task might continue to process some items after cancellation is requested.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Cancellation in Managed Threads</p>
+</li>
+<li>
+<p>How to: Cancel a Task and Its Children</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/task-cancellation">Task cancellation</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

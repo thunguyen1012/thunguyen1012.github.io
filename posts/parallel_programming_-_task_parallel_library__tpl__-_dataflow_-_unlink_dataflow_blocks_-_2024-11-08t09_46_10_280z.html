@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Dataflow - Unlink dataflow blocks | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This document describes how to unlink a target dataflow block from its source.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Dataflow - Unlink dataflow blocks</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This document describes how to unlink a target dataflow block from its source.</p>
+<blockquote>
+<p class='note'>Note
+The TPL Dataflow Library (the <code>System.Threading.Tasks.Dataflow</code> namespace) is not distributed with .NET. To install the <code>System.Threading.Tasks.Dataflow</code> namespace in Visual Studio, open your project, choose Manage NuGet Packages from the Project menu, and search online for the <code>System.Threading.Tasks.Dataflow</code> package. Alternatively, to install it using the .NET Core CLI, run <code>dotnet add package System.Threading.Tasks.Dataflow</code>.</p>
+</blockquote>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>The following example creates three <code>TransformBlock&lt;TInput,TOutput&gt;</code> objects, each of which calls the <code>TrySolution</code> method to compute a value. This example requires only the result from the first call to <code>TrySolution</code> to finish.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks.Dataflow;
+
+// Demonstrates how to unlink dataflow blocks.
+class DataflowReceiveAny
+{
+   // Receives the value from the first provided source that has
+   // a message.
+   public static T ReceiveFromAny&lt;T&gt;(params ISourceBlock&lt;T&gt;[] sources)
+   {
+      // Create a WriteOnceBlock&lt;T&gt; object and link it to each source block.
+      var writeOnceBlock = new WriteOnceBlock&lt;T&gt;(e =&gt; e);
+      foreach (var source in sources)
+      {
+         // Setting MaxMessages to one instructs
+         // the source block to unlink from the WriteOnceBlock&lt;T&gt; object
+         // after offering the WriteOnceBlock&lt;T&gt; object one message.
+         source.LinkTo(writeOnceBlock, new DataflowLinkOptions { MaxMessages = 1 });
+      }
+      // Return the first value that is offered to the WriteOnceBlock object.
+      return writeOnceBlock.Receive();
+   }
+
+   // Demonstrates a function that takes several seconds to produce a result.
+   static int TrySolution(int n, CancellationToken ct)
+   {
+      // Simulate a lengthy operation that completes within three seconds
+      // or when the provided CancellationToken object is cancelled.
+      SpinWait.SpinUntil(() =&gt; ct.IsCancellationRequested,
+         new Random().Next(3000));
+
+      // Return a value.
+      return n + 42;
+   }
+
+   static void Main(string[] args)
+   {
+      // Create a shared CancellationTokenSource object to enable the
+      // TrySolution method to be cancelled.
+      var cts = new CancellationTokenSource();
+
+      // Create three TransformBlock&lt;int, int&gt; objects.
+      // Each TransformBlock&lt;int, int&gt; object calls the TrySolution method.
+      Func&lt;int, int&gt; action = n =&gt; TrySolution(n, cts.Token);
+      var trySolution1 = new TransformBlock&lt;int, int&gt;(action);
+      var trySolution2 = new TransformBlock&lt;int, int&gt;(action);
+      var trySolution3 = new TransformBlock&lt;int, int&gt;(action);
+
+      // Post data to each TransformBlock&lt;int, int&gt; object.
+      trySolution1.Post(11);
+      trySolution2.Post(21);
+      trySolution3.Post(31);
+
+      // Call the ReceiveFromAny&lt;T&gt; method to receive the result from the
+      // first TransformBlock&lt;int, int&gt; object to finish.
+      int result = ReceiveFromAny(trySolution1, trySolution2, trySolution3);
+
+      // Cancel all calls to TrySolution that are still active.
+      cts.Cancel();
+
+      // Print the result to the console.
+      Console.WriteLine(&quot;The solution is {0}.&quot;, result);
+
+      cts.Dispose();
+   }
+}
+
+/* Sample output:
+The solution is 53.
+*/
+</code></pre>
+<p>To receive the value from the first <code>TransformBlock&lt;TInput,TOutput&gt;</code> object that finishes, this example defines the <code>ReceiveFromAny(T)</code> method. The <code>ReceiveFromAny(T)</code> method accepts an array of <code>ISourceBlock&lt;TOutput&gt;</code> objects and links each of these objects to a <code>WriteOnceBlock&lt;T&gt;</code> object. When you use the <code>LinkTo</code> method to link a source dataflow block to a target block, the source propagates messages to the target as data becomes available. Because the <code>WriteOnceBlock&lt;T&gt;</code> class accepts only the first message that it is offered, the <code>ReceiveFromAny(T)</code> method produces its result by calling the <code>Receive</code> method. This produces the first message that is offered to the <code>WriteOnceBlock&lt;T&gt;</code> object. The <code>LinkTo</code> method has an overloaded version that takes an <code>DataflowLinkOptions</code> object with a <code>MaxMessages</code> property that, when it is set to <code>1</code>, instructs the source block to unlink from the target after the target receives one message from the source. It is important for the <code>WriteOnceBlock&lt;T&gt;</code> object to unlink from its sources because the relationship between the array of sources and the <code>WriteOnceBlock&lt;T&gt;</code> object is no longer required after the <code>WriteOnceBlock&lt;T&gt;</code> object receives a message.</p>
+<p>To enable the remaining calls to <code>TrySolution</code> to end after one of them computes a value, the <code>TrySolution</code> method takes a <code>CancellationToken</code> object that is canceled after the call to <code>ReceiveFromAny(T)</code> returns. The <code>SpinUntil</code> method returns when this <code>CancellationToken</code> object is canceled.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>Dataflow</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-unlink-dataflow-blocks">How to: Unlink Dataflow Blocks</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Write a Parallel.ForEach loop with partition-local variables | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='The following example shows how to write a ForEach method that uses partition-local variables. When a ForEach loop executes, it divides its source collection into multiple partitions. Each partition has its own copy of the partition-local variable. A partition-local variable is similar to a thread-local variable, except that multiple partitions can run on a single thread.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Write a Parallel.ForEach loop with partition-local variables</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>The following example shows how to write a ForEach method that uses partition-local variables. When a ForEach loop executes, it divides its source collection into multiple partitions. Each partition has its own copy of the partition-local variable. A partition-local variable is similar to a thread-local variable, except that multiple partitions can run on a single thread.</p>
+<p>The code and parameters in this example closely resemble the corresponding For method. For more information, see How to: Write a Parallel.For Loop with Thread-Local Variables.</p>
+<p>To use a partition-local variable in a ForEach loop, you must call one of the method overloads that takes two type parameters. The first type parameter, <code>TSource</code>, specifies the type of the source element, and the second type parameter, <code>TLocal</code>, specifies the type of the partition-local variable.</p>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>The following example calls the <code>Parallel.ForEach&lt;TSource,TLocal&gt;(IEnumerable&lt;TSource&gt;, Func&lt;TLocal&gt;, Func&lt;TSource,ParallelLoopState,TLocal,TLocal&gt;, Action&lt;TLocal&gt;)</code> overload to compute the sum of an array of one million elements. This overload has four parameters:</p>
+<ul>
+<li>
+<p><code>source</code>, which is the data source. It must implement <code>IEnumerable&lt;T&gt;</code>. The data source in our example is the one million member <code>IEnumerable&lt;Int32&gt;</code> object returned by the <code>Enumerable.Range</code> method.</p>
+</li>
+<li>
+<p><code>localInit</code>, or the function that initializes the partition-local variable. This function is called once for each partition in which the Parallel.ForEach operation executes. Our example initializes the partition-local variable to zero.</p>
+</li>
+<li>
+<p><code>body</code>, a <code>Func&lt;T1,T2,T3,TResult&gt;</code> that is invoked by the parallel loop on each iteration of the loop. Its signature is <code>Func&lt;TSource, ParallelLoopState, TLocal, TLocal&gt;</code>. You supply the code for the delegate, and the loop passes in the input parameters, which are:</p>
+</li>
+</ul>
+<p>Your delegate returns the partition-local variable, which is then passed to the next iteration of the loop that executes in that particular partition. Each loop partition maintains a separate instance of this variable.
+In the example, the delegate adds the value of each integer to the partition-local variable, which maintains a running total of the values of the integer elements in that partition.</p>
+<ul>
+<li>
+<p>The current element of the <code>IEnumerable&lt;T&gt;</code>.</p>
+</li>
+<li>
+<p>A ParallelLoopState variable that you can use in your delegate's code to examine the state of the loop.</p>
+</li>
+<li>
+<p>The partition-local variable.</p>
+</li>
+<li>
+<p><code>localFinally</code>, an <code>Action&lt;TLocal&gt;</code> delegate that the <code>Parallel.ForEach</code> invokes when the looping operations in each partition have completed. The <code>Parallel.ForEach</code> method passes your <code>Action&lt;TLocal&gt;</code> delegate the final value of the partition-local variable for this loop partition, and you provide the code that performs the required action for combining the result from this partition with the results from the other partitions. This delegate can be invoked concurrently by multiple tasks. Because of this, the example uses the <code>Interlocked.Add(Int32, Int32)</code> method to synchronize access to the total variable. Because the delegate type is an <code>Action&lt;T&gt;</code>, there is no return value.</p>
+</li>
+</ul>
+<pre><code class="language-csharp">using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+class Test
+{
+    static void Main()
+    {
+        int[] nums = Enumerable.Range(0, 1000000).ToArray();
+        long total = 0;
+
+        // First type parameter is the type of the source elements
+        // Second type parameter is the type of the thread-local variable (partition subtotal)
+        Parallel.ForEach&lt;int, long&gt;(
+            nums, // source collection
+            () =&gt; 0, // method to initialize the local variable
+            (j, loop, subtotal) =&gt; // method invoked by the loop on each iteration
+            {
+                subtotal += j; //modify local variable
+                return subtotal; // value to be passed to next iteration
+            },
+            // Method to be executed when each partition has completed.
+            // finalResult is the final value of subtotal for a particular partition.
+            (finalResult) =&gt; Interlocked.Add(ref total, finalResult));
+
+        Console.WriteLine(&quot;The total from Parallel.ForEach is {0:N0}&quot;, total);
+    }
+}
+// The example displays the following output:
+//        The total from Parallel.ForEach is 499,999,500,000
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Data Parallelism</p>
+</li>
+<li>
+<p>How to: Write a Parallel.For Loop with Thread-Local Variables</p>
+</li>
+<li>
+<p>Lambda Expressions in PLINQ and TPL</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-write-a-parallel-foreach-loop-with-partition-local-variables">How to: Write a Parallel.ForEach loop with partition-local variables</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

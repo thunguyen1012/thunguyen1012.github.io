@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Dataflow - Create a dataflow pipeline | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='Although you can use the DataflowBlock.Receive, DataflowBlock.ReceiveAsync, and DataflowBlock.TryReceive methods to receive messages from source blocks, you can also connect message blocks to form a dataflow pipeline. A dataflow pipeline is a series of components, or dataflow blocks, each of which performs a specific task that contributes to a larger goal. Every dataflow block in a dataflow pipeline performs work when it receives a message from another dataflow block. An analogy to this is an assembly line for automobile manufacturing. As each vehicle passes through the assembly line, one station assembles the frame, the next one installs the engine, and so on. Because an assembly line enables multiple vehicles to be assembled at the same time, it provides better throughput than assembling complete vehicles one at a time.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Dataflow - Create a dataflow pipeline</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>You can use the following methods to receive messages from source blocks.</p>
+<p>This document demonstrates a dataflow pipeline that downloads the book The Iliad of Homer from a website and searches the text to match individual words with words that reverse the first word's characters.</p>
+<ul>
+<li>
+<p>Create the dataflow blocks that participate in the pipeline.</p>
+</li>
+<li>
+<p>Connect each dataflow block to the next block in the pipeline. Each block receives as input the output of the previous block in the pipeline.</p>
+</li>
+<li>
+<p>For each dataflow block, create a continuation task that sets the next block to the completed state after the previous block finishes.</p>
+</li>
+<li>
+<p>Post data to the head of the pipeline.</p>
+</li>
+<li>
+<p>Mark the head of the pipeline as completed.</p>
+</li>
+<li>
+<p>Wait for the pipeline to complete all work.</p>
+</li>
+</ul>
+<h2><a href="#prerequisites" aria-hidden="true" class="anchor" id="prerequisites"></a>Prerequisites</h2>
+<p>Read Dataflow before you start this walkthrough.</p>
+<h2><a href="#creating-a-console-application" aria-hidden="true" class="anchor" id="creating-a-console-application"></a>Creating a Console Application</h2>
+<p>In Visual Studio, create a Visual C# or Visual Basic Console Application project. Install the <code>System.Threading.Tasks.Dataflow</code> NuGet package.</p>
+<blockquote>
+<p class='note'>Note
+The TPL Dataflow Library (the <code>System.Threading.Tasks.Dataflow</code> namespace) is not distributed with .NET. To install the <code>System.Threading.Tasks.Dataflow</code> namespace in Visual Studio, open your project, choose Manage NuGet Packages from the Project menu, and search online for the <code>System.Threading.Tasks.Dataflow</code> package. Alternatively, to install it using the .NET Core CLI, run <code>dotnet add package System.Threading.Tasks.Dataflow</code>.</p>
+</blockquote>
+<p>Add the following code to your project to create the basic application.</p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks.Dataflow;
+
+// Demonstrates how to create a basic dataflow pipeline.
+// This program downloads the book &quot;The Iliad of Homer&quot; by Homer from the Web
+// and finds all reversed words that appear in that book.
+static class Program
+{
+   static void Main()
+   {
+   }
+}
+</code></pre>
+<h2><a href="#creating-the-dataflow-blocks" aria-hidden="true" class="anchor" id="creating-the-dataflow-blocks"></a>Creating the Dataflow Blocks</h2>
+<p>Add the following code to the <code>Main</code> method to create the dataflow blocks that participate in the pipeline. The table that follows summarizes the role of each member of the pipeline.</p>
+<pre><code class="language-csharp">//
+// Create the members of the pipeline.
+//
+
+// Downloads the requested resource as a string.
+var downloadString = new TransformBlock&lt;string, string&gt;(async uri =&gt;
+{
+   Console.WriteLine(&quot;Downloading '{0}'...&quot;, uri);
+
+   return await new HttpClient(new HttpClientHandler{ AutomaticDecompression = System.Net.DecompressionMethods.GZip }).GetStringAsync(uri);
+});
+
+// Separates the specified text into an array of words.
+var createWordList = new TransformBlock&lt;string, string[]&gt;(text =&gt;
+{
+   Console.WriteLine(&quot;Creating word list...&quot;);
+
+   // Remove common punctuation by replacing all non-letter characters
+   // with a space character.
+   char[] tokens = text.Select(c =&gt; char.IsLetter(c) ? c : ' ').ToArray();
+   text = new string(tokens);
+
+   // Separate the text into an array of words.
+   return text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+});
+
+// Removes short words and duplicates.
+var filterWordList = new TransformBlock&lt;string[], string[]&gt;(words =&gt;
+{
+   Console.WriteLine(&quot;Filtering word list...&quot;);
+
+   return words
+      .Where(word =&gt; word.Length &gt; 3)
+      .Distinct()
+      .ToArray();
+});
+
+// Finds all words in the specified collection whose reverse also
+// exists in the collection.
+var findReversedWords = new TransformManyBlock&lt;string[], string&gt;(words =&gt;
+{
+   Console.WriteLine(&quot;Finding reversed words...&quot;);
+
+   var wordsSet = new HashSet&lt;string&gt;(words);
+
+   return from word in words.AsParallel()
+          let reverse = new string(word.Reverse().ToArray())
+          where word != reverse &amp;&amp; wordsSet.Contains(reverse)
+          select word;
+});
+
+// Prints the provided reversed words to the console.
+var printReversedWords = new ActionBlock&lt;string&gt;(reversedWord =&gt;
+{
+   Console.WriteLine(&quot;Found reversed words {0}/{1}&quot;,
+      reversedWord, new string(reversedWord.Reverse().ToArray()));
+});
+</code></pre>
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>downloadString</code></td>
+<td><a href="/en-us/dotnet/api/system.threading.tasks.dataflow.transformblock-2" class="no-loc" data-linktype="absolute-path">TransformBlock&lt;TInput,TOutput&gt;</a></td>
+<td>Downloads the book text from the Web.</td>
+</tr>
+<tr>
+<td><code>createWordList</code></td>
+<td><a href="/en-us/dotnet/api/system.threading.tasks.dataflow.transformblock-2" class="no-loc" data-linktype="absolute-path">TransformBlock&lt;TInput,TOutput&gt;</a></td>
+<td>Separates the book text into an array of words.</td>
+</tr>
+<tr>
+<td><code>filterWordList</code></td>
+<td><a href="/en-us/dotnet/api/system.threading.tasks.dataflow.transformblock-2" class="no-loc" data-linktype="absolute-path">TransformBlock&lt;TInput,TOutput&gt;</a></td>
+<td>Removes short words and duplicates from the word array.</td>
+</tr>
+<tr>
+<td><code>findReversedWords</code></td>
+<td><a href="/en-us/dotnet/api/system.threading.tasks.dataflow.transformmanyblock-2" class="no-loc" data-linktype="absolute-path">TransformManyBlock&lt;TInput,TOutput&gt;</a></td>
+<td>Finds all words in the filtered word array collection whose reverse also occurs in the word array.</td>
+</tr>
+<tr>
+<td><code>printReversedWords</code></td>
+<td><a href="/en-us/dotnet/api/system.threading.tasks.dataflow.actionblock-1" class="no-loc" data-linktype="absolute-path">ActionBlock&lt;TInput&gt;</a></td>
+<td>Displays words and the corresponding reverse words to the console.</td>
+</tr>
+</tbody></table>
+<p>Although you could combine multiple steps in the dataflow pipeline in this example into one step, the example illustrates the concept of composing multiple independent dataflow tasks to perform a larger task. The example uses <code>TransformBlock&lt;TInput,TOutput&gt;</code> to enable each member of the pipeline to perform an operation on its input data and send the results to the next step in the pipeline. The <code>findReversedWords</code> member of the pipeline is a <code>TransformManyBlock&lt;TInput,TOutput&gt;</code> object because it produces multiple independent outputs for each input. The tail of the pipeline, <code>printReversedWords</code>, is an <code>ActionBlock&lt;TInput&gt;</code> object because it performs an action on its input, and does not produce a result.</p>
+<h2><a href="#forming-the-pipeline" aria-hidden="true" class="anchor" id="forming-the-pipeline"></a>Forming the Pipeline</h2>
+<p>Add the following code to connect each block to the next block in the pipeline.</p>
+<p>The LinkTo method connects a source dataflow block to a target dataflow block in the pipeline.</p>
+<pre><code class="language-csharp">//
+// Connect the dataflow blocks to form a pipeline.
+//
+
+var linkOptions = new DataflowLinkOptions { PropagateCompletion = true };
+
+downloadString.LinkTo(createWordList, linkOptions);
+createWordList.LinkTo(filterWordList, linkOptions);
+filterWordList.LinkTo(findReversedWords, linkOptions);
+findReversedWords.LinkTo(printReversedWords, linkOptions);
+</code></pre>
+<h2><a href="#posting-data-to-the-pipeline" aria-hidden="true" class="anchor" id="posting-data-to-the-pipeline"></a>Posting Data to the Pipeline</h2>
+<p>Add the following code to post the URL of the book The Iliad of Homer to the head of the dataflow pipeline.</p>
+<pre><code class="language-csharp">// Process &quot;The Iliad of Homer&quot; by Homer.
+downloadString.Post(&quot;http://www.gutenberg.org/cache/epub/16452/pg16452.txt&quot;);
+</code></pre>
+<p>This example uses <code>DataflowBlock.Post</code> to synchronously send data to the head of the pipeline. Use the <code>DataflowBlock.SendAsync</code> method when you must asynchronously send data to a dataflow node.</p>
+<h2><a href="#completing-pipeline-activity" aria-hidden="true" class="anchor" id="completing-pipeline-activity"></a>Completing Pipeline Activity</h2>
+<p>Add the following code to mark the head of the pipeline as completed. The head of the pipeline propagates its completion after it processes all buffered messages.</p>
+<pre><code class="language-csharp">// Mark the head of the pipeline as complete.
+downloadString.Complete();
+</code></pre>
+<p>This example shows how to send data through a dataflow pipeline.</p>
+<h2><a href="#waiting-for-the-pipeline-to-finish" aria-hidden="true" class="anchor" id="waiting-for-the-pipeline-to-finish"></a>Waiting for the Pipeline to Finish</h2>
+<p>Add the following code to wait for the pipeline to finish. The overall operation is finished when the tail of the pipeline finishes.</p>
+<pre><code class="language-csharp">// Wait for the last block in the pipeline to process all messages.
+printReversedWords.Completion.Wait();
+</code></pre>
+<p>You can wait for dataflow completion from any thread or from multiple threads at the same time.</p>
+<h2><a href="#the-complete-example" aria-hidden="true" class="anchor" id="the-complete-example"></a>The Complete Example</h2>
+<p>The following example shows the complete code for this walkthrough.</p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks.Dataflow;
+
+// Demonstrates how to create a basic dataflow pipeline.
+// This program downloads the book &quot;The Iliad of Homer&quot; by Homer from the Web
+// and finds all reversed words that appear in that book.
+static class DataflowReversedWords
+{
+   static void Main()
+   {
+      //
+      // Create the members of the pipeline.
+      //
+
+      // Downloads the requested resource as a string.
+      var downloadString = new TransformBlock&lt;string, string&gt;(async uri =&gt;
+      {
+         Console.WriteLine(&quot;Downloading '{0}'...&quot;, uri);
+
+         return await new HttpClient(new HttpClientHandler{ AutomaticDecompression = System.Net.DecompressionMethods.GZip }).GetStringAsync(uri);
+      });
+
+      // Separates the specified text into an array of words.
+      var createWordList = new TransformBlock&lt;string, string[]&gt;(text =&gt;
+      {
+         Console.WriteLine(&quot;Creating word list...&quot;);
+
+         // Remove common punctuation by replacing all non-letter characters
+         // with a space character.
+         char[] tokens = text.Select(c =&gt; char.IsLetter(c) ? c : ' ').ToArray();
+         text = new string(tokens);
+
+         // Separate the text into an array of words.
+         return text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+      });
+
+      // Removes short words and duplicates.
+      var filterWordList = new TransformBlock&lt;string[], string[]&gt;(words =&gt;
+      {
+         Console.WriteLine(&quot;Filtering word list...&quot;);
+
+         return words
+            .Where(word =&gt; word.Length &gt; 3)
+            .Distinct()
+            .ToArray();
+      });
+
+      // Finds all words in the specified collection whose reverse also
+      // exists in the collection.
+      var findReversedWords = new TransformManyBlock&lt;string[], string&gt;(words =&gt;
+      {
+         Console.WriteLine(&quot;Finding reversed words...&quot;);
+
+         var wordsSet = new HashSet&lt;string&gt;(words);
+
+         return from word in words.AsParallel()
+                let reverse = new string(word.Reverse().ToArray())
+                where word != reverse &amp;&amp; wordsSet.Contains(reverse)
+                select word;
+      });
+
+      // Prints the provided reversed words to the console.
+      var printReversedWords = new ActionBlock&lt;string&gt;(reversedWord =&gt;
+      {
+         Console.WriteLine(&quot;Found reversed words {0}/{1}&quot;,
+            reversedWord, new string(reversedWord.Reverse().ToArray()));
+      });
+
+      //
+      // Connect the dataflow blocks to form a pipeline.
+      //
+
+      var linkOptions = new DataflowLinkOptions { PropagateCompletion = true };
+
+      downloadString.LinkTo(createWordList, linkOptions);
+      createWordList.LinkTo(filterWordList, linkOptions);
+      filterWordList.LinkTo(findReversedWords, linkOptions);
+      findReversedWords.LinkTo(printReversedWords, linkOptions);
+
+      // Process &quot;The Iliad of Homer&quot; by Homer.
+      downloadString.Post(&quot;http://www.gutenberg.org/cache/epub/16452/pg16452.txt&quot;);
+
+      // Mark the head of the pipeline as complete.
+      downloadString.Complete();
+
+      // Wait for the last block in the pipeline to process all messages.
+      printReversedWords.Completion.Wait();
+   }
+}
+/* Sample output:
+   Downloading 'http://www.gutenberg.org/cache/epub/16452/pg16452.txt'...
+   Creating word list...
+   Filtering word list...
+   Finding reversed words...
+   Found reversed words doom/mood
+   Found reversed words draw/ward
+   Found reversed words aera/area
+   Found reversed words seat/taes
+   Found reversed words live/evil
+   Found reversed words port/trop
+   Found reversed words sleek/keels
+   Found reversed words area/aera
+   Found reversed words tops/spot
+   Found reversed words evil/live
+   Found reversed words mood/doom
+   Found reversed words speed/deeps
+   Found reversed words moor/room
+   Found reversed words trop/port
+   Found reversed words spot/tops
+   Found reversed words spots/stops
+   Found reversed words stops/spots
+   Found reversed words reed/deer
+   Found reversed words keels/sleek
+   Found reversed words deeps/speed
+   Found reversed words deer/reed
+   Found reversed words taes/seat
+   Found reversed words room/moor
+   Found reversed words ward/draw
+*/
+</code></pre>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next Steps</h2>
+<p>This example shows how to introduce a form of parallelism into your application that resembles how parts might move through an automobile factory.</p>
+<p>The parallelism that is achieved by using dataflow pipelines is known as coarse-grained parallelism because it typically consists of fewer, larger tasks. You can also use a more fine-grained parallelism of smaller, short-running tasks in a dataflow pipeline. In this example, the <code>findReversedWords</code> member of the pipeline uses PLINQ to process multiple items in the work list in parallel. The use of fine-grained parallelism in a coarse-grained pipeline can improve overall throughput.</p>
+<p>You can connect a source dataflow block to multiple target blocks to create a dataflow network.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>Dataflow</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/walkthrough-creating-a-dataflow-pipeline">Walkthrough: Creating a Dataflow Pipeline</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

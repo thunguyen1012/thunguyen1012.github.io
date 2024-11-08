@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Attached and detached child tasks | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='A child task (or nested task) is a System.Threading.Tasks.Task instance that is created in the user delegate of another task, which is known as the parent task. A child task can be either detached or attached. A detached child task is a task that executes independently of its parent. An attached child task is a nested task that is created with the TaskCreationOptions.AttachedToParent option whose parent does not explicitly or by default prohibit it from being attached. A task may create any number of attached and detached child tasks, limited only by system resources.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Attached and detached child tasks</h1>
+        <ul>
+<li>
+<p>Article</p>
+<ul>
+<li>
+<p>09/15/2021</p>
+</li>
+<li>
+<p>12 contributors</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>A child task is a task that is created in the user delegate of another task.</p>
+<p>The following table lists the basic differences between the two kinds of child tasks.</p>
+<table><thead>
+<tr>
+<th>Category</th>
+<th>Detached child tasks</th>
+<th>Attached child tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parent waits for child tasks to complete.</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Parent propagates exceptions thrown by child tasks.</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Status of parent depends on status of child.</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+</tbody></table>
+<p>You can create tasks inside a parent task, or you can attach them to a child task.</p>
+<h2><a href="#detached-child-tasks" aria-hidden="true" class="anchor" id="detached-child-tasks"></a>Detached child tasks</h2>
+<p>The console app creates a parent task and a child task.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Example
+{
+   public static void Main()
+   {
+      var parent = Task.Factory.StartNew(() =&gt; {
+         Console.WriteLine(&quot;Outer task executing.&quot;);
+
+         var child = Task.Factory.StartNew(() =&gt; {
+            Console.WriteLine(&quot;Nested task starting.&quot;);
+            Thread.SpinWait(500000);
+            Console.WriteLine(&quot;Nested task completing.&quot;);
+         });
+      });
+
+      parent.Wait();
+      Console.WriteLine(&quot;Outer has completed.&quot;);
+   }
+}
+// The example produces output like the following:
+//        Outer task executing.
+//        Nested task starting.
+//        Outer has completed.
+//        Nested task completing.
+</code></pre>
+<pre><code class="language-vb">Imports System.Threading
+Imports System.Threading.Tasks
+
+Module Example
+    Public Sub Main()
+        Dim parent = Task.Factory.StartNew(Sub()
+                                               Console.WriteLine(&quot;Outer task executing.&quot;)
+                                               Dim child = Task.Factory.StartNew(Sub()
+                                                                                     Console.WriteLine(&quot;Nested task starting.&quot;)
+                                                                                     Thread.SpinWait(500000)
+                                                                                     Console.WriteLine(&quot;Nested task completing.&quot;)
+                                                                                 End Sub)
+                                           End Sub)
+        parent.Wait()
+        Console.WriteLine(&quot;Outer task has completed.&quot;)
+    End Sub
+End Module
+' The example produces output like the following:
+'   Outer task executing.
+'   Nested task starting.
+'   Outer task has completed.
+'   Nested task completing.
+</code></pre>
+<p>A child task can be a parent task or a detached child task.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+class Example
+{
+   static void Main()
+   {
+      var outer = Task&lt;int&gt;.Factory.StartNew(() =&gt; {
+            Console.WriteLine(&quot;Outer task executing.&quot;);
+
+            var nested = Task&lt;int&gt;.Factory.StartNew(() =&gt; {
+                  Console.WriteLine(&quot;Nested task starting.&quot;);
+                  Thread.SpinWait(5000000);
+                  Console.WriteLine(&quot;Nested task completing.&quot;);
+                  return 42;
+            });
+
+            // Parent will wait for this detached child.
+            return nested.Result;
+      });
+
+      Console.WriteLine(&quot;Outer has returned {0}.&quot;, outer.Result);
+   }
+}
+// The example displays the following output:
+//       Outer task executing.
+//       Nested task starting.
+//       Nested task completing.
+//       Outer has returned 42.
+</code></pre>
+<pre><code class="language-vb">Imports System.Threading
+Imports System.Threading.Tasks
+
+Module Example
+    Public Sub Main()
+        Dim parent = Task(Of Integer).Factory.StartNew(Function()
+                                                           Console.WriteLine(&quot;Outer task executing.&quot;)
+                                                           Dim child = Task(Of Integer).Factory.StartNew(Function()
+                                                                                                             Console.WriteLine(&quot;Nested task starting.&quot;)
+                                                                                                             Thread.SpinWait(5000000)
+                                                                                                             Console.WriteLine(&quot;Nested task completing.&quot;)
+                                                                                                             Return 42
+                                                                                                         End Function)
+                                                           Return child.Result
+
+
+                                                       End Function)
+        Console.WriteLine(&quot;Outer has returned {0}&quot;, parent.Result)
+    End Sub
+End Module
+' The example displays the following output:
+'       Outer task executing.
+'       Nested task starting.
+'       Detached task completing.
+'       Outer has returned 42
+</code></pre>
+<h2><a href="#attached-child-tasks" aria-hidden="true" class="anchor" id="attached-child-tasks"></a>Attached child tasks</h2>
+<p>This example shows how to create an attached child task.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Example
+{
+   public static void Main()
+   {
+      var parent = Task.Factory.StartNew(() =&gt; {
+            Console.WriteLine(&quot;Parent task executing.&quot;);
+            var child = Task.Factory.StartNew(() =&gt; {
+                  Console.WriteLine(&quot;Attached child starting.&quot;);
+                  Thread.SpinWait(5000000);
+                  Console.WriteLine(&quot;Attached child completing.&quot;);
+            }, TaskCreationOptions.AttachedToParent);
+      });
+      parent.Wait();
+      Console.WriteLine(&quot;Parent has completed.&quot;);
+   }
+}
+// The example displays the following output:
+//       Parent task executing.
+//       Attached child starting.
+//       Attached child completing.
+//       Parent has completed.
+</code></pre>
+<pre><code class="language-vb">Imports System.Threading
+Imports System.Threading.Tasks
+
+Module Example
+    Public Sub Main()
+        Dim parent = Task.Factory.StartNew(Sub()
+                                               Console.WriteLine(&quot;Parent task executing&quot;)
+                                               Dim child = Task.Factory.StartNew(Sub()
+                                                                                     Console.WriteLine(&quot;Attached child starting.&quot;)
+                                                                                     Thread.SpinWait(5000000)
+                                                                                     Console.WriteLine(&quot;Attached child completing.&quot;)
+                                                                                 End Sub, TaskCreationOptions.AttachedToParent)
+                                           End Sub)
+        parent.Wait()
+        Console.WriteLine(&quot;Parent has completed.&quot;)
+    End Sub
+End Module
+' The example displays the following output:
+'       Parent task executing.
+'       Attached child starting.
+'       Attached child completing.
+'       Parent has completed.
+</code></pre>
+<p>You can use attached child tasks to create tightly synchronized graphs of asynchronous operations.</p>
+<p>A child task can attach to its parent task by calling the Task.Run method.</p>
+<pre><code class="language-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class Example
+{
+   public static void Main()
+   {
+      var parent = Task.Run(() =&gt; {
+            Console.WriteLine(&quot;Parent task executing.&quot;);
+            var child = Task.Factory.StartNew(() =&gt; {
+                  Console.WriteLine(&quot;Attached child starting.&quot;);
+                  Thread.SpinWait(5000000);
+                  Console.WriteLine(&quot;Attached child completing.&quot;);
+            }, TaskCreationOptions.AttachedToParent);
+      });
+      parent.Wait();
+      Console.WriteLine(&quot;Parent has completed.&quot;);
+   }
+}
+// The example displays output like the following:
+//       Parent task executing.
+//       Parent has completed.
+//       Attached child starting.
+</code></pre>
+<pre><code class="language-vb">Imports System.Threading
+Imports System.Threading.Tasks
+
+Module Example
+    Public Sub Main()
+        Dim parent = Task.Run(Sub()
+                                  Console.WriteLine(&quot;Parent task executing.&quot;)
+                                  Dim child = Task.Factory.StartNew(Sub()
+                                                                        Console.WriteLine(&quot;Attached child starting.&quot;)
+                                                                        Thread.SpinWait(5000000)
+                                                                        Console.WriteLine(&quot;Attached child completing.&quot;)
+                                                                    End Sub, TaskCreationOptions.AttachedToParent)
+                              End Sub)
+        parent.Wait()
+        Console.WriteLine(&quot;Parent has completed.&quot;)
+    End Sub
+End Module
+' The example displays output like the following:
+'       Parent task executing.
+'       Parent has completed.
+'       Attached child starting.
+</code></pre>
+<h2><a href="#exceptions-in-child-tasks" aria-hidden="true" class="anchor" id="exceptions-in-child-tasks"></a>Exceptions in child tasks</h2>
+<p>The attached child task method allows you to attach a child task to a parent task.</p>
+<h2><a href="#cancellation-and-child-tasks" aria-hidden="true" class="anchor" id="cancellation-and-child-tasks"></a>Cancellation and child tasks</h2>
+<p>To cancel a parent task and all its children by using one cancellation request, you pass the same token as an argument to all tasks and provide in each task the logic to respond to the request in each task.</p>
+<h3><a href="#when-the-parent-cancels" aria-hidden="true" class="anchor" id="when-the-parent-cancels"></a>When the parent cancels</h3>
+<p>If a parent cancels itself before its child task is started, the child never starts.</p>
+<h3><a href="#when-a-detached-child-task-cancels" aria-hidden="true" class="anchor" id="when-a-detached-child-task-cancels"></a>When a detached child task cancels</h3>
+<p>A detached child task cancels itself by using the same token that was passed to the parent, and the parent does not wait for the child task to cancel itself.</p>
+<h3><a href="#when-an-attached-child-task-cancels" aria-hidden="true" class="anchor" id="when-an-attached-child-task-cancels"></a>When an attached child task cancels</h3>
+<p>A child task is a subclass of a parent task.</p>
+<p>For more information, see Exception Handling.</p>
+<h2><a href="#preventing-a-child-task-from-attaching-to-its-parent" aria-hidden="true" class="anchor" id="preventing-a-child-task-from-attaching-to-its-parent"></a>Preventing a child task from attaching to its parent</h2>
+<p>The child taskPropagation method propagates exceptions from a child task to a parent task.</p>
+<p>When a task tries to attach to its parent task, the child task will not be able to do so and will execute just as if the TaskCreationOptions.AttachedToParent option was not specified.</p>
+<p>You might want to prevent a child task from attaching to its parent when the child task does not finish in a timely manner.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Parallel Programming</p>
+</li>
+<li>
+<p>Data Parallelism</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/attached-and-detached-child-tasks">Attached and Detached Child Tasks</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Write a Parallel.ForEach loop | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='This article shows how to use a Parallel.ForEach loop to enable data parallelism over any System.Collections.IEnumerable or System.Collections.Generic.IEnumerable<T> data source.'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Data parallelism - Write a Parallel.ForEach loop</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>This article shows how to use a <code>Parallel.ForEach</code> loop to enable data parallelism over any <code>System.Collections.IEnumerable</code> or <code>System.Collections.Generic.IEnumerable&lt;T&gt;</code> data source.</p>
+<blockquote>
+<p class='note'>Note
+This documentation uses lambda expressions to define delegates in PLINQ. If you aren't familiar with lambda expressions in C# or Visual Basic, see Lambda expressions in PLINQ and TPL.</p>
+</blockquote>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>This example demonstrates Parallel.ForEach for CPU-intensive operations. When you run the example, it randomly generates 2 million numbers and tries to filter to prime numbers. The first case iterates over the collection via a for-each loop. The second case iterates over the collection via <code>Parallel.ForEach</code>. The resulting time taken by each iteration is displayed when the application is finished.</p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace ParallelExample
+{
+    class Program
+    {
+        static void Main()
+        {
+            // 2 million
+            var limit = 2_000_000;
+            var numbers = Enumerable.Range(0, limit).ToList();
+
+            var watch = Stopwatch.StartNew();
+            var primeNumbersFromForeach = GetPrimeList(numbers);
+            watch.Stop();
+
+            var watchForParallel = Stopwatch.StartNew();
+            var primeNumbersFromParallelForeach = GetPrimeListWithParallel(numbers);
+            watchForParallel.Stop();
+
+            Console.WriteLine($&quot;Classical foreach loop | Total prime numbers : {primeNumbersFromForeach.Count} | Time Taken : {watch.ElapsedMilliseconds} ms.&quot;);
+            Console.WriteLine($&quot;Parallel.ForEach loop  | Total prime numbers : {primeNumbersFromParallelForeach.Count} | Time Taken : {watchForParallel.ElapsedMilliseconds} ms.&quot;);
+
+            Console.WriteLine(&quot;Press 'Enter' to exit.&quot;);
+            Console.ReadLine();
+        }
+
+        /// &lt;summary&gt;
+        /// GetPrimeList returns Prime numbers by using sequential ForEach
+        /// &lt;/summary&gt;
+        /// &lt;param name=&quot;inputs&quot;&gt;&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        private static IList&lt;int&gt; GetPrimeList(IList&lt;int&gt; numbers) =&gt; numbers.Where(IsPrime).ToList();
+
+        /// &lt;summary&gt;
+        /// GetPrimeListWithParallel returns Prime numbers by using Parallel.ForEach
+        /// &lt;/summary&gt;
+        /// &lt;param name=&quot;numbers&quot;&gt;&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        private static IList&lt;int&gt; GetPrimeListWithParallel(IList&lt;int&gt; numbers)
+        {
+            var primeNumbers = new ConcurrentBag&lt;int&gt;();
+
+            Parallel.ForEach(numbers, number =&gt;
+            {
+                if (IsPrime(number))
+                {
+                    primeNumbers.Add(number);
+                }
+            });
+
+            return primeNumbers.ToList();
+        }
+
+        /// &lt;summary&gt;
+        /// IsPrime returns true if number is Prime, else false.(https://en.wikipedia.org/wiki/Prime_number)
+        /// &lt;/summary&gt;
+        /// &lt;param name=&quot;number&quot;&gt;&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        private static bool IsPrime(int number)
+        {
+            if (number &lt; 2)
+            {
+                return false;
+            }
+
+            for (var divisor = 2; divisor &lt;= Math.Sqrt(number); divisor++)
+            {
+                if (number % divisor == 0)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+}
+</code></pre>
+<p>A <code>Parallel.ForEach</code> loop works like a <code>Parallel.For</code> loop. The loop partitions the source collection and schedules the work on multiple threads based on the system environment. The more processors on the system, the faster the parallel method runs. For some source collections, a sequential loop might be faster, depending on the size of the source and the kind of work the loop performs. For more information about performance, see Potential pitfalls in data and task parallelism.</p>
+<p>For more information about parallel loops, see How to: Write a simple <code>Parallel.For</code> loop.</p>
+<p>To use the <code>Parallel.ForEach</code> loop with a non-generic collection, you can use the <code>Enumerable.Cast</code> extension method to convert the collection to a generic collection, as shown in the following example:</p>
+<pre><code class="language-csharp">Parallel.ForEach(nonGenericCollection.Cast&lt;object&gt;(),
+    currentElement =&gt;
+    {
+    });
+</code></pre>
+<p>You can also use Parallel LINQ (PLINQ) to parallelize the processing of <code>IEnumerable&lt;T&gt;</code> data sources. PLINQ enables you to use declarative query syntax to express the loop behavior. For more information, see Parallel LINQ (PLINQ).</p>
+<h2><a href="#compile-and-run-the-code" aria-hidden="true" class="anchor" id="compile-and-run-the-code"></a>Compile and run the code</h2>
+<p>You can compile the code as a console application for .NET Framework or as a console application for .NET Core.</p>
+<p>In Visual Studio, there are Visual Basic and C# console application templates for Windows Desktop and .NET Core.</p>
+<p>From the command line, you can use the .NET CLI commands (for example, <code>dotnet new console</code>) or create the file and use the command-line compiler for a .NET Framework application.</p>
+<p>To run a .NET Core console application from the command line, use <code>dotnet run</code> from the folder that contains your application.</p>
+<p>To run your console application from Visual Studio, press F5.</p>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>Data parallelism</p>
+</li>
+<li>
+<p>Parallel programming</p>
+</li>
+<li>
+<p>Parallel LINQ (PLINQ)</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-write-a-simple-parallel-foreach-loop">How to: Write a simple Parallel.ForEach loop</a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>

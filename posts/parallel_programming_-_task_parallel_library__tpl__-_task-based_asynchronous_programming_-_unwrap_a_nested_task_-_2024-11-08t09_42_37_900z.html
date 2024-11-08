@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Unwrap a nested task | Sudo's Notes</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="content-type" content="text/html;" />
+    <meta name="viewport" content="initial-scale=1.0 maximum-scale=1.0" />
+    <meta property='og:image' content='https://thunguyen1012.github.io/img/default.jpg'><meta name='description' content='You can return a task from a method, and then wait on or continue from that task, as shown in the following example:'>
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="google-site-verification"
+      content="google-site-verification=kcDFRw1y16XjxYUB-datjB6MQB-CsjgE9h6lCalynC4"
+    />
+
+    <!-- Google Analytics -->
+    <script>
+      window.ga =
+        window.ga ||
+        function () {
+          (ga.q = ga.q || []).push(arguments);
+        };
+      ga.l = +new Date();
+      ga("create", "UA-120719369-1", "auto");
+      ga("send", "pageview");
+    </script>
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <!-- End Google Analytics -->
+    <link href="../css/theme-dark.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="../css/highlight/railscasts.css" />
+    <script src="../js/highlight.pack.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const content = document.getElementsByClassName("main")[0];
+        const currentURL = window.location.href;
+
+        function updateReadPercentage() {
+          const contentHeight = content.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          const scrollY = window.scrollY;
+          let readPercentage =
+            ((scrollY + viewportHeight) / contentHeight) * 100;
+          readPercentage = Math.min(100, Math.max(0, readPercentage));
+
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            item.percent = Math.floor(readPercentage);
+          } else {
+            readingItems.push({
+              url: currentURL,
+              percent: Math.floor(readPercentage),
+            });
+          }
+          localStorage.setItem("readPercentage", JSON.stringify(readingItems));
+        }
+
+        function loadReadPercentage() {
+          const storedData = localStorage.getItem("readPercentage");
+          const readingItems = JSON.parse(storedData) || [];
+          const item = readingItems.find((item) => item.url === currentURL);
+          if (item) {
+            const contentHeight = content.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            const scrollPosition =
+              (item.percent / 100) * contentHeight - viewportHeight;
+
+            window.scrollTo(0, scrollPosition);
+          }
+        }
+
+        window.addEventListener("scroll", updateReadPercentage);
+        window.addEventListener("resize", updateReadPercentage);
+        loadReadPercentage();
+        updateReadPercentage();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="/"><span class="avatar"></span></a>
+    </div>
+    <div class="container">
+      <div class="main">
+        <h1>Parallel programming - Task Parallel Library (TPL) - Task-based asynchronous programming - Unwrap a nested task</h1>
+        <h2><a href="#in-this-article" aria-hidden="true" class="anchor" id="in-this-article"></a>In this article</h2>
+<p>You can return a task from a method, and then wait on or continue from that task, as shown in the following example:</p>
+<pre><code class="language-csharp">static Task&lt;string&gt; DoWorkAsync()
+{
+    return Task&lt;String&gt;.Factory.StartNew(() =&gt;
+    {
+       //...
+        return &quot;Work completed.&quot;;
+    });
+}
+
+static void StartTask()
+{
+    Task&lt;String&gt; t = DoWorkAsync();
+    t.Wait();
+    Console.WriteLine(t.Result);
+}
+</code></pre>
+<p>In the previous example, the Result property is of type <code>string</code> (String in Visual Basic).</p>
+<p>However, in some scenarios, you might want to create a task within another task, and then return the nested task. In this case, the <code>TResult</code> of the enclosing task is itself a task. In the following example, the Result property is a <code>Task&lt;Task&lt;string&gt;&gt;</code> in C#.</p>
+<pre><code class="language-csharp">// Note the type of t and t2.
+Task&lt;Task&lt;string&gt;&gt; t = Task.Factory.StartNew(() =&gt; DoWorkAsync());
+Task&lt;Task&lt;string&gt;&gt; t2 = DoWorkAsync().ContinueWith((s) =&gt; DoMoreWorkAsync());
+
+// Outputs: System.Threading.Tasks.Task`1[System.String]
+Console.WriteLine(t.Result);
+</code></pre>
+<p>In this example, we will show you how to unwrap a task and retrieve its Result property.</p>
+<pre><code class="language-csharp">// Unwrap the inner task.
+Task&lt;string&gt; t3 = DoWorkAsync().ContinueWith((s) =&gt; DoMoreWorkAsync()).Unwrap();
+
+// Outputs &quot;More work completed.&quot;
+Console.WriteLine(t.Result);
+</code></pre>
+<p>The Unwrap methods can be used to transform any <code>Task&lt;Task&gt;</code> or <code>Task&lt;Task&lt;TResult&gt;&gt;</code> to a <code>Task</code> or <code>Task&lt;TResult&gt;</code>. The new task fully represents the inner nested task, and includes cancellation state and all exceptions.</p>
+<h2><a href="#example" aria-hidden="true" class="anchor" id="example"></a>Example</h2>
+<p>The following example demonstrates how to use the Unwrap extension methods.</p>
+<pre><code class="language-csharp">namespace Unwrap
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+    // A program whose only use is to demonstrate Unwrap.
+    class Program
+    {
+        static void Main()
+        {
+            // An arbitrary threshold value.
+            byte threshold = 0x40;
+
+            // data is a Task&lt;byte[]&gt;
+            var data = Task&lt;byte[]&gt;.Factory.StartNew(() =&gt;
+                {
+                    return GetData();
+                });
+
+            // We want to return a task so that we can
+            // continue from it later in the program.
+            // Without Unwrap: stepTwo is a Task&lt;Task&lt;byte[]&gt;&gt;
+            // With Unwrap: stepTwo is a Task&lt;byte[]&gt;
+            var stepTwo = data.ContinueWith((antecedent) =&gt;
+                {
+                    return Task&lt;byte&gt;.Factory.StartNew( () =&gt; Compute(antecedent.Result));
+                })
+                .Unwrap();
+
+            // Without Unwrap: antecedent.Result = Task&lt;byte&gt;
+            // and the following method will not compile.
+            // With Unwrap: antecedent.Result = byte and
+            // we can work directly with the result of the Compute method.
+            var lastStep = stepTwo.ContinueWith( (antecedent) =&gt;
+                {
+                    if (antecedent.Result &gt;= threshold)
+                    {
+                      return Task.Factory.StartNew( () =&gt;  Console.WriteLine(&quot;Program complete. Final = 0x{0:x} threshold = 0x{1:x}&quot;, stepTwo.Result, threshold));
+                    }
+                    else
+                    {
+                        return DoSomeOtherAsynchronousWork(stepTwo.Result, threshold);
+                    }
+                });
+
+            lastStep.Wait();
+            Console.WriteLine(&quot;Press any key&quot;);
+            Console.ReadKey();
+        }
+
+        #region Dummy_Methods
+        private static byte[] GetData()
+        {
+            Random rand = new Random();
+            byte[] bytes = new byte[64];
+            rand.NextBytes(bytes);
+            return bytes;
+        }
+
+        static Task DoSomeOtherAsynchronousWork(int i, byte b2)
+        {
+            return Task.Factory.StartNew(() =&gt;
+                {
+                    Thread.SpinWait(500000);
+                    Console.WriteLine(&quot;Doing more work. Value was &lt;= threshold&quot;);
+                });
+        }
+        static byte Compute(byte[] data)
+        {
+
+            byte final = 0;
+            foreach (byte item in data)
+            {
+                final ^= item;
+                Console.WriteLine(&quot;{0:x}&quot;, final);
+            }
+            Console.WriteLine(&quot;Done computing&quot;);
+            return final;
+        }
+        #endregion
+    }
+}
+</code></pre>
+<h2><a href="#see-also" aria-hidden="true" class="anchor" id="see-also"></a>See also</h2>
+<ul>
+<li>
+<p>System.Threading.Tasks.TaskExtensions</p>
+</li>
+<li>
+<p><code>Task</code>-based Asynchronous Programming</p>
+</li>
+</ul>
+<p>Ref: <a href="https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-unwrap-a-nested-task">How to: Unwrap a Nested <code>Task</code></a></p>
+ <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/Summary.html'>Summary</a><a class='topic-tag' href='/tags/.Net.html'>.Net</a><a class='topic-tag' href='/tags/AdvancedProgramming.html'>AdvancedProgramming</a></div>
+      </div>
+    </div>
+  </body>
+</html>
